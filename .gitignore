@@ -1,2 +1,5 @@
 .vs/
 *.filters
+Mahjong2/x64/
+x64/
+*.user
