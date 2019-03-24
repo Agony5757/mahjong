@@ -1,4 +1,4 @@
-#include "Yaku.h"
+﻿#include "Yaku.h"
 
 Yaku::Yaku()
 {

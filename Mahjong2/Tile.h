@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <memory>
 #include <vector>
 #include <unordered_map>
@@ -15,10 +15,10 @@ enum Wind {
 };
 
 enum class Belong : uint8_t {
-	p1ÊÖ, p1ºÓ,
-	p2ÊÖ, p2ºÓ,
-	p3ÊÖ, p3ºÓ,
-	p4ÊÖ, p4ºÓ,
+	p1æ‰‹, p1æ²³,
+	p2æ‰‹, p2æ²³,
+	p3æ‰‹, p3æ²³,
+	p4æ‰‹, p4æ²³,
 	yama,
 };
 
@@ -27,7 +27,7 @@ enum BaseTile {
 	_1s, _2s, _3s, _4s, _5s, _6s, _7s, _8s, _9s,
 	_1p, _2p, _3p, _4p, _5p, _6p, _7p, _8p, _9p,
 	east, south, west, north,
-	°×, ·¢, ÖĞ
+	ç™½, å‘, ä¸­
 };
 
 class Tile {
@@ -47,25 +47,25 @@ public:
 			ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "p";
 		}
 		else if (tile == east) {
-			ret = "[¶«";
+			ret = "[ä¸œ";
 		}
 		else if (tile == south) {
-			ret = "[ÄÏ";
+			ret = "[å—";
 		}
 		else if (tile == west) {
-			ret = "[Î÷";
+			ret = "[è¥¿";
 		}
 		else if (tile == north) {
-			ret = "[±±";
+			ret = "[åŒ—";
 		}
-		else if (tile == °×) {
-			ret = "[°×";
+		else if (tile == ç™½) {
+			ret = "[ç™½";
 		}
-		else if (tile == ·¢) {
-			ret = "[·¢";
+		else if (tile == å‘) {
+			ret = "[å‘";
 		}
-		else if (tile == ÖĞ) {
-			ret = "[ÖĞ";
+		else if (tile == ä¸­) {
+			ret = "[ä¸­";
 		}
 		else throw std::runtime_error("unknown tile");
 
@@ -96,7 +96,7 @@ inline std::string tiles_to_string(std::vector<Tile*> tiles) {
 	return ss.str();
 }
 
-inline std::string ¸±Â¶_to_string(Tile* head, std::vector<Tile*> fulu) {
+inline std::string å‰¯éœ²_to_string(Tile* head, std::vector<Tile*> fulu) {
 	std::stringstream ss;
 	ss << "[" << head->to_string() << "]";
 	ss << tiles_to_string(fulu);
@@ -106,13 +106,13 @@ inline std::string ¸±Â¶_to_string(Tile* head, std::vector<Tile*> fulu) {
 inline std::string wind_to_string(Wind wind) {
 	switch (wind) {
 	case Wind::East:
-		return "¶«";
+		return "ä¸œ";
 	case Wind::South:
-		return "ÄÏ";
+		return "å—";
 	case Wind::West:
-		return "Î÷";
+		return "è¥¿";
 	case Wind::North:
-		return "±±";
+		return "åŒ—";
 	default:
 		return "??";
 	}

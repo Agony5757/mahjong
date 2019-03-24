@@ -1,4 +1,4 @@
-#ifndef Mini_Mahjong_Tile_H__
+﻿#ifndef Mini_Mahjong_Tile_H__
 #define Mini_Mahjong_Tile_H__
 
 #pragma once

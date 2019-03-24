@@ -1,4 +1,4 @@
-#ifndef Mini_Mahjong_Constant_H__
+﻿#ifndef Mini_Mahjong_Constant_H__
 #define Mini_Mahjong_Constant_H__
 
 #pragma once

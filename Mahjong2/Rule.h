@@ -1,25 +1,25 @@
-#pragma once
+ï»¿#pragma once
 
 #include "Table.h"
 
-bool isÌıÅÆ(std::vector<Tile*> hand);
-bool isÕñÌı(std::vector<Tile*> hand);
+bool iså¬ç‰Œ(std::vector<Tile*> hand);
+bool isæŒ¯å¬(std::vector<Tile*> hand);
 
-bool isÆß¶Ô(std::vector<Tile*> hand, Tile*);
+bool isä¸ƒå¯¹(std::vector<Tile*> hand, Tile*);
 
-bool is¹úÊ¿ÎŞË«(std::vector<Tile*> hand, Tile*);
+bool iså›½å£«æ— åŒ(std::vector<Tile*> hand, Tile*);
 
-// ºÍÅÆĞÍ°üÀ¨ÁËÎŞÒÛµÄÇé¿ö£¬ÕâÊÇ±ØÒª²»³ä·ÖÌõ¼ş£¬²¢ÇÒ²»ĞèÒªÂú×ãÓĞ14ÕÅµÄÌõ¼ş
-// ÕâÊÇÈ¥µô¸±Â¶£¬ÁôÏÂÊÖÅÆµÄÅĞ¶Ï
-bool isCommonºÍÅÆĞÍ(std::vector<Tile*>);
+// å’Œç‰Œå‹åŒ…æ‹¬äº†æ— å½¹çš„æƒ…å†µï¼Œè¿™æ˜¯å¿…è¦ä¸å……åˆ†æ¡ä»¶ï¼Œå¹¶ä¸”ä¸éœ€è¦æ»¡è¶³æœ‰14å¼ çš„æ¡ä»¶
+// è¿™æ˜¯å»æ‰å‰¯éœ²ï¼Œç•™ä¸‹æ‰‹ç‰Œçš„åˆ¤æ–­
+bool isCommonå’Œç‰Œå‹(std::vector<Tile*>);
 
-// ¹úÊ¿ÎŞË«ºÍÅÆĞÍÖ»ÅĞ¶ÏÊÇ·ñÂú×ã£¬²»ÅĞ¶ÏdoubleÒÛÂúµÄÇé¿ö
-bool is¹úÊ¿ÎŞË«ºÍÅÆĞÍ(std::vector<Tile*>);
+// å›½å£«æ— åŒå’Œç‰Œå‹åªåˆ¤æ–­æ˜¯å¦æ»¡è¶³ï¼Œä¸åˆ¤æ–­doubleå½¹æ»¡çš„æƒ…å†µ
+bool iså›½å£«æ— åŒå’Œç‰Œå‹(std::vector<Tile*>);
 
-bool isÆß¶ÔºÍÅÆĞÍ(std::vector<Tile*>);
+bool isä¸ƒå¯¹å’Œç‰Œå‹(std::vector<Tile*>);
 
-bool canºÍÅÆ(std::vector<Tile*> hand,
+bool canå’Œç‰Œ(std::vector<Tile*> hand,
 	std::unordered_map<Tile*, std::vector<Tile*>> fulus,
 	std::vector<Tile*> river,
-	Tile* newtile, // ÓÃ×ÔÃşÅÆ(nullptr)
+	Tile* newtile, // ç”¨è‡ªæ‘¸ç‰Œ(nullptr)
 	bool isHaidi);

@@ -1,42 +1,42 @@
-#include "Table.h"
+ï»¿#include "Table.h"
 #include "Rule.h"
 #include "macro.h"
 using namespace std;
 
-#pragma region(testºÍÅÆ)
+#pragma region(testå’Œç‰Œ)
 
-void testºÍÅÆ×´Ì¬1() {
+void testå’Œç‰ŒçŠ¶æ€1() {
 	Table t(0);
 	t.init_tiles();
 	t.init_yama();
-	auto &yama = t.ÅÆÉ½;
+	auto &yama = t.ç‰Œå±±;
 	vector<Tile*> tiles = { yama[0], yama[1], yama[2], yama[3], yama[3] };
 
-	TEST_EQ_VERBOSE(true, isCommonºÍÅÆĞÍ(tiles));
+	TEST_EQ_VERBOSE(true, isCommonå’Œç‰Œå‹(tiles));
 }
 
-void testºÍÅÆ×´Ì¬2() {
+void testå’Œç‰ŒçŠ¶æ€2() {
 	Table t(0);
 	t.init_tiles();
 	t.init_yama();
-	auto &yama = t.ÅÆÉ½;
+	auto &yama = t.ç‰Œå±±;
 	vector<Tile*> tiles = { yama[0], yama[0], yama[2], yama[3], yama[3] };
 
-	TEST_EQ_VERBOSE(false, isCommonºÍÅÆĞÍ(tiles));
+	TEST_EQ_VERBOSE(false, isCommonå’Œç‰Œå‹(tiles));
 }
 
-void testºÍÅÆ×´Ì¬3() {
+void testå’Œç‰ŒçŠ¶æ€3() {
 	Table t(0);
 	t.init_tiles();
 	t.init_yama();
-	auto &yama = t.ÅÆÉ½;
+	auto &yama = t.ç‰Œå±±;
 	vector<Tile*> tiles = { yama[0], yama[0], yama[0], yama[1], yama[2], yama[3], yama[4],
 							yama[5], yama[6], yama[7], yama[8], yama[8], yama[8] };
 
 	for (int i = 0; i < 9; ++i) {
 		tiles.push_back(yama[i]);
 		// SORT_TILES(tiles);
-		TEST_EQ_VERBOSE(true, isCommonºÍÅÆĞÍ(tiles));
+		TEST_EQ_VERBOSE(true, isCommonå’Œç‰Œå‹(tiles));
 		tiles.pop_back();
 	}
 }
@@ -49,9 +49,9 @@ void testGameProcess() {
 }
 
 int main() {
-	testºÍÅÆ×´Ì¬1();
-	testºÍÅÆ×´Ì¬2();
-	testºÍÅÆ×´Ì¬3();
+	testå’Œç‰ŒçŠ¶æ€1();
+	testå’Œç‰ŒçŠ¶æ€2();
+	testå’Œç‰ŒçŠ¶æ€3();
 	getchar();
 	return 0;
 }

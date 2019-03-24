@@ -1,31 +1,36 @@
-#include "Rule.h"
+ï»¿#include "Rule.h"
 #include "macro.h"
 
 using namespace std;
-static std::vector<Tile*> findË³×Ó(std::vector<Tile*> tiles, int n);
-static std::vector<Tile*> find¿Ì×Ó(std::vector<Tile*> tiles, int n);
+static std::vector<Tile*> findé¡ºå­(std::vector<Tile*> tiles, int n);
+static std::vector<Tile*> findåˆ»å­(std::vector<Tile*> tiles, int n);
 
-bool isÌıÅÆ(std::vector<Tile*> hand)
+bool iså¬ç‰Œ(std::vector<Tile*> hand)
 {
 	return false;
 }
 
-bool isÕñÌı(std::vector<Tile*> hand)
+bool isæŒ¯å¬(std::vector<Tile*> hand, std::vector<Tile*> river, Tile* newtile)
 {
 	return false;
 }
 
-bool isÆß¶Ô(std::vector<Tile*> hand, Tile *)
+bool isä¸ƒå¯¹(std::vector<Tile*> hand, Tile *)
+{
+	if (hand.size() != 14)
+	{
+		return false;
+	}
+
+	return false;
+}
+
+bool iså›½å£«æ— åŒ(std::vector<Tile*> hand, Tile *)
 {
 	return false;
 }
 
-bool is¹úÊ¿ÎŞË«(std::vector<Tile*> hand, Tile *)
-{
-	return false;
-}
-
-bool isCommonºÍÅÆĞÍ(std::vector<Tile*> tiles) {
+bool isCommonå’Œç‰Œå‹(std::vector<Tile*> tiles) {
 
 	if (tiles.size() % 3 != 2) return false;
 
@@ -45,17 +50,17 @@ bool isCommonºÍÅÆĞÍ(std::vector<Tile*> tiles) {
 		return false;
 }
 
-bool canºÍÅÆ(std::vector<Tile*> hand, std::unordered_map<Tile*, std::vector<Tile*>> fulus, std::vector<Tile*> river, Tile * newtile, bool isHaidi)
+bool canå’Œç‰Œ(std::vector<Tile*> hand, std::unordered_map<Tile*, std::vector<Tile*>> fulus, std::vector<Tile*> river, Tile * newtile, bool isHaidi)
 {
 	return false;
 }
 
-std::vector<Tile*> findË³×Ó(std::vector<Tile*> tiles, int n)
+std::vector<Tile*> findé¡ºå­(std::vector<Tile*> tiles, int n)
 {
 	return {};
 }
 
-std::vector<Tile*> find¿Ì×Ó(std::vector<Tile*> tiles, int n)
+std::vector<Tile*> findåˆ»å­(std::vector<Tile*> tiles, int n)
 {
 	return {};
 }

@@ -1,4 +1,4 @@
-#include "Yaku.h"
+ï»¿#include "Yaku.h"
 
 #include <iostream>
 #include <algorithm>
@@ -43,13 +43,13 @@ namespace mahjong
 	{
 		std::vector<CompletedTiles> ret;
 
-		// ¶Ô
+		// å¯¹
 		std::vector<CompletedTiles> toitsuCompletedTiles;
 
-		// Ë³
+		// é¡º
 		std::vector<CompletedTiles> shuntsuCompletedTiles;
 
-		// ¿Ì
+		// åˆ»
 		std::vector<CompletedTiles> koutsuCompletedTiles;
 
 		bool flag = false;

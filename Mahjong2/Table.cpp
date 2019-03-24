@@ -1,4 +1,4 @@
-#include "Table.h"
+ï»¿#include "Table.h"
 #include "macro.h"
 #include "Rule.h"
 #include <random>
@@ -32,16 +32,16 @@ std::string Player::river_to_string()
 std::string Player::to_string()
 {
 	stringstream ss;
-	ss << "×Ô·ç" << wind_to_string(wind) << endl;
-	ss << "ÊÖÅÆ:" << hand_to_string();
+	ss << "è‡ªé£" << wind_to_string(wind) << endl;
+	ss << "æ‰‹ç‰Œ:" << hand_to_string();
 	ss << endl;
-	ss << "ÅÆºÓ:" << river_to_string();
+	ss << "ç‰Œæ²³:" << river_to_string();
 	ss << endl;
 	if (riichi) {
-		ss << "Á¢Ö±×´Ì¬" << endl;
+		ss << "ç«‹ç›´çŠ¶æ€" << endl;
 	}
 	else {
-		ss << "Î´Á¢Ö±×´Ì¬" << endl;
+		ss << "æœªç«‹ç›´çŠ¶æ€" << endl;
 	}
 	return ss.str();
 }
@@ -86,49 +86,49 @@ void Table::shuffle_tiles()
 void Table::init_yama()
 {
 	vector<Tile*> empty;
-	ÅÆÉ½.swap(empty);
+	ç‰Œå±±.swap(empty);
 	for (int i = 0; i < N_TILES; ++i) {
-		ÅÆÉ½.push_back(&(tiles[i]));
+		ç‰Œå±±.push_back(&(tiles[i]));
 	}
 }
 
 void Table::init_wind()
 {
-	player[×¯¼Ò].wind = Wind::East;
-	player[(×¯¼Ò + 1) % 4].wind = Wind::South;
-	player[(×¯¼Ò + 2) % 4].wind = Wind::West;
-	player[(×¯¼Ò + 3) % 4].wind = Wind::North;
+	player[åº„å®¶].wind = Wind::East;
+	player[(åº„å®¶ + 1) % 4].wind = Wind::South;
+	player[(åº„å®¶ + 2) % 4].wind = Wind::West;
+	player[(åº„å®¶ + 3) % 4].wind = Wind::North;
 }
 
-void Table::test_show_yama_with_ÍõÅÆ()
+void Table::test_show_yama_with_ç‹ç‰Œ()
 {
-	cout << "ÅÆÉ½:";
-	if (ÅÆÉ½.size() < 14) {
-		cout << "ÅÆ²»×ã14ÕÅ" << endl;
+	cout << "ç‰Œå±±:";
+	if (ç‰Œå±±.size() < 14) {
+		cout << "ç‰Œä¸è¶³14å¼ " << endl;
 		return;
 	}
 	for (int i = 0; i < 14; ++i) {
-		cout << ÅÆÉ½[i]->to_string() << " ";
+		cout << ç‰Œå±±[i]->to_string() << " ";
 	}
-	cout << "(ÍõÅÆÇø)| ";
-	for (int i = 14; i < ÅÆÉ½.size(); ++i) {
-		cout << ÅÆÉ½[i]->to_string() << " ";
+	cout << "(ç‹ç‰ŒåŒº)| ";
+	for (int i = 14; i < ç‰Œå±±.size(); ++i) {
+		cout << ç‰Œå±±[i]->to_string() << " ";
 	}
 	cout << endl;
-	cout << "±¦ÅÆÖ¸Ê¾ÅÆÎª:";
+	cout << "å®ç‰ŒæŒ‡ç¤ºç‰Œä¸º:";
 	for (int i = 0; i < dora_spec; ++i) {
-		cout << ÅÆÉ½[5 - i * 2]->to_string() << " ";
+		cout << ç‰Œå±±[5 - i * 2]->to_string() << " ";
 	}
 	cout << endl;
 }
 
 void Table::test_show_yama()
 {
-	cout << "ÅÆÉ½:";
-	for (int i = 0; i < ÅÆÉ½.size(); ++i) {
-		cout << ÅÆÉ½[i]->to_string() << " ";
+	cout << "ç‰Œå±±:";
+	for (int i = 0; i < ç‰Œå±±.size(); ++i) {
+		cout << ç‰Œå±±[i]->to_string() << " ";
 	}
-	cout << "¹²" << ÅÆÉ½.size() << "ÕÅÅÆ";
+	cout << "å…±" << ç‰Œå±±.size() << "å¼ ç‰Œ";
 	cout << endl;
 }
 
@@ -177,24 +177,24 @@ Result Table::GameProcess(bool verbose)
 	init_red_dora_3();
 	shuffle_tiles();
 	init_yama();
-	// Ã¿ÈË·¢13ÕÅÅÆ
+	// æ¯äººå‘13å¼ ç‰Œ
 	_deal(0, 13);
 	_deal(1, 13);
 	_deal(2, 13);
 	_deal(3, 13);
 	ALLSORT;
 
-	// ³õÊ¼»¯Ã¿ÈË×Ô·ç
+	// åˆå§‹åŒ–æ¯äººè‡ªé£
 	init_wind();
-	// ¸ø×¯¼Ò·¢ÅÆ
-	·¢ÅÆ(×¯¼Ò);	
+	// ç»™åº„å®¶å‘ç‰Œ
+	å‘ç‰Œ(åº„å®¶);	
 
-	turn = ×¯¼Ò;
+	turn = åº„å®¶;
 	VERBOSE{
 		test_show_all();
 	}
 
-	// ÓÎÏ·½ø³ÌµÄÖ÷Ñ­»·,Ñ­»·µÄ¿ªÊ¼ÊÇÄ³ÈËÓĞ14ÕÅÅÆ
+	// æ¸¸æˆè¿›ç¨‹çš„ä¸»å¾ªç¯,å¾ªç¯çš„å¼€å§‹æ˜¯æŸäººæœ‰14å¼ ç‰Œ
 	while (1) {
 
 	}
@@ -202,8 +202,8 @@ Result Table::GameProcess(bool verbose)
 
 void Table::_deal(int i_player)
 {		
-	player[i_player].hand.push_back(ÅÆÉ½.back());
-	ÅÆÉ½.pop_back();
+	player[i_player].hand.push_back(ç‰Œå±±.back());
+	ç‰Œå±±.pop_back();
 }
 
 void Table::_deal(int i_player, int n_tiles)
@@ -213,15 +213,15 @@ void Table::_deal(int i_player, int n_tiles)
 	}
 }
 
-void Table::·¢ÅÆ(int i_player)
+void Table::å‘ç‰Œ(int i_player)
 {
 	_deal(i_player);
-	openGameLog.logÃşÅÆ(i_player, nullptr);
-	fullGameLog.logÃşÅÆ(i_player, player[i_player].hand.back());
+	openGameLog.logæ‘¸ç‰Œ(i_player, nullptr);
+	fullGameLog.logæ‘¸ç‰Œ(i_player, player[i_player].hand.back());
 }
 
-Table::Table(int ×¯¼Ò)
-	: dora_spec(1), ×¯¼Ò(×¯¼Ò)
+Table::Table(int åº„å®¶)
+	: dora_spec(1), åº„å®¶(åº„å®¶)
 {
 }
 
@@ -233,36 +233,36 @@ std::vector<SelfAction> Table::GetValidActions()
 
 	// if (hand.size() != 14) throw runtime_error("??");
 
-	if (is¹úÊ¿ÎŞË«(hand, nullptr)) {
-		s.push_back(SelfAction(Action::×ÔÃş, { hand.back() }));
+	if (iså›½å£«æ— åŒ(hand, nullptr)) {
+		s.push_back(SelfAction(Action::è‡ªæ‘¸, { hand.back() }));
 	}
-	if (isÆß¶Ô(hand, nullptr)) {
-		s.push_back(SelfAction(Action::×ÔÃş, { hand.back() }));
+	if (isä¸ƒå¯¹(hand, nullptr)) {
+		s.push_back(SelfAction(Action::è‡ªæ‘¸, { hand.back() }));
 	}
 
 	// check riichi status
 	if (p.riichi) {		
-		if (isCommonºÍÅÆĞÍ(hand)) {
-			s.push_back(SelfAction(Action::×ÔÃş, { hand.back() }));
+		if (isCommonå’Œç‰Œå‹(hand)) {
+			s.push_back(SelfAction(Action::è‡ªæ‘¸, { hand.back() }));
 		}
-	}	
+	}
 	else {		
-		if (isCommonºÍÅÆĞÍ(hand)) {
-			if (canºÍÅÆ(p.hand, p.¸±Â¶s, p.river, nullptr, 
-				// ÕâÒ»ĞĞµÄÄ¿µÄÊÇÅĞ¶ÏÊÇ·ñÎªº£µ×
-				(ÅÆÉ½.size() + dora_spec - 1) == 14
+		if (isCommonå’Œç‰Œå‹(hand)) {
+			if (canå’Œç‰Œ(p.hand, p.å‰¯éœ²s, p.river, nullptr, 
+				// è¿™ä¸€è¡Œçš„ç›®çš„æ˜¯åˆ¤æ–­æ˜¯å¦ä¸ºæµ·åº•
+				(ç‰Œå±±.size() + dora_spec - 1) == 14
 			)) {
-				s.push_back(SelfAction(Action::×ÔÃş, { hand.back() }));
+				s.push_back(SelfAction(Action::è‡ªæ‘¸, { hand.back() }));
 			}			
 		}
 		for (auto &tile : hand) {
 			if (tile != hand.back()) {
-				// Ã¿ÕÅÅÆ¶¼¿ÉÒÔ´ò£¬³ıÁË×îºóÒ»ÕÅ
-				s.push_back(SelfAction(Action::ÊÖÇĞ, { tile }));
+				// æ¯å¼ ç‰Œéƒ½å¯ä»¥æ‰“ï¼Œé™¤äº†æœ€åä¸€å¼ 
+				s.push_back(SelfAction(Action::æ‰‹åˆ‡, { tile }));
 			}
 		}
 	}
-	s.push_back(SelfAction(Action::ÃşÇĞ, { hand.back() }));
+	s.push_back(SelfAction(Action::æ‘¸åˆ‡, { hand.back() }));
 	return s;
 }
 
@@ -276,7 +276,7 @@ Table::~Table()
 #pragma region(GAMELOG)
 BaseGameLog::BaseGameLog(int p1, int p2, Action action, Tile *tile,
 	std::vector<Tile*> fulu)
-	:player(p1), player2(p2), action(action), ÅÆ(tile), ¸±Â¶(fulu)
+	:player(p1), player2(p2), action(action), ç‰Œ(tile), å‰¯éœ²(fulu)
 {
 }
 
@@ -284,45 +284,45 @@ std::string BaseGameLog::to_string()
 {
 	stringstream ss;
 	switch (action) {
-	case Action::°µ¸Ü:
-		ss << "°µ¸Ü|"; 
-		goto ¸±Â¶Çé¿ö;
-	case Action::Åö:
-		ss << "Åö|";
-		goto ¸±Â¶Çé¿ö;
-	case Action::³Ô:
-		ss << "³Ô|";
-		goto ¸±Â¶Çé¿ö;
-	case Action::ÊÖÇĞ:
-		ss << "ÊÖÇĞ|";
-		goto ³öÅÆÇé¿ö;
-	case Action::ÃşÇĞ:
-		ss << "ÃşÇĞ|";
-		goto ³öÅÆÇé¿ö;
-	case Action::ÃşÅÆ:
-		ss << "ÃşÅÆ|";
-		goto ³öÅÆÇé¿ö;
-	case Action::ÊÖÇĞÁ¢Ö±:
-		ss << "ÊÖÇĞÁ¢Ö±|";
-		goto Á¢Ö±Çé¿ö;
-	case Action::ÃşÇĞÁ¢Ö±:
-		ss << "ÃşÇĞÁ¢Ö±|";
-		goto Á¢Ö±Çé¿ö;
+	case Action::æš—æ :
+		ss << "æš—æ |"; 
+		goto å‰¯éœ²æƒ…å†µ;
+	case Action::ç¢°:
+		ss << "ç¢°|";
+		goto å‰¯éœ²æƒ…å†µ;
+	case Action::åƒ:
+		ss << "åƒ|";
+		goto å‰¯éœ²æƒ…å†µ;
+	case Action::æ‰‹åˆ‡:
+		ss << "æ‰‹åˆ‡|";
+		goto å‡ºç‰Œæƒ…å†µ;
+	case Action::æ‘¸åˆ‡:
+		ss << "æ‘¸åˆ‡|";
+		goto å‡ºç‰Œæƒ…å†µ;
+	case Action::æ‘¸ç‰Œ:
+		ss << "æ‘¸ç‰Œ|";
+		goto å‡ºç‰Œæƒ…å†µ;
+	case Action::æ‰‹åˆ‡ç«‹ç›´:
+		ss << "æ‰‹åˆ‡ç«‹ç›´|";
+		goto ç«‹ç›´æƒ…å†µ;
+	case Action::æ‘¸åˆ‡ç«‹ç›´:
+		ss << "æ‘¸åˆ‡ç«‹ç›´|";
+		goto ç«‹ç›´æƒ…å†µ;
 	default:
 		return "??\n";
 	}
-Á¢Ö±Çé¿ö:	
-³öÅÆÇé¿ö:
-	if (ÅÆ == nullptr) {
+ç«‹ç›´æƒ…å†µ:	
+å‡ºç‰Œæƒ…å†µ:
+	if (ç‰Œ == nullptr) {
 		ss << "-";
 	}
 	else {
-		ss << ÅÆ->to_string();
+		ss << ç‰Œ->to_string();
 	}
 	ss << "|Player" << player << endl;
 	return ss.str();
-¸±Â¶Çé¿ö:
-	ss << ¸±Â¶_to_string(ÅÆ, ¸±Â¶)
+å‰¯éœ²æƒ…å†µ:
+	ss << å‰¯éœ²_to_string(ç‰Œ, å‰¯éœ²)
 		<< "|Player" << player
 		<< "|Player2" << player2
 		<< endl;
@@ -344,19 +344,19 @@ void GameLog::_log(int player1, int player2, Action action,
 	logs.push_back(BaseGameLog(player1, player2, action, tile, fulu));
 }
 
-void GameLog::logÃşÅÆ(int player, Tile* tile)
+void GameLog::logæ‘¸ç‰Œ(int player, Tile* tile)
 {
-	_log(player, -1, Action::ÃşÅÆ, tile, {});
+	_log(player, -1, Action::æ‘¸ç‰Œ, tile, {});
 }
 
-void GameLog::logÃşÇĞ(int player, Tile *tile)
+void GameLog::logæ‘¸åˆ‡(int player, Tile *tile)
 {
-	_log(player, -1, Action::ÃşÇĞ, tile, {});
+	_log(player, -1, Action::æ‘¸åˆ‡, tile, {});
 }
 
-void GameLog::logÊÖÇĞ(int player, Tile *tile)
+void GameLog::logæ‰‹åˆ‡(int player, Tile *tile)
 {
-	_log(player, -1, Action::ÊÖÇĞ, tile, {});
+	_log(player, -1, Action::æ‰‹åˆ‡, tile, {});
 }
 #pragma endregion
 

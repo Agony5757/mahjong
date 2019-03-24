@@ -1,9 +1,9 @@
-#pragma once
+ï»¿#pragma once
 
 #include <vector>
 #include <algorithm>
 #include <type_traits>
-#include "../ºÍÅÆÅÐ¶ÏÆ÷/Yaku.h"
+#include "../å’Œç‰Œåˆ¤æ–­å™¨/Yaku.h"
 
 #define VERBOSE if (verbose)
 #define SORT(player) player.sort_hand();
@@ -13,7 +13,7 @@
 #define TEST_EQ_VERBOSE(value, expected) if (value == expected) cout<<"PASS"<<endl; else cout<<"FAIL"<<endl;
 
 template<typename T>
-bool is_in(std::vector<T> vec, T &elem){
+bool is_in(std::vector<T> vec, const T &elem){
 	if (find(vec.begin(), vec.end(), elem) != vec.end()) {
 		return true;
 	}
@@ -54,6 +54,30 @@ inline std::vector<mahjong::Tile> convert_tiles_to_extern_tiles(std::vector<Tile
 		default:
 			throw std::runtime_error("??");
 		}
+	}
+	return newtiles;
+}
+
+inline std::vector<BaseTile> convert_extern_tiles_to_basetiles(std::vector<mahjong::Tile> tiles) {
+	std::vector<BaseTile> newtiles;
+	for (auto tile : tiles) {
+		int type;
+		int number = tile.getTileNumber();
+		switch (tile.getTileType()) {
+		case mahjong::TileType::Manzu:
+			type = 0; break;
+		case mahjong::TileType::Souzu:
+			type = 1; break;
+		case mahjong::TileType::Ponzu:
+			type = 2; break;
+		case mahjong::TileType::Special:
+			type = 3; break;
+		default:
+			throw std::runtime_error("??");
+		}
+		auto basetile_number = type * 9 + number;
+		BaseTile t = static_cast<BaseTile>(basetile_number);
+		newtiles.push_back(t);
 	}
 	return newtiles;
 }

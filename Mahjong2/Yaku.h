@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "Tile.h"
 
@@ -6,9 +6,9 @@ class Yaku
 {
 public:
 	Yaku();
-	virtual bool test(std::vector<Tile*> ÊÖÅÆ,
-		std::unordered_map<Tile*, std::vector<Tile*>> ¸±Â¶s,
-		std::vector<Tile*> ÅÆºÓ,
-	    Tile* µÈ´ýÅÆ) = 0;
+	virtual bool test(std::vector<Tile*> æ‰‹ç‰Œ,
+		std::unordered_map<Tile*, std::vector<Tile*>> å‰¯éœ²s,
+		std::vector<Tile*> ç‰Œæ²³,
+	    Tile* ç­‰å¾…ç‰Œ) = 0;
 };
 
