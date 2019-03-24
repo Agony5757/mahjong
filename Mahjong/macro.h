@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿#ifndef MACRO_H
+#define MACRO_H
 
 #include <vector>
 #include <algorithm>
@@ -81,3 +82,5 @@ inline std::vector<BaseTile> convert_extern_tiles_to_basetiles(std::vector<mahjo
 	}
 	return newtiles;
 }
+
+#endif

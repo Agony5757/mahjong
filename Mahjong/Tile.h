@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿#ifndef TILE_H
+#define TILE_H
+
 #include <memory>
 #include <vector>
 #include <unordered_map>
@@ -117,3 +119,5 @@ inline std::string wind_to_string(Wind wind) {
 		return "??";
 	}
 }
+
+#endif

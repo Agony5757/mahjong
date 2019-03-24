@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿#ifndef RULE_H
+#define RULE_H
 
 #include "Table.h"
 
@@ -23,3 +24,5 @@ bool can和牌(std::vector<Tile*> hand,
 	std::vector<Tile*> river,
 	Tile* newtile, // 用自摸牌(nullptr)
 	bool isHaidi);
+
+#endif
