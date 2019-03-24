@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "Tile.h"
 
@@ -6,17 +6,17 @@ constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
 
 enum class Action : uint8_t {
-	³Ô, Åö,
-	¸Ü,
-	°µ¸Ü,
-	ÊÖÇĞ,
-	ÃşÇĞ,
-	ÊÖÇĞÁ¢Ö±,
-	ÃşÇĞÁ¢Ö±,
-	ÃşÅÆ,
-	×ÔÃş,
-	ÈÙºÍ,
-	¾ÅÖÖ¾ÅÅÆ,
+	åƒ, ç¢°,
+	æ ,
+	æš—æ ,
+	æ‰‹åˆ‡,
+	æ‘¸åˆ‡,
+	æ‰‹åˆ‡ç«‹ç›´,
+	æ‘¸åˆ‡ç«‹ç›´,
+	æ‘¸ç‰Œ,
+	è‡ªæ‘¸,
+	è£å’Œ,
+	ä¹ç§ä¹ç‰Œ,
 };
 
 struct SelfAction {
@@ -31,11 +31,11 @@ struct ResponseAction {
 };
 
 struct BaseGameLog {
-	int player; // Ö÷½Ğ
-	int player2;// ±»½Ğ
+	int player; // ä¸»å«
+	int player2;// è¢«å«
 	Action action;
-	Tile* ÅÆ;
-	std::vector<Tile*> ¸±Â¶;	
+	Tile* ç‰Œ;
+	std::vector<Tile*> å‰¯éœ²;	
 
 	BaseGameLog(int, int, Action, Tile*, std::vector<Tile*>);
 
@@ -47,9 +47,9 @@ public:
 	std::vector<BaseGameLog> logs;
 	std::string to_string();
 	void _log(int player1, int player2, Action, Tile*, std::vector<Tile*>);
-	void logÃşÅÆ(int player, Tile*);
-	void logÃşÇĞ(int player, Tile*);
-	void logÊÖÇĞ(int player, Tile*);
+	void logæ‘¸ç‰Œ(int player, Tile*);
+	void logæ‘¸åˆ‡(int player, Tile*);
+	void logæ‰‹åˆ‡(int player, Tile*);
 };
 
 class Player {
@@ -57,11 +57,11 @@ public:
 	Player();
 	bool riichi;
 	Wind wind;
-	bool Ç×¼Ò;
+	bool äº²å®¶;
 	int score;
 	std::vector<Tile*> hand;
 	std::vector<Tile*> river;
-	std::unordered_map<Tile*, std::vector<Tile*>> ¸±Â¶s;
+	std::unordered_map<Tile*, std::vector<Tile*>> å‰¯éœ²s;
 	std::string hand_to_string();
 	std::string river_to_string();
 
@@ -74,44 +74,44 @@ public:
 };
 
 enum ResultType {
-	ÈÙºÍÖÕ¾Ö,
-	×ÔÃşÖÕ¾Ö,
-	ÎŞÈËÌıÅÆÁ÷¾Ö,
-	Ò»ÈËÌıÅÆÁ÷¾Ö,
-	Á½ÈËÌıÅÆÁ÷¾Ö,
-	ÈıÈËÌıÅÆÁ÷¾Ö,
-	ËÄÈËÌıÅÆÁ÷¾Ö,
-	Á½¼ÒÈÙºÍ,
-	Èı¼ÒÈÙºÍ,
+	è£å’Œç»ˆå±€,
+	è‡ªæ‘¸ç»ˆå±€,
+	æ— äººå¬ç‰Œæµå±€,
+	ä¸€äººå¬ç‰Œæµå±€,
+	ä¸¤äººå¬ç‰Œæµå±€,
+	ä¸‰äººå¬ç‰Œæµå±€,
+	å››äººå¬ç‰Œæµå±€,
+	ä¸¤å®¶è£å’Œ,
+	ä¸‰å®¶è£å’Œ,
 
-	Á÷¾ÖÂú¹á,
+	æµå±€æ»¡è´¯,
 
-	¾ÅÖÖ¾ÅÅÆÁ÷¾Ö,
-	ËÄ·çÁ¬´ò,
-	ËÄ¸ÜÁ÷¾Ö,
-	ËÄ¼ÒÁ¢Ö±,
+	ä¹ç§ä¹ç‰Œæµå±€,
+	å››é£è¿æ‰“,
+	å››æ æµå±€,
+	å››å®¶ç«‹ç›´,
 };
 
 struct Result {
 	ResultType result_type;
 
-	// ×ÔÃş£¬Ò»¼ÒÈÙºÍµÄÇé¿ö
+	// è‡ªæ‘¸ï¼Œä¸€å®¶è£å’Œçš„æƒ…å†µ
 	int score;
 	int fan;
 	int fu;
-	int ÒÛÂú±¶Êı;
+	int å½¹æ»¡å€æ•°;
 
-	// Á½¼ÒÈÙºÍµÄÇé¿ö
+	// ä¸¤å®¶è£å’Œçš„æƒ…å†µ
 	int score2;
 	int fan2;
 	int fu2;
-	int ÒÛÂú±¶Êı2;
+	int å½¹æ»¡å€æ•°2;
 
-	// Èı¼ÒÈÙºÍµÄÇé¿ö
+	// ä¸‰å®¶è£å’Œçš„æƒ…å†µ
 	int score3;
 	int fan3;
 	int fu3;
-	int ÒÛÂú±¶Êı3;
+	int å½¹æ»¡å€æ•°3;
 
 	std::vector<int> winner;
 	std::vector<int> loser;
@@ -123,8 +123,8 @@ private:
 	Tile tiles[N_TILES];
 public:
 	int dora_spec;
-	Wind ³¡·ç;
-	int ×¯¼Ò;
+	Wind åœºé£;
+	int åº„å®¶;
 	void init_tiles();
 	void init_red_dora_3();
 	void shuffle_tiles();
@@ -135,7 +135,7 @@ public:
 	void _deal(int i_player);
 	void _deal(int i_player, int n_tiles);
 
-	void ·¢ÅÆ(int i_player);
+	void å‘ç‰Œ(int i_player);
 
 	inline void next_turn() { turn++; turn = turn % 4; }
 
@@ -144,17 +144,17 @@ public:
 
 	int turn;
 
-	Table(int ×¯¼Ò);
+	Table(int åº„å®¶);
 
-	// ÒòÎªÒ»¶¨ÊÇturnËùÔÚµÄplayerĞĞ¶¯£¬ËùÒÔ²»ĞèÒªÊäÈëplayerID
+	// å› ä¸ºä¸€å®šæ˜¯turnæ‰€åœ¨çš„playerè¡ŒåŠ¨ï¼Œæ‰€ä»¥ä¸éœ€è¦è¾“å…¥playerID
 	std::vector<SelfAction> GetValidActions();
 	std::vector<ResponseAction> GetValidResponse(int player);
 
-	std::vector<Tile*> ÅÆÉ½;
+	std::vector<Tile*> ç‰Œå±±;
 	Player player[4];
 	~Table();
 
-	void test_show_yama_with_ÍõÅÆ();
+	void test_show_yama_with_ç‹ç‰Œ();
 	void test_show_yama();
 	void test_show_player_hand(int i_player);
 	void test_show_all_player_hand();
@@ -164,11 +164,11 @@ public:
 	void test_show_full_gamelog();
 
 	inline void test_show_all() {
-		test_show_yama_with_ÍõÅÆ();
+		test_show_yama_with_ç‹ç‰Œ();
 		test_show_all_player_info();
 		test_show_open_gamelog();
 		test_show_full_gamelog();
-		std::cout << "ÂÖµ½Player" << turn << std::endl;
+		std::cout << "è½®åˆ°Player" << turn << std::endl;
 	}
 
 	Result GameProcess(bool);
