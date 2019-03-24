@@ -6,6 +6,11 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Mahjong", "Mahjong\Mahjong.vcxproj", "{AA9CD7F4-4237-42C6-A01E-C161B16E280A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Mahjong2", "Mahjong2\Mahjong2.vcxproj", "{65F5975D-89ED-4F8C-A2BA-AFA52D7E1177}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DF09C6F9-D070-4885-946B-8982DDD1419B} = {DF09C6F9-D070-4885-946B-8982DDD1419B}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "和牌判断器", "和牌判断器\和牌判断器.vcxproj", "{DF09C6F9-D070-4885-946B-8982DDD1419B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +36,14 @@ Global
 		{65F5975D-89ED-4F8C-A2BA-AFA52D7E1177}.Release|x64.Build.0 = Release|x64
 		{65F5975D-89ED-4F8C-A2BA-AFA52D7E1177}.Release|x86.ActiveCfg = Release|Win32
 		{65F5975D-89ED-4F8C-A2BA-AFA52D7E1177}.Release|x86.Build.0 = Release|Win32
+		{DF09C6F9-D070-4885-946B-8982DDD1419B}.Debug|x64.ActiveCfg = Debug|x64
+		{DF09C6F9-D070-4885-946B-8982DDD1419B}.Debug|x64.Build.0 = Debug|x64
+		{DF09C6F9-D070-4885-946B-8982DDD1419B}.Debug|x86.ActiveCfg = Debug|Win32
+		{DF09C6F9-D070-4885-946B-8982DDD1419B}.Debug|x86.Build.0 = Debug|Win32
+		{DF09C6F9-D070-4885-946B-8982DDD1419B}.Release|x64.ActiveCfg = Release|x64
+		{DF09C6F9-D070-4885-946B-8982DDD1419B}.Release|x64.Build.0 = Release|x64
+		{DF09C6F9-D070-4885-946B-8982DDD1419B}.Release|x86.ActiveCfg = Release|Win32
+		{DF09C6F9-D070-4885-946B-8982DDD1419B}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

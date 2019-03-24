@@ -1,5 +1,7 @@
 #include "Table.h"
 #include "macro.h"
+#include "Rule.h"
+#include <random>
 using namespace std;
 
 #pragma region PLAYER
@@ -76,11 +78,9 @@ void Table::init_red_dora_3()
 
 void Table::shuffle_tiles()
 {
-	srand((unsigned)time(NULL));
-	for (int i = N_TILES - 1; i > 0; --i)
-	{
-		swap(tiles[i], tiles[rand() % (i + 1)]);
-	}
+	std::random_device rd;
+	std::mt19937 g(rd());
+	std::shuffle(tiles, tiles + N_TILES, g);
 }
 
 void Table::init_yama()
@@ -225,6 +225,47 @@ Table::Table(int 庄家)
 {
 }
 
+std::vector<SelfAction> Table::GetValidActions()
+{
+	vector<SelfAction> s;
+	auto &p = player[turn];
+	auto hand = player[turn].hand;
+
+	// if (hand.size() != 14) throw runtime_error("??");
+
+	if (is国士无双(hand, nullptr)) {
+		s.push_back(SelfAction(Action::自摸, { hand.back() }));
+	}
+	if (is七对(hand, nullptr)) {
+		s.push_back(SelfAction(Action::自摸, { hand.back() }));
+	}
+
+	// check riichi status
+	if (p.riichi) {		
+		if (isCommon和牌型(hand)) {
+			s.push_back(SelfAction(Action::自摸, { hand.back() }));
+		}
+	}	
+	else {		
+		if (isCommon和牌型(hand)) {
+			if (can和牌(p.hand, p.副露s, p.river, nullptr, 
+				// 这一行的目的是判断是否为海底
+				(牌山.size() + dora_spec - 1) == 14
+			)) {
+				s.push_back(SelfAction(Action::自摸, { hand.back() }));
+			}			
+		}
+		for (auto &tile : hand) {
+			if (tile != hand.back()) {
+				// 每张牌都可以打，除了最后一张
+				s.push_back(SelfAction(Action::手切, { tile }));
+			}
+		}
+	}
+	s.push_back(SelfAction(Action::摸切, { hand.back() }));
+	return s;
+}
+
 
 Table::~Table()
 {
@@ -232,6 +273,7 @@ Table::~Table()
 
 #pragma endregion
 
+#pragma region(GAMELOG)
 BaseGameLog::BaseGameLog(int p1, int p2, Action action, Tile *tile,
 	std::vector<Tile*> fulu)
 	:player(p1), player2(p2), action(action), 牌(tile), 副露(fulu)
@@ -260,10 +302,16 @@ std::string BaseGameLog::to_string()
 	case Action::摸牌:
 		ss << "摸牌|";
 		goto 出牌情况;
+	case Action::手切立直:
+		ss << "手切立直|";
+		goto 立直情况;
+	case Action::摸切立直:
+		ss << "摸切立直|";
+		goto 立直情况;
 	default:
 		return "??\n";
 	}
-	
+立直情况:	
 出牌情况:
 	if (牌 == nullptr) {
 		ss << "-";
@@ -309,4 +357,10 @@ void GameLog::log摸切(int player, Tile *tile)
 void GameLog::log手切(int player, Tile *tile)
 {
 	_log(player, -1, Action::手切, tile, {});
+}
+#pragma endregion
+
+SelfAction::SelfAction(Action action, std::vector<Tile*> tiles)
+	:action(action), correspond_tiles(tiles)
+{
 }
