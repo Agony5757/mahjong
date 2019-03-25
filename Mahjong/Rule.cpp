@@ -2,33 +2,6 @@
 #include "macro.h"
 
 using namespace std;
-static std::vector<Tile*> find顺子(std::vector<Tile*> tiles, int n);
-static std::vector<Tile*> find刻子(std::vector<Tile*> tiles, int n);
-
-bool is听牌(std::vector<Tile*> hand)
-{
-	return false;
-}
-
-bool is振听(std::vector<Tile*> hand, std::vector<Tile*> river, Tile* newtile)
-{
-	return false;
-}
-
-bool is七对(std::vector<Tile*> hand, Tile *)
-{
-	if (hand.size() != 14)
-	{
-		return false;
-	}
-
-	return false;
-}
-
-bool is国士无双(std::vector<Tile*> hand, Tile *)
-{
-	return false;
-}
 
 bool isCommon和牌型(std::vector<Tile*> tiles) {
 
@@ -48,19 +21,4 @@ bool isCommon和牌型(std::vector<Tile*> tiles) {
 		return true;
 	else
 		return false;
-}
-
-bool can和牌(std::vector<Tile*> hand, std::unordered_map<Tile*, std::vector<Tile*>> fulus, std::vector<Tile*> river, Tile * newtile, bool isHaidi)
-{
-	return false;
-}
-
-std::vector<Tile*> find顺子(std::vector<Tile*> tiles, int n)
-{
-	return {};
-}
-
-std::vector<Tile*> find刻子(std::vector<Tile*> tiles, int n)
-{
-	return {};
 }

@@ -94,10 +94,10 @@ void Table::init_yama()
 
 void Table::init_wind()
 {
-	player[庄家].wind = Wind::East;
-	player[(庄家 + 1) % 4].wind = Wind::South;
-	player[(庄家 + 2) % 4].wind = Wind::West;
-	player[(庄家 + 3) % 4].wind = Wind::North;
+	player[dealer].wind = Wind::East;
+	player[(dealer + 1) % 4].wind = Wind::South;
+	player[(dealer + 2) % 4].wind = Wind::West;
+	player[(dealer + 3) % 4].wind = Wind::North;
 }
 
 void Table::test_show_yama_with_王牌()
@@ -187,9 +187,9 @@ Result Table::GameProcess(bool verbose)
 	// 初始化每人自风
 	init_wind();
 	// 给庄家发牌
-	发牌(庄家);	
+	发牌(dealer);	
 
-	turn = 庄家;
+	turn = dealer;
 	VERBOSE{
 		test_show_all();
 	}
@@ -221,7 +221,7 @@ void Table::发牌(int i_player)
 }
 
 Table::Table(int 庄家)
-	: dora_spec(1), 庄家(庄家)
+	: dora_spec(1), dealer(庄家)
 {
 }
 
@@ -233,36 +233,36 @@ std::vector<SelfAction> Table::GetValidActions()
 
 	// if (hand.size() != 14) throw runtime_error("??");
 
-	if (is国士无双(hand, nullptr)) {
-		s.push_back(SelfAction(Action::自摸, { hand.back() }));
-	}
-	if (is七对(hand, nullptr)) {
-		s.push_back(SelfAction(Action::自摸, { hand.back() }));
-	}
+	//if (is国士无双(hand, nullptr)) {
+	//	s.push_back(SelfAction(Action::自摸, { hand.back() }));
+	//}
+	//if (is七对(hand, nullptr)) {
+	//	s.push_back(SelfAction(Action::自摸, { hand.back() }));
+	//}
 
-	// check riichi status
-	if (p.riichi) {		
-		if (isCommon和牌型(hand)) {
-			s.push_back(SelfAction(Action::自摸, { hand.back() }));
-		}
-	}
-	else {		
-		if (isCommon和牌型(hand)) {
-			if (can和牌(p.hand, p.副露s, p.river, nullptr, 
-				// 这一行的目的是判断是否为海底
-				(牌山.size() + dora_spec - 1) == 14
-			)) {
-				s.push_back(SelfAction(Action::自摸, { hand.back() }));
-			}			
-		}
-		for (auto &tile : hand) {
-			if (tile != hand.back()) {
-				// 每张牌都可以打，除了最后一张
-				s.push_back(SelfAction(Action::手切, { tile }));
-			}
-		}
-	}
-	s.push_back(SelfAction(Action::摸切, { hand.back() }));
+	//// check riichi status
+	//if (p.riichi) {		
+	//	if (isCommon和牌型(hand)) {
+	//		s.push_back(SelfAction(Action::自摸, { hand.back() }));
+	//	}
+	//}
+	//else {		
+	//	if (isCommon和牌型(hand)) {
+	//		if (can和牌(p.hand, p.副露s, p.river, nullptr, 
+	//			// 这一行的目的是判断是否为海底
+	//			(牌山.size() + dora_spec - 1) == 14
+	//		)) {
+	//			s.push_back(SelfAction(Action::自摸, { hand.back() }));
+	//		}			
+	//	}
+	//	for (auto &tile : hand) {
+	//		if (tile != hand.back()) {
+	//			// 每张牌都可以打，除了最后一张
+	//			s.push_back(SelfAction(Action::手切, { tile }));
+	//		}
+	//	}
+	//}
+	//s.push_back(SelfAction(Action::摸切, { hand.back() }));
 	return s;
 }
 

@@ -125,7 +125,7 @@ private:
 public:
 	int dora_spec;
 	Wind 场风;
-	int 庄家;
+	int dealer; // 庄家
 	void init_tiles();
 	void init_red_dora_3();
 	void shuffle_tiles();
