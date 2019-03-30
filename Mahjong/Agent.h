@@ -29,7 +29,7 @@ public:
 	}
 };
 
-class RealPlayer : class Agent {
+class RealPlayer : public Agent {
 public:
 	int get_self_action(TableStatus status, std::vector<SelfAction> actions) {
 
