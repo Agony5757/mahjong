@@ -2,56 +2,12 @@
 #define TABLE_H
 
 #include "Tile.h"
+#include "Action.h"
+#include "GameLog.h"
+#include "Agent.h"
 
 constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
-
-enum class Action : uint8_t {
-	吃, 碰,
-	杠,
-	暗杠,
-	手切,
-	摸切,
-	手切立直,
-	摸切立直,
-	摸牌,
-	自摸,
-	荣和,
-	九种九牌,
-};
-
-struct SelfAction {
-	Action action;
-	std::vector<Tile*> correspond_tiles;
-	SelfAction(Action, std::vector<Tile*>);
-};
-
-struct ResponseAction {
-	Action action;
-	std::vector<Tile*> correspond_tiles;
-};
-
-struct BaseGameLog {
-	int player; // 主叫
-	int player2;// 被叫
-	Action action;
-	Tile* 牌;
-	std::vector<Tile*> 副露;	
-
-	BaseGameLog(int, int, Action, Tile*, std::vector<Tile*>);
-
-	std::string to_string();
-};
-
-class GameLog {
-public:
-	std::vector<BaseGameLog> logs;
-	std::string to_string();
-	void _log(int player1, int player2, Action, Tile*, std::vector<Tile*>);
-	void log摸牌(int player, Tile*);
-	void log摸切(int player, Tile*);
-	void log手切(int player, Tile*);
-};
 
 class Player {
 public:
@@ -123,6 +79,8 @@ class Table
 private:
 	Tile tiles[N_TILES];
 public:
+
+	Agent* agents[4];
 	int dora_spec;
 	Wind 场风;
 	int dealer; // 庄家
