@@ -51,7 +51,7 @@ MahjongAlgorithm文件夹：一个第三方的，可以将牌进行3n+2拆解的
 第二步：主循环
 
 	0. 循环的起点是player[turn]具有3n+2张牌的情况。
-	1. 对于player[turn]，if (after_kan) 摸岭上牌，更新牌山；否则普通摸牌。（记录）
+	1. 对于player[turn]，if (after_kan) 摸岭上牌，更新牌山；否则普通摸牌。（记录）。流局：四杠流局判定；荒牌流局判定；四风连打流局判定；四立直流局判定；在摸牌前进行。
 	2. 如果是非立直状态 valid_action = GetValidAction()
 	   如果是立直状态   valid_action = GetRiichiSelfAction()
 	3. 通过Player[turn].gameLog，构造TableStatus对象table_status
@@ -113,6 +113,22 @@ MahjongAlgorithm文件夹：一个第三方的，可以将牌进行3n+2拆解的
 			所有人的一发状态 = false，第一巡状态 = false
 			after_chipon = false
 
+	case 暗杠：
+		对于i = 0,1,2,3 except turn
+		response_action = Get抢暗杠(i)
+		将每个response_action传递到对应的agent那里，通过Plyaer[i].gameLog构造TableStatus对象
+		获得每个player的Action
+
+		response_action.action只有pass和抢杠
+		case pass:
+			after_kan = true
+			将牌移动到fulus对应的那一项中
+			所有人的一发状态 = false，第一巡状态 = false
+			after_chipon = false
+
+	case 立直:
+		和打牌的状态一样。除了ron的情况，在回到循环起点之前，执行:player[turn]的立直状态=true。扣1000点。
+
 	case 自摸:
 		进行游戏结算
 
@@ -146,4 +162,9 @@ MahjongAlgorithm文件夹：一个第三方的，可以将牌进行3n+2拆解的
 	2. 添加pass
 
 ### Get抢杠
-	1. not振听 && 判断手牌+新牌 == 普通胡牌型 = 添加荣和
+	1. not振听 && 判断手牌+新牌 == 和牌型 = 添加荣和
+	2. 添加pass
+
+### Get抢暗杠
+	1. not振听 && 判断手牌+新牌 == 国士无双 = 添加荣和
+	2. 添加pass
