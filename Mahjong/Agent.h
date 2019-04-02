@@ -20,20 +20,22 @@
 // Abstract base class
 class Agent {
 public:
-	virtual inline int get_self_action(TableStatus status, std::vector<SelfAction> actions) {
+	virtual inline int get_self_action(Table* table, std::vector<SelfAction> actions) {
 		return 0;
 	}
 	
-	virtual inline int get_response_action(TableStatus status, std::vector<ResponseAction> actions) {
+	virtual inline int get_response_action(Table*, std::vector<ResponseAction> actions) {
 		return 0;
 	}
 };
 
 class RealPlayer : public Agent {
 public:
-	int get_self_action(TableStatus status, std::vector<SelfAction> actions) {
-
+	int get_self_action(Table* status, std::vector<SelfAction> actions) {
+		
 	}
 };
+
+
 
 #endif

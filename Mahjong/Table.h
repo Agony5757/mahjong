@@ -103,7 +103,7 @@ public:
 
 	int turn;
 
-	Table(int 庄家);
+	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4);
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
 	std::vector<SelfAction> GetValidActions();

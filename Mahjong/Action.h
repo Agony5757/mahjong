@@ -4,18 +4,22 @@
 #include "Tile.h"
 
 enum class Action : uint8_t {
+	// response begin
 	pass,
-	吃, 碰,
+	吃, 
+	碰,
 	杠,
-	暗杠,
-	手切,
-	摸切,
-	手切立直,
-	摸切立直,
-	摸牌,
-	自摸,
 	荣和,
+	// response end
+
+	// self action begin
+	暗杠,
+	加杠,
+	出牌,
+	立直,
+	自摸,
 	九种九牌,
+	// self action end
 };
 
 struct SelfAction {

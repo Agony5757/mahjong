@@ -2,6 +2,7 @@
 #include "macro.h"
 #include "GameLog.h"
 #include "Rule.h"
+#include "GameResult.h"
 #include <random>
 using namespace std;
 
@@ -195,14 +196,44 @@ Result Table::GameProcess(bool verbose)
 		test_show_all();
 	}
 
-	// 注册Agent
-
+	// 测试Agent
+	for (int i = 0; i < 4; ++i) { 
+		if (agents[i] == nullptr) 
+			throw runtime_error("Agent " + to_string(i) + " is not registered!"); 
+	}
 
 	// 游戏进程的主循环,循环的开始是某人有14张牌
 	while (1) {
 		auto actions = GetValidActions();
-		 
+
 		// 让Agent进行选择
+		int selection = agents[turn]->get_self_action(this, actions);
+		auto selected_action = actions[selection];
+		switch (selected_action.action) {
+		case Action::九种九牌:
+			return 九种九牌流局结算();
+		case Action::出牌: {
+			auto tile = selected_action.correspond_tiles;
+			// 等待回复
+
+			vector<ResponseAction> actions(4);
+
+			for (int i = 0; i < 4; ++i) {
+				if (i == turn) {
+					actions[i].action = Action::pass;
+					continue;
+				}
+				// 对于所有其他人
+				auto response = GetValidResponse(i);
+				int selected_response = agents[i]->get_response_action(this, response);
+				actions[i] = response[selected_response];
+			}
+
+			// 判断			
+		}
+		default:
+			throw runtime_error("Selection invalid!");
+		}
 
 	}
 }
@@ -227,9 +258,13 @@ void Table::发牌(int i_player)
 	fullGameLog.log摸牌(i_player, player[i_player].hand.back());
 }
 
-Table::Table(int 庄家)
+Table::Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4)
 	: dora_spec(1), dealer(庄家)
 {
+	agents[0] = p1;
+	agents[1] = p2;
+	agents[2] = p3;
+	agents[3] = p4;
 }
 
 std::vector<SelfAction> Table::GetValidActions()

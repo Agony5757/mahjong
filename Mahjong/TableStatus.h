@@ -12,31 +12,33 @@ public:
 	AbstractTableStatus(const GameLog &gameLog);
 	GameLog game_log;
 	virtual GameLog get_gamelog();
+	std::string status;
+	virtual void parse_gamelog();
+	std::string to_string();
 };
 
 class TableStatus : public AbstractTableStatus {
 public:
 	void clear_all();
-	void parse_gamelog(const GameLog &gamelog);
-	void to_string();
-
-	Wind your_wind;
-	int mountain_remain;
-
+	void parse_gamelog();
 	
+	//Wind your_wind;
+	//int mountain_remain;
 
 	enum OpenTileSource {
-		手切,
-		摸切,
-		上家打出,
-		下家打出,
-		对家打出,
-		
+		上家手切,
+		上家摸切,
+		下家手切,
+		下家摸切,
+		对家手切,
+		对家摸切,
+		自家手切,
+		自家摸切,
 	};
 
 	struct OpenTileInfo {
 		BaseTile tile;
-		bool is_riichi;
+		bool is_after_riichi;
 		OpenTileSource source;
 	};
 
@@ -44,6 +46,8 @@ public:
 	std::vector<BaseTile> 上家_river;
 	std::vector<BaseTile> 对家_river;
 	std::vector<BaseTile> 下家_river;
+
+
 
 };
 
