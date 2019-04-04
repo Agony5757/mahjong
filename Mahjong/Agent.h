@@ -3,6 +3,7 @@
 
 #include "Action.h"
 #include "TableStatus.h"
+#include "Table.h"
 // abstract class of Agent
 
 // For Action Phase
@@ -16,6 +17,10 @@
 // Except the choice, agent could get all informations
 // from the table if needed. This is a struct called
 // TableStatus.
+
+
+// Forward Decl
+class Table;
 
 // Abstract base class
 class Agent {
@@ -31,9 +36,7 @@ public:
 
 class RealPlayer : public Agent {
 public:
-	int get_self_action(Table* status, std::vector<SelfAction> actions) {
-		
-	}
+	int get_self_action(Table* status, std::vector<SelfAction> actions);
 };
 
 

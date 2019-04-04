@@ -32,6 +32,42 @@ enum BaseTile {
 	白, 发, 中
 };
 
+inline std::string basetile_to_string(BaseTile tile) {
+	std::string ret;
+	if (0 <= tile && tile <= 8) {
+		ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
+	}
+	else if (9 <= tile && tile <= 17) {
+		ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "s";
+	}
+	else if (18 <= tile && tile <= 26) {
+		ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "p";
+	}
+	else if (tile == east) {
+		ret = "[东";
+	}
+	else if (tile == south) {
+		ret = "[南";
+	}
+	else if (tile == west) {
+		ret = "[西";
+	}
+	else if (tile == north) {
+		ret = "[北";
+	}
+	else if (tile == 白) {
+		ret = "[白";
+	}
+	else if (tile == 发) {
+		ret = "[发";
+	}
+	else if (tile == 中) {
+		ret = "[中";
+	}
+	else throw std::runtime_error("unknown tile");
+	return ret + ']';
+}
+
 class Tile {
 public:
 	BaseTile tile;

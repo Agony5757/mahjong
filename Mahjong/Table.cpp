@@ -1,8 +1,9 @@
 ﻿#include "Table.h"
 #include "macro.h"
-#include "GameLog.h"
 #include "Rule.h"
 #include "GameResult.h"
+#include "Agent.h"
+
 #include <random>
 using namespace std;
 
@@ -96,10 +97,10 @@ void Table::init_yama()
 
 void Table::init_wind()
 {
-	player[dealer].wind = Wind::East;
-	player[(dealer + 1) % 4].wind = Wind::South;
-	player[(dealer + 2) % 4].wind = Wind::West;
-	player[(dealer + 3) % 4].wind = Wind::North;
+	player[庄家].wind = Wind::East;
+	player[(庄家 + 1) % 4].wind = Wind::South;
+	player[(庄家 + 2) % 4].wind = Wind::West;
+	player[(庄家 + 3) % 4].wind = Wind::North;
 }
 
 void Table::test_show_yama_with_王牌()
@@ -189,20 +190,22 @@ Result Table::GameProcess(bool verbose)
 	// 初始化每人自风
 	init_wind();
 	// 给庄家发牌
-	发牌(dealer);
+	发牌(庄家);
 
-	turn = dealer;
+	turn = 庄家;
+	同巡振听 = { {false, -1}, {false, -1}, {false, -1}, {false, -1} };
+
 	VERBOSE{
 		test_show_all();
 	}
 
 	// 测试Agent
-	for (int i = 0; i < 4; ++i) { 
+	for (int i = 0; i < 4; ++i) {
 		if (agents[i] == nullptr) 
 			throw runtime_error("Agent " + to_string(i) + " is not registered!"); 
 	}
 
-	// 游戏进程的主循环,循环的开始是某人有14张牌
+	// 游戏进程的主循环,循环的开始是某人有3n+2张牌
 	while (1) {
 		auto actions = GetValidActions();
 
@@ -211,13 +214,15 @@ Result Table::GameProcess(bool verbose)
 		auto selected_action = actions[selection];
 		switch (selected_action.action) {
 		case Action::九种九牌:
-			return 九种九牌流局结算();
+			return 九种九牌流局结算(this);
+		case Action::自摸:
+			return 自摸结算(this);
 		case Action::出牌: {
 			auto tile = selected_action.correspond_tiles;
 			// 等待回复
 
 			vector<ResponseAction> actions(4);
-
+			Action final_action = Action::pass;
 			for (int i = 0; i < 4; ++i) {
 				if (i == turn) {
 					actions[i].action = Action::pass;
@@ -227,9 +232,34 @@ Result Table::GameProcess(bool verbose)
 				auto response = GetValidResponse(i);
 				int selected_response = agents[i]->get_response_action(this, response);
 				actions[i] = response[selected_response];
-			}
 
-			// 判断			
+				// 从actions中获得优先级
+				if (actions[i].action > final_action)
+					final_action = actions[i].action;
+			}
+			
+			// 保存那张要被打出的牌
+			vector<Tile*>::iterator iter = 
+				find(player[turn].hand.begin(), player[turn].hand.end(), tile[0]);
+			// 根据最终的final_action来进行判断
+			switch (final_action) {
+			case Action::pass:
+				// 消除第一巡和一发
+				player[turn].一发 = false;
+				player[turn].first_round = false;
+				// 什么都不做。将action对应的牌从手牌移动到牌河里面
+				player[turn].river.push_back(tile[0]);
+				player[turn].hand.erase(iter);
+				next_turn();
+				continue;
+			case Action::吃:
+				// 消除第一巡和一发
+				for (int i = 0; i < 4; ++i) {
+					player[i].first_round = false;
+					player[i].一发 = false;
+				}
+
+			}
 		}
 		default:
 			throw runtime_error("Selection invalid!");
@@ -258,53 +288,23 @@ void Table::发牌(int i_player)
 	fullGameLog.log摸牌(i_player, player[i_player].hand.back());
 }
 
-Table::Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4)
-	: dora_spec(1), dealer(庄家)
+Table::Table(int 庄家, 
+	Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4])
+	: dora_spec(1), 庄家(庄家)
 {
 	agents[0] = p1;
 	agents[1] = p2;
 	agents[2] = p3;
 	agents[3] = p4;
+	for (int i = 0; i < 4; ++i) player[i].score = scores[i];
 }
 
 std::vector<SelfAction> Table::GetValidActions()
 {
 	vector<SelfAction> s;
 	auto &p = player[turn];
-	auto hand = player[turn].hand;
+	auto hand = p.hand;
 
-	// if (hand.size() != 14) throw runtime_error("??");
-
-	//if (is国士无双(hand, nullptr)) {
-	//	s.push_back(SelfAction(Action::自摸, { hand.back() }));
-	//}
-	//if (is七对(hand, nullptr)) {
-	//	s.push_back(SelfAction(Action::自摸, { hand.back() }));
-	//}
-
-	//// check riichi status
-	//if (p.riichi) {		
-	//	if (isCommon和牌型(hand)) {
-	//		s.push_back(SelfAction(Action::自摸, { hand.back() }));
-	//	}
-	//}
-	//else {		
-	//	if (isCommon和牌型(hand)) {
-	//		if (can和牌(p.hand, p.副露s, p.river, nullptr, 
-	//			// 这一行的目的是判断是否为海底
-	//			(牌山.size() + dora_spec - 1) == 14
-	//		)) {
-	//			s.push_back(SelfAction(Action::自摸, { hand.back() }));
-	//		}			
-	//	}
-	//	for (auto &tile : hand) {
-	//		if (tile != hand.back()) {
-	//			// 每张牌都可以打，除了最后一张
-	//			s.push_back(SelfAction(Action::手切, { tile }));
-	//		}
-	//	}
-	//}
-	//s.push_back(SelfAction(Action::摸切, { hand.back() }));
 	return s;
 }
 
@@ -329,3 +329,4 @@ Table::~Table()
 
 #pragma region(GAMELOG)
 #pragma endregion
+

@@ -4,7 +4,7 @@
 #include "Tile.h"
 #include "Action.h"
 #include "GameLog.h"
-#include "Agent.h"
+#include "GameResult.h"
 
 constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
@@ -24,55 +24,17 @@ public:
 
 	std::string to_string();
 
+	bool 一发;
+	bool first_round;
+
 	void play_tile();
 
 	void sort_hand();
 	void test_show_hand();	
 };
 
-enum ResultType {
-	荣和终局,
-	自摸终局,
-	无人听牌流局,
-	一人听牌流局,
-	两人听牌流局,
-	三人听牌流局,
-	四人听牌流局,
-	两家荣和,
-	三家荣和,
-
-	流局满贯,
-
-	九种九牌流局,
-	四风连打,
-	四杠流局,
-	四家立直,
-};
-
-struct Result {
-	ResultType result_type;
-
-	// 自摸，一家荣和的情况
-	int score;
-	int fan;
-	int fu;
-	int 役满倍数;
-
-	// 两家荣和的情况
-	int score2;
-	int fan2;
-	int fu2;
-	int 役满倍数2;
-
-	// 三家荣和的情况
-	int score3;
-	int fan3;
-	int fu3;
-	int 役满倍数3;
-
-	std::vector<int> winner;
-	std::vector<int> loser;
-};
+// Forward Decl
+class Agent;
 
 class Table
 {
@@ -83,7 +45,8 @@ public:
 	Agent* agents[4];
 	int dora_spec;
 	Wind 场风;
-	int dealer; // 庄家
+	int 庄家; // 庄家
+	int n本场;
 	void init_tiles();
 	void init_red_dora_3();
 	void shuffle_tiles();
@@ -103,7 +66,11 @@ public:
 
 	int turn;
 
-	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4);
+	// 下标表示玩家编号，bool表示是否进入该状态, int表示下一次轮到该玩家打牌时,
+	// 解除对应的振听状态
+	std::vector<std::pair<bool, int>> 同巡振听;
+
+	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4]);
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
 	std::vector<SelfAction> GetValidActions();

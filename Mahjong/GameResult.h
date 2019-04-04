@@ -1,6 +1,8 @@
 ﻿#ifndef GAME_RESULT_H
 #define GAME_RESULT_H
 
+#include <vector>
+
 enum ResultType {
 	荣和终局,
 	自摸终局,
@@ -23,31 +25,20 @@ enum ResultType {
 struct Result {
 	ResultType result_type;
 
-	// 自摸，一家荣和的情况
-	int score;
-	int fan;
-	int fu;
-	int 役满倍数;
-
-	// 两家荣和的情况
-	int score2;
-	int fan2;
-	int fu2;
-	int 役满倍数2;
-
-	// 三家荣和的情况
-	int score3;
-	int fan3;
-	int fu3;
-	int 役满倍数3;
+	int score[4];
+	int fan[4];
+	int fu[4];
+	int 役满倍数[4];
 
 	std::vector<int> winner;
 	std::vector<int> loser;
 };
 
-Result 九种九牌流局结算() {
-	return Result();
-	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
-}
+// Forward Decl
+class Table;
+
+Result 九种九牌流局结算(Table* table);
+
+Result 自摸结算(Table* table);
 
 #endif

@@ -11,6 +11,7 @@ enum class Action : uint8_t {
 	杠,
 	荣和,
 	// response end
+	// 注意到所有的response Action可以通过大小来比较
 
 	// self action begin
 	暗杠,
@@ -26,6 +27,7 @@ struct SelfAction {
 	Action action;
 	std::vector<Tile*> correspond_tiles;
 	SelfAction(Action, std::vector<Tile*>);
+	std::string to_string();
 };
 
 struct ResponseAction {
