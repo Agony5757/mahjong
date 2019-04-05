@@ -37,6 +37,7 @@ public:
 class RealPlayer : public Agent {
 public:
 	int get_self_action(Table* status, std::vector<SelfAction> actions);
+	int get_response_action(Table* status, std::vector<ResponseAction> actions);
 };
 
 

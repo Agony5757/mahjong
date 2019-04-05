@@ -143,4 +143,58 @@ bool is_same_capacitor(T a, T b) {
 	return true;
 }
 
+inline std::vector<Tile*>::iterator
+find_match_tile(std::vector<Tile*> tiles, BaseTile t) {
+	for (auto iter = tiles.begin();
+		iter != tiles.end();
+		++iter) {
+		if ((*iter)->tile == t) {
+			return iter;
+		}
+	}	
+	return tiles.end();
+}
+
+inline std::vector<Tile*>::iterator
+find_match_tile(std::vector<Tile*> tiles, Tile* t) {
+	for (auto iter = tiles.begin();
+		iter != tiles.end();
+		++iter) {
+		if ((*iter) == t) {
+			return iter;
+		}
+	}
+	return tiles.end();
+}
+
+// 找手牌中是不是有t的重复n张牌
+inline std::vector<Tile*> get_duplicate(
+	std::vector<Tile*> tiles,
+	BaseTile t,
+	int n) {
+
+	std::vector<Tile*> duplicate_tiles;
+
+	int duplicates = 0;
+	for (auto tile : tiles) {
+		if (tile->tile == t)
+			duplicates++;
+	}
+	if (duplicates == n) {
+		for (auto tile : tiles) {
+			if (tile->tile == t) {
+				duplicates--;
+				duplicate_tiles.push_back(tile);
+			}
+			if (duplicates == 0) return duplicate_tiles;
+		}
+	}
+	else return duplicate_tiles;
+}
+
+template<typename T>
+void merge_into(std::vector<T> &to, const std::vector<T> &from) {
+	to.insert(to.end(), from.begin(), from.end());
+}
+
 #endif

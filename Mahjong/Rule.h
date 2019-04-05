@@ -70,6 +70,6 @@ std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles);
 // 不考虑无役的听牌情况
 std::vector<BaseTile> is听牌(std::vector<BaseTile> tiles);
 
-// 荣和的役情况
+
 
 #endif

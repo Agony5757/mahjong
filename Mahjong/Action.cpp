@@ -1,6 +1,10 @@
 ﻿#include "Action.h"
 #include "Action.h"
 
+SelfAction::SelfAction()
+{
+}
+
 SelfAction::SelfAction(Action action, std::vector<Tile*> tiles)
 	:action(action), correspond_tiles(tiles)
 {
@@ -8,17 +12,7 @@ SelfAction::SelfAction(Action action, std::vector<Tile*> tiles)
 
 std::string SelfAction::to_string()
 {
-	switch (action) {
-	case Action::pass:
-		return "pass";
-	case Action::吃:
-		return "吃" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string();
-	case Action::碰:
-		return "碰" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string();
-	case Action::杠:
-		return "杠" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string() + correspond_tiles[2]->to_string();
-	case Action::荣和:
-		return "荣和";
+	switch (action) {	
 	case Action::暗杠:
 		return "暗杠" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string() + correspond_tiles[2]->to_string();
 	case Action::加杠:
@@ -33,5 +27,26 @@ std::string SelfAction::to_string()
 		return "九种九牌";
 	default:
 		throw std::runtime_error("Invalid Action");
+	}
+}
+
+ResponseAction::ResponseAction()
+{
+}
+
+std::string ResponseAction::to_string() {
+	switch (action) {
+	case Action::pass:
+		return "pass";
+	case Action::吃:
+		return "吃" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string();
+	case Action::碰:
+		return "碰" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string();
+	case Action::杠:
+		return "杠" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string() + correspond_tiles[2]->to_string();
+	case Action::荣和:
+		return "荣和"; 
+	default:
+			throw std::runtime_error("Invalid Action");
 	}
 }

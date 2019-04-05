@@ -12,13 +12,15 @@ constexpr auto INIT_SCORE = 25000;
 class Player {
 public:
 	Player();
-	bool riichi;
+	bool riichi = false;
+	bool 门清 = true;
 	Wind wind;
 	bool 亲家;
+	bool 振听 = false;
 	int score;
 	std::vector<Tile*> hand;
 	std::vector<Tile*> river;
-	std::unordered_map<Tile*, std::vector<Tile*>> 副露s;
+	std::vector<Fulu> 副露s;
 	std::string hand_to_string();
 	std::string river_to_string();
 
@@ -27,7 +29,23 @@ public:
 	bool 一发;
 	bool first_round;
 
-	void play_tile();
+	// SelfAction
+	std::vector<SelfAction> get_加杠(bool after_chipon);
+	std::vector<SelfAction> get_暗杠(bool after_chipon);
+	std::vector<SelfAction> get_打牌(bool after_chipon);
+	std::vector<SelfAction> get_自摸();
+	std::vector<SelfAction> get_立直();
+	std::vector<SelfAction> get_九种九牌(bool 第一巡);
+
+	// Response Action
+	std::vector<ResponseAction> get_荣和(Tile* tile);
+	std::vector<ResponseAction> get_Chi(Tile* tile);
+	std::vector<ResponseAction> get_Pon(Tile* tile);
+	std::vector<ResponseAction> get_Kan(Tile* tile); // 大明杠
+
+	void move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile);
+	void remove_from_hand(Tile* tile);
+	void play_暗杠(std::vector<Tile*> tiles);
 
 	void sort_hand();
 	void test_show_hand();	
@@ -65,16 +83,18 @@ public:
 	GameLog fullGameLog;
 
 	int turn;
+	
+	bool after_chipon = false;
+	bool after_kan = false;
 
-	// 下标表示玩家编号，bool表示是否进入该状态, int表示下一次轮到该玩家打牌时,
-	// 解除对应的振听状态
-	std::vector<std::pair<bool, int>> 同巡振听;
-
+	Table(int 庄家 = 0, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);
 	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4]);
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
 	std::vector<SelfAction> GetValidActions();
-	std::vector<ResponseAction> GetValidResponse(int player);
+
+	// 根据turn打出的tile，可以做出的决定
+	std::vector<ResponseAction> GetValidResponse(int player, Tile* tile);
 
 	std::vector<Tile*> 牌山;
 	Player player[4];

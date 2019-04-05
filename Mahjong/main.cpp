@@ -7,7 +7,7 @@ using namespace std;
 #pragma region(test和牌)
 
 void test和牌状态1() {
-	Table t(0, nullptr, nullptr, nullptr, nullptr);
+	Table t;
 	t.init_tiles();
 	t.init_yama();
 	auto &yama = t.牌山;
@@ -17,7 +17,7 @@ void test和牌状态1() {
 }
 
 void test和牌状态2() {
-	Table t(0, nullptr, nullptr, nullptr, nullptr);
+	Table t;
 	t.init_tiles();
 	t.init_yama();
 	auto &yama = t.牌山;
@@ -27,7 +27,7 @@ void test和牌状态2() {
 }
 
 void test和牌状态3() {
-	Table t(0, nullptr, nullptr, nullptr, nullptr);
+	Table t;
 	t.init_tiles();
 	t.init_yama();
 	auto &yama = t.牌山;
@@ -43,7 +43,7 @@ void test和牌状态3() {
 }
 
 void testCompletedTiles1() {
-	Table t(0, nullptr, nullptr, nullptr, nullptr);
+	Table t;
 	t.init_tiles();
 	t.init_yama();
 	auto &yama = t.牌山;
@@ -60,7 +60,7 @@ void testCompletedTiles1() {
 }
 
 void testCompletedTiles2() {
-	Table t(0, nullptr, nullptr, nullptr, nullptr);
+	Table t;
 	t.init_tiles();
 	t.init_yama();
 	auto &yama = t.牌山;
@@ -80,13 +80,13 @@ void testGameProcess() {
 
 int main() {
 	
-	test和牌状态1();
-	test和牌状态2();
-	test和牌状态3();
-	//testGameProcess();
+	//test和牌状态1();
+	//test和牌状态2();
+	//test和牌状态3();
+	testGameProcess();
 	
-	testCompletedTiles2();
-	testCompletedTiles1();
+	//testCompletedTiles2();
+	//testCompletedTiles1();
 	getchar();
 	return 0;
 }

@@ -24,6 +24,7 @@ enum class Action : uint8_t {
 };
 
 struct SelfAction {
+	SelfAction();
 	Action action;
 	std::vector<Tile*> correspond_tiles;
 	SelfAction(Action, std::vector<Tile*>);
@@ -31,7 +32,9 @@ struct SelfAction {
 };
 
 struct ResponseAction {
+	ResponseAction();
 	Action action;
+	std::string to_string();
 	std::vector<Tile*> correspond_tiles;
 };
 

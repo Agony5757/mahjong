@@ -32,6 +32,79 @@ enum BaseTile {
 	白, 发, 中
 };
 
+inline bool is_幺牌(BaseTile t) {
+	if (t == _1m || t == _1s || t == _1p) {
+		return true;
+	}
+	else return false;
+}
+
+inline bool is_九牌(BaseTile t) {
+	if (t == _9m || t == _9s || t == _9p) {
+		return true;
+	}
+	else return false;
+}
+
+inline bool is_老头牌(BaseTile t) {
+	if (is_九牌(t) || is_幺牌(t)) {
+		return true;
+	}
+	else return false;
+}
+
+inline bool is_字牌(BaseTile t) {
+	if (t >= BaseTile::east && t<= BaseTile::中) {
+		return true;
+	}
+	else return false;
+}
+
+inline bool is_幺九牌(BaseTile t) {
+	if (is_老头牌(t) || is_字牌(t)) {
+		return true;
+	}
+	else return false;
+}
+
+inline bool is_顺子(std::vector<BaseTile> tiles) {
+	if (tiles.size() != 3) return false;
+	std::sort(tiles.begin(), tiles.end());
+
+	if (tiles[1] - tiles[0] != 1) return false;
+	if (tiles[2] - tiles[1] != 1) return false;
+	// 必须成顺子
+
+	if (tiles[2] == _1s) return false;
+	if (tiles[2] == _2s) return false;
+	if (tiles[2] == _1p) return false;
+	if (tiles[2] == _2p) return false;
+	if (tiles[2] >= east) return false;
+
+	return true;
+}
+
+inline bool is_刻子(std::vector<BaseTile> tiles) {
+	if (tiles.size() != 3) return false;
+
+	if (tiles[1] - tiles[0] != 0) return false;
+	if (tiles[2] - tiles[1] != 0) return false;
+	// 必须都相同
+	
+	return true;
+}
+
+inline bool is_杠(std::vector<BaseTile> tiles) {
+	if (tiles.size() != 4) return false;
+
+	if (tiles[1] - tiles[0] != 0) return false;
+	if (tiles[2] - tiles[1] != 0) return false;
+	if (tiles[3] - tiles[2] != 0) return false;
+	// 必须都相同
+
+	return true;
+}
+
 inline std::string basetile_to_string(BaseTile tile) {
 	std::string ret;
 	if (0 <= tile && tile <= 8) {
@@ -155,5 +228,79 @@ inline std::string wind_to_string(Wind wind) {
 		return "??";
 	}
 }
+
+struct Fulu {
+	enum Type {
+		Chi,
+		Pon,
+		大明杠,
+		加杠,
+		暗杠,
+	};
+	std::vector<Tile*> tiles;
+	int take;
+	// take标记的tiles中第几张牌拿的是别人的
+	// take == 0 说明 (1)23
+	// take == 1 说明 1(2)3
+	// take == 2 说明 12(3)
+	// take在type==Chi的时候才有效，其他时候不用
+
+	Type type;
+	inline std::string to_string() {
+		std::stringstream ss;
+		switch (type) {
+		case Chi: {
+			for (int i = 0; i < 3; ++i) {
+				if (i == take) {
+					ss << "(" << tiles[i]->to_string() << ")";
+				}
+				else {
+					ss << tiles[i]->to_string();
+				}
+			}
+		}
+		case Pon: {
+			for (int i = 0; i < 3; ++i) {
+				if (i == 1) {
+					ss << "(" << tiles[i]->to_string() << ")";
+				}
+				else {
+					ss << tiles[i]->to_string();
+				}
+			}
+		}
+		case 大明杠: {
+			for (int i = 0; i < 4; ++i) {
+				if (i < 1) {
+					ss << "(" << tiles[i]->to_string() << ")";
+				}
+				else {
+					ss << tiles[i]->to_string();
+				}
+			}
+		}
+		case 加杠: {
+			for (int i = 0; i < 4; ++i) {
+				if (i < 2) {
+					ss << "(" << tiles[i]->to_string() << ")";
+				}
+				else {
+					ss << tiles[i]->to_string();
+				}
+			}
+		}
+		case 暗杠: {
+			for (int i = 0; i < 4; ++i) {
+				if (i == 0 || i == 3) {
+					ss << tiles[i]->to_string();
+				}
+				else {
+					ss << "[?]";
+				}
+			}
+		}
+		}
+	}
+};
 
 #endif
