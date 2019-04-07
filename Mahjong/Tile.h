@@ -16,7 +16,7 @@ enum Wind {
 	East = 1, South, West, North
 };
 
-enum class Belong : uint8_t {
+enum class Belong : unsigned char {
 	p1手, p1河,
 	p2手, p2河,
 	p3手, p3河,
@@ -24,7 +24,7 @@ enum class Belong : uint8_t {
 	yama,
 };
 
-enum BaseTile {
+enum BaseTile : unsigned char {
 	_1m, _2m, _3m, _4m, _5m, _6m, _7m, _8m, _9m,
 	_1s, _2s, _3s, _4s, _5s, _6s, _7s, _8s, _9s,
 	_1p, _2p, _3p, _4p, _5p, _6p, _7p, _8p, _9p,
@@ -145,7 +145,6 @@ class Tile {
 public:
 	BaseTile tile;
 	bool red_dora;
-	Belong belongs;
 	inline std::string to_string() {
 		std::string ret;
 		if (0 <= tile && tile <= 8) {
@@ -258,6 +257,7 @@ struct Fulu {
 					ss << tiles[i]->to_string();
 				}
 			}
+			break;
 		}
 		case Pon: {
 			for (int i = 0; i < 3; ++i) {
@@ -268,6 +268,7 @@ struct Fulu {
 					ss << tiles[i]->to_string();
 				}
 			}
+			break;
 		}
 		case 大明杠: {
 			for (int i = 0; i < 4; ++i) {
@@ -278,6 +279,7 @@ struct Fulu {
 					ss << tiles[i]->to_string();
 				}
 			}
+			break;
 		}
 		case 加杠: {
 			for (int i = 0; i < 4; ++i) {
@@ -288,6 +290,7 @@ struct Fulu {
 					ss << tiles[i]->to_string();
 				}
 			}
+			break;
 		}
 		case 暗杠: {
 			for (int i = 0; i < 4; ++i) {
@@ -298,8 +301,10 @@ struct Fulu {
 					ss << "[?]";
 				}
 			}
+			break;
 		}
 		}
+		return ss.str();
 	}
 };
 

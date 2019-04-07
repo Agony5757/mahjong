@@ -13,6 +13,8 @@ class Player {
 public:
 	Player();
 	bool riichi = false;
+	// 第几张开始是立直牌
+	int riichi_n = 0;
 	bool 门清 = true;
 	Wind wind;
 	bool 亲家;
@@ -45,7 +47,12 @@ public:
 
 	void move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile);
 	void remove_from_hand(Tile* tile);
-	void play_暗杠(std::vector<Tile*> tiles);
+
+	// 将所有的BaseTile值为tile的四个牌移动到副露区
+	void play_暗杠(BaseTile tile);
+
+	// 将牌移动到牌河（一定没有人吃碰杠）
+	void move_from_hand_to_river(Tile* tile);
 
 	void sort_hand();
 	void test_show_hand();	
@@ -70,12 +77,15 @@ public:
 	void shuffle_tiles();
 	void init_yama();
 
+	std::string export_yama();
+	void import_yama(std::string);
 	void init_wind();
 	
 	void _deal(int i_player);
 	void _deal(int i_player, int n_tiles);
 
 	void 发牌(int i_player);
+	void 发岭上牌(int i_player);
 
 	inline void next_turn() { turn++; turn = turn % 4; }
 
@@ -94,7 +104,7 @@ public:
 	std::vector<SelfAction> GetValidActions();
 
 	// 根据turn打出的tile，可以做出的决定
-	std::vector<ResponseAction> GetValidResponse(int player, Tile* tile);
+	std::vector<ResponseAction> GetValidResponse(int player, Tile* tile, bool);
 
 	std::vector<Tile*> 牌山;
 	Player player[4];
@@ -112,12 +122,12 @@ public:
 	inline void test_show_all() {
 		test_show_yama_with_王牌();
 		test_show_all_player_info();
-		test_show_open_gamelog();
-		test_show_full_gamelog();
+		//test_show_open_gamelog();
+		//test_show_full_gamelog();
 		std::cout << "轮到Player" << turn << std::endl;
 	}
 
-	Result GameProcess(bool);
+	Result GameProcess(bool, std::string = "");
 
 };
 

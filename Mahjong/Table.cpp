@@ -37,6 +37,14 @@ std::string Player::to_string()
 	stringstream ss;
 	ss << "自风" << wind_to_string(wind) << endl;
 	ss << "手牌:" << hand_to_string();
+
+	if (副露s.size() != 0)
+	{
+		ss << " 副露:";
+		for (auto fulu : 副露s)
+			ss << fulu.to_string() << " ";
+	}
+	
 	ss << endl;
 	ss << "牌河:" << river_to_string();
 	ss << endl;
@@ -203,8 +211,8 @@ vector<vector<Tile*>> get_Chi_tiles(vector<Tile*> hand, Tile* tile) {
 	vector<vector<Tile*>> chi_tiles;
 	for (int i = 0; i < hand.size() - 1; ++i) {
 		for (int j = 1; (i + j) < hand.size(); ++j)
-			if (is_顺子({ hand[i]->tile, hand[j]->tile, tile->tile })) {
-				chi_tiles.push_back({ hand[i] , hand[j] });
+			if (is_顺子({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
+				chi_tiles.push_back({ hand[i] , hand[i + j] });
 
 			}
 	}
@@ -216,8 +224,8 @@ vector<vector<Tile*>> get_Pon_tiles(vector<Tile*> hand, Tile* tile) {
 	vector<vector<Tile*>> chi_tiles;
 	for (int i = 0; i < hand.size() - 1; ++i) {
 		for (int j = 1; (i + j) < hand.size(); ++j)
-			if (is_刻子({ hand[i]->tile, hand[j]->tile, tile->tile })) {
-				chi_tiles.push_back({ hand[i] , hand[j] });
+			if (is_刻子({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
+				chi_tiles.push_back({ hand[i] , hand[i + j] });
 
 			}
 	}
@@ -233,11 +241,10 @@ vector<vector<Tile*>> get_Kan_tiles(vector<Tile*> hand, Tile* tile) {
 				if (
 					is_杠({ 
 						hand[i]->tile, 
-						hand[j]->tile, 
-						hand[k]->tile,
+						hand[i + j]->tile,
+						hand[i + j + k]->tile,
 						tile->tile })) {
-					chi_tiles.push_back({ hand[i] , hand[j], hand[k] });
-
+					chi_tiles.push_back({ hand[i] , hand[i + j], hand[i + j + k] });
 				}
 	}
 	return chi_tiles;
@@ -274,9 +281,9 @@ std::vector<ResponseAction> Player::get_Pon(Tile * tile)
 {
 	vector<ResponseAction> actions;
 
-	BaseTile t = tile->tile;
-	
+	BaseTile t = tile->tile;	
 	auto chi_tiles = get_Pon_tiles(hand, tile);
+
 	for (auto one_chi_tiles : chi_tiles) {
 		ResponseAction action;
 		action.action = Action::碰;
@@ -292,8 +299,8 @@ std::vector<ResponseAction> Player::get_Kan(Tile * tile)
 	vector<ResponseAction> actions;
 
 	BaseTile t = tile->tile;
-
 	auto chi_tiles = get_Kan_tiles(hand, tile);
+
 	for (auto one_chi_tiles : chi_tiles) {
 		ResponseAction action;
 		action.action = Action::碰;
@@ -302,6 +309,103 @@ std::vector<ResponseAction> Player::get_Kan(Tile * tile)
 	}
 
 	return actions;
+}
+
+void Player::move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile * tile)
+{
+	Fulu fulu;
+	if (is_刻子({ tiles[0]->tile, tiles[1]->tile, tile->tile } )
+		&& tiles.size()==2) {
+		// 碰的情况
+		// 创建对象
+		fulu.type = Fulu::Pon;
+		fulu.take = 0;
+		fulu.tiles = { tiles[0], tiles[1], tile };
+		
+		// 加入
+		副露s.push_back(fulu);
+		
+		// 删掉原来的牌
+		hand.erase(find(hand.begin(), hand.end(), tiles[0]));
+		hand.erase(find(hand.begin(), hand.end(), tiles[1]));
+		return;
+	}
+	if (is_顺子({ tiles[0]->tile, tiles[1]->tile, tile->tile })
+		&& tiles.size() == 2) {
+		// 吃的情况
+		// 创建对象
+		fulu.type = Fulu::Chi;
+		if (tile->tile < tiles[0]->tile) {
+			//(1)23
+			fulu.take = 0;
+			fulu.tiles = { tile, tiles[0], tiles[1] };
+		}
+		else if (tile->tile > tiles[1]->tile) {
+			//12(3)
+			fulu.take = 2;
+			fulu.tiles = { tiles[0], tiles[1], tile};
+		}
+		else {
+			//1(2)3
+			fulu.take = 1;
+			fulu.tiles = { tiles[0], tile, tiles[1] };
+		}
+		// 加入
+		副露s.push_back(fulu);
+
+		// 删掉原来的牌
+		hand.erase(find(hand.begin(), hand.end(), tiles[0]));
+		hand.erase(find(hand.begin(), hand.end(), tiles[1]));
+		return;
+	}
+	if (is_杠({ tiles[0]->tile, tiles[1]->tile, tiles[2]->tile, tile->tile })
+		&& tiles.size() == 3) {
+		// 杠的情况
+		// 创建对象
+		fulu.type = Fulu::大明杠;
+		fulu.take = 0;
+		fulu.tiles = { tiles[0], tiles[1], tiles[2], tile };
+
+		// 加入
+		副露s.push_back(fulu);
+
+		// 删掉原来的牌
+		hand.erase(find(hand.begin(), hand.end(), tiles[0]));
+		hand.erase(find(hand.begin(), hand.end(), tiles[1]));
+		hand.erase(find(hand.begin(), hand.end(), tiles[2]));
+		return;
+	}
+}
+
+void Player::remove_from_hand(Tile *tile)
+{
+	auto iter=
+	remove_if(hand.begin(), hand.end(), [tile](Tile* t) {return tile == t; });
+	hand.erase(iter);
+}
+
+void Player::play_暗杠(BaseTile tile)
+{
+	Fulu fulu;
+	fulu.type = Fulu::暗杠;
+	fulu.take = 0;
+	
+	for_each(hand.begin(), hand.end(),
+		[&fulu, tile](Tile* t) 
+	{
+		if (tile == t->tile)
+			fulu.tiles.push_back(t);
+	});
+	auto iter = 
+	remove_if(hand.begin(), hand.end(),
+		[tile](Tile* t) {return t->tile == tile; });		
+	hand.erase(iter, hand.end());
+}
+
+void Player::move_from_hand_to_river(Tile * tile)
+{
+	remove_from_hand(tile);
+	river.push_back(tile);
 }
 
 void Player::sort_hand()
@@ -322,7 +426,7 @@ void Table::init_tiles()
 {
 	for (int i = 0; i < N_TILES; ++i) {
 		tiles[i].tile = static_cast<BaseTile>(i % 34);
-		tiles[i].belongs = Belong::yama;
+		//tiles[i].belongs = Belong::yama;
 		tiles[i].red_dora = false;
 	}
 }
@@ -347,6 +451,26 @@ void Table::init_yama()
 	牌山.swap(empty);
 	for (int i = 0; i < N_TILES; ++i) {
 		牌山.push_back(&(tiles[i]));
+	}
+}
+
+string Table::export_yama() {
+	constexpr int LENGTH = N_TILES * sizeof(Tile);
+	unsigned char s[LENGTH];
+	for (int i = 0; i < N_TILES; i++) {
+		memcpy(s + i * sizeof(Tile), tiles + i, sizeof(Tile));
+	}
+	Base64 base64;
+	return base64.Encode(s, LENGTH);
+}
+
+void Table::import_yama(std::string yama) {
+	constexpr int LENGTH = N_TILES * sizeof(Tile);
+	Base64 base64;
+	auto decode = base64.Decode(yama, LENGTH);
+	const char *s = decode.c_str();
+	for (int i = 0; i < N_TILES; i++) {
+		memcpy(tiles + i, s + i * sizeof(Tile), sizeof(Tile));
 	}
 }
 
@@ -429,12 +553,26 @@ void Table::test_show_full_gamelog()
 	cout << fullGameLog.to_string();
 }
 
-Result Table::GameProcess(bool verbose)
+Result Table::GameProcess(bool verbose, std::string yama)
 {
-	init_tiles();
-	init_red_dora_3();
-	shuffle_tiles();
-	init_yama();
+	if (yama == "") {
+		init_tiles();
+		init_red_dora_3();
+		shuffle_tiles();
+		init_yama();
+
+		// 将牌山导出为字符串
+		cout << "牌山代码:" << export_yama() << endl;
+	}
+	else {
+		import_yama(yama);
+		init_yama();
+
+		VERBOSE{
+			cout << "导入牌山" << endl;
+		}
+	}
+
 	// 每人发13张牌
 	_deal(0, 13);
 	_deal(1, 13);
@@ -444,14 +582,8 @@ Result Table::GameProcess(bool verbose)
 
 	// 初始化每人自风
 	init_wind();
-	// 给庄家发牌
-	发牌(庄家);
 
-	turn = 庄家;
-	
-	VERBOSE{
-		test_show_all();
-	}
+	turn = 庄家;	
 
 	// 测试Agent
 	for (int i = 0; i < 4; ++i) {
@@ -461,6 +593,29 @@ Result Table::GameProcess(bool verbose)
 
 	// 游戏进程的主循环,循环的开始是某人有3n+2张牌
 	while (1) {
+		for (int i = 0; i < 4; ++i) {
+			if (i != turn)
+				player[i].sort_hand();
+			// 全部自动整理手牌
+		}
+
+		// 如果是after_kan, 从岭上抓
+		if (after_kan) {
+			发岭上牌(turn);
+			goto WAITING_PHASE;
+		}
+
+		// 如果是after_chipon, 不抓
+		if (after_chipon) {
+			goto WAITING_PHASE;
+		}
+
+		// 剩下的情况正常抓
+		发牌(turn);
+
+		// TODO: 注意！这一阶段没有考虑流局
+
+WAITING_PHASE:
 		auto actions = GetValidActions();
 
 		// 让Agent进行选择
@@ -483,42 +638,89 @@ Result Table::GameProcess(bool verbose)
 					continue;
 				}
 				// 对于所有其他人
-				auto response = GetValidResponse(i, tile);
-				int selected_response = agents[i]->get_response_action(this, response);
-				actions[i] = response[selected_response];
+				bool is下家 = false;
+				if (i == (turn + 1) % 4)
+					is下家 = true;
+				auto response = GetValidResponse(i, tile, is下家);
+				if (response.size() != 1) {
+					VERBOSE{
+						cout << "Player " << i << "选择:" << endl;
+					}
+					int selected_response =
+						agents[i]->get_response_action(this, response);
+					actions[i] = response[selected_response];
+				}
+				else
+					actions[i].action = Action::pass;
+				
 
 				// 从actions中获得优先级
 				if (actions[i].action > final_action)
 					final_action = actions[i].action;
 			}
-			
-			// 保存那张要被打出的牌
-			vector<Tile*>::iterator iter = 
-				find(player[turn].hand.begin(), player[turn].hand.end(), tile[0]);
+
+			std::vector<int> response_player;
+			for (int i = 0; i < 4; ++i) {
+				if (actions[i].action == final_action) {
+					response_player.push_back(i);
+				}
+			}
+			int response = response_player[0];
 			// 根据最终的final_action来进行判断
+			// response_player里面保存了所有最终action和final_action相同的玩家
+			// 只有在pass和荣和的时候才会出现这种情况
+			// 其他情况用response来代替
+			
 			switch (final_action) {
 			case Action::pass:
 				// 消除第一巡和一发
 				player[turn].一发 = false;
 				player[turn].first_round = false;
+				if (after_kan) { dora_spec++; }
+				after_kan = false;
+				after_chipon = false;
 				// 什么都不做。将action对应的牌从手牌移动到牌河里面
-				player[turn].river.push_back(tile);
-				player[turn].hand.erase(iter);
+				player[turn].move_from_hand_to_river(tile);
 				next_turn();
 				continue;
 			case Action::吃:
+			case Action::碰:
 				// 消除第一巡和一发
 				for (int i = 0; i < 4; ++i) {
 					player[i].first_round = false;
 					player[i].一发 = false;
 				}
-
+				player[turn].remove_from_hand(tile);				
+				player[response].move_from_hand_to_fulu(
+					actions[response].correspond_tiles, tile);
+				turn = response;
+				after_chipon = true;
+				if (after_kan) { dora_spec++; }
+				after_kan = false;
+				continue;
+				
+			// 大明杠
+			case Action::杠:
+				// 消除第一巡和一发
+				for (int i = 0; i < 4; ++i) {
+					player[i].first_round = false;
+					player[i].一发 = false;
+				}
+				player[turn].remove_from_hand(tile);
+				player[response].move_from_hand_to_fulu(
+					actions[response].correspond_tiles, tile);
+				turn = response;
+				after_chipon = true;
+				if (after_kan) { dora_spec++; }
+				after_kan = true;
+				continue;
+			case Action::荣和:
+				throw runtime_error("NOT IMPLEMENTED YET");
 			}
 		}
 		default:
 			throw runtime_error("Selection invalid!");
 		}
-
 	}
 }
 
@@ -538,8 +740,15 @@ void Table::_deal(int i_player, int n_tiles)
 void Table::发牌(int i_player)
 {
 	_deal(i_player);
-	openGameLog.log摸牌(i_player, nullptr);
-	fullGameLog.log摸牌(i_player, player[i_player].hand.back());
+	//openGameLog.log摸牌(i_player, nullptr);
+	//fullGameLog.log摸牌(i_player, player[i_player].hand.back());
+}
+
+void Table::发岭上牌(int i_player)
+{
+	_deal(i_player);
+	//openGameLog.log摸牌(i_player, nullptr);
+	//fullGameLog.log摸牌(i_player, player[i_player].hand.back());
 }
 
 Table::Table(int 庄家, Agent * p1, Agent * p2, Agent * p3, Agent * p4) : dora_spec(1), 庄家(庄家)
@@ -575,7 +784,8 @@ std::vector<SelfAction> Table::GetValidActions()
 	return actions;
 }
 
-std::vector<ResponseAction> Table::GetValidResponse(int i, Tile* tile)
+std::vector<ResponseAction> Table::GetValidResponse(
+	int i, Tile* tile, bool is下家)
 {
 	std::vector<ResponseAction> actions;
 	
@@ -587,9 +797,11 @@ std::vector<ResponseAction> Table::GetValidResponse(int i, Tile* tile)
 	auto &the_player = player[i];
 
 	merge_into(actions, the_player.get_荣和(tile));
-	merge_into(actions, the_player.get_Chi(tile));
 	merge_into(actions, the_player.get_Pon(tile));
 	merge_into(actions, the_player.get_Kan(tile));
+
+	if (is下家)
+		merge_into(actions, the_player.get_Chi(tile));
 
 	return actions;
 }
