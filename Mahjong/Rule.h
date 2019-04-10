@@ -78,22 +78,23 @@ std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles);
 std::vector<BaseTile> get听牌(std::vector<BaseTile> tiles);
 bool is和牌(std::vector<BaseTile> tiles);
 
-std::vector<BaseTile> is_riichi_able(std::vector<Tile*> hands, bool 门清);
+std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清);
 
 bool can_ron(std::vector<Tile*> hands, Tile* get_tile);
 bool can_tsumo(std::vector<Tile*> hands);
 
 std::vector<Yaku> get_立直_双立直(bool double_riichi, bool riichi, bool 一发);
 
-std::vector<Yaku> get_平和(CompletedTiles complete_tiles, bool 门清, BaseTile);
+std::vector<Yaku> get_平和(CompletedTiles complete_tiles, bool 门清, BaseTile, Wind 场风, Wind 自风);
 std::vector<Yaku> get_门前自摸(bool 门清, bool 自摸);
 
 std::vector<Yaku> get_四暗刻_三暗刻(CompletedTiles complete_tiles);
 
 /* Forwar Decl */
 class Player;
+class Table;
 
-std::vector<Yaku> get_yaku_tsumo(Player *player);
-std::vector<Yaku> get_yaku_ron(Player *player, Tile* get_tile);
+std::vector<Yaku> get_yaku_tsumo(Table* table, Player *player);
+std::vector<Yaku> get_yaku_ron(Table* table, Player *player, Tile* get_tile);
 
 #endif

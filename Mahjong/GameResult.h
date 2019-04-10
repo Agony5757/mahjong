@@ -30,6 +30,9 @@ struct Result {
 	int fu[4];
 	int 役满倍数[4];
 
+	int n立直棒;
+	int n本场;
+	
 	std::vector<int> winner;
 	std::vector<int> loser;
 };
@@ -42,6 +45,7 @@ Result 九种九牌流局结算(Table* table);
 Result 四风连打流局结算(Table* table);
 
 Result 四立直流局结算(Table* table);
+Result 四杠流局结算(Table* table);
 
 Result 荒牌流局结算(Table* table);
 

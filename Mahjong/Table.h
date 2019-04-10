@@ -9,6 +9,9 @@
 constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
 
+// Forward Decl
+class Table;
+
 class Player {
 public:
 	Player();
@@ -36,12 +39,12 @@ public:
 	std::vector<SelfAction> get_加杠();
 	std::vector<SelfAction> get_暗杠();
 	std::vector<SelfAction> get_打牌(bool after_chipon);
-	std::vector<SelfAction> get_自摸();
+	std::vector<SelfAction> get_自摸(Table*);
 	std::vector<SelfAction> get_立直();
-	std::vector<SelfAction> get_九种九牌(bool 第一巡);
+	std::vector<SelfAction> get_九种九牌();
 
 	// Response Action
-	std::vector<ResponseAction> get_荣和(Tile* tile);
+	std::vector<ResponseAction> get_荣和(Table*, Tile* tile);
 	std::vector<ResponseAction> get_Chi(Tile* tile);
 	std::vector<ResponseAction> get_Pon(Tile* tile);
 	std::vector<ResponseAction> get_Kan(Tile* tile); // 大明杠
@@ -96,6 +99,7 @@ public:
 	Wind 场风;
 	int 庄家; // 庄家
 	int n本场;
+	int n立直棒;
 	void init_tiles();
 	void init_red_dora_3();
 	void shuffle_tiles();
@@ -118,9 +122,27 @@ public:
 
 	int turn;
 	
-	bool after_chipon = false;
-	bool after_minkan = false;
-	bool after_ankan = false;
+	Action last_action;
+	inline bool after_chipon(){
+		return last_action == Action::吃 ||
+			last_action == Action::碰;
+	}
+
+	inline bool after_daiminkan() {
+		return last_action == Action::杠;
+	}
+
+	inline bool after_ankan() {
+		return last_action == Action::暗杠;
+	}
+
+	inline bool after_加杠() {
+		return last_action == Action::加杠;
+	}
+
+	inline bool after_杠() {
+		return after_daiminkan() || after_ankan() || after_加杠();
+	}
 
 	Table(int 庄家 = 0, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);
 	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4]);

@@ -207,9 +207,9 @@ bool is和牌(std::vector<BaseTile> tiles)
 	}
 }
 
-std::vector<BaseTile> is_riichi_able(std::vector<Tile*> hands, bool 门清)
+std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清)
 {
-	std::vector<BaseTile> play_tiles;
+	std::vector<Tile*> play_tiles;
 	if (!门清) return play_tiles;
 	if (hands.size() % 3 != 2) return play_tiles;
 
@@ -218,7 +218,9 @@ std::vector<BaseTile> is_riichi_able(std::vector<Tile*> hands, bool 门清)
 		copy_hand.erase(copy_hand.begin() + i);
 		auto s = convert_tiles_to_base_tiles(copy_hand);
 		auto tenhai = get听牌(s);
-		merge_into(play_tiles, tenhai);
+		if (tenhai.size() != 0) {
+			play_tiles.push_back(hands[i]);
+		}
 	}
 	return play_tiles;
 }
@@ -314,7 +316,7 @@ std::vector<Yaku> get_四暗刻_三暗刻(CompletedTiles complete_tiles)
 	return yaku;
 }
 
-std::vector<Yaku> get_yaku_tsumo(Player * player)
+std::vector<Yaku> get_yaku_tsumo(Table* table, Player * player)
 {
 	auto 门清 = player->门清;
 	auto riichi = player->riichi;
@@ -327,7 +329,19 @@ std::vector<Yaku> get_yaku_tsumo(Player * player)
 	merge_into(yakus, get_立直_双立直(double_riichi, riichi, 一发));
 
 	return yakus;
-
 }
 
+std::vector<Yaku> get_yaku_ron(Table* table, Player * player, Tile* get_tile)
+{
+	auto 门清 = player->门清;
+	auto riichi = player->riichi;
+	auto double_riichi = player->double_riichi;
+	bool 自摸 = true;
+	bool 一发 = player->一发;
+
+	vector<Yaku> yakus;
+	merge_into(yakus, get_立直_双立直(double_riichi, riichi, 一发));
+
+	return yakus;
+}
 

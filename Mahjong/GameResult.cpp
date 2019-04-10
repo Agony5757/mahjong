@@ -32,6 +32,15 @@ Result 四立直流局结算(Table * table)
 	return result;
 }
 
+Result 四杠流局结算(Table * table)
+{
+	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
+	Result result;
+	for (int i = 0; i < 4; ++i)
+		result.score[i] = table->player[i].score;
+	return result;
+}
+
 Result 荒牌流局结算(Table * table)
 {
 	cout << "Warning: 罚符 is not considered" << endl;

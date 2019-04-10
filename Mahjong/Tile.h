@@ -116,7 +116,7 @@ inline bool is_场风(BaseTile tile, Wind 场风) {
 	case Wind::North:
 		return tile == BaseTile::north;
 	default:
-		throw runtime_error("Unknown wind.");
+		throw std::runtime_error("Unknown wind.");
 	}
 }
 
@@ -131,7 +131,7 @@ inline bool is_自风(BaseTile tile, Wind 自风) {
 	case Wind::North:
 		return tile == BaseTile::north;
 	default:
-		throw runtime_error("Unknown wind.");
+		throw std::runtime_error("Unknown wind.");
 	}
 }
 

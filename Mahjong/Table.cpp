@@ -7,7 +7,6 @@
 #include <random>
 using namespace std;
 
-#pragma region PLAYER
 Player::Player()
 	:riichi(false), score(INIT_SCORE)
 { }
@@ -166,16 +165,39 @@ std::vector<SelfAction> Player::get_打牌(bool after_chipon)
 	return actions;
 }
 
-std::vector<SelfAction> Player::get_自摸()
+std::vector<SelfAction> Player::get_自摸(Table* table)
 {
-	cout << "Warning:自摸 is not considered yet" << endl;
-	return std::vector<SelfAction>();
+	// cout << "Warning:自摸 is not considered yet" << endl;
+
+	std::vector<SelfAction> actions;
+	if (is和牌(convert_tiles_to_base_tiles(hand))) {
+		auto yakus = get_yaku_tsumo(table, this);
+		if (yakus.size() == 0) throw runtime_error("Yakus should have at least 1.");
+		if (yakus[0] == Yaku::None) return actions;
+		else {
+			SelfAction action;
+			action.action = Action::自摸;
+			actions.push_back(action);
+		}
+	}
+	else
+		return actions;
 }
 
 std::vector<SelfAction> Player::get_立直()
 {
-	cout << "Warning:立直 is not considered yet" << endl;
-	return std::vector<SelfAction>();
+	// cout << "Warning:立直 is not considered yet" << endl;
+	std::vector<SelfAction> actions;
+
+	auto riichi_tiles = is_riichi_able(hand, 门清);
+	for (auto riichi_tile : riichi_tiles) {
+		SelfAction action;
+		action.action = Action::立直;
+		action.correspond_tiles.push_back(riichi_tile);
+		actions.push_back(action);
+	}
+
+	return actions;
 }
 
 static int 九种九牌counter(std::vector<Tile*> hand) {
@@ -190,10 +212,10 @@ static int 九种九牌counter(std::vector<Tile*> hand) {
 	return counter;
 }
 
-std::vector<SelfAction> Player::get_九种九牌(bool 第一巡)
+std::vector<SelfAction> Player::get_九种九牌()
 {
 	vector<SelfAction> actions;
-	if (!第一巡) return actions;
+	if (!first_round) return actions;
 
 	// 考虑到第一巡可以有人暗杠，但是自己不行
 	if (hand.size() != 14) return actions;
@@ -250,10 +272,24 @@ vector<vector<Tile*>> get_Kan_tiles(vector<Tile*> hand, Tile* tile) {
 	return chi_tiles;
 }
 
-std::vector<ResponseAction> Player::get_荣和(Tile * tile)
+std::vector<ResponseAction> Player::get_荣和(Table* table, Tile * tile)
 {
-	cout << "Warning:荣和 is not considered yet" << endl;
-	return std::vector<ResponseAction>();
+	std::vector<ResponseAction> actions;
+
+	auto copy_hand = hand;
+	copy_hand.push_back(tile);
+	if (is和牌(convert_tiles_to_base_tiles(copy_hand))) {
+		auto yakus = get_yaku_ron(table, this, tile);
+		if (yakus.size() == 0) throw runtime_error("Yakus should have at least 1.");
+		if (yakus[0] == Yaku::None) return actions;
+		else {
+			ResponseAction action;
+			action.action = Action::荣和;
+			actions.push_back(action);
+		}
+	}
+	else
+		return actions;
 }
 
 std::vector<ResponseAction> Player::get_Chi(Tile* tile)
@@ -443,10 +479,6 @@ void Player::test_show_hand()
 {
 	cout << hand_to_string();
 }
-
-#pragma endregion
-
-#pragma region TABLE
 
 void Table::init_tiles()
 {
@@ -650,9 +682,28 @@ Result Table::GameProcess(bool verbose, std::string yama)
 			return 四立直流局结算(this);
 		}
 
+		// 判定四杠散了
+		if (get_remain_kan_tile() == 0) {
+			int n_杠=0;
+			for (int i = 0; i < 4; ++i) {
+				if (any_of(player[i].副露s.begin(), player[i].副露s.end(),
+					[](Fulu &f) {
+					return f.type == Fulu::暗杠 ||
+						f.type == Fulu::大明杠 ||
+						f.type == Fulu::加杠;
+				})) {
+					// 统计一共有多少个人杠过
+					n_杠++;
+				}
+			}
+			if (n_杠 >= 1) {
+				return 四杠流局结算(this);
+			}
+		}
+
 		if (get_remain_tile() == 0)
-			return 荒牌流局结算(this);
-			
+			return 荒牌流局结算(this);	
+
 		for (int i = 0; i < 4; ++i) {
 			if (i != turn)
 				player[i].sort_hand();
@@ -660,19 +711,25 @@ Result Table::GameProcess(bool verbose, std::string yama)
 		}
 
 		// 如果是after_minkan, 从岭上抓
-		if (after_minkan) {
+		if (after_daiminkan()) {
 			发岭上牌(turn);
 			goto WAITING_PHASE;
 		}
 
 		// 如果是after_ankan, 从岭上抓
-		if (after_ankan) {
+		if (after_ankan()) {
 			发岭上牌(turn);
 			goto WAITING_PHASE;
 		}
 
 		// 如果是after_chipon, 不抓
-		if (after_chipon) {
+		if (after_chipon()) {
+			goto WAITING_PHASE;
+		}
+
+		// 如果是after_chipon, 从岭上抓
+		if (after_加杠()) {
+			发岭上牌(turn);
 			goto WAITING_PHASE;
 		}
 
@@ -683,6 +740,17 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 WAITING_PHASE:
 		auto actions = GetValidActions();
+
+		// 如果已经有了4个杠子，禁止接下来的杠
+		if (get_remain_kan_tile() == 0) {
+			auto iter = remove_if(actions.begin(), actions.end(),
+				[](SelfAction& sa) {
+				if (sa.action == Action::暗杠) return true;
+				if (sa.action == Action::加杠) return true;
+				return false;
+			});
+			actions.erase(iter, actions.end());
+		}
 
 		// 让Agent进行选择
 		int selection = agents[turn]->get_self_action(this, actions);
@@ -708,6 +776,29 @@ WAITING_PHASE:
 				if (i == (turn + 1) % 4)
 					is下家 = true;
 				auto response = GetValidResponse(i, tile, is下家);
+
+				// 如果是海底状态，删除掉除了荣和和pass之外的所有情况
+				if (get_remain_tile() == 0) {
+					auto iter = 
+						remove_if(response.begin(), response.end(),
+						[](ResponseAction& ra) {
+						if (ra.action == Action::pass) return false;
+						if (ra.action == Action::荣和) return false;
+						return true;
+					});
+					response.erase(iter, response.end());
+				}
+
+				// 如果已经有了4个杠子，禁止接下来的杠
+				if (get_remain_kan_tile() == 0) {
+					auto iter = remove_if(response.begin(), response.end(),
+						[](ResponseAction& ra) {
+						if (ra.action == Action::杠) return true;
+						return false;
+					});
+					actions.erase(iter, actions.end());
+				}
+
 				if (response.size() != 1) {
 					VERBOSE{
 						cout << "Player " << i << "选择:" << endl;
@@ -742,11 +833,10 @@ WAITING_PHASE:
 				player[turn].一发 = false;
 				player[turn].first_round = false;
 
-				// 明杠，打出牌之后且其他人pass
-				if (after_minkan) { dora_spec++; }
-				after_minkan = false;
-				after_ankan = false;
-				after_chipon = false;
+				// 杠，打出牌之后且其他人pass
+				if (after_杠()) { dora_spec++; }
+				
+				last_action = Action::出牌;
 				// 什么都不做。将action对应的牌从手牌移动到牌河里面
 				player[turn].move_from_hand_to_river(tile);				
 				next_turn();
@@ -762,12 +852,11 @@ WAITING_PHASE:
 				player[response].move_from_hand_to_fulu(
 					actions[response].correspond_tiles, tile);
 				turn = response;
-				after_chipon = true;
 
 				// 明杠，打出牌之后且其他人吃碰
-				if (after_minkan) { dora_spec++; }
-				after_minkan = false;
-				after_ankan = false;
+				if (after_杠()) { dora_spec++; }
+				last_action = Action::碰;
+
 				continue;
 				
 			// 大明杠
@@ -781,12 +870,11 @@ WAITING_PHASE:
 				player[response].move_from_hand_to_fulu(
 					actions[response].correspond_tiles, tile);
 				turn = response;
-				after_chipon = true;
 
 				// 明杠，打出牌之后且其他人吃碰
-				if (after_minkan) { dora_spec++; }
-				after_minkan = true;
-				after_ankan = false;
+				if (after_杠()) { dora_spec++; }
+				last_action = Action::杠;
+
 				continue;
 			case Action::荣和:
 				throw runtime_error("NOT IMPLEMENTED YET");
@@ -832,8 +920,7 @@ WAITING_PHASE:
 				return 抢暗杠结算(this, response_player);
 			}
 			player[turn].play_暗杠(selected_action.correspond_tiles[0]->tile);
-			after_ankan = true;
-			after_chipon = false;
+			last_action = Action::暗杠;
 			
 			continue;
 		}
@@ -879,12 +966,130 @@ WAITING_PHASE:
 			}
 
 			player[turn].play_加杠(selected_action.correspond_tiles[0]);
-			after_ankan = true;
-			after_chipon = false;
+			last_action = Action::加杠;
 
 			continue;
+		}		
+		case Action::立直: {
+			auto tile = selected_action.correspond_tiles[0];
+			// 等待回复
+
+			vector<ResponseAction> actions(4);
+			Action final_action = Action::pass;
+			for (int i = 0; i < 4; ++i) {
+				if (i == turn) {
+					actions[i].action = Action::pass;
+					continue;
+				}
+				// 对于所有其他人
+				bool is下家 = false;
+				if (i == (turn + 1) % 4)
+					is下家 = true;
+				auto response = GetValidResponse(i, tile, is下家);
+				if (response.size() != 1) {
+					VERBOSE{
+						cout << "Player " << i << "选择:" << endl;
+					}
+						int selected_response =
+						agents[i]->get_response_action(this, response);
+					actions[i] = response[selected_response];
+				}
+				else
+					actions[i].action = Action::pass;
+
+				// 从actions中获得优先级
+				if (actions[i].action > final_action)
+					final_action = actions[i].action;
+			}
+
+			std::vector<int> response_player;
+			for (int i = 0; i < 4; ++i) {
+				if (actions[i].action == final_action) {
+					response_player.push_back(i);
+				}
+			}
+			int response = response_player[0];
+			// 根据最终的final_action来进行判断
+			// response_player里面保存了所有最终action和final_action相同的玩家
+			// 只有在pass和荣和的时候才会出现这种情况
+			// 其他情况用response来代替
+
+			switch (final_action) {
+			case Action::pass:
+				// 消除第一巡和一发
+				player[turn].一发 = false;
+				player[turn].first_round = false;
+
+				// 杠，打出牌之后且其他人pass
+				if (after_杠()) { dora_spec++; }
+
+				last_action = Action::出牌;
+				// 什么都不做。将action对应的牌从手牌移动到牌河里面
+				player[turn].move_from_hand_to_river(tile);
+
+				// 立直成功
+				if (player[turn].first_round) {
+					player[turn].double_riichi = true;
+				}
+				player[turn].riichi = true;
+
+				next_turn();
+				continue;
+			case Action::吃:
+			case Action::碰:
+				// 消除第一巡和一发
+				for (int i = 0; i < 4; ++i) {
+					player[i].first_round = false;
+					player[i].一发 = false;
+				}
+				player[turn].remove_from_hand(tile);
+				player[response].move_from_hand_to_fulu(
+					actions[response].correspond_tiles, tile);
+
+				// 立直成功
+				if (player[turn].first_round) {
+					player[turn].double_riichi = true;
+				}
+				player[turn].riichi = true;
+
+				turn = response;
+
+				// 明杠，打出牌之后且其他人吃碰
+				if (after_杠()) { dora_spec++; }
+				last_action = Action::碰;
+
+				continue;
+
+				// 大明杠
+			case Action::杠:
+				// 消除第一巡和一发
+				for (int i = 0; i < 4; ++i) {
+					player[i].first_round = false;
+					player[i].一发 = false;
+				}
+				player[turn].remove_from_hand(tile);
+				player[response].move_from_hand_to_fulu(
+					actions[response].correspond_tiles, tile);
+
+				// 立直成功
+				if (player[turn].first_round) {
+					player[turn].double_riichi = true;
+				}
+				player[turn].riichi = true;
+
+				turn = response;
+
+				// 明杠，打出牌之后且其他人吃碰
+				if (after_杠()) { dora_spec++; }
+				last_action = Action::杠;
+
+
+				continue;
+			case Action::荣和:
+				throw runtime_error("NOT IMPLEMENTED YET");
+			}
 		}
-		
+
 		default:
 			throw runtime_error("Selection invalid!");
 		}
@@ -942,14 +1147,14 @@ std::vector<SelfAction> Table::GetValidActions()
 {
 	vector<SelfAction> actions;
 	auto& the_player = player[turn];
-	if (!after_chipon && !after_ankan && !after_minkan)
-		merge_into(actions, the_player.get_加杠());
-
-	if (!after_chipon)
+	if (!after_chipon()) {
 		merge_into(actions, the_player.get_暗杠());
-
-	merge_into(actions, the_player.get_打牌(after_chipon));
-	merge_into(actions, the_player.get_自摸());
+		merge_into(actions, the_player.get_加杠());
+	}
+	
+	merge_into(actions, the_player.get_打牌(after_chipon()));
+	merge_into(actions, the_player.get_九种九牌());
+	merge_into(actions, the_player.get_自摸(this));
 	merge_into(actions, the_player.get_立直());
 
 	return actions;
@@ -967,7 +1172,7 @@ std::vector<ResponseAction> Table::GetValidResponse(
 
 	auto &the_player = player[i];
 
-	merge_into(actions, the_player.get_荣和(tile));
+	merge_into(actions, the_player.get_荣和(this, tile));
 	merge_into(actions, the_player.get_Pon(tile));
 	merge_into(actions, the_player.get_Kan(tile));
 
@@ -1010,9 +1215,3 @@ std::vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
 Table::~Table()
 {
 }
-
-#pragma endregion
-
-#pragma region(GAMELOG)
-#pragma endregion
-
