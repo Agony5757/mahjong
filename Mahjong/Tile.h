@@ -105,6 +105,53 @@ inline bool is_杠(std::vector<BaseTile> tiles) {
 	return true;
 }
 
+inline bool is_场风(BaseTile tile, Wind 场风) {
+	switch (场风) {
+	case Wind::East:
+		return tile == BaseTile::east;
+	case Wind::West:
+		return tile == BaseTile::west;
+	case Wind::South:
+		return tile == BaseTile::south;
+	case Wind::North:
+		return tile == BaseTile::north;
+	default:
+		throw runtime_error("Unknown wind.");
+	}
+}
+
+inline bool is_自风(BaseTile tile, Wind 自风) {
+	switch (自风) {
+	case Wind::East:
+		return tile == BaseTile::east;
+	case Wind::West:
+		return tile == BaseTile::west;
+	case Wind::South:
+		return tile == BaseTile::south;
+	case Wind::North:
+		return tile == BaseTile::north;
+	default:
+		throw runtime_error("Unknown wind.");
+	}
+}
+
+inline bool is_三元牌(BaseTile tile) {
+	return (tile == BaseTile::中 || tile == BaseTile::发 || tile == BaseTile::白);
+}
+	
+inline bool is_役牌(BaseTile tile, Wind 场风, Wind 自风) {
+	if (is_场风(tile, 场风)) {
+		return true;
+	}
+	if (is_自风(tile, 自风)) {
+		return true;
+	}
+	if (is_三元牌(tile)) {
+		return true;
+	}
+	return false;
+}
+
 inline std::string basetile_to_string(BaseTile tile) {
 	std::string ret;
 	if (0 <= tile && tile <= 8) {

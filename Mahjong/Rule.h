@@ -3,6 +3,8 @@
 
 #include "Tile.h"
 #include "macro.h"
+#include "Yaku.h"
+#include <functional>
 
 /* Converter & TileGroup Data Structure */
 
@@ -25,6 +27,8 @@ struct TileGroup {
 	}
 };
 
+bool operator<(const TileGroup& g1, const TileGroup& g2);
+
 struct CompletedTiles {
 	TileGroup head;
 	std::vector<TileGroup> body;
@@ -35,6 +39,9 @@ struct CompletedTiles {
 			[&ss](TileGroup &group) {ss << group.to_string() << " "; });
 		ss << std::endl;
 		return ss.str();
+	}
+	inline void sort_body() {
+		std::sort(body.begin(), body.end());
 	}
 };
 
@@ -68,8 +75,25 @@ bool is国士无双和牌型(std::vector<BaseTile> tiles);
 std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles);
 
 // 不考虑无役的听牌情况
-std::vector<BaseTile> is听牌(std::vector<BaseTile> tiles);
+std::vector<BaseTile> get听牌(std::vector<BaseTile> tiles);
+bool is和牌(std::vector<BaseTile> tiles);
 
+std::vector<BaseTile> is_riichi_able(std::vector<Tile*> hands, bool 门清);
 
+bool can_ron(std::vector<Tile*> hands, Tile* get_tile);
+bool can_tsumo(std::vector<Tile*> hands);
+
+std::vector<Yaku> get_立直_双立直(bool double_riichi, bool riichi, bool 一发);
+
+std::vector<Yaku> get_平和(CompletedTiles complete_tiles, bool 门清, BaseTile);
+std::vector<Yaku> get_门前自摸(bool 门清, bool 自摸);
+
+std::vector<Yaku> get_四暗刻_三暗刻(CompletedTiles complete_tiles);
+
+/* Forwar Decl */
+class Player;
+
+std::vector<Yaku> get_yaku_tsumo(Player *player);
+std::vector<Yaku> get_yaku_ron(Player *player, Tile* get_tile);
 
 #endif

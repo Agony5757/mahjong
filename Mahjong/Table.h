@@ -12,6 +12,7 @@ constexpr auto INIT_SCORE = 25000;
 class Player {
 public:
 	Player();
+	bool double_riichi = false;
 	bool riichi = false;
 	// 第几张开始是立直牌
 	int riichi_n = 0;

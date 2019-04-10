@@ -1,8 +1,9 @@
 ﻿#ifndef YAKU_H
 #define YAKU_H
 
-enum Yaku {	
+enum class Yaku {	
 
+	// 特指无役
 	None,
 
 	立直,
