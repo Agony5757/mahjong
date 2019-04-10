@@ -1,8 +1,42 @@
 ﻿#include "GameResult.h"
 #include "Table.h"
 
+#include "macro.h"
+
+using namespace std;
+
 Result 九种九牌流局结算(Table * table)
 {
+	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
+	Result result;
+	for (int i = 0; i < 4; ++i)
+		result.score[i] = table->player[i].score;
+	return result;
+}
+
+Result 四风连打流局结算(Table * table)
+{
+	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
+	Result result;
+	for (int i = 0; i < 4; ++i)
+		result.score[i] = table->player[i].score;
+	return result;
+}
+
+Result 四立直流局结算(Table * table)
+{
+	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
+	Result result;
+	for (int i = 0; i < 4; ++i)
+		result.score[i] = table->player[i].score;
+	return result;
+}
+
+Result 荒牌流局结算(Table * table)
+{
+	cout << "Warning: 罚符 is not considered" << endl;
+	cout << "Warning: 流局满贯 is not considered" << endl;
+
 	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
 	Result result;
 	for (int i = 0; i < 4; ++i)
@@ -37,4 +71,14 @@ Result 自摸结算(Table * table)
 
 	}
 	return result;
+}
+
+Result 抢暗杠结算(Table * table, std::vector<int> response_player)
+{
+	return Result();
+}
+
+Result 抢杠结算(Table * table, std::vector<int> response_player)
+{
+	return Result();
 }

@@ -58,10 +58,10 @@ std::string Player::to_string()
 }
 
 
-std::vector<SelfAction> Player::get_加杠(bool after_chipon)
+std::vector<SelfAction> Player::get_加杠()
 {
 	vector<SelfAction> actions;
-	if (after_chipon == true) return actions;
+	//if (after_chipon == true) return actions;
 
 	for (auto fulu : 副露s) {
 		if (fulu.type == Fulu::Pon) {
@@ -78,10 +78,10 @@ std::vector<SelfAction> Player::get_加杠(bool after_chipon)
 	return actions;
 }
 
-std::vector<SelfAction> Player::get_暗杠(bool after_chipon)
+std::vector<SelfAction> Player::get_暗杠()
 {
 	vector<SelfAction> actions;
-	if (after_chipon == true) return actions;
+	//if (after_chipon == true) return actions;
 	
 	for (auto tile : hand) {
 		auto duplicate = get_duplicate(hand, tile->tile, 4);
@@ -311,6 +311,18 @@ std::vector<ResponseAction> Player::get_Kan(Tile * tile)
 	return actions;
 }
 
+std::vector<ResponseAction> Player::get_抢暗杠(Tile * tile)
+{
+	cout << "Warning:抢暗杠 is not considered yet" << endl;
+	return std::vector<ResponseAction>();
+}
+
+std::vector<ResponseAction> Player::get_抢杠(Tile * tile)
+{
+	cout << "Warning:抢杠 is not considered yet" << endl;
+	return std::vector<ResponseAction>();
+}
+
 void Player::move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile * tile)
 {
 	Fulu fulu;
@@ -402,6 +414,20 @@ void Player::play_暗杠(BaseTile tile)
 	hand.erase(iter, hand.end());
 }
 
+void Player::play_加杠(Tile * tile)
+{
+	for (auto &fulu : 副露s) {
+		if (fulu.type == Fulu::Pon) {
+			if (tile->tile == fulu.tiles[0]->tile)
+			{
+				fulu.type = Fulu::加杠;
+				fulu.tiles.push_back(tile);
+			}
+		}
+	}
+	remove_from_hand(tile);
+}
+
 void Player::move_from_hand_to_river(Tile * tile)
 {
 	remove_from_hand(tile);
@@ -452,6 +478,11 @@ void Table::init_yama()
 	for (int i = 0; i < N_TILES; ++i) {
 		牌山.push_back(&(tiles[i]));
 	}
+
+	dora_spec = 1;
+	宝牌指示牌 = { 牌山[5],牌山[7],牌山[9],牌山[11],牌山[13] };
+	里宝牌指示牌 = { 牌山[6],牌山[8],牌山[10],牌山[12],牌山[14] };
+
 }
 
 string Table::export_yama() {
@@ -593,14 +624,49 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 	// 游戏进程的主循环,循环的开始是某人有3n+2张牌
 	while (1) {
+
+		// 四风连打判定
+		if (
+			player[0].river.size() == 1 &&
+			player[1].river.size() == 1 &&
+			player[2].river.size() == 1 &&
+			player[3].river.size() == 1 &&
+			player[0].副露s.size() == 0 &&
+			player[1].副露s.size() == 0 &&
+			player[2].副露s.size() == 0 &&
+			player[3].副露s.size() == 0 &&
+			player[0].river[0]->tile == player[1].river[0]->tile &&
+			player[1].river[0]->tile == player[2].river[0]->tile &&
+			player[2].river[0]->tile == player[3].river[0]->tile)
+		{
+			return 四风连打流局结算(this);			
+		}
+
+		if (
+			player[0].riichi &&
+			player[1].riichi &&
+			player[2].riichi &&
+			player[3].riichi) {
+			return 四立直流局结算(this);
+		}
+
+		if (get_remain_tile() == 0)
+			return 荒牌流局结算(this);
+			
 		for (int i = 0; i < 4; ++i) {
 			if (i != turn)
 				player[i].sort_hand();
 			// 全部自动整理手牌
 		}
 
-		// 如果是after_kan, 从岭上抓
-		if (after_kan) {
+		// 如果是after_minkan, 从岭上抓
+		if (after_minkan) {
+			发岭上牌(turn);
+			goto WAITING_PHASE;
+		}
+
+		// 如果是after_ankan, 从岭上抓
+		if (after_ankan) {
 			发岭上牌(turn);
 			goto WAITING_PHASE;
 		}
@@ -651,8 +717,7 @@ WAITING_PHASE:
 					actions[i] = response[selected_response];
 				}
 				else
-					actions[i].action = Action::pass;
-				
+					actions[i].action = Action::pass;				
 
 				// 从actions中获得优先级
 				if (actions[i].action > final_action)
@@ -676,11 +741,14 @@ WAITING_PHASE:
 				// 消除第一巡和一发
 				player[turn].一发 = false;
 				player[turn].first_round = false;
-				if (after_kan) { dora_spec++; }
-				after_kan = false;
+
+				// 明杠，打出牌之后且其他人pass
+				if (after_minkan) { dora_spec++; }
+				after_minkan = false;
+				after_ankan = false;
 				after_chipon = false;
 				// 什么都不做。将action对应的牌从手牌移动到牌河里面
-				player[turn].move_from_hand_to_river(tile);
+				player[turn].move_from_hand_to_river(tile);				
 				next_turn();
 				continue;
 			case Action::吃:
@@ -695,8 +763,11 @@ WAITING_PHASE:
 					actions[response].correspond_tiles, tile);
 				turn = response;
 				after_chipon = true;
-				if (after_kan) { dora_spec++; }
-				after_kan = false;
+
+				// 明杠，打出牌之后且其他人吃碰
+				if (after_minkan) { dora_spec++; }
+				after_minkan = false;
+				after_ankan = false;
 				continue;
 				
 			// 大明杠
@@ -711,13 +782,109 @@ WAITING_PHASE:
 					actions[response].correspond_tiles, tile);
 				turn = response;
 				after_chipon = true;
-				if (after_kan) { dora_spec++; }
-				after_kan = true;
+
+				// 明杠，打出牌之后且其他人吃碰
+				if (after_minkan) { dora_spec++; }
+				after_minkan = true;
+				after_ankan = false;
 				continue;
 			case Action::荣和:
 				throw runtime_error("NOT IMPLEMENTED YET");
 			}
 		}
+		case Action::暗杠: {
+			auto tile = selected_action.correspond_tiles[0];
+			// 等待回复
+
+			vector<ResponseAction> actions(4);
+			Action final_action = Action::pass;
+			for (int i = 0; i < 4; ++i) {
+				if (i == turn) {
+					actions[i].action = Action::pass;
+					continue;
+				}
+
+				auto response = Get抢暗杠(i, tile);
+				if (response.size() != 1) {
+					VERBOSE{
+						cout << "Player " << i << "选择:" << endl;
+					}
+					int selected_response =
+						agents[i]->get_response_action(this, response);
+					actions[i] = response[selected_response];
+				}
+				else
+					actions[i].action = Action::pass;
+				
+				// 从actions中获得优先级
+				if (actions[i].action == Action::抢暗杠)
+					final_action = actions[i].action;
+			}
+
+			std::vector<int> response_player;
+			for (int i = 0; i < 4; ++i) {
+				if (actions[i].action == final_action) {
+					response_player.push_back(i);
+				}
+			}
+			if (response_player.size() != 0) {
+				// 有人抢杠则进行结算
+				return 抢暗杠结算(this, response_player);
+			}
+			player[turn].play_暗杠(selected_action.correspond_tiles[0]->tile);
+			after_ankan = true;
+			after_chipon = false;
+			
+			continue;
+		}
+		case Action::加杠: {
+			auto tile = selected_action.correspond_tiles[0];
+			// 等待回复
+
+			vector<ResponseAction> actions(4);
+			Action final_action = Action::pass;
+			for (int i = 0; i < 4; ++i) {
+				if (i == turn) {
+					actions[i].action = Action::pass;
+					continue;
+				}
+
+				auto response = Get抢杠(i, tile);
+				if (response.size() != 1) {
+					VERBOSE{
+						cout << "Player " << i << "选择:" << endl;
+					}
+						int selected_response =
+						agents[i]->get_response_action(this, response);
+					actions[i] = response[selected_response];
+				}
+				else
+					actions[i].action = Action::pass;
+
+				// 从actions中获得优先级
+				if (actions[i].action == Action::抢杠)
+					final_action = actions[i].action;
+			}
+
+			std::vector<int> response_player;
+			for (int i = 0; i < 4; ++i) {
+				if (actions[i].action == final_action) {
+					response_player.push_back(i);
+				}
+			}
+
+			if (response_player.size() != 0) {
+				// 有人抢杠则进行结算
+				return 抢杠结算(this, response_player);
+			}
+
+			player[turn].play_加杠(selected_action.correspond_tiles[0]);
+			after_ankan = true;
+			after_chipon = false;
+
+			continue;
+		}
+		
 		default:
 			throw runtime_error("Selection invalid!");
 		}
@@ -775,8 +942,12 @@ std::vector<SelfAction> Table::GetValidActions()
 {
 	vector<SelfAction> actions;
 	auto& the_player = player[turn];
-	merge_into(actions, the_player.get_加杠(after_chipon));
-	merge_into(actions, the_player.get_暗杠(after_chipon));
+	if (!after_chipon && !after_ankan && !after_minkan)
+		merge_into(actions, the_player.get_加杠());
+
+	if (!after_chipon)
+		merge_into(actions, the_player.get_暗杠());
+
 	merge_into(actions, the_player.get_打牌(after_chipon));
 	merge_into(actions, the_player.get_自摸());
 	merge_into(actions, the_player.get_立直());
@@ -802,6 +973,36 @@ std::vector<ResponseAction> Table::GetValidResponse(
 
 	if (is下家)
 		merge_into(actions, the_player.get_Chi(tile));
+
+	return actions;
+}
+
+std::vector<ResponseAction> Table::Get抢暗杠(int i, Tile * tile)
+{
+	std::vector<ResponseAction> actions;
+
+	// first: pass action
+	ResponseAction action_pass;
+	action_pass.action = Action::pass;
+	actions.push_back(action_pass);
+
+	auto &the_player = player[i];
+	merge_into(actions, the_player.get_抢暗杠(tile));
+
+	return actions;
+}
+
+std::vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
+{
+	std::vector<ResponseAction> actions;
+
+	// first: pass action
+	ResponseAction action_pass;
+	action_pass.action = Action::pass;
+	actions.push_back(action_pass);
+
+	auto &the_player = player[i];
+	merge_into(actions, the_player.get_抢杠(tile));
 
 	return actions;
 }

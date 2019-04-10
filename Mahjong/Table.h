@@ -33,8 +33,8 @@ public:
 	bool first_round;
 
 	// SelfAction
-	std::vector<SelfAction> get_加杠(bool after_chipon);
-	std::vector<SelfAction> get_暗杠(bool after_chipon);
+	std::vector<SelfAction> get_加杠();
+	std::vector<SelfAction> get_暗杠();
 	std::vector<SelfAction> get_打牌(bool after_chipon);
 	std::vector<SelfAction> get_自摸();
 	std::vector<SelfAction> get_立直();
@@ -45,12 +45,21 @@ public:
 	std::vector<ResponseAction> get_Chi(Tile* tile);
 	std::vector<ResponseAction> get_Pon(Tile* tile);
 	std::vector<ResponseAction> get_Kan(Tile* tile); // 大明杠
+	
+	// Response Action (抢暗杠)
+	std::vector<ResponseAction> get_抢暗杠(Tile* tile);
+
+	// Response Action (抢杠)
+	std::vector<ResponseAction> get_抢杠(Tile* tile);
 
 	void move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile);
 	void remove_from_hand(Tile* tile);
 
 	// 将所有的BaseTile值为tile的四个牌移动到副露区
 	void play_暗杠(BaseTile tile);
+
+	// 移动tile到副露中和它basetile相同的刻子中
+	void play_加杠(Tile* tile);
 
 	// 将牌移动到牌河（一定没有人吃碰杠）
 	void move_from_hand_to_river(Tile* tile);
@@ -69,7 +78,21 @@ private:
 public:
 
 	Agent* agents[4];
+
+	// 翻开了几张宝牌指示牌
 	int dora_spec;
+	std::vector<Tile*> 宝牌指示牌;
+	std::vector<Tile*> 里宝牌指示牌;
+
+	inline int get_remain_kan_tile() {
+		auto iter = find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]);
+		return iter - 牌山.begin() - 1;
+	}
+
+	inline int get_remain_tile() {
+		return 牌山.size() - 14;
+	}
+
 	Wind 场风;
 	int 庄家; // 庄家
 	int n本场;
@@ -96,7 +119,8 @@ public:
 	int turn;
 	
 	bool after_chipon = false;
-	bool after_kan = false;
+	bool after_minkan = false;
+	bool after_ankan = false;
 
 	Table(int 庄家 = 0, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);
 	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4]);
@@ -106,6 +130,12 @@ public:
 
 	// 根据turn打出的tile，可以做出的决定
 	std::vector<ResponseAction> GetValidResponse(int player, Tile* tile, bool);
+
+	// 根据turn打出的tile，可以做出的抢杠决定
+	std::vector<ResponseAction> Get抢暗杠(int player, Tile* tile);
+
+	// 根据turn打出的tile，可以做出的抢杠决定
+	std::vector<ResponseAction> Get抢杠(int player, Tile* tile);
 
 	std::vector<Tile*> 牌山;
 	Player player[4];

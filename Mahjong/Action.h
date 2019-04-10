@@ -13,6 +13,9 @@ enum class Action : uint8_t {
 	// response end
 	// 注意到所有的response Action可以通过大小来比较
 
+	抢暗杠,
+	抢杠,
+
 	// self action begin
 	暗杠,
 	加杠,

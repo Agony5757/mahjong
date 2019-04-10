@@ -49,7 +49,7 @@ inline bool is_九牌(BaseTile t) {
 inline bool is_老头牌(BaseTile t) {
 	if (is_九牌(t) || is_幺牌(t)) {
 		return true;
-	}
+	} 
 	else return false;
 }
 
