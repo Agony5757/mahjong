@@ -738,7 +738,14 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 		// TODO: 注意！这一阶段没有考虑流局
 
-WAITING_PHASE:
+	WAITING_PHASE:
+		if (player[turn].is_riichi())
+			goto RIICHI_PHASE;
+		else
+			goto NO_RIICHI_PHASE;
+
+	NO_RIICHI_PHASE: {
+
 		auto actions = GetValidActions();
 
 		// 如果已经有了4个杠子，禁止接下来的杠
@@ -779,9 +786,9 @@ WAITING_PHASE:
 
 				// 如果是海底状态，删除掉除了荣和和pass之外的所有情况
 				if (get_remain_tile() == 0) {
-					auto iter = 
+					auto iter =
 						remove_if(response.begin(), response.end(),
-						[](ResponseAction& ra) {
+							[](ResponseAction& ra) {
 						if (ra.action == Action::pass) return false;
 						if (ra.action == Action::荣和) return false;
 						return true;
@@ -803,12 +810,12 @@ WAITING_PHASE:
 					VERBOSE{
 						cout << "Player " << i << "选择:" << endl;
 					}
-					int selected_response =
+						int selected_response =
 						agents[i]->get_response_action(this, response);
 					actions[i] = response[selected_response];
 				}
 				else
-					actions[i].action = Action::pass;				
+					actions[i].action = Action::pass;
 
 				// 从actions中获得优先级
 				if (actions[i].action > final_action)
@@ -826,7 +833,7 @@ WAITING_PHASE:
 			// response_player里面保存了所有最终action和final_action相同的玩家
 			// 只有在pass和荣和的时候才会出现这种情况
 			// 其他情况用response来代替
-			
+
 			switch (final_action) {
 			case Action::pass:
 				// 消除第一巡和一发
@@ -835,10 +842,10 @@ WAITING_PHASE:
 
 				// 杠，打出牌之后且其他人pass
 				if (after_杠()) { dora_spec++; }
-				
+
 				last_action = Action::出牌;
 				// 什么都不做。将action对应的牌从手牌移动到牌河里面
-				player[turn].move_from_hand_to_river(tile);				
+				player[turn].move_from_hand_to_river(tile);
 				next_turn();
 				continue;
 			case Action::吃:
@@ -848,7 +855,7 @@ WAITING_PHASE:
 					player[i].first_round = false;
 					player[i].一发 = false;
 				}
-				player[turn].remove_from_hand(tile);				
+				player[turn].remove_from_hand(tile);
 				player[response].move_from_hand_to_fulu(
 					actions[response].correspond_tiles, tile);
 				turn = response;
@@ -858,8 +865,8 @@ WAITING_PHASE:
 				last_action = Action::碰;
 
 				continue;
-				
-			// 大明杠
+
+				// 大明杠
 			case Action::杠:
 				// 消除第一巡和一发
 				for (int i = 0; i < 4; ++i) {
@@ -897,13 +904,13 @@ WAITING_PHASE:
 					VERBOSE{
 						cout << "Player " << i << "选择:" << endl;
 					}
-					int selected_response =
+						int selected_response =
 						agents[i]->get_response_action(this, response);
 					actions[i] = response[selected_response];
 				}
 				else
 					actions[i].action = Action::pass;
-				
+
 				// 从actions中获得优先级
 				if (actions[i].action == Action::抢暗杠)
 					final_action = actions[i].action;
@@ -921,7 +928,7 @@ WAITING_PHASE:
 			}
 			player[turn].play_暗杠(selected_action.correspond_tiles[0]->tile);
 			last_action = Action::暗杠;
-			
+
 			continue;
 		}
 		case Action::加杠: {
@@ -969,7 +976,7 @@ WAITING_PHASE:
 			last_action = Action::加杠;
 
 			continue;
-		}		
+		}
 		case Action::立直: {
 			auto tile = selected_action.correspond_tiles[0];
 			// 等待回复
@@ -1093,6 +1100,10 @@ WAITING_PHASE:
 		default:
 			throw runtime_error("Selection invalid!");
 		}
+		}
+	
+		RIICHI_PHASE:
+
 	}
 }
 
@@ -1173,12 +1184,13 @@ std::vector<ResponseAction> Table::GetValidResponse(
 	auto &the_player = player[i];
 
 	merge_into(actions, the_player.get_荣和(this, tile));
-	merge_into(actions, the_player.get_Pon(tile));
-	merge_into(actions, the_player.get_Kan(tile));
+	if (!the_player.is_riichi()) {
+		merge_into(actions, the_player.get_Pon(tile));
+		merge_into(actions, the_player.get_Kan(tile));
 
-	if (is下家)
-		merge_into(actions, the_player.get_Chi(tile));
-
+		if (is下家)
+			merge_into(actions, the_player.get_Chi(tile));
+	}
 	return actions;
 }
 

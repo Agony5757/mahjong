@@ -19,6 +19,9 @@ public:
 	bool riichi = false;
 	// 第几张开始是立直牌
 	int riichi_n = 0;
+
+	inline bool is_riichi() { return riichi || double_riichi; }
+
 	bool 门清 = true;
 	Wind wind;
 	bool 亲家;
