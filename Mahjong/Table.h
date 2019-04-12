@@ -58,6 +58,10 @@ public:
 	// Response Action (抢杠)
 	std::vector<ResponseAction> get_抢杠(Tile* tile);
 
+	// 立直后
+	std::vector<SelfAction> riichi_get_暗杠(Table* table);
+	std::vector<SelfAction> riichi_get_打牌();
+
 	void move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile);
 	void remove_from_hand(Tile* tile);
 
@@ -152,6 +156,8 @@ public:
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
 	std::vector<SelfAction> GetValidActions();
+
+	std::vector<SelfAction> GetRiichiActions();
 
 	// 根据turn打出的tile，可以做出的决定
 	std::vector<ResponseAction> GetValidResponse(int player, Tile* tile, bool);

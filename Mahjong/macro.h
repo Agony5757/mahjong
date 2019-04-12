@@ -132,7 +132,7 @@ inline std::vector<BaseTile> convert_extern_tiles_to_basetiles(std::vector<mahjo
 }
 
 template<typename T>
-bool is_same_capacitor(T a, T b) {
+bool is_same_container(T a, T b) {
 	if (a.size() != b.size()) {
 		return false;
 	}

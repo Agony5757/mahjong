@@ -149,7 +149,7 @@ bool is国士无双和牌型(std::vector<BaseTile> tiles)
 	for (auto add : adds) {
 		raw.push_back(add);
 		sort(tiles.begin(), tiles.end());
-		if (is_same_capacitor(tiles, raw))
+		if (is_same_container(tiles, raw))
 			return true;
 		else
 			raw.pop_back();
