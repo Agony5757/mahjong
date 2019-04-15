@@ -12,13 +12,61 @@ constexpr auto INIT_SCORE = 25000;
 // Forward Decl
 class Table;
 
+class RiverTile {
+public:
+	Tile* tile;
+
+	// 第几张牌丢下去的
+	int number;
+
+	// 是不是立直后弃牌
+	bool riichi;
+
+	// 这张牌明面上还在不在河里
+	bool remain;
+
+	// true为手切，false为摸切
+	bool fromhand;
+};
+
+class River {
+	// 记录所有的弃牌，而不是仅仅在河里的牌
+public:
+	std::vector<RiverTile> river;
+	inline std::vector<BaseTile> to_basetile() {
+		std::vector<BaseTile> basetiles;
+		for (auto &tile : river) {
+			basetiles.push_back(tile.tile->tile);
+		}
+		return basetiles;
+	}
+	inline std::string to_string() {
+		std::stringstream ss;
+
+		for (auto tile : river) {
+			ss << tile.tile->to_string() << " ";
+		}
+		return ss.str();
+	}
+
+	inline RiverTile& operator[](size_t n) {
+		return river[n];
+	}
+
+	inline size_t size() {
+		return river.size();
+	}
+
+	inline void push_back(RiverTile rt) {
+		river.push_back(rt);
+	}
+};
+
 class Player {
 public:
 	Player();
 	bool double_riichi = false;
 	bool riichi = false;
-	// 第几张开始是立直牌
-	int riichi_n = 0;
 
 	inline bool is_riichi() { return riichi || double_riichi; }
 
@@ -28,7 +76,7 @@ public:
 	bool 振听 = false;
 	int score;
 	std::vector<Tile*> hand;
-	std::vector<Tile*> river;
+	River river;
 	std::vector<Fulu> 副露s;
 	std::string hand_to_string();
 	std::string river_to_string();
@@ -72,7 +120,16 @@ public:
 	void play_加杠(Tile* tile);
 
 	// 将牌移动到牌河（一定没有人吃碰杠）
-	void move_from_hand_to_river(Tile* tile);
+	// remain指这张牌是不是明面上还在牌河
+	void move_from_hand_to_river(Tile* tile, int &number, bool remain, bool fromhand);
+
+	inline void move_from_hand_to_river_log_only(Tile* tile, int &number, bool fromhand) {
+		return move_from_hand_to_river(tile, number, false, fromhand);
+	}
+
+	inline void move_from_hand_to_river_really(Tile* tile, int& number, bool fromhand) {
+		return move_from_hand_to_river(tile, number, true, fromhand);
+	}
 
 	void sort_hand();
 	void test_show_hand();	
@@ -84,6 +141,9 @@ class Agent;
 class Table
 {
 private:
+
+	int river_counter = 0;
+
 	Tile tiles[N_TILES];
 public:
 
@@ -129,7 +189,7 @@ public:
 
 	int turn;
 	
-	Action last_action;
+	Action last_action = Action::出牌;
 	inline bool after_chipon(){
 		return last_action == Action::吃 ||
 			last_action == Action::碰;

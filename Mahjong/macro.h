@@ -14,6 +14,9 @@
 
 #define TEST_EQ_VERBOSE(value, expected) if (value == expected) cout<<"PASS"<<endl; else cout<<"FAIL"<<endl;
 
+constexpr bool FROM_摸切 = false;
+constexpr bool FROM_手切 = true;
+
 template<typename T>
 bool is_in(std::vector<T> vec, const T &elem){
 	if (find(vec.begin(), vec.end(), elem) != vec.end()) {

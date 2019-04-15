@@ -1,6 +1,6 @@
 ﻿#include "GameResult.h"
 #include "Table.h"
-
+#include "ScoreCounter.h"
 #include "macro.h"
 
 using namespace std;
@@ -72,14 +72,15 @@ Result 自摸结算(Table * table)
 	// 三人输
 	for (int i = 0; i < 4; ++i) if (i != winner) result.loser.push_back(i);
 
-	// 因为是自摸，根据玩家是不是庄家，打点有所不同
-	if (winner == table->庄家) {
+	auto yakus = yaku_counter(table, table->turn, nullptr);
+	
 
-	}
-	else {
-
-	}
 	return result;
+}
+
+Result 荣和结算(Table * table, std::vector<int> response_player)
+{
+	return Result();
 }
 
 Result 抢暗杠结算(Table * table, std::vector<int> response_player)

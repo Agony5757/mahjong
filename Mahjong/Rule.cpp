@@ -238,110 +238,112 @@ bool can_tsumo(std::vector<Tile*> hands)
 		return true;
 }
 
-std::vector<Yaku> get_立直_双立直(bool double_riichi, bool riichi, bool 一发)
-{
-	vector<Yaku> yaku;
-	if (double_riichi) {
-		yaku.push_back(Yaku::两立直); 
-	}
-	else if (riichi) {
-		yaku.push_back(Yaku::立直);
-	}
-	if (一发) {
-		yaku.push_back(Yaku::一发);
-	}
-	return yaku;
-}
 
-vector<Yaku> get_平和(CompletedTiles complete_tiles, bool 门清, BaseTile get_tile, 
-	Wind 场风, Wind 自风)
-{
-	vector<Yaku> yaku;
-	// cout << "Warning: 平和 is not considered." << endl;
-	complete_tiles.sort_body();
-	if (complete_tiles.body[0].type != TileGroup::Toitsu) {
-		throw runtime_error("First group is not Toitsu.");
-	}
-	if (!门清) return yaku;
-	
-	if (!all_of(complete_tiles.body.begin() + 1, complete_tiles.body.end(),
-		[](TileGroup &s) {return (s.type == TileGroup::Shuntsu); })
-	) {
-		return yaku;
-	}
-
-	if (!any_of(complete_tiles.body.begin()+1, complete_tiles.body.end(),
-		[get_tile](TileGroup &s) { 
-		// get_tile存在于s.tiles中
-		// 并且s.tiles除去这张牌，是23，34，。。。78中的一个
-		// 因为是顺子，所以肯定不是字牌
-		// 因此和这两张牌都不是老头牌，以及这两张牌差为1等价
-		auto iter = find(s.tiles.begin(), s.tiles.end(), get_tile);
-		if (iter == s.tiles.end()) { return false; }
-		else {
-			s.tiles.erase(iter);
-			sort(s.tiles.begin(), s.tiles.end());
-			if (is_老头牌(s.tiles[0]) || is_老头牌(s.tiles[1])
-				||
-				abs(s.tiles[0] - s.tiles[1]) != 1
-				) {
-				return false;
-			}
-			else return true;
-		}
-	}))
-		return yaku;
-
-	if (is_役牌(get_tile, 场风, 自风))
-		return yaku;
-
-	yaku.push_back(Yaku::平和);
-
-	return yaku;
-}
-
-std::vector<Yaku> get_门前自摸(bool 门清, bool 自摸)
-{
-	vector<Yaku> yaku;
-	if (门清 && 自摸) {
-		yaku.push_back(Yaku::门前清自摸和);
-	}
-	return yaku;
-}
-
-std::vector<Yaku> get_四暗刻_三暗刻(CompletedTiles complete_tiles)
-{
-	vector<Yaku> yaku;
-	cout << "Warning: 四暗刻 is not considered." << endl;
-	return yaku;
-}
-
-std::vector<Yaku> get_yaku_tsumo(Table* table, Player * player)
-{
-	auto 门清 = player->门清;
-	auto riichi = player->riichi;
-	auto double_riichi = player->double_riichi;
-	bool 自摸 = true;
-	bool 一发 = player->一发;
-
-	vector<Yaku> yakus;
-	merge_into(yakus, get_门前自摸(门清, 自摸));
-	merge_into(yakus, get_立直_双立直(double_riichi, riichi, 一发));
-
-	return yakus;
-}
-
-std::vector<Yaku> get_yaku_ron(Table* table, Player * player, Tile* get_tile)
-{
-	auto 门清 = player->门清;
-	auto riichi = player->riichi;
-	auto double_riichi = player->double_riichi;
-	bool 自摸 = true;
-	bool 一发 = player->一发;
-
-	vector<Yaku> yakus;
-	merge_into(yakus, get_立直_双立直(double_riichi, riichi, 一发));
-
-	return yakus;
-}
-
+//
+//std::vector<Yaku> get_立直_双立直(bool double_riichi, bool riichi, bool 一发)
+//{
+//	vector<Yaku> yaku;
+//	if (double_riichi) {
+//		yaku.push_back(Yaku::两立直); 
+//	}
+//	else if (riichi) {
+//		yaku.push_back(Yaku::立直);
+//	}
+//	if (一发) {
+//		yaku.push_back(Yaku::一发);
+//	}
+//	return yaku;
+//}
+//
+//vector<Yaku> get_平和(CompletedTiles complete_tiles, bool 门清, BaseTile get_tile, 
+//	Wind 场风, Wind 自风)
+//{
+//	vector<Yaku> yaku;
+//	// cout << "Warning: 平和 is not considered." << endl;
+//	complete_tiles.sort_body();
+//	if (complete_tiles.body[0].type != TileGroup::Toitsu) {
+//		throw runtime_error("First group is not Toitsu.");
+//	}
+//	if (!门清) return yaku;
+//	
+//	if (!all_of(complete_tiles.body.begin() + 1, complete_tiles.body.end(),
+//		[](TileGroup &s) {return (s.type == TileGroup::Shuntsu); })
+//	) {
+//		return yaku;
+//	}
+//
+//	if (!any_of(complete_tiles.body.begin()+1, complete_tiles.body.end(),
+//		[get_tile](TileGroup &s) { 
+//		// get_tile存在于s.tiles中
+//		// 并且s.tiles除去这张牌，是23，34，。。。78中的一个
+//		// 因为是顺子，所以肯定不是字牌
+//		// 因此和这两张牌都不是老头牌，以及这两张牌差为1等价
+//		auto iter = find(s.tiles.begin(), s.tiles.end(), get_tile);
+//		if (iter == s.tiles.end()) { return false; }
+//		else {
+//			s.tiles.erase(iter);
+//			sort(s.tiles.begin(), s.tiles.end());
+//			if (is_老头牌(s.tiles[0]) || is_老头牌(s.tiles[1])
+//				||
+//				abs(s.tiles[0] - s.tiles[1]) != 1
+//				) {
+//				return false;
+//			}
+//			else return true;
+//		}
+//	}))
+//		return yaku;
+//
+//	if (is_役牌(get_tile, 场风, 自风))
+//		return yaku;
+//
+//	yaku.push_back(Yaku::平和);
+//
+//	return yaku;
+//}
+//
+//std::vector<Yaku> get_门前自摸(bool 门清, bool 自摸)
+//{
+//	vector<Yaku> yaku;
+//	if (门清 && 自摸) {
+//		yaku.push_back(Yaku::门前清自摸和);
+//	}
+//	return yaku;
+//}
+//
+//std::vector<Yaku> get_四暗刻_三暗刻(CompletedTiles complete_tiles)
+//{
+//	vector<Yaku> yaku;
+//	cout << "Warning: 四暗刻 is not considered." << endl;
+//	return yaku;
+//}
+//
+//std::vector<Yaku> get_yaku_tsumo(Table* table, Player * player)
+//{
+//	auto 门清 = player->门清;
+//	auto riichi = player->riichi;
+//	auto double_riichi = player->double_riichi;
+//	bool 自摸 = true;
+//	bool 一发 = player->一发;
+//
+//	vector<Yaku> yakus;
+//	merge_into(yakus, get_门前自摸(门清, 自摸));
+//	merge_into(yakus, get_立直_双立直(double_riichi, riichi, 一发));
+//
+//	return yakus;
+//}
+//
+//std::vector<Yaku> get_yaku_ron(Table* table, Player * player, Tile* get_tile)
+//{
+//	auto 门清 = player->门清;
+//	auto riichi = player->riichi;
+//	auto double_riichi = player->double_riichi;
+//	bool 自摸 = true;
+//	bool 一发 = player->一发;
+//
+//	vector<Yaku> yakus;
+//	merge_into(yakus, get_立直_双立直(double_riichi, riichi, 一发));
+//
+//	return yakus;
+//}
+//

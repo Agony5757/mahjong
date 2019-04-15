@@ -3,6 +3,7 @@
 #include "Rule.h"
 #include "GameResult.h"
 #include "Agent.h"
+#include "ScoreCounter.h"
 
 #include <random>
 using namespace std;
@@ -23,12 +24,7 @@ std::string Player::hand_to_string()
 
 std::string Player::river_to_string()
 {
-	stringstream ss;
-
-	for (auto tile : river) {
-		ss << tile->to_string() << " ";
-	}
-	return ss.str();
+	return river.to_string();
 }
 
 std::string Player::to_string()
@@ -171,17 +167,12 @@ std::vector<SelfAction> Player::get_自摸(Table* table)
 
 	std::vector<SelfAction> actions;
 	if (is和牌(convert_tiles_to_base_tiles(hand))) {
-		auto yakus = get_yaku_tsumo(table, this);
-		if (yakus.size() == 0) throw runtime_error("Yakus should have at least 1.");
-		if (yakus[0] == Yaku::None) return actions;
-		else {
-			SelfAction action;
-			action.action = Action::自摸;
-			actions.push_back(action);
-		}
+		SelfAction action;
+		action.action = Action::自摸;
+		actions.push_back(action);
 	}
-	else
-		return actions;
+	// 在桌子那边加以过滤
+	return actions;
 }
 
 std::vector<SelfAction> Player::get_立直()
@@ -278,18 +269,14 @@ std::vector<ResponseAction> Player::get_荣和(Table* table, Tile * tile)
 
 	auto copy_hand = hand;
 	copy_hand.push_back(tile);
+
 	if (is和牌(convert_tiles_to_base_tiles(copy_hand))) {
-		auto yakus = get_yaku_ron(table, this, tile);
-		if (yakus.size() == 0) throw runtime_error("Yakus should have at least 1.");
-		if (yakus[0] == Yaku::None) return actions;
-		else {
-			ResponseAction action;
-			action.action = Action::荣和;
-			actions.push_back(action);
-		}
+		ResponseAction action;
+		action.action = Action::荣和;
+		actions.push_back(action);
 	}
-	else
-		return actions;
+
+	return actions;
 }
 
 std::vector<ResponseAction> Player::get_Chi(Tile* tile)
@@ -513,10 +500,11 @@ void Player::play_加杠(Tile * tile)
 	remove_from_hand(tile);
 }
 
-void Player::move_from_hand_to_river(Tile * tile)
+void Player::move_from_hand_to_river(Tile * tile, int &number, bool remain, bool fromhand)
 {
 	remove_from_hand(tile);
-	river.push_back(tile);
+	number++;
+	river.push_back({ tile, number, riichi, remain, fromhand });
 }
 
 void Player::sort_hand()
@@ -695,12 +683,12 @@ Result Table::GameProcess(bool verbose, std::string yama)
 	// 初始化每人自风
 	init_wind();
 
-	turn = 庄家;	
+	turn = 庄家;
 
 	// 测试Agent
 	for (int i = 0; i < 4; ++i) {
-		if (agents[i] == nullptr) 
-			throw runtime_error("Agent " + to_string(i) + " is not registered!"); 
+		if (agents[i] == nullptr)
+			throw runtime_error("Agent " + to_string(i) + " is not registered!");
 	}
 
 	// 游戏进程的主循环,循环的开始是某人有3n+2张牌
@@ -716,11 +704,11 @@ Result Table::GameProcess(bool verbose, std::string yama)
 			player[1].副露s.size() == 0 &&
 			player[2].副露s.size() == 0 &&
 			player[3].副露s.size() == 0 &&
-			player[0].river[0]->tile == player[1].river[0]->tile &&
-			player[1].river[0]->tile == player[2].river[0]->tile &&
-			player[2].river[0]->tile == player[3].river[0]->tile)
+			player[0].river[0].tile->tile == player[1].river[0].tile->tile &&
+			player[1].river[0].tile->tile == player[2].river[0].tile->tile &&
+			player[2].river[0].tile->tile == player[3].river[0].tile->tile)
 		{
-			return 四风连打流局结算(this);			
+			return 四风连打流局结算(this);
 		}
 
 		if (
@@ -733,7 +721,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 		// 判定四杠散了
 		if (get_remain_kan_tile() == 0) {
-			int n_杠=0;
+			int n_杠 = 0;
 			for (int i = 0; i < 4; ++i) {
 				if (any_of(player[i].副露s.begin(), player[i].副露s.end(),
 					[](Fulu &f) {
@@ -751,12 +739,12 @@ Result Table::GameProcess(bool verbose, std::string yama)
 		}
 
 		if (get_remain_tile() == 0)
-			return 荒牌流局结算(this);	
+			return 荒牌流局结算(this);
 
+		// 全部自动整理手牌
 		for (int i = 0; i < 4; ++i) {
 			if (i != turn)
 				player[i].sort_hand();
-			// 全部自动整理手牌
 		}
 
 		// 如果是after_minkan, 从岭上抓
@@ -788,25 +776,35 @@ Result Table::GameProcess(bool verbose, std::string yama)
 		// TODO: 注意！这一阶段没有考虑流局
 
 	WAITING_PHASE:
-		if (player[turn].is_riichi())
-			goto RIICHI_PHASE;
-		else
-			goto NO_RIICHI_PHASE;
 
-	NO_RIICHI_PHASE: {
+		// 此时统计每个人的牌河振听状态
+		// turn可以解除振听，即使player[turn]确实振听了，在下一次WAITING_PHASE之前，也会追加振听效果
+		// 其他人按照规则追加振听效果
+		for (int i = 0; i < 4; ++i) {
+			if (i == turn) {
+				player[turn].振听 = false;
+				continue;
+			}
 
-		auto actions = GetValidActions();
+			auto &hand = player[i].hand;
+			auto tiles = get听牌(convert_tiles_to_base_tiles(hand));
+			auto &river = player[i].river.to_basetile();
 
-		// 如果已经有了4个杠子，禁止接下来的杠
-		if (get_remain_kan_tile() == 0) {
-			auto iter = remove_if(actions.begin(), actions.end(),
-				[](SelfAction& sa) {
-				if (sa.action == Action::暗杠) return true;
-				if (sa.action == Action::加杠) return true;
-				return false;
-			});
-			actions.erase(iter, actions.end());
+			// 检查river和tiles是否有重合
+			for (auto& tile : tiles) {
+				if (find(river.begin(), river.end(), tile) != river.end()) {
+					// 只要找到一个
+					player[i].振听 = true;
+					continue;
+				}
+			}
 		}
+
+		vector<SelfAction> actions;
+		if (player[turn].is_riichi())
+			actions = GetRiichiActions();
+		else
+			actions = GetValidActions();
 
 		int selection;
 		if (actions.size() == 1)
@@ -821,9 +819,21 @@ Result Table::GameProcess(bool verbose, std::string yama)
 			return 九种九牌流局结算(this);
 		case Action::自摸:
 			return 自摸结算(this);
-		case Action::出牌: {
+		case Action::出牌:
+		case Action::立直:
+		{
 			auto tile = selected_action.correspond_tiles[0];
 			// 等待回复
+
+			// 大部分情况都是手切, 除了上一步动作为 出牌 加杠 暗杠
+			// 并且判定抉择弃牌是不是最后一张牌
+
+			bool FROM_手切摸切 = FROM_手切;
+			if (last_action == Action::出牌 || last_action == Action::加杠 || last_action == Action::暗杠) {
+				// tile是不是最后一张
+				if (tile == player[turn].hand.back())
+					FROM_手切摸切 = FROM_摸切;
+			}
 
 			vector<ResponseAction> actions(4);
 			Action final_action = Action::pass;
@@ -837,28 +847,6 @@ Result Table::GameProcess(bool verbose, std::string yama)
 				if (i == (turn + 1) % 4)
 					is下家 = true;
 				auto response = GetValidResponse(i, tile, is下家);
-
-				// 如果是海底状态，删除掉除了荣和和pass之外的所有情况
-				if (get_remain_tile() == 0) {
-					auto iter =
-						remove_if(response.begin(), response.end(),
-							[](ResponseAction& ra) {
-						if (ra.action == Action::pass) return false;
-						if (ra.action == Action::荣和) return false;
-						return true;
-					});
-					response.erase(iter, response.end());
-				}
-
-				// 如果已经有了4个杠子，禁止接下来的杠
-				if (get_remain_kan_tile() == 0) {
-					auto iter = remove_if(response.begin(), response.end(),
-						[](ResponseAction& ra) {
-						if (ra.action == Action::杠) return true;
-						return false;
-					});
-					actions.erase(iter, actions.end());
-				}
 
 				if (response.size() != 1) {
 					VERBOSE{
@@ -890,55 +878,67 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 			switch (final_action) {
 			case Action::pass:
-				// 消除第一巡和一发
+
+				// 消除一发状态
 				player[turn].一发 = false;
-				player[turn].first_round = false;
+				// 如果成功立直了, 那么这个状态就会在接下来被设置为true，直到有人鸣牌或者自己没有自摸
 
 				// 杠，打出牌之后且其他人pass
 				if (after_杠()) { dora_spec++; }
 
+				// 什么都不做。将action对应的牌从手牌移动到牌河里面	
+
+				player[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
+
+				// 立直成功
+				if (selected_action.action == Action::立直) {
+					if (player[turn].first_round) {
+						player[turn].double_riichi = true;
+					}
+					player[turn].riichi = true;
+					player[turn].一发 = true;
+				}
+
+				// 消除第一巡和一发
+				player[turn].first_round = false;
+
 				last_action = Action::出牌;
-				// 什么都不做。将action对应的牌从手牌移动到牌河里面
-				player[turn].move_from_hand_to_river(tile);
 				next_turn();
 				continue;
 			case Action::吃:
 			case Action::碰:
-				// 消除第一巡和一发
-				for (int i = 0; i < 4; ++i) {
-					player[i].first_round = false;
-					player[i].一发 = false;
-				}
-				player[turn].remove_from_hand(tile);
-				player[response].move_from_hand_to_fulu(
-					actions[response].correspond_tiles, tile);
-				turn = response;
-
-				// 明杠，打出牌之后且其他人吃碰
-				if (after_杠()) { dora_spec++; }
-				last_action = Action::碰;
-
-				continue;
-
-				// 大明杠
 			case Action::杠:
-				// 消除第一巡和一发
-				for (int i = 0; i < 4; ++i) {
-					player[i].first_round = false;
-					player[i].一发 = false;
-				}
 				player[turn].remove_from_hand(tile);
+				player[turn].move_from_hand_to_river_log_only(tile, river_counter, FROM_手切摸切);
+
 				player[response].move_from_hand_to_fulu(
 					actions[response].correspond_tiles, tile);
 				turn = response;
 
+				if (selected_action.action == Action::立直) {
+					// 立直成功
+					if (player[turn].first_round) {
+						player[turn].double_riichi = true;
+					}
+					player[turn].riichi = true;
+					// 立直即鸣牌，一定没有一发
+				}
+
+				// 这是鸣牌，消除所有人第一巡和一发
+				for (int i = 0; i < 4; ++i) {
+					player[i].first_round = false;
+					player[i].一发 = false;
+				}
+
 				// 明杠，打出牌之后且其他人吃碰
 				if (after_杠()) { dora_spec++; }
-				last_action = Action::杠;
-
+				last_action = final_action;
 				continue;
+
 			case Action::荣和:
 				throw runtime_error("NOT IMPLEMENTED YET");
+			default:
+				throw runtime_error("Invalid Selection.");
 			}
 		}
 		case Action::暗杠: {
@@ -1031,314 +1031,10 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 			continue;
 		}
-		case Action::立直: {
-			auto tile = selected_action.correspond_tiles[0];
-			// 等待回复
-
-			vector<ResponseAction> actions(4);
-			Action final_action = Action::pass;
-			for (int i = 0; i < 4; ++i) {
-				if (i == turn) {
-					actions[i].action = Action::pass;
-					continue;
-				}
-				// 对于所有其他人
-				bool is下家 = false;
-				if (i == (turn + 1) % 4)
-					is下家 = true;
-				auto response = GetValidResponse(i, tile, is下家);
-				if (response.size() != 1) {
-					VERBOSE{
-						cout << "Player " << i << "选择:" << endl;
-					}
-						int selected_response =
-						agents[i]->get_response_action(this, response);
-					actions[i] = response[selected_response];
-				}
-				else
-					actions[i].action = Action::pass;
-
-				// 从actions中获得优先级
-				if (actions[i].action > final_action)
-					final_action = actions[i].action;
-			}
-
-			std::vector<int> response_player;
-			for (int i = 0; i < 4; ++i) {
-				if (actions[i].action == final_action) {
-					response_player.push_back(i);
-				}
-			}
-			int response = response_player[0];
-			// 根据最终的final_action来进行判断
-			// response_player里面保存了所有最终action和final_action相同的玩家
-			// 只有在pass和荣和的时候才会出现这种情况
-			// 其他情况用response来代替
-
-			switch (final_action) {
-			case Action::pass:
-				// 消除第一巡和一发
-				player[turn].一发 = false;
-				player[turn].first_round = false;
-
-				// 杠，打出牌之后且其他人pass
-				if (after_杠()) { dora_spec++; }
-
-				last_action = Action::出牌;
-				// 什么都不做。将action对应的牌从手牌移动到牌河里面
-				player[turn].move_from_hand_to_river(tile);
-
-				// 立直成功
-				if (player[turn].first_round) {
-					player[turn].double_riichi = true;
-				}
-				player[turn].riichi = true;
-
-				next_turn();
-				continue;
-			case Action::吃:
-			case Action::碰:
-				// 消除第一巡和一发
-				for (int i = 0; i < 4; ++i) {
-					player[i].first_round = false;
-					player[i].一发 = false;
-				}
-				player[turn].remove_from_hand(tile);
-				player[response].move_from_hand_to_fulu(
-					actions[response].correspond_tiles, tile);
-
-				// 立直成功
-				if (player[turn].first_round) {
-					player[turn].double_riichi = true;
-				}
-				player[turn].riichi = true;
-
-				turn = response;
-
-				// 明杠，打出牌之后且其他人吃碰
-				if (after_杠()) { dora_spec++; }
-				last_action = Action::碰;
-
-				continue;
-
-				// 大明杠
-			case Action::杠:
-				// 消除第一巡和一发
-				for (int i = 0; i < 4; ++i) {
-					player[i].first_round = false;
-					player[i].一发 = false;
-				}
-				player[turn].remove_from_hand(tile);
-				player[response].move_from_hand_to_fulu(
-					actions[response].correspond_tiles, tile);
-
-				// 立直成功
-				if (player[turn].first_round) {
-					player[turn].double_riichi = true;
-				}
-				player[turn].riichi = true;
-
-				turn = response;
-
-				// 明杠，打出牌之后且其他人吃碰
-				if (after_杠()) { dora_spec++; }
-				last_action = Action::杠;
-
-
-				continue;
-			case Action::荣和:
-				throw runtime_error("NOT IMPLEMENTED YET");
-			}
-		}
 
 		default:
 			throw runtime_error("Selection invalid!");
 		}
-	}
-	
-	RIICHI_PHASE: {
-	auto actions = GetValidActions();
-
-	// 让Agent进行选择
-	int selection;
-	if (actions.size() == 1)
-		selection = 0;
-	else
-		selection = agents[turn]->get_self_action(this, actions);
-
-	auto selected_action = actions[selection];
-	switch (selected_action.action) {
-	case Action::自摸:
-		return 自摸结算(this);
-	case Action::出牌: {
-		auto tile = selected_action.correspond_tiles[0];
-		// 等待回复
-
-		vector<ResponseAction> actions(4);
-		Action final_action = Action::pass;
-		for (int i = 0; i < 4; ++i) {
-			if (i == turn) {
-				actions[i].action = Action::pass;
-				continue;
-			}
-			// 对于所有其他人
-			bool is下家 = false;
-			if (i == (turn + 1) % 4)
-				is下家 = true;
-			auto response = GetValidResponse(i, tile, is下家);
-
-			// 如果是海底状态，删除掉除了荣和和pass之外的所有情况
-			if (get_remain_tile() == 0) {
-				auto iter =
-					remove_if(response.begin(), response.end(),
-						[](ResponseAction& ra) {
-					if (ra.action == Action::pass) return false;
-					if (ra.action == Action::荣和) return false;
-					return true;
-				});
-				response.erase(iter, response.end());
-			}
-
-			// 如果已经有了4个杠子，禁止接下来的杠
-			if (get_remain_kan_tile() == 0) {
-				auto iter = remove_if(response.begin(), response.end(),
-					[](ResponseAction& ra) {
-					if (ra.action == Action::杠) return true;
-					return false;
-				});
-				actions.erase(iter, actions.end());
-			}
-
-			if (response.size() != 1) {
-				VERBOSE{
-					cout << "Player " << i << "选择:" << endl;
-				}
-					int selected_response =
-					agents[i]->get_response_action(this, response);
-				actions[i] = response[selected_response];
-			}
-			else
-				actions[i].action = Action::pass;
-
-			// 从actions中获得优先级
-			if (actions[i].action > final_action)
-				final_action = actions[i].action;
-		}
-
-		std::vector<int> response_player;
-		for (int i = 0; i < 4; ++i) {
-			if (actions[i].action == final_action) {
-				response_player.push_back(i);
-			}
-		}
-		int response = response_player[0];
-		// 根据最终的final_action来进行判断
-		// response_player里面保存了所有最终action和final_action相同的玩家
-		// 只有在pass和荣和的时候才会出现这种情况
-		// 其他情况用response来代替
-
-		switch (final_action) {
-		case Action::pass:
-			// 消除第一巡和一发
-			player[turn].一发 = false;
-			player[turn].first_round = false;
-
-			// 杠，打出牌之后且其他人pass
-			if (after_杠()) { dora_spec++; }
-
-			last_action = Action::出牌;
-			// 什么都不做。将action对应的牌从手牌移动到牌河里面
-			player[turn].move_from_hand_to_river(tile);
-			next_turn();
-			continue;
-		case Action::吃:
-		case Action::碰:
-			// 消除第一巡和一发
-			for (int i = 0; i < 4; ++i) {
-				player[i].first_round = false;
-				player[i].一发 = false;
-			}
-			player[turn].remove_from_hand(tile);
-			player[response].move_from_hand_to_fulu(
-				actions[response].correspond_tiles, tile);
-			turn = response;
-
-			// 明杠，打出牌之后且其他人吃碰
-			if (after_杠()) { dora_spec++; }
-			last_action = Action::碰;
-
-			continue;
-
-			// 大明杠
-		case Action::杠:
-			// 消除第一巡和一发
-			for (int i = 0; i < 4; ++i) {
-				player[i].first_round = false;
-				player[i].一发 = false;
-			}
-			player[turn].remove_from_hand(tile);
-			player[response].move_from_hand_to_fulu(
-				actions[response].correspond_tiles, tile);
-			turn = response;
-
-			// 明杠，打出牌之后且其他人吃碰
-			if (after_杠()) { dora_spec++; }
-			last_action = Action::杠;
-
-			continue;
-		case Action::荣和:
-			throw runtime_error("NOT IMPLEMENTED YET");
-		}
-	}
-	case Action::暗杠: {
-		auto tile = selected_action.correspond_tiles[0];
-		// 等待回复
-
-		vector<ResponseAction> actions(4);
-		Action final_action = Action::pass;
-		for (int i = 0; i < 4; ++i) {
-			if (i == turn) {
-				actions[i].action = Action::pass;
-				continue;
-			}
-
-			auto response = Get抢暗杠(i, tile);
-			if (response.size() != 1) {
-				VERBOSE{
-					cout << "Player " << i << "选择:" << endl;
-				}
-					int selected_response =
-					agents[i]->get_response_action(this, response);
-				actions[i] = response[selected_response];
-			}
-			else
-				actions[i].action = Action::pass;
-
-			// 从actions中获得优先级
-			if (actions[i].action == Action::抢暗杠)
-				final_action = actions[i].action;
-		}
-
-		std::vector<int> response_player;
-		for (int i = 0; i < 4; ++i) {
-			if (actions[i].action == final_action) {
-				response_player.push_back(i);
-			}
-		}
-		if (response_player.size() != 0) {
-			// 有人抢杠则进行结算
-			return 抢暗杠结算(this, response_player);
-		}
-		player[turn].play_暗杠(selected_action.correspond_tiles[0]->tile);
-		last_action = Action::暗杠;
-
-		continue;
-	}
-	default:
-		throw runtime_error("Selection invalid!");
-	}
-	}
-
 	}
 }
 
@@ -1403,6 +1099,30 @@ std::vector<SelfAction> Table::GetValidActions()
 	merge_into(actions, the_player.get_自摸(this));
 	merge_into(actions, the_player.get_立直());
 
+	// 过滤器
+
+	// 如果已经有了4个杠子，禁止接下来的杠
+	if (get_remain_kan_tile() == 0) {
+		auto iter = remove_if(actions.begin(), actions.end(),
+			[](SelfAction& sa) {
+			if (sa.action == Action::暗杠) return true;
+			if (sa.action == Action::加杠) return true;
+			return false;
+		});
+		actions.erase(iter, actions.end());
+	}
+
+	// 计算役，如果无役，则禁止自摸
+	auto result = yaku_counter(this, turn, nullptr);
+	if (result.yakus.size() == 0) {
+		auto iter = remove_if(actions.begin(), actions.end(),
+			[](SelfAction& sa) {
+			if (sa.action == Action::自摸) return true;
+			return false;
+		});
+		actions.erase(iter,actions.end());
+	}
+
 	return actions;
 }
 
@@ -1437,6 +1157,56 @@ std::vector<ResponseAction> Table::GetValidResponse(
 		if (is下家)
 			merge_into(actions, the_player.get_Chi(tile));
 	}
+
+	// 过滤器
+	auto &response = actions;
+
+	// 如果是海底状态，删除掉除了荣和和pass之外的所有情况
+	if (get_remain_tile() == 0) {
+		auto iter =
+			remove_if(response.begin(), response.end(),
+				[](ResponseAction& ra) {
+			if (ra.action == Action::pass) return false;
+			if (ra.action == Action::荣和) return false;
+			return true;
+		});
+		response.erase(iter, response.end());
+	}
+
+	// 如果已经有了4个杠子，禁止接下来的杠
+	if (get_remain_kan_tile() == 0) {
+		auto iter = remove_if(response.begin(), response.end(),
+			[](ResponseAction& ra) {
+			if (ra.action == Action::杠) return true;
+			return false;
+		});
+		actions.erase(iter, actions.end());
+	}
+
+	// 如果是振听状态，则不能荣和
+	if (the_player.振听 == true) {
+		auto iter = remove_if(response.begin(), response.end(),
+			[](ResponseAction& ra) {
+			if (ra.action == Action::荣和) return true;
+			return false;
+		});
+		actions.erase(iter, actions.end());
+		// 玩家继续处于振听状态
+	}
+
+	// 如果无役，则不能荣和
+	if (yaku_counter(this, turn, tile).yakus.size() == 0) {
+		auto iter = remove_if(response.begin(), response.end(),
+			[](ResponseAction& ra) {
+			if (ra.action == Action::荣和) return true;
+			return false;
+		});
+		actions.erase(iter, actions.end());
+
+		// 不仅如此，还要追加振听状态
+		the_player.振听 = true;
+	}
+
 	return actions;
 }
 
