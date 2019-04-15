@@ -32,6 +32,15 @@ enum BaseTile : unsigned char {
 	白, 发, 中
 };
 
+inline BaseTile get_dora_next(BaseTile tile) {
+	if (tile == _9m) return _1m;
+	else if (tile == _9s) return _1s;
+	else if (tile == _9p) return _1p;
+	else if (tile == north) return east;
+	else if (tile == 中) return 白;
+	else return static_cast<BaseTile>((int)tile + 1);
+}
+
 inline bool is_幺牌(BaseTile t) {
 	if (t == _1m || t == _1s || t == _1p) {
 		return true;

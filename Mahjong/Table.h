@@ -154,6 +154,22 @@ public:
 	std::vector<Tile*> 宝牌指示牌;
 	std::vector<Tile*> 里宝牌指示牌;
 
+	inline std::vector<BaseTile> get_dora() {
+		std::vector<BaseTile> doratiles;
+		for (int i = 0; i < dora_spec; ++i) {
+			doratiles.push_back(get_dora_next(宝牌指示牌[i]->tile));
+		}
+		return doratiles;
+	}
+
+	inline std::vector<BaseTile> get_ura_dora() {
+		std::vector<BaseTile> doratiles;
+		for (int i = 0; i < dora_spec; ++i) {
+			doratiles.push_back(get_dora_next(里宝牌指示牌[i]->tile));
+		}
+		return doratiles;
+	}
+
 	inline int get_remain_kan_tile() {
 		auto iter = find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]);
 		return iter - 牌山.begin() - 1;

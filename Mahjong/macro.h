@@ -200,6 +200,7 @@ void merge_into(std::vector<T> &to, const std::vector<T> &from) {
 	to.insert(to.end(), from.begin(), from.end());
 }
 
+
 class Base64 {
 private:
 	std::string _base64_table;

@@ -488,6 +488,7 @@ void Player::play_暗杠(BaseTile tile)
 
 void Player::play_加杠(Tile * tile)
 {
+	门清 = false;
 	for (auto &fulu : 副露s) {
 		if (fulu.type == Fulu::Pon) {
 			if (tile->tile == fulu.tiles[0]->tile)
@@ -814,6 +815,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 		// 让Agent进行选择
 		auto selected_action = actions[selection];
+
 		switch (selected_action.action) {
 		case Action::九种九牌:
 			return 九种九牌流局结算(this);
@@ -911,6 +913,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 				player[turn].remove_from_hand(tile);
 				player[turn].move_from_hand_to_river_log_only(tile, river_counter, FROM_手切摸切);
 
+				player[response].门清 = false;
 				player[response].move_from_hand_to_fulu(
 					actions[response].correspond_tiles, tile);
 				turn = response;
@@ -943,6 +946,9 @@ Result Table::GameProcess(bool verbose, std::string yama)
 		}
 		case Action::暗杠: {
 			auto tile = selected_action.correspond_tiles[0];
+
+			// 暗杠的情况，第一巡也消除了
+			player[turn].first_round = false;
 			// 等待回复
 
 			vector<ResponseAction> actions(4);
@@ -1022,12 +1028,18 @@ Result Table::GameProcess(bool verbose, std::string yama)
 			}
 
 			if (response_player.size() != 0) {
-				// 有人抢杠则进行结算
+				// 有人抢杠则进行结算，除非加杠宣告成功，否则一发状态仍然存在
 				return 抢杠结算(this, response_player);
-			}
+			}		
 
 			player[turn].play_加杠(selected_action.correspond_tiles[0]);
 			last_action = Action::加杠;
+			
+			// 这是鸣牌，消除所有人第一巡和一发
+			for (int i = 0; i < 4; ++i) {
+				player[i].first_round = false;
+				player[i].一发 = false;
+			}
 
 			continue;
 		}
@@ -1113,7 +1125,7 @@ std::vector<SelfAction> Table::GetValidActions()
 	}
 
 	// 计算役，如果无役，则禁止自摸
-	auto result = yaku_counter(this, turn, nullptr);
+	auto result = yaku_counter(this, turn, nullptr, false, false);
 	if (result.yakus.size() == 0) {
 		auto iter = remove_if(actions.begin(), actions.end(),
 			[](SelfAction& sa) {
@@ -1195,7 +1207,7 @@ std::vector<ResponseAction> Table::GetValidResponse(
 	}
 
 	// 如果无役，则不能荣和
-	if (yaku_counter(this, turn, tile).yakus.size() == 0) {
+	if (yaku_counter(this, turn, tile, false, false).yakus.size() == 0) {
 		auto iter = remove_if(response.begin(), response.end(),
 			[](ResponseAction& ra) {
 			if (ra.action == Action::荣和) return true;
