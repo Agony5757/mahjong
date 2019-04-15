@@ -9,12 +9,9 @@ using namespace std;
 if (亲) {if (自摸){score1=score_亲自摸_all;} else{score1=score_铳亲;}} \
 else {if (自摸) {score1=score_子自摸_亲; score2=score_子自摸_子;} else{score1=score_铳子;}}
 
-/*
-
-
-*/
-
 static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<Fulu> fulus, Tile* correspond_tile, BaseTile tsumo_tile);
+
+int calculate_fan(vector<Yaku> yakus);
 
 CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool 抢杠, bool 抢暗杠)
 {
@@ -139,8 +136,23 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 
 	if (is国士无双和牌型(convert_tiles_to_base_tiles(tiles))) {
 		vector<Yaku> yakus;
-		
-		yakus.push_back(Yaku::国士无双);
+		bool is_13面;
+		// 判定13面
+		{
+			auto tiles = player.hand;
+			if (correspond_tile == nullptr) tiles.pop_back();
+			vector<BaseTile> raw
+			{ _1m, _9m, _1s, _9s, _1p, _9p, east, south, west, north, 白, 发, 中 };
+
+			sort(tiles.begin(), tiles.end());
+			if (is_same_container(raw, convert_tiles_to_base_tiles(tiles)))
+				is_13面 = true;
+			else is_13面 = false;
+		}
+		if (is_13面)
+			yakus.push_back(Yaku::国士无双十三面);
+		else
+			yakus.push_back(Yaku::国士无双);
 		AllYakusAndFu.push_back({ yakus, 0 });
 	}
 
@@ -160,12 +172,18 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	for (auto &complete_tiles : complete_tiles_list) {
 		auto yaku_fus = get_手役_from_complete_tiles(complete_tiles, player.副露s, correspond_tile, player.hand.back()->tile);
 		for (auto &yaku_fu : yaku_fus) {
-			vector<Yaku> yakus(场役.begin(), 场役.end());
+			vector<Yaku> yakus;
+			merge_into(yakus, 场役);
+			merge_into(yakus, Dora役);
 			merge_into(yakus, yaku_fu.first);
 
 			AllYakusAndFu.push_back({ yakus, yaku_fu.second });
 		}
 	}
+
+	//对于AllYakusAndFu，判定番最高的，番相同的，判定符最高的
+	
+	
 
 }
 
@@ -206,13 +224,16 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 	else if (fan >= 6) {
 		REGISTER_SCORE(亲, 自摸, 18000, 6000 , 12000, 6000, 3000);
 	}
-	else if (fan >= 5) {
+	else if (fan == 5) {
 		REGISTER_SCORE(亲, 自摸, 12000, 4000 , 8000, 4000, 2000);
 	}
-	else if (fan >= 4) {
-		// 32符 即 40符
-		if (fu >= 32) {
+	else if (fan == 4) {
+		// 40符以上满贯
+		if (fu >= 40) {
 			REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
+		}
+		else if (fu == 30) {
+			REGISTER_SCORE(亲, 自摸, 11600, 3600, 7700, 3900, 2000);
 		}
 		else if (fu == 25) {
 			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
@@ -220,8 +241,96 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 		else if (fu == 20) {
 			REGISTER_SCORE(亲, 自摸, 7700, 2600, 5200, 2600, 1300);
 		}
-		else if (fu >= 22) {
+	}
+	else if (fan == 3) {
+		// 70符以上满贯
+		if (fu >= 70) {
+			REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
+		}
+		else if (fu == 60) {
 			REGISTER_SCORE(亲, 自摸, 11600, 3600, 7700, 3900, 2000);
+		}
+		else if (fu == 50) {
+			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
+		}
+		else if (fu == 40) {
+			REGISTER_SCORE(亲, 自摸, 7700, 2600, 5200, 2600, 1300);
+		}
+		else if (fu == 30) {
+			REGISTER_SCORE(亲, 自摸, 5800, 2000, 3900, 2000, 1000);
+		}
+		else if (fu == 25) {
+			REGISTER_SCORE(亲, 自摸, 4800, 1600, 3200, 1600, 800);
+		}
+		else if (fu == 20) {
+			REGISTER_SCORE(亲, 自摸, 3900, 1300, 2600, 1300, 700);
+		}
+	}
+	else if (fan == 2) {
+		if (fu >= 110) {
+			REGISTER_SCORE(亲, 自摸, 10600, 3600, 7100, 3600, 1800);
+		}
+		else if (fu == 100) {
+			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
+		}
+		else if (fu == 90) {
+			REGISTER_SCORE(亲, 自摸, 8700, 2900, 5800, 2900, 1500);
+		}
+		else if (fu == 80) {
+			REGISTER_SCORE(亲, 自摸, 7700, 2600, 5200, 2600, 1300);
+		}
+		else if (fu == 70) {
+			REGISTER_SCORE(亲, 自摸, 6800, 2300, 4500, 2300, 1200);
+		}
+		else if (fu == 60) {
+			REGISTER_SCORE(亲, 自摸, 5800, 2000, 3900, 2000, 1000);
+		}
+		else if (fu == 50) {
+			REGISTER_SCORE(亲, 自摸, 4800, 1600, 3200, 1600, 800);
+		}
+		else if (fu == 40) {
+			REGISTER_SCORE(亲, 自摸, 3900, 1300, 2600, 1300, 700);
+		}
+		else if (fu == 30) {
+			REGISTER_SCORE(亲, 自摸, 2900, 1000, 2000, 1000, 500);
+		}
+		else if (fu == 25) {
+			REGISTER_SCORE(亲, 自摸, 2400, -1, 1600, -1, -1);
+		}
+		else if (fu == 20) {
+			REGISTER_SCORE(亲, 自摸, 2000, 700, 1300, 700, 400);
+		}
+	}
+	else if (fan == 1) {
+		if (fu >= 110) {
+			REGISTER_SCORE(亲, 自摸, 5300, -1, 3600, -1, -1);
+		}
+		else if (fu == 100) {
+			REGISTER_SCORE(亲, 自摸, 4800, 1600, 3200, 1600, 800);
+		}
+		else if (fu == 90) {
+			REGISTER_SCORE(亲, 自摸, 4400, 1500, 2900, 1500, 800);
+		}
+		else if (fu == 80) {
+			REGISTER_SCORE(亲, 自摸, 3900, 1300, 2600, 1300, 700);
+		}
+		else if (fu == 70) {
+			REGISTER_SCORE(亲, 自摸, 3400, 1200, 2300, 1200, 600);
+		}
+		else if (fu == 60) {
+			REGISTER_SCORE(亲, 自摸, 2900, 1000, 2000, 1000, 500);
+		}
+		else if (fu == 50) {
+			REGISTER_SCORE(亲, 自摸, 2400, 800, 1600, 800, 400);
+		}
+		else if (fu == 40) {
+			REGISTER_SCORE(亲, 自摸, 2000, 700, 1300, 700, 400);
+		}
+		else if (fu == 30) {
+			REGISTER_SCORE(亲, 自摸, 1500, 500, 1000, 500, 300);
+		}
+		else if (fu == 20) {
+			REGISTER_SCORE(亲, 自摸, 1000, -1, -1, -1, -1);
 		}
 	}
 }
@@ -243,5 +352,40 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 	// 当这个 荣和/自摸 的牌存在于不同的地方的时候，也有可能会导致解释不同
 
 
+
+}
+
+int calculate_fan(vector<Yaku> yakus)
+{
+	bool 役满;
+	for (auto yaku : yakus) {
+		if (yaku > Yaku::满贯 && yaku < Yaku::双倍役满) {
+			役满 = true;
+			break;
+		}
+	}
+	int fan = 0;
+	if (役满) {
+		for (auto yaku : yakus) {
+			if (yaku < Yaku::满贯) continue; // 跳过所有不是役满的
+			if (yaku > Yaku::满贯 && yaku < Yaku::役满) fan += 13;
+			if (yaku > Yaku::役满 && yaku < Yaku::双倍役满) fan += 26;
+		}
+		return fan;
+	}
+	else {
+		for (auto yaku : yakus) {
+			if (yaku > Yaku::None && yaku < Yaku::一番) fan += 1;
+			if (yaku > Yaku::一番 && yaku < Yaku::二番) fan += 2;
+			if (yaku > Yaku::二番 && yaku < Yaku::三番) fan += 3;
+			if (yaku > Yaku::三番 && yaku < Yaku::五番) fan += 5;
+			if (yaku > Yaku::五番 && yaku < Yaku::六番) fan += 6;
+		}
+		if (fan >= 13) {
+			// 累计役满
+			fan = 13;
+		}
+		return fan;
+	}
 
 }
