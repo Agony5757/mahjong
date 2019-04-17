@@ -311,4 +311,14 @@ public:
 	}
 };
 
+// from p1 to p2
+inline int get_distance(int p1, int p2) {
+	if (p1 <= p2) {
+		return p2 - p1;
+	}
+	else {
+		return p2 - p1 + 4;
+	}
+}
+
 #endif

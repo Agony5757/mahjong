@@ -183,8 +183,33 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 
 	//对于AllYakusAndFu，判定番最高的，番相同的，判定符最高的
 	
-	
+	auto iter = max_element(AllYakusAndFu.begin(), AllYakusAndFu.end(), [](pair<vector<Yaku>, int> yaku_fu1, pair<vector<Yaku>, int> yaku_fu2) {
+		auto fan1 = calculate_fan(yaku_fu1.first);
+		auto fan2 = calculate_fan(yaku_fu2.first);
+		if (fan1 < fan2) return true;
+		if (fan1 > fan2) return false;
 
+		if (fan1 == fan2) return yaku_fu1.second < yaku_fu2.second;
+	});
+
+	if (iter == AllYakusAndFu.end()) {
+		// 说明无役
+		final_result.yakus.push_back(Yaku::None);
+	}
+	else if (!can_agari(final_result.yakus)) {
+		// 如果只有宝牌役/无役，置为无役
+		final_result.yakus.assign({ Yaku::None });
+	}
+	else {
+		final_result.yakus.assign(iter->first.begin(), iter->first.end());
+		final_result.fan = calculate_fan(final_result.yakus);
+		final_result.fu = iter->second;
+		bool 亲家 = false;
+		if (table->庄家 == turn) 亲家 = true;
+
+		final_result.calculate_score(亲家, tsumo);
+	}
+	return final_result;
 }
 
 
@@ -336,6 +361,18 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 }
 
 // 内部函数
+inline static
+pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
+	const CompletedTiles &ct, vector<Fulu> fulus, BaseTile last_tile, bool tsumo, const BaseTile* position) {
+
+	vector<Yaku> yakus;
+	int fu;
+
+
+
+	return { yakus, fu };
+}
+
 vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<Fulu> fulus, Tile *correspond_tile, BaseTile tsumo_tile)
 {
 	bool tsumo;			 // 是自摸吗
@@ -350,9 +387,34 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 
 	vector<pair<vector<Yaku>, int>> yaku_fus;
 	// 当这个 荣和/自摸 的牌存在于不同的地方的时候，也有可能会导致解释不同
+	// 这个牌一定在ct里面
+	// 对于每一种情况，都是vector中的一个元素
 
+	// 重要：ct之后不要进行复制
+	// 首先统计ct中有多少个last_tile
+	auto &head = ct.head;
+	auto &body = ct.body;
 
-
+	vector<BaseTile*> mark_last_tile_in_ct;
+	{
+		auto s = head.find(last_tile);
+		if (s != nullptr) {
+			mark_last_tile_in_ct.push_back(s);
+		}
+	}
+	{
+		for (auto &group : body) {
+			auto s = group.find(last_tile);
+			if (s != nullptr) {
+				mark_last_tile_in_ct.push_back(s);
+			}
+		}
+	}
+	
+	for (auto last_tile_pos : mark_last_tile_in_ct) {
+		yaku_fus.push_back(get_手役_from_complete_tiles_固定位置(ct, fulus, last_tile, tsumo, last_tile_pos));
+	}
+	return yaku_fus;
 }
 
 int calculate_fan(vector<Yaku> yakus)

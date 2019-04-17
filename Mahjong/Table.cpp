@@ -899,6 +899,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 					}
 					player[turn].riichi = true;
 					player[turn].一发 = true;
+					n立直棒++;
 				}
 
 				// 消除第一巡和一发
@@ -924,6 +925,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 						player[turn].double_riichi = true;
 					}
 					player[turn].riichi = true;
+					n立直棒++;
 					// 立直即鸣牌，一定没有一发
 				}
 
@@ -939,7 +941,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 				continue;
 
 			case Action::荣和:
-				throw runtime_error("NOT IMPLEMENTED YET");
+				return 荣和结算(this, selected_action.correspond_tiles[0], response_player);
 			default:
 				throw runtime_error("Invalid Selection.");
 			}
@@ -984,7 +986,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 			}
 			if (response_player.size() != 0) {
 				// 有人抢杠则进行结算
-				return 抢暗杠结算(this, response_player);
+				return 抢暗杠结算(this, tile, response_player);
 			}
 			player[turn].play_暗杠(selected_action.correspond_tiles[0]->tile);
 			last_action = Action::暗杠;
@@ -1029,7 +1031,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 			if (response_player.size() != 0) {
 				// 有人抢杠则进行结算，除非加杠宣告成功，否则一发状态仍然存在
-				return 抢杠结算(this, response_player);
+				return 抢杠结算(this, tile, response_player);
 			}		
 
 			player[turn].play_加杠(selected_action.correspond_tiles[0]);

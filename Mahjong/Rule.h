@@ -25,6 +25,13 @@ struct TileGroup {
 		ss << "]";
 		return ss.str();
 	}
+	inline BaseTile* find(BaseTile basetile) {
+		for (auto &iter : tiles) {
+			if (iter == basetile)
+				return &iter;
+		}
+		return nullptr;
+	}
 };
 
 bool operator<(const TileGroup& g1, const TileGroup& g2);
