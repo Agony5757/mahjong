@@ -1,6 +1,4 @@
 ﻿#include "TableStatus.h"
-#include "TableStatus.h"
-#include "TableStatus.h"
 
 using namespace std;
 
