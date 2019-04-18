@@ -29,17 +29,33 @@ public:
 		return 0;
 	}
 	
-	virtual inline int get_response_action(Table*, std::vector<ResponseAction> actions) {
+	virtual inline int get_response_action(Table*, SelfAction action, Tile*, std::vector<ResponseAction> actions) {
 		return 0;
 	}
 };
 
 class RealPlayer : public Agent {
 public:
+	int i_player; // player number
+	inline RealPlayer(int i) :i_player(i) {}
 	int get_self_action(Table* status, std::vector<SelfAction> actions);
-	int get_response_action(Table* status, std::vector<ResponseAction> actions);
+	int get_response_action(Table* status, SelfAction action, Tile*, std::vector<ResponseAction> actions);
 };
 
+extern int extern_get_self_action(int i_player, Table* table, std::vector<SelfAction> actions);
+extern int extern_get_response_action(int i_player, Table* status, SelfAction action, Tile*, std::vector<ResponseAction> actions);
+
+class ExternPlayer : public Agent {
+public:
+	int i_player; // player number
+	inline ExternPlayer(int i) :i_player(i) {}
+	inline int get_self_action(Table* status, std::vector<SelfAction> actions) {
+		return extern_get_self_action(i_player, status, actions);
+	}
+	inline int get_response_action(Table* status, SelfAction action, Tile* tile, std::vector<ResponseAction> actions) {
+		return extern_get_response_action(i_player, status, action, tile, actions);
+	}
+};
 
 
 #endif

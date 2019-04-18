@@ -855,7 +855,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 						cout << "Player " << i << "选择:" << endl;
 					}
 						int selected_response =
-						agents[i]->get_response_action(this, response);
+						agents[i]->get_response_action(this, selected_action, tile, response);
 					actions[i] = response[selected_response];
 				}
 				else
@@ -969,7 +969,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 						cout << "Player " << i << "选择:" << endl;
 					}
 						int selected_response =
-						agents[i]->get_response_action(this, response);
+						agents[i]->get_response_action(this, selected_action, tile, response);
 					actions[i] = response[selected_response];
 				}
 				else
@@ -1013,7 +1013,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 						cout << "Player " << i << "选择:" << endl;
 					}
 						int selected_response =
-						agents[i]->get_response_action(this, response);
+						agents[i]->get_response_action(this, selected_action, tile, response);
 					actions[i] = response[selected_response];
 				}
 				else
