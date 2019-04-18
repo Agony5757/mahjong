@@ -2,6 +2,7 @@
 #include "Table.h"
 #include "ScoreCounter.h"
 #include "macro.h"
+#include "Rule.h"
 
 using namespace std;
 
@@ -11,6 +12,11 @@ Result 九种九牌流局结算(Table * table)
 	Result result;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->player[i].score;
+
+	result.连庄 = true;
+	result.n本场 = table->n本场 + 1;
+	result.n立直棒 = table->n立直棒;
+
 	return result;
 }
 
@@ -20,6 +26,11 @@ Result 四风连打流局结算(Table * table)
 	Result result;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->player[i].score;
+
+	result.连庄 = true;
+	result.n本场 = table->n本场 + 1;
+	result.n立直棒 = table->n立直棒;
+
 	return result;
 }
 
@@ -29,6 +40,11 @@ Result 四立直流局结算(Table * table)
 	Result result;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->player[i].score;
+
+	result.连庄 = true;
+	result.n本场 = table->n本场 + 1;
+	result.n立直棒 = table->n立直棒;
+
 	return result;
 }
 
@@ -38,18 +54,168 @@ Result 四杠流局结算(Table * table)
 	Result result;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->player[i].score;
+
+	result.连庄 = true;
+	result.n本场 = table->n本场 + 1;
+	result.n立直棒 = table->n立直棒;
+
 	return result;
+}
+
+bool is流局满贯(River r) {
+	return all_of(r.river.begin(), r.river.end(), [](RiverTile& tile){
+		if (is_幺九牌(tile.tile->tile) && tile.remain) {
+			// remain 表示还在河里
+			// 然后全是幺九牌
+			return true;
+		}
+		return false;
+	});
 }
 
 Result 荒牌流局结算(Table * table)
 {
-	cout << "Warning: 罚符 is not considered" << endl;
+	//cout << "Warning: 罚符 is not considered" << endl;
 	cout << "Warning: 流局满贯 is not considered" << endl;
 
-	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
 	Result result;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->player[i].score;
+
+	int 流局满贯人数 = 0;
+	bool 流局满贯[4] = { false,false,false,false };
+	// 统计流局满贯的人数
+	for (int i = 0; i < 4; ++i) {
+		if (is流局满贯(table->player[i].river)) {
+			流局满贯[i] = true;
+			流局满贯人数++;
+		}
+	}
+	
+	if (流局满贯人数 > 0) {
+		if (流局满贯[table->庄家])
+			result.连庄 = true;
+		else 
+			result.连庄 = false;
+
+		result.n本场 = table->n本场 + 1;
+		result.n立直棒 = table->n立直棒;
+		if (流局满贯人数 == 4) {
+			// 不涉及到分数支付
+		}
+		else if (流局满贯人数 == 3) {
+			if (流局满贯[table->庄家])
+			{
+				result.score[table->庄家] += 4000;
+				for (int i = 0; i < 4; ++i) {
+					if (流局满贯[i])
+						result.score[i] += 8000;
+					else
+						result.score[i] -= 28000;
+				}
+			}
+			else
+			{
+				for (int i = 0; i < 4; ++i) {
+					if (流局满贯[i])
+						result.score[i] += 8000;
+					else
+						result.score[i] -= 24000;
+				}
+			}
+		}
+		else if (流局满贯人数 == 2){
+			if (流局满贯[table->庄家])
+			{
+				result.score[table->庄家] += 4000;
+				for (int i = 0; i < 4; ++i) {
+					if (流局满贯[i])
+						result.score[i] += 8000;
+					else
+						result.score[i] -= 10000;
+				}
+			}
+			else
+			{
+				result.score[table->庄家] -= 5400;
+				for (int i = 0; i < 4; ++i) {
+					if (流局满贯[i])
+						result.score[i] += 8000;
+					else
+						result.score[i] -= 5300;
+				}
+			}
+		}
+		else if (流局满贯人数 == 1) {
+			if (流局满贯[table->庄家])
+			{
+				for (int i = 0; i < 4; ++i) {
+					if (流局满贯[i])
+						result.score[i] += 12000;
+					else
+						result.score[i] -= 4000;
+				}
+			}
+			else
+			{
+				result.score[table->庄家] -= 2000;
+				for (int i = 0; i < 4; ++i) {
+					if (流局满贯[i])
+						result.score[i] += 8000;
+					else
+						result.score[i] -= 2000;
+				}
+			}
+		}
+	}
+	else {
+		// 统计罚符
+		// 开始统计四人听牌的状态	
+		int 听牌人数 = 0;
+		bool 听牌[4];
+
+		for (int i = 0; i < 4; ++i) {
+			if (get听牌(convert_tiles_to_base_tiles(table->player[i].hand)).size() > 0) {
+				听牌[i] = true;
+			}
+		}
+		cout << "Warning: 空听 is not considered" << endl;
+
+		result.n本场 = table->n本场 + 1;
+		result.n立直棒 = table->n立直棒;
+		if (听牌[table->庄家])
+			result.连庄 = true;
+		else
+			result.连庄 = false;
+
+		if (听牌人数 == 4) {	}
+		else if (听牌人数 == 0) { }
+		else if (听牌人数 == 1) {
+			for (int i = 0; i < 4; ++i) {
+				if (听牌[i])
+					result.score[i] += 3000;
+				else
+					result.score[i] -= 1000;
+			}
+		}
+		else if (听牌人数 == 2) {
+			for (int i = 0; i < 4; ++i) {
+				if (听牌[i])
+					result.score[i] += 1500;
+				else
+					result.score[i] -= 1500;
+			}
+		}
+		else if (听牌人数 == 3) {
+			for (int i = 0; i < 4; ++i) {
+				if (听牌[i])
+					result.score[i] += 1000;
+				else
+					result.score[i] -= 3000;
+			}
+		}		
+	}
+	
 	return result;
 }
 

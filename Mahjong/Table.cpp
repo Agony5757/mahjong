@@ -898,11 +898,12 @@ Result Table::GameProcess(bool verbose, std::string yama)
 						player[turn].double_riichi = true;
 					}
 					player[turn].riichi = true;
-					player[turn].一发 = true;
 					n立直棒++;
+					player[turn].score -= 1000;
+					player[turn].一发 = true;
 				}
 
-				// 消除第一巡和一发
+				// 消除第一巡
 				player[turn].first_round = false;
 
 				last_action = Action::出牌;
@@ -926,6 +927,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 					}
 					player[turn].riichi = true;
 					n立直棒++;
+					player[turn].score -= 1000;
 					// 立直即鸣牌，一定没有一发
 				}
 
@@ -1111,7 +1113,10 @@ std::vector<SelfAction> Table::GetValidActions()
 	merge_into(actions, the_player.get_打牌(after_chipon()));
 	merge_into(actions, the_player.get_九种九牌());
 	merge_into(actions, the_player.get_自摸(this));
-	merge_into(actions, the_player.get_立直());
+
+	if (player[turn].score >= 1000)
+		// 有1000点才能立直，否则不行
+		merge_into(actions, the_player.get_立直());
 
 	// 过滤器
 
