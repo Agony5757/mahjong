@@ -2,6 +2,7 @@
 #define GAME_RESULT_H
 
 #include <vector>
+#include <sstream>
 
 enum ResultType {
 	荣和终局,
@@ -34,6 +35,16 @@ struct Result {
 	int n本场;
 
 	bool 连庄;
+
+	inline std::string to_string() {
+		using namespace std;
+		stringstream ss;
+		ss << "Score:" << endl;
+		for (int i = 0; i < 4; ++i) {
+			ss << "Player " << i << ":" << score[i] << endl;
+		}
+		return ss.str();
+	}
 	
 	std::vector<int> winner;
 	std::vector<int> loser;

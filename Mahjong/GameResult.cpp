@@ -76,7 +76,7 @@ bool is流局满贯(River r) {
 Result 荒牌流局结算(Table * table)
 {
 	//cout << "Warning: 罚符 is not considered" << endl;
-	cout << "Warning: 流局满贯 is not considered" << endl;
+	//cout << "Warning: 流局满贯 is not considered" << endl;
 
 	Result result;
 	for (int i = 0; i < 4; ++i)

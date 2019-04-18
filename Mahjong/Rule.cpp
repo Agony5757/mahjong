@@ -205,6 +205,7 @@ bool is和牌(std::vector<BaseTile> tiles)
 	if (isCommon和牌型(tiles)) {
 		return true;
 	}
+	return false;
 }
 
 std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清)
@@ -230,12 +231,14 @@ bool can_ron(std::vector<Tile*> hands, Tile * get_tile)
 	hands.push_back(get_tile);
 	if (is和牌(convert_tiles_to_base_tiles(hands)))
 		return true;
+	return false;
 }
 
 bool can_tsumo(std::vector<Tile*> hands)
 {
 	if (is和牌(convert_tiles_to_base_tiles(hands)))
 		return true;
+	return false;
 }
 
 

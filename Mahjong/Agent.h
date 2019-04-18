@@ -42,6 +42,14 @@ public:
 	int get_response_action(Table* status, SelfAction action, Tile*, std::vector<ResponseAction> actions);
 };
 
+class RandomPlayer : public Agent {
+public:
+	int i_player; // player number
+	inline RandomPlayer(int i) :i_player(i) {}
+	int get_self_action(Table* status, std::vector<SelfAction> actions);
+	int get_response_action(Table* status, SelfAction action, Tile*, std::vector<ResponseAction> actions);
+};
+
 extern int extern_get_self_action(int i_player, Table* table, std::vector<SelfAction> actions);
 extern int extern_get_response_action(int i_player, Table* status, SelfAction action, Tile*, std::vector<ResponseAction> actions);
 

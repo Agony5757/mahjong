@@ -52,3 +52,33 @@ int RealPlayer::get_response_action(Table * status, SelfAction action, Tile* til
 	cin >> selection;
 	return selection;
 }
+
+#include <random>
+
+int RandomPlayer::get_self_action(Table * status, std::vector<SelfAction> actions)
+{
+	for (int i = 0; i < actions.size(); ++i) {
+		if (actions[i].action == Action::自摸)
+			return i;
+		if (actions[i].action == Action::立直)
+			return i;
+		if (actions[i].action == Action::九种九牌)
+			return i;
+	}
+	std::default_random_engine generator;
+	std::uniform_int_distribution<int> distribution(0, actions.size() - 1);
+	int dice_roll = distribution(generator);  // generates number in the range 1..6 
+	return dice_roll;
+}
+
+int RandomPlayer::get_response_action(Table * status, SelfAction action, Tile *, std::vector<ResponseAction> actions)
+{
+	for (int i = 0; i < actions.size(); ++i) {
+		if (actions[i].action == Action::荣和)
+			return i;
+	}
+	std::default_random_engine generator;
+	std::uniform_int_distribution<int> distribution(0, actions.size() - 1);
+	int dice_roll = distribution(generator);  // generates number in the range 1..6 
+	return dice_roll;
+}

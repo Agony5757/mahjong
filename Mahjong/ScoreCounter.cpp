@@ -188,7 +188,6 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 		auto fan2 = calculate_fan(yaku_fu2.first);
 		if (fan1 < fan2) return true;
 		if (fan1 > fan2) return false;
-
 		if (fan1 == fan2) return yaku_fu1.second < yaku_fu2.second;
 	});
 
@@ -375,7 +374,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 
 vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<Fulu> fulus, Tile *correspond_tile, BaseTile tsumo_tile)
 {
-	bool tsumo;			 // 是自摸吗
+	bool tsumo = false;			 // 是自摸吗
 	BaseTile last_tile;  // 最后取得的牌，既可以是荣和，也可以是自摸
 	if (correspond_tile == nullptr) {
 		tsumo = true;

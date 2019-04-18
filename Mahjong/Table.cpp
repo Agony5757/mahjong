@@ -213,7 +213,7 @@ std::vector<SelfAction> Player::get_九种九牌()
 
 	if (九种九牌counter(hand) >= 9) {
 		SelfAction action;
-		action.action == Action::九种九牌;
+		action.action = Action::九种九牌;
 		actions.push_back(action);		
 	}	
 	return actions;
@@ -464,8 +464,8 @@ void Player::move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile * tile)
 void Player::remove_from_hand(Tile *tile)
 {
 	auto iter=
-	remove_if(hand.begin(), hand.end(), [tile](Tile* t) {return tile == t; });
-	hand.erase(iter);
+		remove_if(hand.begin(), hand.end(), [tile](Tile* t) {return tile == t; });
+	hand.erase(iter, hand.end());
 }
 
 void Player::play_暗杠(BaseTile tile)
@@ -481,8 +481,8 @@ void Player::play_暗杠(BaseTile tile)
 			fulu.tiles.push_back(t);
 	});
 	auto iter = 
-	remove_if(hand.begin(), hand.end(),
-		[tile](Tile* t) {return t->tile == tile; });		
+		remove_if(hand.begin(), hand.end(),
+			[tile](Tile* t) {return t->tile == tile; });		
 	hand.erase(iter, hand.end());
 }
 
@@ -663,7 +663,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 		init_yama();
 
 		// 将牌山导出为字符串
-		cout << "牌山代码:" << export_yama() << endl;
+		//cout << "牌山代码:" << export_yama() << endl;
 	}
 	else {
 		import_yama(yama);
@@ -694,7 +694,6 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 	// 游戏进程的主循环,循环的开始是某人有3n+2张牌
 	while (1) {
-
 		// 四风连打判定
 		if (
 			player[0].river.size() == 1 &&
@@ -1214,7 +1213,7 @@ std::vector<ResponseAction> Table::GetValidResponse(
 	}
 
 	// 如果无役，则不能荣和
-	if (yaku_counter(this, turn, tile, false, false).yakus.size() == 0) {
+	if (yaku_counter(this, i, tile, false, false).yakus.size() == 0) {
 		auto iter = remove_if(response.begin(), response.end(),
 			[](ResponseAction& ra) {
 			if (ra.action == Action::荣和) return true;

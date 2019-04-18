@@ -75,20 +75,34 @@ void testCompletedTiles2() {
 
 void testGameProcess() {
 	Table t(1, new RealPlayer(0), new RealPlayer(1), new RealPlayer(2), new RealPlayer(3));
-	t.GameProcess(true);
+	auto s = t.GameProcess(true);
+	cout << s.to_string();
+	getchar();
 }
 
 void testGameProcess2() {
 	Table t(1, new RealPlayer(0), new RealPlayer(1), new RealPlayer(2), new RealPlayer(3));
-	t.GameProcess(true, "EwAVAA8AGAAJACEAHQAgABQABwAdABsAFwABABMACAADAAwABAACABIADQACABIAIQAAAAkAEAAfAAUAFgEfACAAAQAEAAsAGwABAAoADwAhAAMAEQALAAcAHAAKAAoAAAATAB4AGAAFAAAABgAXAAQBBgAQAAEABQAaACEAAgAVABUABwAUAA4ADwAQAAwAGQAgAAcABQAMAA0ADwAGABoAAwANAAoAEAAIABQAEgAbAAwAFgAJAAMAFwAWABEABAASABUAGAAaAAYAHAAYAA4AAAAZAB4ACQAeABEACAALAB8AHwACAA4AEwAZAA4ACAAdACAAFwAaAAsAGQAcABYAFAAbAB0ADQEeABEAHAA=");
+	Result s = t.GameProcess(true, "EwAVAA8AGAAJACEAHQAgABQABwAdABsAFwABABMACAADAAwABAACABIADQACABIAIQAAAAkAEAAfAAUAFgEfACAAAQAEAAsAGwABAAoADwAhAAMAEQALAAcAHAAKAAoAAAATAB4AGAAFAAAABgAXAAQBBgAQAAEABQAaACEAAgAVABUABwAUAA4ADwAQAAwAGQAgAAcABQAMAA0ADwAGABoAAwANAAoAEAAIABQAEgAbAAwAFgAJAAMAFwAWABEABAASABUAGAAaAAYAHAAYAA4AAAAZAB4ACQAeABEACAALAB8AHwACAA4AEwAZAA4ACAAdACAAFwAaAAsAGQAcABYAFAAbAB0ADQEeABEAHAA=");
+	
 }
+
+void testGameProcess3() {	
+	int game = 0;
+	while (1) {
+		cout << "Game " << ++game << endl;
+		Table t(1, new RandomPlayer(0), new RandomPlayer(1), new RandomPlayer(2), new RandomPlayer(3));
+		auto s = t.GameProcess(false);
+		cout << "Result: " << endl << s.to_string();
+	}
+}
+
 
 int main() {
 	
 	//test和牌状态1();
 	//test和牌状态2();
 	//test和牌状态3();
-	testGameProcess();
+	testGameProcess3();
 	
 	//testCompletedTiles2();
 	//testCompletedTiles1();
