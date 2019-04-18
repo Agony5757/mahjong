@@ -44,7 +44,14 @@ public:
 		std::stringstream ss;
 
 		for (auto tile : river) {
-			ss << tile.tile->to_string() << " ";
+			ss << tile.tile->to_string() << tile.number;
+			if (tile.fromhand)
+				ss << "h";
+			if (tile.riichi)
+				ss << "r";
+			if (!tile.remain)
+				ss << "-";
+			ss << " ";
 		}
 		return ss.str();
 	}

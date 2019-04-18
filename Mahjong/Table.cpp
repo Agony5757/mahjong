@@ -663,7 +663,9 @@ Result Table::GameProcess(bool verbose, std::string yama)
 		init_yama();
 
 		// 将牌山导出为字符串
-		//cout << "牌山代码:" << export_yama() << endl;
+		VERBOSE{
+			cout << "牌山代码:" << export_yama() << endl;
+		}
 	}
 	else {
 		import_yama(yama);
@@ -985,7 +987,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 					response_player.push_back(i);
 				}
 			}
-			if (response_player.size() != 0) {
+			if (response_player.size() != 0 && final_action == Action::抢暗杠) {
 				// 有人抢杠则进行结算
 				return 抢暗杠结算(this, tile, response_player);
 			}

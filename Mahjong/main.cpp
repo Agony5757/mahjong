@@ -2,6 +2,7 @@
 #include "Rule.h"
 #include "macro.h"
 #include "Agent.h"
+#include <fstream>
 using namespace std;
 
 #pragma region(test和牌)
@@ -87,11 +88,11 @@ void testGameProcess2() {
 }
 
 void testGameProcess3() {	
-	int game = 0;
-	while (1) {
+	int game = 0;	
+	for (int i=0;i<1000;++i) {
 		cout << "Game " << ++game << endl;
 		Table t(1, new RandomPlayer(0), new RandomPlayer(1), new RandomPlayer(2), new RandomPlayer(3));
-		auto s = t.GameProcess(false);
+		auto s = t.GameProcess(true);
 		cout << "Result: " << endl << s.to_string();
 	}
 }
