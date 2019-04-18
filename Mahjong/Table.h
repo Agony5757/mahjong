@@ -186,10 +186,10 @@ public:
 		return 牌山.size() - 14;
 	}
 
-	Wind 场风;
+	Wind 场风 = Wind::East;
 	int 庄家; // 庄家
-	int n本场;
-	int n立直棒;
+	int n本场 = 0;
+	int n立直棒 = 0;
 	void init_tiles();
 	void init_red_dora_3();
 	void shuffle_tiles();
@@ -209,6 +209,19 @@ public:
 
 	GameLog openGameLog;
 	GameLog fullGameLog;
+
+	enum ToStringOption : int {
+		YAMA = 1 << 0,
+		PLAYER = 1 << 1,
+		DORA = 1 << 2,
+		N_立直棒 = 1 << 3,
+		N_本场 = 1 << 4,
+		亲家 = 1 << 5,
+		REMAIN_TILE = 1 << 6,
+	};
+
+	std::string to_string(int option =
+		YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE);
 
 	int turn;
 	

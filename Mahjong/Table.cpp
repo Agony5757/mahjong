@@ -30,6 +30,7 @@ std::string Player::river_to_string()
 std::string Player::to_string()
 {
 	stringstream ss;
+	ss << "点数:" << score << endl;
 	ss << "自风" << wind_to_string(wind) << endl;
 	ss << "手牌:" << hand_to_string();
 
@@ -336,14 +337,34 @@ std::vector<ResponseAction> Player::get_Kan(Tile * tile)
 
 std::vector<ResponseAction> Player::get_抢暗杠(Tile * tile)
 {
-	cout << "Warning:抢暗杠 is not considered yet" << endl;
-	return std::vector<ResponseAction>();
+	std::vector<ResponseAction> actions;
+
+	auto copy_hand = hand;
+	copy_hand.push_back(tile);
+
+	if (is国士无双和牌型(convert_tiles_to_base_tiles(copy_hand))) {
+		ResponseAction action;
+		action.action = Action::抢暗杠;
+		actions.push_back(action);
+	}
+
+	return actions;
 }
 
 std::vector<ResponseAction> Player::get_抢杠(Tile * tile)
 {
-	cout << "Warning:抢杠 is not considered yet" << endl;
-	return std::vector<ResponseAction>();
+	std::vector<ResponseAction> actions;
+
+	auto copy_hand = hand;
+	copy_hand.push_back(tile);
+
+	if (is和牌(convert_tiles_to_base_tiles(copy_hand))) {
+		ResponseAction action;
+		action.action = Action::抢暗杠;
+		actions.push_back(action);
+	}
+
+	return actions;
 }
 
 std::vector<SelfAction> Player::riichi_get_暗杠(Table * table)
@@ -600,7 +621,7 @@ void Table::test_show_yama_with_王牌()
 	cout << endl;
 	cout << "宝牌指示牌为:";
 	for (int i = 0; i < dora_spec; ++i) {
-		cout << 牌山[5 - i * 2]->to_string() << " ";
+		cout << 宝牌指示牌[i]->to_string() << " ";
 	}
 	cout << endl;
 }
@@ -852,10 +873,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 				auto response = GetValidResponse(i, tile, is下家);
 
 				if (response.size() != 1) {
-					VERBOSE{
-						cout << "Player " << i << "选择:" << endl;
-					}
-						int selected_response =
+					int selected_response =
 						agents[i]->get_response_action(this, selected_action, tile, response);
 					actions[i] = response[selected_response];
 				}
@@ -966,10 +984,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 				auto response = Get抢暗杠(i, tile);
 				if (response.size() != 1) {
-					VERBOSE{
-						cout << "Player " << i << "选择:" << endl;
-					}
-						int selected_response =
+					int selected_response =
 						agents[i]->get_response_action(this, selected_action, tile, response);
 					actions[i] = response[selected_response];
 				}
@@ -1010,10 +1025,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 				auto response = Get抢杠(i, tile);
 				if (response.size() != 1) {
-					VERBOSE{
-						cout << "Player " << i << "选择:" << endl;
-					}
-						int selected_response =
+					int selected_response =
 						agents[i]->get_response_action(this, selected_action, tile, response);
 					actions[i] = response[selected_response];
 				}
@@ -1082,7 +1094,56 @@ void Table::发岭上牌(int i_player)
 	//fullGameLog.log摸牌(i_player, player[i_player].hand.back());
 }
 
-Table::Table(int 庄家, Agent * p1, Agent * p2, Agent * p3, Agent * p4) : dora_spec(1), 庄家(庄家)
+std::string Table::to_string(int option)
+{
+	stringstream ss;
+	if (option & ToStringOption::YAMA) {
+		ss << "牌山:";
+		if (牌山.size() < 14) {
+			ss << "牌不足14张" << endl;
+			return ss.str();
+		}
+		for (int i = 0; i < 14; ++i) {
+			ss << 牌山[i]->to_string() << " ";
+		}
+		ss << "(王牌区)| ";
+		for (int i = 14; i < 牌山.size(); ++i) {
+			ss << 牌山[i]->to_string() << " ";
+		}
+		ss << endl;
+	}
+	if (option & ToStringOption::DORA) {
+		ss << "宝牌指示牌为:";
+		for (int i = 0; i < dora_spec; ++i) {
+			ss << 宝牌指示牌[i]->to_string() << " ";
+		}
+		ss << endl;
+	}
+
+	if (option & ToStringOption::REMAIN_TILE) {
+		ss << "余" << get_remain_tile() << "张牌" << endl;
+	}
+	if (option & ToStringOption::PLAYER) {
+		for (int i = 0; i < 4; ++i)
+		ss << "Player" << i << " : "
+			<< endl << player[i].to_string();
+		ss << endl;
+	}
+	if (option & ToStringOption::亲家) {
+		ss << "亲家: Player " << 庄家 << endl;
+	}
+	if (option & ToStringOption::N_本场) {
+		ss << n本场 << "本场";
+	}
+	if (option & ToStringOption::N_立直棒) {
+		ss << n本场 << "立直棒";
+	}
+	ss << endl;
+	return ss.str();
+}
+
+Table::Table(int 庄家, Agent * p1, Agent * p2, Agent * p3, Agent * p4) 
+	: dora_spec(1), 庄家(庄家)
 {
 	agents[0] = p1;
 	agents[1] = p2;
@@ -1134,7 +1195,7 @@ std::vector<SelfAction> Table::GetValidActions()
 
 	// 计算役，如果无役，则禁止自摸
 	auto result = yaku_counter(this, turn, nullptr, false, false);
-	if (result.yakus.size() == 0) {
+	if (result.yakus.size() == 1 && result.yakus[0] == Yaku::None) {
 		auto iter = remove_if(actions.begin(), actions.end(),
 			[](SelfAction& sa) {
 			if (sa.action == Action::自摸) return true;

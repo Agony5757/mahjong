@@ -8,8 +8,8 @@ using namespace std;
 
 Result 九种九牌流局结算(Table * table)
 {
-	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
 	Result result;
+	result.result_type = ResultType::中途流局;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->player[i].score;
 
@@ -22,8 +22,8 @@ Result 九种九牌流局结算(Table * table)
 
 Result 四风连打流局结算(Table * table)
 {
-	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
 	Result result;
+	result.result_type = ResultType::中途流局;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->player[i].score;
 
@@ -36,8 +36,8 @@ Result 四风连打流局结算(Table * table)
 
 Result 四立直流局结算(Table * table)
 {
-	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
 	Result result;
+	result.result_type = ResultType::中途流局;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->player[i].score;
 
@@ -50,8 +50,8 @@ Result 四立直流局结算(Table * table)
 
 Result 四杠流局结算(Table * table)
 {
-	// 对于这种流局，所有人的分数都是0，也既不是winner也不是loser
 	Result result;
+	result.result_type = ResultType::中途流局;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->player[i].score;
 
@@ -79,6 +79,7 @@ Result 荒牌流局结算(Table * table)
 	//cout << "Warning: 流局满贯 is not considered" << endl;
 
 	Result result;
+	
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->player[i].score;
 
@@ -93,6 +94,7 @@ Result 荒牌流局结算(Table * table)
 	}
 	
 	if (流局满贯人数 > 0) {
+		result.result_type = ResultType::流局满贯;
 		if (流局满贯[table->庄家])
 			result.连庄 = true;
 		else 
@@ -169,6 +171,7 @@ Result 荒牌流局结算(Table * table)
 		}
 	}
 	else {
+		result.result_type = ResultType::荒牌流局;
 		// 统计罚符
 		// 开始统计四人听牌的状态	
 		int 听牌人数 = 0;
@@ -179,7 +182,7 @@ Result 荒牌流局结算(Table * table)
 				听牌[i] = true;
 			}
 		}
-		cout << "Warning: 空听 is not considered" << endl;
+		// cout << "Warning: 空听 is not considered" << endl;
 
 		result.n本场 = table->n本场 + 1;
 		result.n立直棒 = table->n立直棒;
@@ -222,6 +225,7 @@ Result 荒牌流局结算(Table * table)
 Result 自摸结算(Table * table)
 {
 	Result result;
+	result.result_type = ResultType::自摸终局;
 	int winner;
 	// 先通过table的状态看看谁要和牌
 	for (int i = 0; i < 4; ++i) {
@@ -297,11 +301,11 @@ Result 自摸结算(Table * table)
 	return result;
 }
 
-
-
 Result 荣和结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
 {
 	Result result;
+	result.result_type = ResultType::荣和终局;
+
 	result.loser.push_back(table->turn); // 当回合的玩家是loser
 	result.winner.assign(response_player.begin(), response_player.end());
 
@@ -341,8 +345,9 @@ Result 荣和结算(Table * table, Tile* agari_tile, std::vector<int> response_p
 
 Result 抢暗杠结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
 {
-
 	Result result;
+	result.result_type = ResultType::荣和终局;
+
 	result.loser.push_back(table->turn); // 当回合的玩家是loser
 	result.winner.assign(response_player.begin(), response_player.end());
 
@@ -383,6 +388,7 @@ Result 抢暗杠结算(Table * table, Tile* agari_tile, std::vector<int> respons
 Result 抢杠结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
 {
 	Result result;
+	result.result_type = ResultType::荣和终局;
 	result.loser.push_back(table->turn); // 当回合的玩家是loser
 	result.winner.assign(response_player.begin(), response_player.end());
 

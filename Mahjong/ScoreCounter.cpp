@@ -367,7 +367,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	vector<Yaku> yakus;
 	int fu;
 
-
+	fu = 30;
 
 	return { yakus, fu };
 }
@@ -418,7 +418,7 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 
 int calculate_fan(vector<Yaku> yakus)
 {
-	bool 役满;
+	bool 役满 = false;
 	for (auto yaku : yakus) {
 		if (yaku > Yaku::满贯 && yaku < Yaku::双倍役满) {
 			役满 = true;

@@ -45,7 +45,8 @@ public:
 class RandomPlayer : public Agent {
 public:
 	int i_player; // player number
-	inline RandomPlayer(int i) :i_player(i) {}
+	std::stringstream &ss;
+	inline RandomPlayer(int i, std::stringstream &ss_) :i_player(i), ss(ss_) {}
 	int get_self_action(Table* status, std::vector<SelfAction> actions);
 	int get_response_action(Table* status, SelfAction action, Tile*, std::vector<ResponseAction> actions);
 };

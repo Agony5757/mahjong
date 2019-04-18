@@ -3,45 +3,56 @@
 
 #include <vector>
 #include <sstream>
+#include <unordered_map>
+#include "ScoreCounter.h"
 
 enum ResultType {
 	荣和终局,
 	自摸终局,
-	无人听牌流局,
-	一人听牌流局,
-	两人听牌流局,
-	三人听牌流局,
-	四人听牌流局,
-	两家荣和,
-	三家荣和,
-
+	荒牌流局,
 	流局满贯,
-
-	九种九牌流局,
-	四风连打,
-	四杠流局,
-	四家立直,
+	中途流局,
 };
 
 struct Result {
 	ResultType result_type;
+	std::unordered_map<int, CounterResult> results;
 
-	int score[4];
-	int fan[4];
-	int fu[4];
+	int score[4];	
 	int 役满倍数[4];
-
 	int n立直棒;
 	int n本场;
-
 	bool 连庄;
 
 	inline std::string to_string() {
 		using namespace std;
 		stringstream ss;
+		switch (result_type) {
+		case ResultType::荒牌流局:
+			ss << "荒牌流局" << endl;
+			break;
+		case ResultType::流局满贯:
+			ss << "流局满贯" << endl;
+			break;
+		case ResultType::荣和终局:
+			ss << "荣和终局" << endl;
+			break;
+		case ResultType::中途流局:
+			ss << "中途流局" << endl;
+			break;
+		case ResultType::自摸终局:
+			ss << "自摸终局" << endl;
+			break;
+		default:
+			throw runtime_error("ResultType Unknown.");
+		}
 		ss << "Score:" << endl;
 		for (int i = 0; i < 4; ++i) {
 			ss << "Player " << i << ":" << score[i] << endl;
+		}
+		for (auto result : results) {
+			ss << "Player" << result.first << ":" << 
+				yakus_to_string(result.second.yakus) << endl;
 		}
 		return ss.str();
 	}

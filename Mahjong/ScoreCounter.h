@@ -22,7 +22,7 @@ class Table;
 class Tile;
 
 // turn 判定役的玩家
-// correspond_tile （自摸为nullptr，荣和为荣和牌）
+// correspond_tile (自摸为nullptr，荣和为荣和牌）
 CounterResult yaku_counter(Table *table, int turn, Tile* correspond_tile, bool 抢杠, bool 抢暗杠);
 
 #endif

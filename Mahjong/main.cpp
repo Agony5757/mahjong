@@ -90,10 +90,17 @@ void testGameProcess2() {
 void testGameProcess3() {	
 	int game = 0;	
 	for (int i=0;i<1000;++i) {
-		cout << "Game " << ++game << endl;
-		Table t(1, new RandomPlayer(0), new RandomPlayer(1), new RandomPlayer(2), new RandomPlayer(3));
-		auto s = t.GameProcess(true);
-		cout << "Result: " << endl << s.to_string();
+		stringstream ss;
+		ss << "Game " << ++game << endl;
+		Table t(1, new RandomPlayer(0, ss),
+			new RandomPlayer(1, ss),
+			new RandomPlayer(2, ss),
+			new RandomPlayer(3, ss));
+		auto s = t.GameProcess(false);
+		if (s.result_type != ResultType::荒牌流局) {
+			ss << "Result: " << endl << s.to_string();
+			cout << ss.str();
+		}
 	}
 }
 
