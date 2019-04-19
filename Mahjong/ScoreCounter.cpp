@@ -9,11 +9,11 @@ using namespace std;
 if (亲) {if (自摸){score1=score_亲自摸_all;} else{score1=score_铳亲;}} \
 else {if (自摸) {score1=score_子自摸_亲; score2=score_子自摸_子;} else{score1=score_铳子;}} return;
 
-static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<Fulu> fulus, Tile* correspond_tile, BaseTile tsumo_tile);
+static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<Fulu> fulus, Tile* correspond_tile, BaseTile tsumo_tile, Wind 自风, Wind 场风);
 
 int calculate_fan(vector<Yaku> yakus);
 
-CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool 抢杠, bool 抢暗杠)
+CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风)
 {
 	// 首先 假设进入到这个counter阶段的，至少满足了和牌条件的牌型
 	// 以及，是否有某种役是不确定的
@@ -175,7 +175,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	// 接下来对牌进行拆解
 	auto &complete_tiles_list = getCompletedTiles(convert_tiles_to_base_tiles(tiles));
 	for (auto &complete_tiles : complete_tiles_list) {
-		auto yaku_fus = get_手役_from_complete_tiles(complete_tiles, player.副露s, correspond_tile, player.hand.back()->tile);
+		auto yaku_fus = get_手役_from_complete_tiles(complete_tiles, player.副露s, correspond_tile, player.hand.back()->tile, 自风, 场风);
 		for (auto &yaku_fu : yaku_fus) {
 			vector<Yaku> yakus;
 			merge_into(yakus, 场役);
@@ -369,7 +369,7 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 // 内部函数
 inline static
 pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
-	const CompletedTiles &ct, vector<Fulu> fulus, BaseTile last_tile, bool tsumo, const BaseTile* position) {
+	const CompletedTiles &ct, vector<Fulu> fulus, BaseTile last_tile, bool tsumo, const BaseTile* position, Wind 自风, Wind 场风) {
 
 	vector<Yaku> yakus;
 	int fu;
@@ -379,9 +379,9 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	return { yakus, fu };
 }
 
-vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<Fulu> fulus, Tile *correspond_tile, BaseTile tsumo_tile)
+vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<Fulu> fulus, Tile *correspond_tile, BaseTile tsumo_tile, Wind 自风, Wind 场风)
 {
-	bool tsumo = false;			 // 是自摸吗
+	bool tsumo = false;	 // 是自摸吗
 	BaseTile last_tile;  // 最后取得的牌，既可以是荣和，也可以是自摸
 	if (correspond_tile == nullptr) {
 		tsumo = true;
@@ -418,7 +418,7 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 	}
 	
 	for (auto last_tile_pos : mark_last_tile_in_ct) {
-		yaku_fus.push_back(get_手役_from_complete_tiles_固定位置(ct, fulus, last_tile, tsumo, last_tile_pos));
+		yaku_fus.push_back(get_手役_from_complete_tiles_固定位置(ct, fulus, last_tile, tsumo, last_tile_pos, 自风, 场风));
 	}
 	return yaku_fus;
 }

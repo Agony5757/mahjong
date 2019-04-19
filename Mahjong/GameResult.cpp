@@ -242,7 +242,7 @@ Result 自摸结算(Table * table)
 	// 三人输
 	for (int i = 0; i < 4; ++i) if (i != winner) result.loser.push_back(i);
 
-	auto yakus = yaku_counter(table, table->turn, nullptr, false, false);
+	auto yakus = yaku_counter(table, table->turn, nullptr, false, false, table->player[winner].wind, table->场风);
 	bool is亲 = false;
 	if (table->turn == table->庄家)
 		is亲 = true;
@@ -314,7 +314,7 @@ Result 荣和结算(Table * table, Tile* agari_tile, std::vector<int> response_p
 	}
 
 	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, winner, agari_tile, false, false);
+		auto yaku = yaku_counter(table, winner, agari_tile, false, false, table->player[winner].wind, table->场风);
 		yaku.calculate_score(winner == table->庄家, false);
 
 		result.results.insert({ winner, yaku });
@@ -359,7 +359,7 @@ Result 抢暗杠结算(Table * table, Tile* agari_tile, std::vector<int> respons
 	}
 
 	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, winner, agari_tile, false, true);
+		auto yaku = yaku_counter(table, winner, agari_tile, false, true, table->player[winner].wind, table->场风);
 		yaku.calculate_score(winner == table->庄家, false);
 		result.score[winner] += yaku.score1;
 		result.score[table->turn] -= yaku.score1;
@@ -400,7 +400,7 @@ Result 抢杠结算(Table * table, Tile* agari_tile, std::vector<int> response_p
 	}
 
 	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, winner, agari_tile, true, false);
+		auto yaku = yaku_counter(table, winner, agari_tile, true, false, table->player[winner].wind, table->场风);
 		yaku.calculate_score(winner == table->庄家, false);
 		result.score[winner] += yaku.score1;
 		result.score[table->turn] -= yaku.score1;

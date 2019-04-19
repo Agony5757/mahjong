@@ -98,7 +98,7 @@ void testGameProcess2() {
 }
 
 void testGameProcess3(string filename) {	
-	ofstream out(filename, ios::app);
+	ofstream out(filename, ios::out);
 	auto t1 = clock();
 	int game = 0;	
 	for (int i = 0; i < 10000; ++i) {
@@ -124,6 +124,44 @@ void testGameProcess3(string filename) {
 		}		
 	}
 	printf("Finish 10000 Games | Time:%d sec\n", (int)((clock() - t1) / CLOCKS_PER_SEC));
+	out.close();
+}
+
+void testGameProcess4(string filename) {
+	ofstream out(filename, ios::in);
+	auto t1 = clock();
+	int game = 0;
+	int i = 0;
+	for (; ; ++i) {
+		if (i % 1000 == 0) {
+			printf("Game %d | Time:%d sec\n", i, (int)((clock() - t1) / CLOCKS_PER_SEC));
+		}
+		stringstream ss;
+		ss << "Game " << ++game << endl;
+		Table t(1, new RandomPlayer(0, ss),
+			new RandomPlayer(1, ss),
+			new RandomPlayer(2, ss),
+			new RandomPlayer(3, ss));
+		try {
+			auto s = t.GameProcess(false);
+
+			if (s.result_type == ResultType::自摸终局) {
+				for (auto result : s.results) {
+					if (is_in(result.second.yakus, Yaku::天和)) {
+						ofstream out(filename, ios::app);
+						ss << "Result: " << endl << s.to_string();
+						out << ss.str();
+						out.close();
+						break;
+					}
+				}				
+			}
+		}
+		catch (runtime_error &e) {
+			out << e.what() << endl;
+		}
+	}
+	printf("Finish %d Games | Time:%d sec\n", i, (int)((clock() - t1) / CLOCKS_PER_SEC));	
 }
 
 
@@ -132,8 +170,8 @@ int main() {
 	//test和牌状态1();
 	//test和牌状态2();
 	//test和牌状态3();
-	test和牌状态4();
-	//testGameProcess3("GameLog.txt");
+	//test和牌状态4();
+	testGameProcess3("GameLog.txt");
 	
 	//testCompletedTiles2();
 	//testCompletedTiles1();

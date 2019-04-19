@@ -156,7 +156,10 @@ std::vector<SelfAction> Player::get_打牌(bool after_chipon)
 	vector<SelfAction> actions;
 	for (auto tile : hand) {
 		// 检查食替情况,不可打出
-		if (after_chipon && is食替(this, tile->tile)) continue;
+		if (after_chipon)
+			if (is食替(this, tile->tile)) 
+				continue;
+
 		// 其他所有牌均可打出
 		SelfAction action;
 		action.action = Action::出牌;
@@ -364,7 +367,7 @@ std::vector<ResponseAction> Player::get_抢杠(Tile * tile)
 
 	if (is和牌(convert_tiles_to_base_tiles(copy_hand))) {
 		ResponseAction action;
-		action.action = Action::抢暗杠;
+		action.action = Action::抢杠;
 		actions.push_back(action);
 	}
 
@@ -850,6 +853,9 @@ Result Table::GameProcess(bool verbose, std::string yama)
 		case Action::出牌:
 		case Action::立直:
 		{
+			// 决定不胡牌，则不具有一发状态
+			player[turn].一发 = false;
+
 			auto tile = selected_action.correspond_tiles[0];
 			// 等待回复
 
@@ -1196,8 +1202,8 @@ std::vector<SelfAction> Table::GetValidActions()
 	}
 
 	// 计算役，如果无役，则禁止自摸
-	auto result = yaku_counter(this, turn, nullptr, false, false);
-	if (can_agari(result.yakus)) {
+	auto result = yaku_counter(this, turn, nullptr, false, false, player[turn].wind, 场风);
+	if (!can_agari(result.yakus)) {
 		auto iter = remove_if(actions.begin(), actions.end(),
 			[](SelfAction& sa) {
 			if (sa.action == Action::自摸) return true;
@@ -1278,7 +1284,7 @@ std::vector<ResponseAction> Table::GetValidResponse(
 	}
 
 	// 如果无役，则不能荣和
-	if (can_agari(yaku_counter(this, i, tile, false, false).yakus)) {
+	if (!can_agari(yaku_counter(this, i, tile, false, false, player[i].wind, 场风).yakus)) {
 		auto iter = remove_if(response.begin(), response.end(),
 			[](ResponseAction& ra) {
 			if (ra.action == Action::荣和) return true;

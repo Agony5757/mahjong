@@ -91,7 +91,7 @@ public:
 	std::string to_string();
 
 	bool 一发;
-	bool first_round;
+	bool first_round = true;
 
 	// SelfAction
 	std::vector<SelfAction> get_加杠();
