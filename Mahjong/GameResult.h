@@ -51,8 +51,9 @@ struct Result {
 			ss << "Player " << i << ":" << score[i] << endl;
 		}
 		for (auto result : results) {
-			ss << "Player" << result.first << ":" << 
-				yakus_to_string(result.second.yakus) << endl;
+			ss << "Player" << result.first << ":" << yakus_to_string(result.second.yakus)
+				<< "|" << result.second.fan << "番" << result.second.fu << "符"
+				<< endl;
 		}
 		return ss.str();
 	}

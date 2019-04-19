@@ -95,13 +95,13 @@ enum class Yaku {
 };
 
 inline bool can_agari(std::vector<Yaku> yakus) {
-	return any_of(yakus.begin(), yakus.end(), [](Yaku yaku) {
-		if (yaku == Yaku::None) return false;
-		if (yaku == Yaku::宝牌) return false;
-		if (yaku == Yaku::赤宝牌) return false;
-		if (yaku == Yaku::里宝牌) return false;
-		if (yaku == Yaku::北宝牌) return false;
-		return true;
+	return !all_of(yakus.begin(), yakus.end(), [](Yaku yaku) {
+		if (yaku == Yaku::None) return true;
+		if (yaku == Yaku::宝牌) return true;
+		if (yaku == Yaku::赤宝牌) return true;
+		if (yaku == Yaku::里宝牌) return true;
+		if (yaku == Yaku::北宝牌) return true;
+		return false;
 	});
 }
 

@@ -43,6 +43,16 @@ void test和牌状态3() {
 	}
 }
 
+void test和牌状态4() {
+	Table t;
+	t.init_tiles();
+	t.init_yama();
+	auto &yama = t.牌山;
+	vector<BaseTile> tiles = { _1m, _1m, east, south, west };
+
+	TEST_EQ_VERBOSE(true, isCommon和牌型(tiles));
+}
+
 void testCompletedTiles1() {
 	Table t;
 	t.init_tiles();
@@ -87,21 +97,33 @@ void testGameProcess2() {
 	
 }
 
-void testGameProcess3() {	
+void testGameProcess3(string filename) {	
+	ofstream out(filename, ios::app);
+	auto t1 = clock();
 	int game = 0;	
-	for (int i=0;i<1000;++i) {
+	for (int i = 0; i < 10000; ++i) {
+		if (i % 1000 == 0) {
+			printf("Game %d | Time:%d sec\n", i, (int)((clock() - t1) / CLOCKS_PER_SEC));
+		}
 		stringstream ss;
 		ss << "Game " << ++game << endl;
 		Table t(1, new RandomPlayer(0, ss),
 			new RandomPlayer(1, ss),
 			new RandomPlayer(2, ss),
 			new RandomPlayer(3, ss));
-		auto s = t.GameProcess(false);
-		if (s.result_type != ResultType::荒牌流局) {
-			ss << "Result: " << endl << s.to_string();
-			cout << ss.str();
+		try {
+			auto s = t.GameProcess(false);
+			
+			if (s.result_type != ResultType::荒牌流局) {
+				ss << "Result: " << endl << s.to_string();
+				out << ss.str();
+			}
 		}
+		catch (runtime_error &e){
+			out << e.what() << endl;
+		}		
 	}
+	printf("Finish 10000 Games | Time:%d sec\n", (int)((clock() - t1) / CLOCKS_PER_SEC));
 }
 
 
@@ -110,7 +132,8 @@ int main() {
 	//test和牌状态1();
 	//test和牌状态2();
 	//test和牌状态3();
-	testGameProcess3();
+	test和牌状态4();
+	//testGameProcess3("GameLog.txt");
 	
 	//testCompletedTiles2();
 	//testCompletedTiles1();

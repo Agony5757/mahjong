@@ -255,12 +255,12 @@ Result 自摸结算(Table * table)
 	if (is亲) {
 		for (int i = 0; i < 4; ++i) {
 			if (i == winner) {
-				result.score[i] += yakus.score1;
+				result.score[i] += (yakus.score1 * 3);
 				result.score[i] += (table->n立直棒 * 1000);
 				result.score[i] += (table->n本场 * 300);
 			}
 			else {
-				result.score[i] -= (yakus.score1 / 3);
+				result.score[i] -= (yakus.score1);
 				result.score[i] -= (table->n本场 * 100);
 			}
 		}
@@ -297,7 +297,7 @@ Result 自摸结算(Table * table)
 		result.n本场 = 0;
 	}
 	result.n立直棒 = 0;
-
+	result.results.insert({ winner, yakus });
 	return result;
 }
 
@@ -316,6 +316,9 @@ Result 荣和结算(Table * table, Tile* agari_tile, std::vector<int> response_p
 	for (auto winner : response_player) {
 		auto yaku = yaku_counter(table, winner, agari_tile, false, false);
 		yaku.calculate_score(winner == table->庄家, false);
+
+		result.results.insert({ winner, yaku });
+
 		result.score[winner] += yaku.score1;
 		result.score[table->turn] -= yaku.score1;		
 	}

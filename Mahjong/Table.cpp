@@ -44,12 +44,16 @@ std::string Player::to_string()
 	ss << endl;
 	ss << "牌河:" << river_to_string();
 	ss << endl;
-	if (riichi) {
-		ss << "立直状态" << endl;
-	}
-	else {
-		ss << "未立直状态" << endl;
-	}
+
+	if (riichi)	ss << "立";
+	else 		ss << "No立";	
+
+	ss << "|";
+
+	if (门清)	ss << "门清";
+	else		ss << "副露";
+	ss << endl;
+
 	return ss.str();
 }
 
@@ -900,17 +904,6 @@ Result Table::GameProcess(bool verbose, std::string yama)
 			switch (final_action) {
 			case Action::pass:
 
-				// 消除一发状态
-				player[turn].一发 = false;
-				// 如果成功立直了, 那么这个状态就会在接下来被设置为true，直到有人鸣牌或者自己没有自摸
-
-				// 杠，打出牌之后且其他人pass
-				if (after_杠()) { dora_spec++; }
-
-				// 什么都不做。将action对应的牌从手牌移动到牌河里面	
-
-				player[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
-
 				// 立直成功
 				if (selected_action.action == Action::立直) {
 					if (player[turn].first_round) {
@@ -922,6 +915,14 @@ Result Table::GameProcess(bool verbose, std::string yama)
 					player[turn].一发 = true;
 				}
 
+				// 杠，打出牌之后且其他人pass
+				if (after_杠()) { dora_spec++; }
+
+				// 什么都不做。将action对应的牌从手牌移动到牌河里面	
+
+				player[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
+
+
 				// 消除第一巡
 				player[turn].first_round = false;
 
@@ -931,13 +932,6 @@ Result Table::GameProcess(bool verbose, std::string yama)
 			case Action::吃:
 			case Action::碰:
 			case Action::杠:
-				player[turn].remove_from_hand(tile);
-				player[turn].move_from_hand_to_river_log_only(tile, river_counter, FROM_手切摸切);
-
-				player[response].门清 = false;
-				player[response].move_from_hand_to_fulu(
-					actions[response].correspond_tiles, tile);
-				turn = response;
 
 				if (selected_action.action == Action::立直) {
 					// 立直成功
@@ -949,6 +943,14 @@ Result Table::GameProcess(bool verbose, std::string yama)
 					player[turn].score -= 1000;
 					// 立直即鸣牌，一定没有一发
 				}
+
+				player[turn].remove_from_hand(tile);
+				player[turn].move_from_hand_to_river_log_only(tile, river_counter, FROM_手切摸切);
+
+				player[response].门清 = false;
+				player[response].move_from_hand_to_fulu(
+					actions[response].correspond_tiles, tile);
+				turn = response;
 
 				// 这是鸣牌，消除所有人第一巡和一发
 				for (int i = 0; i < 4; ++i) {
@@ -1195,7 +1197,7 @@ std::vector<SelfAction> Table::GetValidActions()
 
 	// 计算役，如果无役，则禁止自摸
 	auto result = yaku_counter(this, turn, nullptr, false, false);
-	if (result.yakus.size() == 1 && result.yakus[0] == Yaku::None) {
+	if (can_agari(result.yakus)) {
 		auto iter = remove_if(actions.begin(), actions.end(),
 			[](SelfAction& sa) {
 			if (sa.action == Action::自摸) return true;
@@ -1276,7 +1278,7 @@ std::vector<ResponseAction> Table::GetValidResponse(
 	}
 
 	// 如果无役，则不能荣和
-	if (yaku_counter(this, i, tile, false, false).yakus.size() == 0) {
+	if (can_agari(yaku_counter(this, i, tile, false, false).yakus)) {
 		auto iter = remove_if(response.begin(), response.end(),
 			[](ResponseAction& ra) {
 			if (ra.action == Action::荣和) return true;

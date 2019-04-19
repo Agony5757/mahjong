@@ -154,7 +154,10 @@ namespace mahjong
 			{
 				TileGroup body;
 				// Check Shuntsu - Left Tile
-				if (agariTile.getTileType() == curTiles[0].getTileType() && agariTile.getTileType() == curTiles[1].getTileType() &&
+				if (
+					agariTile.getTileType() == curTiles[0].getTileType() && agariTile.getTileType() == curTiles[1].getTileType() &&
+					agariTile.getTileType() != TileType::Special &&
+
 					agariTile.getTileNumber() == (curTiles[0].getTileNumber() - 1) && agariTile.getTileNumber() == (curTiles[1].getTileNumber() - 2)
 					)
 				{
@@ -169,6 +172,8 @@ namespace mahjong
 				}
 				// Check Shuntsu - Center Tile
 				else if (agariTile.getTileType() == curTiles[0].getTileType() && agariTile.getTileType() == curTiles[1].getTileType() &&
+					agariTile.getTileType() != TileType::Special &&
+
 					agariTile.getTileNumber() == (curTiles[0].getTileNumber() + 1) && agariTile.getTileNumber() == (curTiles[1].getTileNumber() - 1)
 					)
 				{
@@ -183,6 +188,8 @@ namespace mahjong
 				}
 				// Check Shuntsu - Right Tile
 				else if (agariTile.getTileType() == curTiles[0].getTileType() && agariTile.getTileType() == curTiles[1].getTileType() &&
+					agariTile.getTileType() != TileType::Special &&
+
 					agariTile.getTileNumber() == (curTiles[0].getTileNumber() + 2) && agariTile.getTileNumber() == (curTiles[1].getTileNumber() + 1)
 					)
 				{

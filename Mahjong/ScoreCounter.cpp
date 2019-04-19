@@ -7,7 +7,7 @@ using namespace std;
 
 #define REGISTER_SCORE(亲, 自摸, score_铳亲, score_亲自摸_all, score_铳子, score_子自摸_亲, score_子自摸_子) \
 if (亲) {if (自摸){score1=score_亲自摸_all;} else{score1=score_铳亲;}} \
-else {if (自摸) {score1=score_子自摸_亲; score2=score_子自摸_子;} else{score1=score_铳子;}}
+else {if (自摸) {score1=score_子自摸_亲; score2=score_子自摸_子;} else{score1=score_铳子;}} return;
 
 static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<Fulu> fulus, Tile* correspond_tile, BaseTile tsumo_tile);
 
@@ -71,6 +71,11 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	/* 如果保存有一发状态 */
 	if (player.一发) {
 		场役.push_back(Yaku::一发);
+	}
+
+	/*门清自摸*/
+	if (tsumo && player.门清) {
+		场役.push_back(Yaku::门前清自摸和);
 	}
 
 	// 接下来统计红宝牌数量
@@ -195,7 +200,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 		// 说明无役
 		final_result.yakus.push_back(Yaku::None);
 	}
-	else if (!can_agari(final_result.yakus)) {
+	else if (!can_agari(iter->first)) {
 		// 如果只有宝牌役/无役，置为无役
 		final_result.yakus.assign({ Yaku::None });
 	}
@@ -357,6 +362,8 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 			REGISTER_SCORE(亲, 自摸, 1000, -1, -1, -1, -1);
 		}
 	}
+	
+	throw runtime_error("Error fan & fu cases.");	
 }
 
 // 内部函数
