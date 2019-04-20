@@ -1186,8 +1186,10 @@ std::vector<SelfAction> Table::GetValidActions()
 	merge_into(actions, the_player.get_九种九牌());
 	merge_into(actions, the_player.get_自摸(this));
 
-	if (player[turn].score >= 1000)
+	if (player[turn].score >= 1000 &&
+		get_remain_tile() > 4)
 		// 有1000点才能立直，否则不行
+		// 牌河有4张以下牌，则不能立直
 		merge_into(actions, the_player.get_立直());
 
 	// 过滤器
