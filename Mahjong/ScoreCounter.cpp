@@ -191,9 +191,11 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	auto iter = max_element(AllYakusAndFu.begin(), AllYakusAndFu.end(), [](pair<vector<Yaku>, int> yaku_fu1, pair<vector<Yaku>, int> yaku_fu2) {
 		auto fan1 = calculate_fan(yaku_fu1.first);
 		auto fan2 = calculate_fan(yaku_fu2.first);
-		if (fan1 < fan2) return true;
-		if (fan1 > fan2) return false;
-		if (fan1 == fan2) return yaku_fu1.second < yaku_fu2.second;
+
+		return pow(2, fan1)*yaku_fu1.second < pow(2, fan2)*yaku_fu2.second;
+		//if (fan1 < fan2) return true;
+		//if (fan1 > fan2) return false;
+		//if (fan1 == fan2) return yaku_fu1.second < yaku_fu2.second;
 	});
 
 	if (iter == AllYakusAndFu.end()) {
@@ -366,6 +368,19 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 	throw runtime_error("Error fan & fu cases.");	
 }
 
+//1pk -> 1p 1p 1p
+//1ps -> 1p 2p 3p
+//1zk -> 1z 1z 1z
+
+//1p4- -> 1p 1p 1p 1p
+//1ps@ -> 1p (2p) 3p
+//1ps! -> (1p) 2.p 3p
+//1ps# -> 1p 2p (3p)
+//1ps$ -> 对应的自摸case
+//1ps%
+//1ps^ 
+
+
 // 内部函数
 inline static
 pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
@@ -373,8 +388,8 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 
 	vector<Yaku> yakus;
 	int fu;
-
-	fu = 30;
+	// 断幺九
+	
 
 	return { yakus, fu };
 }
