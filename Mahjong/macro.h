@@ -215,7 +215,7 @@ public:
 	 * 这里必须是unsigned类型，否则编码中文的时候出错
 	 */
 	inline std::string Encode(const unsigned char * str, int bytes) {
-		int num = 0, bin = 0, i;
+		int num = 0, bin = 0;
 		std::string _encode_result;
 		const unsigned char * current;
 		current = str;

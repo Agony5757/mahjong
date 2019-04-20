@@ -190,10 +190,10 @@ int main() {
 	//test和牌状态2();
 	//test和牌状态3();
 	//test和牌状态4();
-	testGamePlay1("GamePlay.txt");
+	testGameProcess3("GameLog.txt");
+	//testGamePlay1("GamePlay.txt");
 	
 	//testCompletedTiles2();
 	//testCompletedTiles1();
-	getchar();
 	return 0;
 }

@@ -147,8 +147,10 @@ static bool is食替(Player* player, BaseTile t) {
 				else return false;
 			}
 		}
+		else throw exception("??");
 	}
-	else throw runtime_error("最后一手既不是吃又不是碰，不考虑食替");
+	else 
+		throw runtime_error("最后一手既不是吃又不是碰，不考虑食替");
 }
 
 std::vector<SelfAction> Player::get_打牌(bool after_chipon)
@@ -334,7 +336,7 @@ std::vector<ResponseAction> Player::get_Kan(Tile * tile)
 
 	for (auto one_chi_tiles : chi_tiles) {
 		ResponseAction action;
-		action.action = Action::碰;
+		action.action = Action::杠;
 		action.correspond_tiles.assign(one_chi_tiles.begin(), one_chi_tiles.end());
 		actions.push_back(action);
 	}
@@ -887,6 +889,8 @@ Result Table::GameProcess(bool verbose, std::string yama)
 						agents[i]->get_response_action(this, selected_action, tile, response);
 					actions[i] = response[selected_response];
 
+					// 判断立直振听和同巡振听：如果选项中有荣和，但是没有荣和
+					// 则1. 立直以后都不能荣和 2. 没有立直，进入同巡振听状态
 					if (any_of(response.begin(), response.end(), [](ResponseAction &ra) {
 						return ra.action == Action::荣和;
 					}) && actions[i].action != Action::荣和) {

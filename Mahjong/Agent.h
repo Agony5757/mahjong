@@ -27,7 +27,7 @@ enum LogMode : int {
 	TABLE_STATUS = 1 << 2,
 	RESPONSE_ACTION = 1 << 3,
 	OTHER_PLAYER_ACTION = 1 << 4,
-	ALL = (1 << 5 - 1),
+	ALL = ((1 << 5) - 1),
 };
 
 // Abstract base class

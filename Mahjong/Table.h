@@ -6,6 +6,9 @@
 #include "GameLog.h"
 #include "GameResult.h"
 
+#pragma warning(disable:4244)
+#pragma warning(disable:4267)
+
 constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
 
