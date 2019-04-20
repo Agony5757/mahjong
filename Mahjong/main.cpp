@@ -97,11 +97,11 @@ void testGameProcess2() {
 	
 }
 
-void testGameProcess3(string filename) {	
+void testGameProcess3(string filename, int games = 1000) {	
 	ofstream out(filename, ios::out);
 	auto t1 = clock();
 	int game = 0;	
-	for (int i = 0; i < 10000; ++i) {
+	for (int i = 0; i < games; ++i) {
 		if (i % 1000 == 0) {
 			printf("Game %d | Time:%d sec\n", i, (int)((clock() - t1) / CLOCKS_PER_SEC));
 		}
@@ -123,7 +123,7 @@ void testGameProcess3(string filename) {
 			out << e.what() << endl;
 		}		
 	}
-	printf("Finish 10000 Games | Time:%d sec\n", (int)((clock() - t1) / CLOCKS_PER_SEC));
+	printf("Finish %d Games | Time:%d sec\n", games, (int)((clock() - t1) / CLOCKS_PER_SEC));
 	out.close();
 }
 

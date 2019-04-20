@@ -191,10 +191,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	auto iter = max_element(AllYakusAndFu.begin(), AllYakusAndFu.end(), [](pair<vector<Yaku>, int> yaku_fu1, pair<vector<Yaku>, int> yaku_fu2) {
 		auto fan1 = calculate_fan(yaku_fu1.first);
 		auto fan2 = calculate_fan(yaku_fu2.first);
-		if (fan1 >= 13 || fan2 >= 13) return fan1 < fan2;
-		if (fan1 < 13 && fan2 >= 13) return fan1 < fan2;
-		if (fan1 >= 13 && fan2 >= 13) return fan1 < fan2;
-		
+		if (fan1 >= 13 || fan2 >= 13) return fan1 < fan2;		
 		return (1ull << fan1) *yaku_fu1.second < (1ull << fan2)*yaku_fu2.second;
 	});
 
@@ -364,8 +361,9 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 			REGISTER_SCORE(亲, 自摸, 1000, -1, -1, -1, -1);
 		}
 	}
-	
-	throw runtime_error("Error fan & fu cases.");	
+	stringstream ss;
+	ss << "Error fan & fu cases." << fan << " fan, " << fu << " fu." << endl;
+	throw runtime_error(ss.str().c_str());	
 }
 
 //1pk -> 1p 1p 1p
@@ -413,22 +411,36 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 
 	// 重要：ct之后不要进行复制
 	// 首先统计ct中有多少个last_tile
-	auto &head = ct.head;
-	auto &body = ct.body;
-
-	vector<BaseTile*> mark_last_tile_in_ct;
-	{
-		auto s = head.find(last_tile);
-		if (s != nullptr) {
-			mark_last_tile_in_ct.push_back(s);
+	
+	std::vector<std::vector<std::string>> tile_group_strings;
+	
+	std::vector<std::string> raw_tile_group_string;
+	raw_tile_group_string.push_back(basetile_to_string(ct.head.tiles[0]) + "2"); //例如1z2
+	for (auto fulu : fulus) {
+		switch (fulu.type) {
+		case Fulu::Chi:
+			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "S-"); // 例如1sS- 即1s2s3s (8sS无效)
+			continue;
+		case Fulu::Pon:
+			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "K-"); // 例如1sK- 即1s1s1s
+			continue;
+		case Fulu::大明杠:
+		case Fulu::加杠:
+			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "4-"); // 例如3z4- 即西大明杠/加杠
+			continue;
+		case Fulu::暗杠:
+			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "4+"); // 例如4s4+ 即4s暗杠
+			continue;
 		}
 	}
-	{
-		for (auto &group : body) {
-			auto s = group.find(last_tile);
-			if (s != nullptr) {
-				mark_last_tile_in_ct.push_back(s);
-			}
+	for (auto tilegroup : ct.body) {
+		switch (tilegroup.type) {
+		case TileGroup::Shuntsu:
+			raw_tile_group_string.push_back(basetile_to_string(tilegroup.tiles[0]) + "K"); //例如1sS
+			continue;
+		case TileGroup::Koutsu:
+			raw_tile_group_string.push_back(basetile_to_string(tilegroup.tiles[0]) + "S"); // 例如1sK
+			continue;			
 		}
 	}
 	

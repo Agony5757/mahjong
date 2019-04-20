@@ -32,6 +32,17 @@ enum BaseTile : unsigned char {
 	白, 发, 中
 };
 
+std::string basetile_to_string(BaseTile bt) {
+	using namespace std;
+	static vector<string> names{
+		"1m","2m","3m","4m","5m","6m","7m","8m","9m",	
+		"1s","2s","3s","4s","5s","6s","7s","8s","9s",	
+		"1p","2p","3p","4p","5p","6p","7p","8p","9p",
+		"1z","2z","3z","4z","5z","6z","7z" 
+	};
+	return names[int(bt)];
+}
+
 inline BaseTile get_dora_next(BaseTile tile) {
 	if (tile == _9m) return _1m;
 	else if (tile == _9s) return _1s;
