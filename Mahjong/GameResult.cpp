@@ -108,21 +108,21 @@ Result 荒牌流局结算(Table * table)
 		else if (流局满贯人数 == 3) {
 			if (流局满贯[table->庄家])
 			{
-				result.score[table->庄家] += 4000;
+				result.score[table->庄家] += 2000;
 				for (int i = 0; i < 4; ++i) {
 					if (流局满贯[i])
-						result.score[i] += 8000;
+						result.score[i] += 2000;
 					else
-						result.score[i] -= 28000;
+						result.score[i] -= 8000;
 				}
 			}
 			else
 			{
 				for (int i = 0; i < 4; ++i) {
 					if (流局满贯[i])
-						result.score[i] += 8000;
+						result.score[i] += 4000;
 					else
-						result.score[i] -= 24000;
+						result.score[i] -= 8000;
 				}
 			}
 		}
@@ -132,19 +132,19 @@ Result 荒牌流局结算(Table * table)
 				result.score[table->庄家] += 4000;
 				for (int i = 0; i < 4; ++i) {
 					if (流局满贯[i])
-						result.score[i] += 8000;
+						result.score[i] += 4000;
 					else
-						result.score[i] -= 10000;
+						result.score[i] -= 6000;
 				}
 			}
 			else
 			{
-				result.score[table->庄家] -= 5400;
+				result.score[table->庄家] -= 4000;
 				for (int i = 0; i < 4; ++i) {
 					if (流局满贯[i])
-						result.score[i] += 8000;
+						result.score[i] += 6000;
 					else
-						result.score[i] -= 5300;
+						result.score[i] -= 4000;
 				}
 			}
 		}
