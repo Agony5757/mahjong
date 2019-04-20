@@ -382,7 +382,7 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 // 内部函数
 inline static
 pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
-	const CompletedTiles &ct, vector<Fulu> fulus, BaseTile last_tile, bool tsumo, const BaseTile* position, Wind 自风, Wind 场风) {
+	vector<string> tile_group_string, Wind 自风, Wind 场风) {
 
 	vector<Yaku> yakus;
 	int fu;
@@ -415,37 +415,72 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 	std::vector<std::vector<std::string>> tile_group_strings;
 	
 	std::vector<std::string> raw_tile_group_string;
-	raw_tile_group_string.push_back(basetile_to_string(ct.head.tiles[0]) + "2"); //例如1z2
+	raw_tile_group_string.push_back(basetile_to_string_simple(ct.head.tiles[0]) + "2"); //例如1z2
 	for (auto fulu : fulus) {
 		switch (fulu.type) {
 		case Fulu::Chi:
-			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "S-"); // 例如1sS- 即1s2s3s (8sS无效)
+			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "S-"); // 例如1sS- 即1s2s3s (8sS无效)
 			continue;
 		case Fulu::Pon:
-			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "K-"); // 例如1sK- 即1s1s1s
+			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "K-"); // 例如1sK- 即1s1s1s
 			continue;
 		case Fulu::大明杠:
 		case Fulu::加杠:
-			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "4-"); // 例如3z4- 即西大明杠/加杠
+			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "4-"); // 例如3z4- 即西大明杠/加杠
 			continue;
 		case Fulu::暗杠:
-			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "4+"); // 例如4s4+ 即4s暗杠
+			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "4+"); // 例如4s4+ 即4s暗杠
 			continue;
 		}
 	}
 	for (auto tilegroup : ct.body) {
 		switch (tilegroup.type) {
 		case TileGroup::Shuntsu:
-			raw_tile_group_string.push_back(basetile_to_string(tilegroup.tiles[0]) + "K"); //例如1sS
+			raw_tile_group_string.push_back(basetile_to_string_simple(tilegroup.tiles[0]) + "K"); //例如1sS
 			continue;
 		case TileGroup::Koutsu:
-			raw_tile_group_string.push_back(basetile_to_string(tilegroup.tiles[0]) + "S"); // 例如1sK
+			raw_tile_group_string.push_back(basetile_to_string_simple(tilegroup.tiles[0]) + "S"); // 例如1sK
 			continue;			
 		}
 	}
+
+	// last_tile是否存在于tile_group中
+	string last_tile_string = basetile_to_string_simple(last_tile);
+	for (auto &tile_group : raw_tile_group_string) {
+		auto attr = tile_group.back(); // 最后一个字符表示它的性质
+		if (attr == '-' || attr == '+') {
+			continue;
+		}
+		if (attr == 'K' || attr == '2') {
+			if (tile_group[0] == last_tile_string[0] && tile_group[1] == last_tile_string[1]) {
+				if (tsumo) tile_group += '!'; 
+				else tile_group += '$';
+				tile_group_strings.push_back(raw_tile_group_string);
+			}
+			else continue;
+		}
+		if (attr == 'S') {
+			if (tile_group[0] == last_tile_string[0] && tile_group[1] == last_tile_string[1]) {
+				if (tsumo) tile_group += '!';
+				else tile_group += '$';
+				tile_group_strings.push_back(raw_tile_group_string);
+			}
+			else if ((tile_group[0] + 1) == last_tile_string[0] && tile_group[1] == last_tile_string[1]) {
+				if (tsumo) tile_group += '@';
+				else tile_group += '%';
+				tile_group_strings.push_back(raw_tile_group_string);
+			}
+			else if ((tile_group[0] + 2) == last_tile_string[0] && tile_group[1] == last_tile_string[1]) {
+				if (tsumo) tile_group += '#';
+				else tile_group += '^';
+				tile_group_strings.push_back(raw_tile_group_string);
+			}
+			else continue;
+		}
+	}
 	
-	for (auto last_tile_pos : mark_last_tile_in_ct) {
-		yaku_fus.push_back(get_手役_from_complete_tiles_固定位置(ct, fulus, last_tile, tsumo, last_tile_pos, 自风, 场风));
+	for (auto tile_group : tile_group_strings) {
+		yaku_fus.push_back(get_手役_from_complete_tiles_固定位置(tile_group, 自风, 场风));
 	}
 	return yaku_fus;
 }

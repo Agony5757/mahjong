@@ -32,7 +32,7 @@ enum BaseTile : unsigned char {
 	白, 发, 中
 };
 
-std::string basetile_to_string(BaseTile bt) {
+inline std::string basetile_to_string_simple(BaseTile bt) {
 	using namespace std;
 	static vector<string> names{
 		"1m","2m","3m","4m","5m","6m","7m","8m","9m",	
