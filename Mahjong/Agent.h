@@ -22,6 +22,14 @@
 // Forward Decl
 class Table;
 
+enum LogMode : int {
+	SELF_ACTION = 1 << 1,
+	TABLE_STATUS = 1 << 2,
+	RESPONSE_ACTION = 1 << 3,
+	OTHER_PLAYER_ACTION = 1 << 4,
+	ALL = (1 << 5 - 1),
+};
+
 // Abstract base class
 class Agent {
 public:
@@ -46,7 +54,10 @@ class RandomPlayer : public Agent {
 public:
 	int i_player; // player number
 	std::stringstream &ss;
-	inline RandomPlayer(int i, std::stringstream &ss_) :i_player(i), ss(ss_) {}
+	int mode;
+	inline RandomPlayer(int i, std::stringstream &ss_, 
+		int mode_ = 0) 
+		:i_player(i), ss(ss_), mode(mode_) {}
 	int get_self_action(Table* status, std::vector<SelfAction> actions);
 	int get_response_action(Table* status, SelfAction action, Tile*, std::vector<ResponseAction> actions);
 };

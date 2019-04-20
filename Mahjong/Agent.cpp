@@ -72,16 +72,19 @@ int RandomPlayer::get_self_action(Table * status, std::vector<SelfAction> action
 			dice_roll = i; break;
 		}
 	}
+	if (mode & SELF_ACTION)
+	{
+		if (mode & TABLE_STATUS)
+			ss << status->to_string();
+		ss << endl; ss << "Select:" << endl;
+		int i = 0;
 
-	ss << status->to_string();
-	ss << endl; ss << "Select:" << endl;
-	int i = 0;
-
-	for (auto action : actions) {
-		if (i == dice_roll)
-			ss << "--> ";
-		ss << i << " " << action.to_string() << endl;
-		++i;
+		for (auto action : actions) {
+			if (i == dice_roll)
+				ss << "--> ";
+			ss << i << " " << action.to_string() << endl;
+			++i;
+		}
 	}
 
 	return dice_roll;
@@ -99,36 +102,39 @@ int RandomPlayer::get_response_action(Table * status, SelfAction action, Tile *t
 			break;
 		}
 	} 
-
-	ss << endl;
-	ss << "You are player " << i_player << "." << endl;
-	ss << "Player " << status->turn;
-	switch (action.action) {
-	case Action::立直:
-		ss << " calls riichi and plays ";
-		break;
-	case Action::出牌:
-		ss << " plays ";
-		break;
-	case Action::暗杠:
-		ss << " 暗杠 ";
-		break;
-	case Action::加杠:
-		ss << " 加杠 ";
-		break;
-	default:
-		throw runtime_error("Unknown action.");
+	if (mode & RESPONSE_ACTION) {
+		if (mode & OTHER_PLAYER_ACTION) {
+			ss << endl;
+			ss << "You are player " << i_player << "." << endl;
+			ss << "Player " << status->turn;
+			switch (action.action) {
+			case Action::立直:
+				ss << " calls riichi and plays ";
+				break;
+			case Action::出牌:
+				ss << " plays ";
+				break;
+			case Action::暗杠:
+				ss << " 暗杠 ";
+				break;
+			case Action::加杠:
+				ss << " 加杠 ";
+				break;
+			default:
+				throw runtime_error("Unknown action.");
+			}
+			ss << tile->to_string() << endl;
+		}
+		ss << "Select:" << endl;
+		int i = 0;
+		for (auto action : actions) {
+			if (i == dice_roll)
+				ss << "--> ";
+			ss << i << " " << action.to_string() << endl;
+			++i;
+		}
 	}
-	ss << tile->to_string() << endl;
 
-	ss << "Select:" << endl;
-	int i = 0;
-	for (auto action : actions) {
-		if (i == dice_roll)
-			ss << "--> ";
-		ss << i << " " << action.to_string() << endl;
-		++i;
-	}
 
 	return dice_roll;
 }

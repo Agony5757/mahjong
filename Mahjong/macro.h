@@ -332,4 +332,9 @@ inline std::string merge_strings(std::vector<std::string> strings) {
 	}
 	return final_string;
 }
+
+inline Wind next_wind(Wind 风) {
+	return (Wind)(int(风) + 1);
+}
+
 #endif

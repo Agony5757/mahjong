@@ -3,6 +3,7 @@
 #include "macro.h"
 #include "Agent.h"
 #include <fstream>
+#include "GamePlay.h"
 using namespace std;
 
 #pragma region(test和牌)
@@ -99,6 +100,7 @@ void testGameProcess2() {
 
 void testGameProcess3(string filename, int games = 1000) {	
 	ofstream out(filename, ios::out);
+	out.close();
 	auto t1 = clock();
 	int game = 0;	
 	for (int i = 0; i < games; ++i) {
@@ -124,11 +126,11 @@ void testGameProcess3(string filename, int games = 1000) {
 		}		
 	}
 	printf("Finish %d Games | Time:%d sec\n", games, (int)((clock() - t1) / CLOCKS_PER_SEC));
-	out.close();
 }
 
 void testGameProcess4(string filename) {
-	ofstream out(filename, ios::in);
+	ofstream out(filename, ios::out);
+	out.close();
 	auto t1 = clock();
 	int game = 0;
 	int i = 0;
@@ -164,6 +166,23 @@ void testGameProcess4(string filename) {
 	printf("Finish %d Games | Time:%d sec\n", i, (int)((clock() - t1) / CLOCKS_PER_SEC));	
 }
 
+void testGamePlay1(string filename, int shots = 10) {
+	ofstream out(filename, ios::out);
+	out.close();
+	stringstream ss;
+	array<Agent*, 4> agents;
+	for (int i = 0; i < 4; ++i)
+	{
+		agents[i] = new RandomPlayer(i, ss);
+	}
+	for (int i = 0; i < shots; ++i)
+	{
+		auto &scores = 东风局(agents, ss);
+		ofstream out(filename, ios::app);
+		out << ss.str();
+		out.close();
+	}
+}
 
 int main() {
 	
@@ -171,7 +190,7 @@ int main() {
 	//test和牌状态2();
 	//test和牌状态3();
 	//test和牌状态4();
-	testGameProcess3("GameLog.txt");
+	testGamePlay1("GamePlay.txt");
 	
 	//testCompletedTiles2();
 	//testCompletedTiles1();
