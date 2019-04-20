@@ -81,6 +81,10 @@ public:
 	Wind wind;
 	bool 亲家;
 	bool 振听 = false;
+	bool 立直振听 = false;
+
+	bool is振听() { return 振听 || 立直振听; }
+
 	int score;
 	std::vector<Tile*> hand;
 	River river;

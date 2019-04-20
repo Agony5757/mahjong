@@ -886,6 +886,18 @@ Result Table::GameProcess(bool verbose, std::string yama)
 					int selected_response =
 						agents[i]->get_response_action(this, selected_action, tile, response);
 					actions[i] = response[selected_response];
+
+					if (any_of(response.begin(), response.end(), [](ResponseAction &ra) {
+						return ra.action == Action::荣和;
+					}) && actions[i].action != Action::荣和) {
+						if (player[i].is_riichi()) {
+							player[i].立直振听 = true;
+						}
+						else {
+							player[i].振听 = true;
+						}
+					}
+
 				}
 				else
 					actions[i].action = Action::pass;
@@ -1277,7 +1289,7 @@ std::vector<ResponseAction> Table::GetValidResponse(
 	}
 
 	// 如果是振听状态，则不能荣和
-	if (the_player.振听 == true) {
+	if (the_player.is振听() == true) {
 		auto iter = remove_if(response.begin(), response.end(),
 			[](ResponseAction& ra) {
 			if (ra.action == Action::荣和) return true;
