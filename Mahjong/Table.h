@@ -244,7 +244,7 @@ public:
 	}
 
 	inline bool after_杠() {
-		return after_daiminkan() || after_ankan() || after_加杠();
+		return after_daiminkan() || after_加杠();
 	}
 
 	Table(int 庄家 = 0, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);

@@ -1016,6 +1016,8 @@ Result Table::GameProcess(bool verbose, std::string yama)
 			}
 			player[turn].play_暗杠(selected_action.correspond_tiles[0]->tile);
 			last_action = Action::暗杠;
+			// 立即翻宝牌指示牌
+			dora_spec++;
 
 			continue;
 		}
