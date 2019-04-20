@@ -192,7 +192,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 		auto fan1 = calculate_fan(yaku_fu1.first);
 		auto fan2 = calculate_fan(yaku_fu2.first);
 		if (fan1 >= 13 || fan2 >= 13) return fan1 < fan2;		
-		return (1ull << fan1) *yaku_fu1.second < (1ull << fan2)*yaku_fu2.second;
+		return (1ull << fan1) * yaku_fu1.second < (1ull << fan2) * yaku_fu2.second;
 	});
 
 	if (iter == AllYakusAndFu.end()) {
@@ -214,8 +214,6 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	}
 	return final_result;
 }
-
-
 
 void CounterResult::calculate_score(bool 亲, bool 自摸)
 {
@@ -385,7 +383,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	vector<string> tile_group_string, Wind 自风, Wind 场风) {
 
 	vector<Yaku> yakus;
-	int fu;
+	int fu = 30;
 	// 断幺九
 	
 
@@ -436,10 +434,10 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 	for (auto tilegroup : ct.body) {
 		switch (tilegroup.type) {
 		case TileGroup::Shuntsu:
-			raw_tile_group_string.push_back(basetile_to_string_simple(tilegroup.tiles[0]) + "K"); //例如1sS
+			raw_tile_group_string.push_back(basetile_to_string_simple(tilegroup.tiles[0]) + "S"); //例如1sS
 			continue;
 		case TileGroup::Koutsu:
-			raw_tile_group_string.push_back(basetile_to_string_simple(tilegroup.tiles[0]) + "S"); // 例如1sK
+			raw_tile_group_string.push_back(basetile_to_string_simple(tilegroup.tiles[0]) + "K"); // 例如1sK
 			continue;			
 		}
 	}
@@ -456,6 +454,7 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 				if (tsumo) tile_group += '!'; 
 				else tile_group += '$';
 				tile_group_strings.push_back(raw_tile_group_string);
+				continue;
 			}
 			else continue;
 		}
@@ -464,23 +463,34 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 				if (tsumo) tile_group += '!';
 				else tile_group += '$';
 				tile_group_strings.push_back(raw_tile_group_string);
+				continue;
 			}
 			else if ((tile_group[0] + 1) == last_tile_string[0] && tile_group[1] == last_tile_string[1]) {
 				if (tsumo) tile_group += '@';
 				else tile_group += '%';
 				tile_group_strings.push_back(raw_tile_group_string);
+				continue;
 			}
 			else if ((tile_group[0] + 2) == last_tile_string[0] && tile_group[1] == last_tile_string[1]) {
 				if (tsumo) tile_group += '#';
 				else tile_group += '^';
 				tile_group_strings.push_back(raw_tile_group_string);
+				continue;
 			}
 			else continue;
 		}
+		else continue;
 	}
 	
+	auto iter = unique(tile_group_strings.begin(), tile_group_strings.end(), 
+		[](vector<string> strings1, vector<string> strings2) {
+		return merge_strings(strings1) == merge_strings(strings2);
+	});
+	tile_group_strings.erase(iter, tile_group_strings.end());
+
 	for (auto tile_group : tile_group_strings) {
-		yaku_fus.push_back(get_手役_from_complete_tiles_固定位置(tile_group, 自风, 场风));
+		auto yaku_fu = get_手役_from_complete_tiles_固定位置(tile_group, 自风, 场风);
+		yaku_fus.push_back(yaku_fu);		
 	}
 	return yaku_fus;
 }

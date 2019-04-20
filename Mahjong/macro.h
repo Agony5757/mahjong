@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <type_traits>
+#include <string>
 #include "MahjongAlgorithm/Yaku.h"
 #include "Tile.h"
 
@@ -321,4 +322,14 @@ inline int get_distance(int p1, int p2) {
 	}
 }
 
+// vector<string> merge
+inline std::string merge_strings(std::vector<std::string> strings) {
+	using std::string;
+	string final_string;
+	for (auto _string  : strings) {
+		final_string += _string;
+		final_string += " ";
+	}
+	return final_string;
+}
 #endif
