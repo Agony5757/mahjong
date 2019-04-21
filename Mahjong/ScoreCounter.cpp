@@ -162,8 +162,18 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 		AllYakusAndFu.push_back({ yakus, 0 });
 	}
 
-	{
-		// 九莲
+	// 九莲
+	if (is纯九莲和牌型(convert_tiles_to_base_tiles(tiles))) {
+		vector<Yaku> yakus; 		
+		merge_into(yakus, 场役); // 也有可能与天和叠加
+		yakus.push_back(Yaku::纯正九莲宝灯);
+		AllYakusAndFu.push_back({ yakus, 0 });
+	}
+	else if (is九莲和牌型(convert_tiles_to_base_tiles(tiles))) {
+		vector<Yaku> yakus;
+		merge_into(yakus, 场役); // 也有可能与天和叠加
+		yakus.push_back(Yaku::九莲宝灯);
+		AllYakusAndFu.push_back({ yakus, 0 });
 	}
 
 	// 接下来统计七对子

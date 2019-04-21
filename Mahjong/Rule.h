@@ -90,6 +90,9 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清);
 bool can_ron(std::vector<Tile*> hands, Tile* get_tile);
 bool can_tsumo(std::vector<Tile*> hands);
 
+bool is纯九莲和牌型(std::vector<BaseTile> tiles);
+bool is九莲和牌型(std::vector<BaseTile> tiles);
+
 
 //
 //std::vector<Yaku> get_立直_双立直(bool double_riichi, bool riichi, bool 一发);

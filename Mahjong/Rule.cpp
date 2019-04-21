@@ -241,6 +241,69 @@ bool can_tsumo(std::vector<Tile*> hands)
 	return false;
 }
 
+bool is纯九莲和牌型(std::vector<BaseTile> tiles)
+{
+	if (tiles.size() != 14) return false;
+	vector<int> 纯九莲和牌型raw = { 1,1,1,2,3,4,5,6,7,8,9,9,9 };
+	vector<int> 纯九莲和牌型[9];
+	for (int i = 1; i <= 9; ++i) {
+		纯九莲和牌型[i - 1].assign(纯九莲和牌型raw.begin(), 纯九莲和牌型raw.end());
+		纯九莲和牌型[i - 1].push_back(i);
+	}
+
+	vector<BaseTile> 纯九莲m;
+	for (int i = 0; i < 14; ++i) {
+		纯九莲m.push_back(BaseTile(纯九莲和牌型raw[i] + int(_1m) - 1));
+	}
+	vector<BaseTile> 纯九莲s;
+	for (int i = 0; i < 14; ++i) {
+		纯九莲m.push_back(BaseTile(纯九莲和牌型raw[i] + int(_1s) - 1));
+	}
+	vector<BaseTile> 纯九莲p;
+	for (int i = 0; i < 14; ++i) {
+		纯九莲m.push_back(BaseTile(纯九莲和牌型raw[i] + int(_1p) - 1));
+	}
+	if (is_same_container(tiles, 纯九莲m)) return true;
+	if (is_same_container(tiles, 纯九莲p)) return true;
+	if (is_same_container(tiles, 纯九莲s)) return true;
+	return false;
+}
+
+bool is九莲和牌型(std::vector<BaseTile> tiles)
+{
+	sort(tiles.begin(), tiles.end());
+	if (tiles.size() != 14) return false;
+	vector<int> 九莲和牌型raw = { 1,1,1,2,3,4,5,6,7,8,9,9,9 };
+	vector<int> 九莲和牌型[9];
+	for (int i = 1; i <= 9; ++i) {
+		九莲和牌型[i - 1].assign(九莲和牌型raw.begin(), 九莲和牌型raw.end());
+		九莲和牌型[i - 1].push_back(i);		
+	}
+
+	vector<BaseTile> 九莲m;
+	for (int i = 0; i < 14; ++i) {
+		九莲m.push_back(BaseTile(九莲和牌型raw[i] + int(_1m) - 1));
+	}
+	sort(九莲m.begin(), 九莲m.end());
+
+	vector<BaseTile> 九莲s;
+	for (int i = 0; i < 14; ++i) {
+		九莲m.push_back(BaseTile(九莲和牌型raw[i] + int(_1s) - 1));
+	}
+	sort(九莲s.begin(), 九莲s.end());
+
+	vector<BaseTile> 九莲p;
+	for (int i = 0; i < 14; ++i) {
+		九莲m.push_back(BaseTile(九莲和牌型raw[i] + int(_1p) - 1));
+	}
+	sort(九莲p.begin(), 九莲p.end());
+
+	if (is_same_container(tiles, 九莲m)) return true;
+	if (is_same_container(tiles, 九莲p)) return true;
+	if (is_same_container(tiles, 九莲s)) return true;
+	return false;
+}
+
 
 //
 //std::vector<Yaku> get_立直_双立直(bool double_riichi, bool riichi, bool 一发)
