@@ -55,6 +55,7 @@ class NMnaive():
 
         self.loss = tf.losses.mean_squared_error(self.value_target, self.value_output)
         self.optimizer = tf.train.AdamOptimizer(lr)
+        self.train_step = self.optimizer.minimize(self.loss)
 
         self.session.run(tf.global_variables_initializer())
 
@@ -66,7 +67,7 @@ class NMnaive():
 
     def train(self, input, target):
 
-        loss, _ = self.session.run([self.loss, self.optimizer], feed_dict={self.features: input,
+        loss, _ = self.session.run([self.loss, self.train_step], feed_dict={self.features: input,
                                                                            self.value_target: target})
 
         return loss
@@ -76,7 +77,7 @@ class AgentNaive():
     """
     Mahjong AI agent naive version
     """
-    def __init__(self, nn: NMnaive, memory:PrioritizedReplayBuffer, gamma=0.99999, greedy=1.0):
+    def __init__(self, nn: NMnaive, memory:PrioritizedReplayBuffer, gamma=0.99999, greedy=1e-3):
         self.nn = nn
         self.gamma = gamma  # discount factor
         self.greedy = greedy
@@ -104,7 +105,18 @@ class AgentNaive():
         return action, policy
 
     def remember(self, this_state, action, next_state, score, done, next_aval_states, policy):
-        pass
+        self.this_state = this_state
+        self.next_state = next_state
+        self.score = score
+        self.done = done
 
     def learn(self):
-        pass
+
+        if not self.done:
+            target_value = self.score + self.gamma * self.nn.output(self.next_state)
+        else:
+            target_value = np.reshape(self.score, [-1, 1])
+
+        self.nn.train(self.this_state, target_value)
+
+
