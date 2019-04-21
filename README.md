@@ -1,8 +1,11 @@
 ﻿# 日本麻将
 
 ## Project Status
+
 雀魂规则：完成
+
 天凤规则：未完成
+
 测试：未彻底进行
 
 ## 综述
@@ -102,74 +105,4 @@ MahjongAlgorithm文件夹：一个第三方的，可以将牌进行3n+2拆解的
 			回到循环起点
 
 		case ron:
-			此时，返回的response_player.size()>=1
-			逐个进行游戏结算
-
-	case 加杠：
-		对于i = 0,1,2,3 except turn
-		response_action = Get抢杠(i)
-		将每个response_action传递到对应的agent那里，通过Plyaer[i].gameLog构造TableStatus对象
-		获得每个player的Action
-
-		response_action.action只有pass和抢杠
-		case pass:
-			after_kan = true
-			将牌移动到fulus对应的那一项中
-			所有人的一发状态 = false，第一巡状态 = false
-			after_chipon = false
-
-	case 暗杠：
-		对于i = 0,1,2,3 except turn
-		response_action = Get抢暗杠(i)
-		将每个response_action传递到对应的agent那里，通过Plyaer[i].gameLog构造TableStatus对象
-		获得每个player的Action
-
-		response_action.action只有pass和抢杠
-		case pass:
-			after_kan = true
-			将牌移动到fulus对应的那一项中
-			所有人的一发状态 = false，第一巡状态 = false
-			after_chipon = false
-
-	case 立直:
-		和打牌的状态一样。除了ron的情况，在回到循环起点之前，执行:player[turn]的立直状态=true。扣1000点。
-
-	case 自摸:
-		进行游戏结算
-
-### GetValidAction
-
-	1. 对于每个牌，判断after_chipon && 能加杠 = 添加加杠
-	2. 对于每种牌，判断after_chipon && 能暗杠 = 添加暗杠
-	3. 对于每个牌，(after_chipon==true && 非食替) || (after_chipon == false) = 添加打牌
-	4. 对于整个手牌，判断是否是 = 添加自摸
-	5. 对于整个手牌，判断是否是国士无双胡牌 = 添加自摸
-	6. （判断立直）fulus中不存在除了暗杠之外的其他类型 && for (tile in 手牌) 手牌-tile == 普通听牌型 || 国士无双听牌型 ||  = 添加立直
-	7. 如果第一巡 = True && 普通胡牌型 = 添加自摸
-	8. 判断手牌存在某种役（包括七对和国士无双） = 添加自摸
-
-### GetRiichiAction
-
-	1. 判断手牌+新牌是否为和牌型（包括七对和国士无双）= 添加自摸
-	2. 判断能暗杠 = 添加暗杠
-	3. 添加打右手第一张
-
-### GetResponseAction
-	（注意到不存在人和，所以第一巡状态不影响response)
-	1. not振听 && 判断手牌+新牌 == 普通胡牌型 && 存在某种役（包括七对和国士无双） = 添加荣和
-	2. 判断手牌中是否能碰 = 添加碰
-	3. 判断手牌中是否能杠 = 添加杠
-	4. 判断turn和自己的关系是否为上家 && 能吃 = 添加吃
-	5. 添加pass
-
-### GetRiichiResponse
-	1. not振听 && 判断手牌+新牌是否为普通和牌型 = 添加荣和
-	2. 添加pass
-
-### Get抢杠
-	1. not振听 && 判断手牌+新牌 == 和牌型 = 添加荣和
-	2. 添加pass
-
-### Get抢暗杠
-	1. not振听 && 判断手牌+新牌 == 国士无双 = 添加荣和
-	2. 添加pass
+			
