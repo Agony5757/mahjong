@@ -171,11 +171,13 @@ find_match_tile(std::vector<Tile*>& tiles, Tile* t) {
 	return tiles.end();
 }
 
-// 找手牌中是不是有t的重复n张牌
+// 找手牌中是不是有t的重复4张牌
 inline std::vector<Tile*> get_duplicate(
 	std::vector<Tile*> tiles,
 	BaseTile t,
 	int n) {
+
+	assert(n == 4);
 
 	std::vector<Tile*> duplicate_tiles;
 
@@ -193,14 +195,13 @@ inline std::vector<Tile*> get_duplicate(
 			if (duplicates == 0) return duplicate_tiles;
 		}
 	}
-	else return duplicate_tiles;
+	return duplicate_tiles;
 }
 
 template<typename T>
 void merge_into(std::vector<T> &to, const std::vector<T> &from) {
 	to.insert(to.end(), from.begin(), from.end());
 }
-
 
 class Base64 {
 private:

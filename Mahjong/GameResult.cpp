@@ -6,8 +6,7 @@
 
 using namespace std;
 
-Result 九种九牌流局结算(Table * table)
-{
+static Result 中途流局结算(Table *table) {
 	Result result;
 	result.result_type = ResultType::中途流局;
 	for (int i = 0; i < 4; ++i)
@@ -18,48 +17,26 @@ Result 九种九牌流局结算(Table * table)
 	result.n立直棒 = table->n立直棒;
 
 	return result;
+}
+
+Result 九种九牌流局结算(Table * table)
+{
+	return 中途流局结算(table);
 }
 
 Result 四风连打流局结算(Table * table)
 {
-	Result result;
-	result.result_type = ResultType::中途流局;
-	for (int i = 0; i < 4; ++i)
-		result.score[i] = table->player[i].score;
-
-	result.连庄 = true;
-	result.n本场 = table->n本场 + 1;
-	result.n立直棒 = table->n立直棒;
-
-	return result;
+	return 中途流局结算(table);
 }
 
 Result 四立直流局结算(Table * table)
 {
-	Result result;
-	result.result_type = ResultType::中途流局;
-	for (int i = 0; i < 4; ++i)
-		result.score[i] = table->player[i].score;
-
-	result.连庄 = true;
-	result.n本场 = table->n本场 + 1;
-	result.n立直棒 = table->n立直棒;
-
-	return result;
+	return 中途流局结算(table);
 }
 
 Result 四杠流局结算(Table * table)
 {
-	Result result;
-	result.result_type = ResultType::中途流局;
-	for (int i = 0; i < 4; ++i)
-		result.score[i] = table->player[i].score;
-
-	result.连庄 = true;
-	result.n本场 = table->n本场 + 1;
-	result.n立直棒 = table->n立直棒;
-
-	return result;
+	return 中途流局结算(table);
 }
 
 bool is流局满贯(River r) {
@@ -348,83 +325,10 @@ Result 荣和结算(Table * table, Tile* agari_tile, std::vector<int> response_p
 
 Result 抢暗杠结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
 {
-	Result result;
-	result.result_type = ResultType::荣和终局;
-
-	result.loser.push_back(table->turn); // 当回合的玩家是loser
-	result.winner.assign(response_player.begin(), response_player.end());
-
-	for (int i = 0; i < 4; ++i) {
-		result.score[i] = table->player[i].score;
-	}
-
-	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, winner, agari_tile, false, true, table->player[winner].wind, table->场风);
-		yaku.calculate_score(winner == table->庄家, false);
-		result.score[winner] += yaku.score1;
-		result.score[table->turn] -= yaku.score1;
-	}
-
-	// riichi 结算
-	// response_player中离loser最近的那个
-	int loser = table->turn;
-	auto iter = min_element(response_player.begin(), response_player.end(),
-		[loser](int x1, int x2) {
-		return get_distance(loser, x1) < get_distance(loser, x2);
-	});
-	result.score[*iter] += (table->n立直棒 * 1000);
-
-	if (is_in(response_player, table->庄家))
-	{
-		result.n本场 = table->n本场 + 1;
-		result.连庄 = true;
-	}
-	else
-	{
-		result.连庄 = false;
-		result.n本场 = 0;
-	}
-	result.n立直棒 = 0;
-	return result;
+	return 荣和结算(table, agari_tile, response_player);
 }
 
 Result 抢杠结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
 {
-	Result result;
-	result.result_type = ResultType::荣和终局;
-	result.loser.push_back(table->turn); // 当回合的玩家是loser
-	result.winner.assign(response_player.begin(), response_player.end());
-
-	for (int i = 0; i < 4; ++i) {
-		result.score[i] = table->player[i].score;
-	}
-
-	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, winner, agari_tile, true, false, table->player[winner].wind, table->场风);
-		yaku.calculate_score(winner == table->庄家, false);
-		result.score[winner] += yaku.score1;
-		result.score[table->turn] -= yaku.score1;
-	}
-
-	// riichi 结算
-	// response_player中离loser最近的那个
-	int loser = table->turn;
-	auto iter = min_element(response_player.begin(), response_player.end(),
-		[loser](int x1, int x2) {
-		return get_distance(loser, x1) < get_distance(loser, x2);
-	});
-	result.score[*iter] += (table->n立直棒 * 1000);
-
-	if (is_in(response_player, table->庄家))
-	{
-		result.n本场 = table->n本场 + 1;
-		result.连庄 = true;
-	}
-	else
-	{
-		result.连庄 = false;
-		result.n本场 = 0;
-	}
-	result.n立直棒 = 0;
-	return result;
+	return 荣和结算(table, agari_tile, response_player);
 }

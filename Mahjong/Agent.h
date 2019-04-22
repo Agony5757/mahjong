@@ -2,7 +2,6 @@
 #define AGENT_H
 
 #include "Action.h"
-#include "TableStatus.h"
 #include "Table.h"
 // abstract class of Agent
 
