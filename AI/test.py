@@ -84,6 +84,7 @@ class MahjongLearner:
         self.action = None
         self.policy = None
         self.next_aval_states = None
+        self.this_state = None
 
     def receive_selection(self, next_aval_states):
         action, policy = agent.select(next_aval_states)
@@ -92,9 +93,8 @@ class MahjongLearner:
         self.policy = policy
 
     def receive_state(self, next_state, score, done, info):
-        agent.remember(next_state, score, done, self.next_aval_states, self.policy)
+        agent.remember(self.this_state, next_state, score, done, self.next_aval_states, self.policy)
         agent.learn()
-
 
 
 if __name__ == 'main':
