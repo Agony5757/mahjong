@@ -62,7 +62,39 @@ class EnvMahjong:
                 
         return next_aval_states
     
-    
+
+'''
+Agony:
+游戏本身涉及到4个玩家。不建议在游戏中做状态获取和步进。
+
+推荐将main处的训练代码用以下类代替。
+
+在游戏过程中交替调用receive_selection和receive_state
+
+并且在游戏结束时调用terminate(未在代码中体现)来结束一局的训练
+
+agent是独立于该类的。训练开始时，创建1个（4个for all players）Agent对象，
+之后每次游戏开始时会创建1个MahjongLearner对象（4个for all players）用于和
+C++游戏之间进行交互。
+'''
+
+class MahjongLearner:
+    def __init__(agent):
+        self.agent = agent
+        self.action = None
+        self.policy = None
+        self.next_aval_states = None
+
+    def receive_selection(self, next_aval_states):
+        action, policy = agent.select(next_aval_states)
+        self.next_aval_states = next_aval_states
+        self.action = action
+        self.policy = policy
+
+    def receive_state(self, next_state, score, done, info):
+        agent.remember(next_state, score, done, self.next_aval_states, self.policy)
+        agent.learn()
+
 
 
 if __name__ == 'main':
