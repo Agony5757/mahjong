@@ -202,8 +202,8 @@ public:
 	void shuffle_tiles();
 	void init_yama();
 
-	std::string export_yama();
-	void import_yama(std::string);
+	// std::string export_yama();
+	// void import_yama(std::string);
 	void init_wind();
 	
 	void _deal(int i_player);

@@ -177,7 +177,7 @@ void testGamePlay1(string filename, int shots = 10) {
 	}
 	for (int i = 0; i < shots; ++i)
 	{
-		auto &scores = 东风局(agents, ss);
+		auto scores = 东风局(agents, ss);
 		ofstream out(filename, ios::app);
 		out << ss.str();
 		out.close();

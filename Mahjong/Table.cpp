@@ -4,7 +4,6 @@
 #include "GameResult.h"
 #include "Agent.h"
 #include "ScoreCounter.h"
-
 #include <random>
 using namespace std;
 
@@ -147,7 +146,7 @@ static bool is食替(Player* player, BaseTile t) {
 				else return false;
 			}
 		}
-		else throw exception("??");
+		else throw runtime_error("??");
 	}
 	else 
 		throw runtime_error("最后一手既不是吃又不是碰，不考虑食替");
@@ -585,25 +584,25 @@ void Table::init_yama()
 
 }
 
-string Table::export_yama() {
-	constexpr int LENGTH = N_TILES * sizeof(Tile);
-	unsigned char s[LENGTH];
-	for (int i = 0; i < N_TILES; i++) {
-		memcpy(s + i * sizeof(Tile), tiles + i, sizeof(Tile));
-	}
-	Base64 base64;
-	return base64.Encode(s, LENGTH);
-}
+// string Table::export_yama() {
+// 	constexpr int LENGTH = N_TILES * sizeof(Tile);
+// 	unsigned char s[LENGTH];
+// 	for (int i = 0; i < N_TILES; i++) {
+// 		memcpy(s + i * sizeof(Tile), tiles + i, sizeof(Tile));
+// 	}
+// 	Base64 base64;
+// 	return base64.Encode(s, LENGTH);
+// }
 
-void Table::import_yama(std::string yama) {
-	constexpr int LENGTH = N_TILES * sizeof(Tile);
-	Base64 base64;
-	auto decode = base64.Decode(yama, LENGTH);
-	const char *s = decode.c_str();
-	for (int i = 0; i < N_TILES; i++) {
-		memcpy(tiles + i, s + i * sizeof(Tile), sizeof(Tile));
-	}
-}
+// void Table::import_yama(std::string yama) {
+// 	constexpr int LENGTH = N_TILES * sizeof(Tile);
+// 	Base64 base64;
+// 	auto decode = base64.Decode(yama, LENGTH);
+// 	const char *s = decode.c_str();
+// 	for (int i = 0; i < N_TILES; i++) {
+// 		memcpy(tiles + i, s + i * sizeof(Tile), sizeof(Tile));
+// 	}
+// }
 
 void Table::init_wind()
 {
@@ -693,12 +692,13 @@ Result Table::GameProcess(bool verbose, std::string yama)
 		init_yama();
 
 		// 将牌山导出为字符串
-		VERBOSE{
-			cout << "牌山代码:" << export_yama() << endl;
-		}
+		// VERBOSE{
+		// 	cout << "牌山代码:" << export_yama() << endl;
+		// }
 	}
 	else {
-		import_yama(yama);
+		// import_yama(yama);
+		throw runtime_error("Yama export is not available now.");
 		init_yama();
 
 		VERBOSE{
@@ -820,7 +820,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 			auto &hand = player[i].hand;
 			auto tiles = get听牌(convert_tiles_to_base_tiles(hand));
-			auto &river = player[i].river.to_basetile();
+			auto river = player[i].river.to_basetile();
 
 			// 检查river和tiles是否有重合
 			for (auto& tile : tiles) {
