@@ -338,4 +338,5 @@ inline Wind next_wind(Wind 风) {
 	return (Wind)(int(风) + 1);
 }
 
+
 #endif
