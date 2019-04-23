@@ -5,3 +5,5 @@ x64/
 *.user
 .vscode/
 build/
+.ipynb_checkpoints/
+__pycache__/
