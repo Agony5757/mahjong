@@ -77,5 +77,39 @@ public:
 	}
 };
 
+#include <Python.h>
+
+class DeepLearningAI : public Agent {
+public:
+	int i_player;
+	static PyObject* test_module;
+	static PyObject* dict;
+	static PyObject* MahjongLearnerClass;
+	PyObject* MahjongLearnerObj;
+	inline DeepLearningAI(int i) : i_player(i) {
+		if (!Py_IsInitialized())
+			Py_Initialize();
+
+		
+
+		if (!test_module)
+			test_module = PyImport_ImportModule("test.py");
+
+		if (!dict)
+			dict = PyModule_GetDict(test_module);
+
+		if (!MahjongLearnerClass)
+			MahjongLearnerClass = PyDict_GetItemString(dict, "MahjongLearner");
+
+		MahjongLearnerObj = PyInstanceMethod_New(MahjongLearnerClass);
+	}
+	int get_self_action(Table* status, std::vector<SelfAction> actions);
+	int get_response_action(Table* status, SelfAction action, Tile* tile, std::vector<ResponseAction> actions);
+	~DeepLearningAI() {
+		if (Py_IsInitialized())
+			Py_Finalize();
+	}
+	void GameOver(int score);
+};
 
 #endif

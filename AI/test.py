@@ -79,22 +79,43 @@ C++游戏之间进行交互。
 '''
 
 class MahjongLearner:
-    def __init__(agent):
+    def __init__(self, agent):
         self.agent = agent
         self.action = None
         self.policy = None
         self.next_aval_states = None
-        self.this_state = None
+        self.this_state = None        
 
-    def receive_selection(self, next_aval_states):
+    def receive_hand_and_select(self, hand):
+        return self.get_selection(hand)
+
+    def get_selection(self, hand):
+        #from hand generate next_aval_states
+        assert(hand == 14)
+        self.next_aval_states = np.zeros([14, 34, 4])
+        for i in range(14):
+            for j in range(14):
+                if i == j:
+                    continue
+                for k in range(4):
+                    if self.next_aval_states[i, hand[j], k] == 0:
+                        self.next_aval_states[i, hand[j], k] = 1
+                        break
+
         action, policy = agent.select(next_aval_states)
-        self.next_aval_states = next_aval_states
         self.action = action
         self.policy = policy
+        return action
 
-    def receive_state(self, next_state, score, done, info):
-        agent.remember(self.this_state, next_state, score, done, self.next_aval_states, self.policy)
+    def receive_hand_only(self, hand):
+        agent.remember(this_state = self.this_state, 
+                       next_state = hand, 
+                       score = 0,  
+                       done = -1,                        
+                       next_aval_states = self.next_aval_states, 
+                       policy = self.policy)
         agent.learn()
+        self.this_state = next_state
 
 
 if __name__ == 'main':

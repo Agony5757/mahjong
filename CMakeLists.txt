@@ -54,5 +54,9 @@ elseif(UNIX)
     add_compile_options(-fPIC -fpermissive)
 endif(WIN32)
 
+find_package(PythonInterp 3)
+find_package(PythonLibs 3)
+include_directories(${PYTHON_INCLUDE_DIRS})
+
 add_subdirectory(Mahjong)
 add_subdirectory(MahjongAlgorithm)
