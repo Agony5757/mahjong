@@ -118,7 +118,7 @@ class MahjongLearner:
         self.this_state = next_state
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
 
     nn = NMnaive(sess)
     env = EnvMahjong()
