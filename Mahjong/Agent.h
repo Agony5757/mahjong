@@ -81,33 +81,21 @@ public:
 class DeepLearningAI : public Agent {
 public:
 	int i_player;
-	static PyObject* test_module;
+	static PyObject* data_adapter_module;
 	static PyObject* dict;
 	static PyObject* MahjongLearnerClass;
 	PyObject* MahjongLearnerObj;
-	inline DeepLearningAI(int i) : i_player(i) {
-		if (!Py_IsInitialized())
-			Py_Initialize();
 
+	inline DeepLearningAI(int i, PyObject* py_agent, 
+		PyObject* data_adapter,
+		PyObject* DataAdapterClass) : i_player(i) {
+		
 		
 
-		if (!test_module)
-			test_module = PyImport_ImportModule("test.py");
-
-		if (!dict)
-			dict = PyModule_GetDict(test_module);
-
-		if (!MahjongLearnerClass)
-			MahjongLearnerClass = PyDict_GetItemString(dict, "MahjongLearner");
-
-		MahjongLearnerObj = PyInstanceMethod_New(MahjongLearnerClass);
 	}
 	int get_self_action(Table* status, std::vector<SelfAction> actions);
 	int get_response_action(Table* status, SelfAction action, Tile* tile, std::vector<ResponseAction> actions);
-	~DeepLearningAI() {
-		if (Py_IsInitialized())
-			Py_Finalize();
-	}
+	~DeepLearningAI() {	}
 	void GameOver(int score);
 };
 

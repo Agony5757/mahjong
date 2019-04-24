@@ -122,8 +122,9 @@ if __name__ == 'main':
 
     nn = NMnaive(sess)
     env = EnvMahjong()
-    memory = PrioritizedReplayBuffer(state_dim=34*4, action_dim=34)
 
+    # before the train start, create 4 agents.
+    memory = PrioritizedReplayBuffer(state_dim=34*4, action_dim=34)
     agent = AgentNaive(nn, memory)
 
 

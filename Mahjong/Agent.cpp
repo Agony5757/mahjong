@@ -137,10 +137,6 @@ int RandomPlayer::get_response_action(Table * status, SelfAction action, Tile *t
 	return dice_roll;
 }
 
-PyObject* DeepLearningAI::test_module = nullptr;
-PyObject* DeepLearningAI::dict = nullptr;
-PyObject* DeepLearningAI::MahjongLearnerClass = nullptr;
-
 static vector<int> tiles_encoder(vector<BaseTile> tiles) {
 
 	vector<int> encode(0, 4 * (9 * 3 + 7));
