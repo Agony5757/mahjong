@@ -14,13 +14,13 @@ def _hand_conversion(hand_from_cpp):
     #  1,0,0,0
     #  ...]
 
-    hand_py = np.zeros((34,4))
+    hand_encoded = np.zeros((34,4))
     for tile in hand_from_cpp:
         for i in range(4):
-            if hand_py[i, tile] == 0:
-                hand_py[i, tile] = 1
+            if hand_encoded[i, tile] == 0:
+                hand_encoded[i, tile] = 1
 
-    return hand_py
+    return hand_encoded
 
 def _hand_selection_conversion(hand_from_cpp):
     # convert from [0, 2, 2, 3, 4]
@@ -31,14 +31,14 @@ def _hand_selection_conversion(hand_from_cpp):
     # [0,2,2,4]
     # [0,2,2,3]
 
-    hand_py = list()
+    selection_list_list = list()
 
     for i in range(len(hand_from_cpp)):
         copy_hand = deepcopy(hand_from_cpp)
         copy_hand.pop(i)
-        hand_py.append(copy_hand)
+        selection_list_list.append(copy_hand)
 
-    return hand_py
+    return selection_list_list
 
 class DataAdapter:
     def __init__():
