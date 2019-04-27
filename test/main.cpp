@@ -4,6 +4,7 @@
 #include "Agent.h"
 #include <fstream>
 #include "GamePlay.h"
+#include <random>
 using namespace std;
 
 #pragma region(test和牌)
@@ -177,11 +178,121 @@ void testGamePlay1(string filename, int shots = 10) {
 	}
 	for (int i = 0; i < shots; ++i)
 	{
-		auto &scores = 东风局(agents, ss);
+		auto scores = 东风局(agents, ss);
 		ofstream out(filename, ios::app);
 		out << ss.str();
 		out.close();
 	}
+}
+
+
+void test_passive_table_auto() {
+	size_t i = 0;
+	while (1) {
+		try {
+
+			i++;
+			if (i % 10 == 0)
+				cout << "Game: " << i << endl;
+
+			Table table;
+			table.game_init();
+			while (table.get_phase() != Table::GAME_OVER) {
+				if (table.get_phase() <= Table::P4_ACTION) {
+					std::default_random_engine generator;
+					std::uniform_int_distribution<size_t> distribution(0, table.get_self_actions().size() - 1);
+					size_t dice_roll = distribution(generator);  // generates number in the range 1..6 
+
+					for (int i = 0; i < table.get_self_actions().size(); ++i) {
+						if (table.get_self_actions()[i].action == Action::自摸) {
+							dice_roll = i; break;
+						}
+						if (table.get_self_actions()[i].action == Action::立直) {
+							dice_roll = i; break;
+						}
+						if (table.get_self_actions()[i].action == Action::九种九牌) {
+							dice_roll = i; break;
+						}
+					}
+					table.make_selection((int)dice_roll);
+				}
+				else {
+					size_t dice_roll = 0;
+					if (table.get_response_actions().size() > 1) {
+						std::default_random_engine generator;
+						std::uniform_int_distribution<size_t> distribution(0, table.get_response_actions().size() - 1);
+						dice_roll = distribution(generator);  // generates number in the range 1..6
+
+						for (int i = 0; i < table.get_response_actions().size(); ++i) {
+							if (table.get_response_actions()[i].action == Action::荣和) {
+								dice_roll = i;
+								break;
+							}
+						}
+					}
+					table.make_selection((int)dice_roll);
+				}
+			}
+		}
+		catch (exception& e) {
+			cout << e.what() << endl;
+		}
+	}
+}
+
+void test_passive_table() {
+	Table table;
+	table.game_init();
+	while (table.get_phase() != Table::GAME_OVER) {
+		if (table.get_phase() <= Table::P4_ACTION) {
+			table.test_show_all();
+			cout << endl; cout << "Select:" << endl;
+			int i = 0;
+
+			for (auto action : table.get_self_actions()) {
+				cout << i << " " << action.to_string() << endl;
+				++i;
+			}
+			int selection;
+			cin >> selection;
+			table.make_selection(selection);
+		}
+		else {
+			cout << endl;
+			cout << "You are player " << table.who_make_selection() << "." << endl;
+			cout << "Player " << table.turn;
+			switch (table.get_selected_action()) {
+			case Action::立直:
+				cout << " calls riichi and plays ";
+				break;
+			case Action::出牌:
+				cout << " plays ";
+				break;
+			case Action::暗杠:
+				cout << " 暗杠 ";
+				break;
+			case Action::加杠:
+				cout << " 加杠 ";
+				break;
+			default:
+				throw runtime_error("Unknown action.");
+			}
+			cout << table.get_tile()->to_string() << endl;
+			cout << "Select:" << endl;			
+			int selection = 0;
+			if (table.get_response_actions().size() > 1) {
+				int i = 0;
+				for (auto action : table.get_response_actions()) {
+					cout << i << " " << action.to_string() << endl;
+					++i;
+				}				
+				cin >> selection;
+			}
+			table.make_selection(selection);
+		}
+	}
+	cout << table.get_result().to_string();
+	getchar();
 }
 
 int main() {
@@ -190,9 +301,11 @@ int main() {
 	//test和牌状态2();
 	//test和牌状态3();
 	//test和牌状态4();
-	testGameProcess3("GameLog.txt");
+	//testGameProcess3("GameLog.txt");
 	//testGamePlay1("GamePlay.txt");
 	
+	test_passive_table_auto();
+
 	//testCompletedTiles2();
 	//testCompletedTiles1();
 	return 0;

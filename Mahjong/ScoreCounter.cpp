@@ -188,7 +188,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	}
 
 	// 接下来对牌进行拆解
-	auto &complete_tiles_list = getCompletedTiles(convert_tiles_to_base_tiles(tiles));
+	auto complete_tiles_list = getCompletedTiles(convert_tiles_to_base_tiles(tiles));
 	for (auto &complete_tiles : complete_tiles_list) {
 		auto yaku_fus = get_手役_from_complete_tiles(complete_tiles, player.副露s, correspond_tile, player.hand.back()->tile, 自风, 场风);
 		for (auto &yaku_fu : yaku_fus) {
@@ -879,7 +879,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	}
 
 	if (fu % 10 != 0) {
-		fu = fu / 10 + 10;
+		fu = (fu / 10) * 10 + 10;
 	}
 
 	// 自摸平和 20符

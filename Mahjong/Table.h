@@ -6,9 +6,6 @@
 #include "GameLog.h"
 #include "GameResult.h"
 
-#pragma warning(disable:4244)
-#pragma warning(disable:4267)
-
 constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
 
@@ -155,12 +152,9 @@ class Agent;
 class Table
 {
 private:
-
 	int river_counter = 0;
-
 	Tile tiles[N_TILES];
 public:
-
 	Agent* agents[4];
 
 	// 翻开了几张宝牌指示牌
@@ -186,15 +180,15 @@ public:
 
 	inline int get_remain_kan_tile() {
 		auto iter = find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]);
-		return iter - 牌山.begin() - 1;
+		return int(iter - 牌山.begin() - 1);
 	}
 
 	inline int get_remain_tile() {
-		return 牌山.size() - 14;
+		return int(牌山.size() - 14);
 	}
 
 	Wind 场风 = Wind::East;
-	int 庄家; // 庄家
+	int 庄家 = 0; // 庄家
 	int n本场 = 0;
 	int n立直棒 = 0;
 	void init_tiles();
@@ -202,8 +196,8 @@ public:
 	void shuffle_tiles();
 	void init_yama();
 
-	std::string export_yama();
-	void import_yama(std::string);
+	// std::string export_yama();
+	// void import_yama(std::string);
 	void init_wind();
 	
 	void _deal(int i_player);
@@ -273,7 +267,6 @@ public:
 
 	std::vector<Tile*> 牌山;
 	Player player[4];
-	~Table();
 
 	void test_show_yama_with_王牌();
 	void test_show_yama();
@@ -293,6 +286,42 @@ public:
 	}
 
 	Result GameProcess(bool, std::string = "");
+
+	// The following part is for the manual instead of the automatic.
+	// Never mix using GameProcess and using the following functions. 
+	enum _Phase_ {
+		P1_ACTION, P2_ACTION, P3_ACTION, P4_ACTION,
+		P1_RESPONSE, P2_RESPONSE, P3_RESPONSE, P4_RESPONSE,
+		P1_抢杠RESPONSE, P2_抢杠RESPONSE, P3_抢杠RESPONSE, P4_抢杠RESPONSE,
+		P1_抢暗杠RESPONSE, P2_抢暗杠RESPONSE, P3_抢暗杠RESPONSE, P4_抢暗杠RESPONSE,
+		GAME_OVER,
+	};
+
+private:
+	std::vector<SelfAction> self_action;
+	std::vector<ResponseAction> response_action;
+
+	Result result;
+	_Phase_ phase;
+	int selection;
+	SelfAction selected_action;
+	Tile* tile;
+	std::vector<ResponseAction> actions; // player actions
+	bool FROM_手切摸切;
+	Action final_action = Action::pass;
+	void _from_beginning();
+public:
+	void game_init();
+	inline int get_phase() { return (int)phase; }
+	void make_selection(int selection);
+	inline Table* get_info() { return this; }
+	Action get_selected_action() { return selected_action.action; }
+	inline int who_make_selection() { return (get_phase() - Table::P1_RESPONSE) % 4; }
+	inline Tile* get_tile() { return tile; };
+	inline Result get_result() { return result; }
+	
+	inline std::vector<SelfAction> get_self_actions() { return self_action; }
+	inline std::vector<ResponseAction> get_response_actions() { return response_action; }
 
 };
 

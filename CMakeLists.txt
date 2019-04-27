@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 
 include_directories(${PROJECT_SOURCE_DIR}/Mahjong
+					${PROJECT_SOURCE_DIR}/MahjongPy
                     ${PROJECT_SOURCE_DIR}
                     )
 
@@ -60,3 +61,5 @@ include_directories(${PYTHON_INCLUDE_DIRS})
 
 add_subdirectory(Mahjong)
 add_subdirectory(MahjongAlgorithm)
+add_subdirectory(MahjongPy)
+add_subdirectory(test)
