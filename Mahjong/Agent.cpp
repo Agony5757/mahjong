@@ -166,7 +166,7 @@ static PyObject* convert_vector_to_PyList(vector<int> s) {
 
 int DeepLearningAI::get_self_action(Table * status, std::vector<SelfAction> actions)
 {
-	
+	return 0;
 }
 
 int DeepLearningAI::get_response_action(Table * status, SelfAction action, Tile * tile, std::vector<ResponseAction> actions)
