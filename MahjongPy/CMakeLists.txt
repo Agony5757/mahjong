@@ -16,7 +16,8 @@ elseif(WIN32)
     set_target_properties(${LIB_MahjongPy} PROPERTIES SUFFIX ".pyd")
 endif(UNIX)
 
-target_link_libraries(${LIB_MahjongPy} ${PYTHON_LIBRARY} ${Mahjong} ${MahjongAlgorithm})
+target_link_libraries(${LIB_MahjongPy} Mahjong MahjongAlgorithm ${PYTHON_LIBRARIES})
+
 set(LIB_MahjongPy_OUT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../AI")
 if (UNIX)
     set(LIB_MahjongPy_OUT_LIB "${LIB_MahjongPy}.so")

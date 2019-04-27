@@ -27,7 +27,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	vector<Yaku> 场役;
 	vector<Yaku> Dora役;
 
-	auto &player = table->player[turn];
+	auto &player = table->players[turn];
 
 	/* riichi 和 double riichi 不重复计算 */
 	if (player.double_riichi)

@@ -28,7 +28,7 @@ std::array<int, 4> FullGame(Wind 局风, std::array<Agent*, 4> agents, std::stri
 		t.n立直棒 = n立直棒;
 		t.n本场 = n本场;
 		for (int i = 0; i < 4; ++i) {
-			t.player[i].score = score[i];
+			t.players[i].score = score[i];
 		}
 
 		ss << n本场 << "本场;" << n立直棒 << "立直棒" << endl;
