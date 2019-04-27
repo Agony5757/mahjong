@@ -76,27 +76,52 @@ public:
 	}
 };
 
-#include <Python.h>
-
-class DeepLearningAI : public Agent {
-public:
-	int i_player;
-	static PyObject* data_adapter_module;
-	static PyObject* dict;
-	static PyObject* MahjongLearnerClass;
-	PyObject* MahjongLearnerObj;
-
-	inline DeepLearningAI(int i, PyObject* py_agent, 
-		PyObject* data_adapter,
-		PyObject* DataAdapterClass) : i_player(i) {
-		
-		
-
-	}
-	int get_self_action(Table* status, std::vector<SelfAction> actions);
-	int get_response_action(Table* status, SelfAction action, Tile* tile, std::vector<ResponseAction> actions);
-	~DeepLearningAI() {	}
-	void GameOver(int score);
-};
+//
+//#include <Python.h>
+//#include "PythonUtil/PythonUtil.h"
+//
+//class DeepLearningAI : public Agent {
+//public:
+//	int i_player;
+//	PyObject* data_adapter;
+//	PyObject* agent;
+//
+//	static bool is_initialized;
+//
+//	inline static void init_python_env() {
+//		if (!Py_IsInitialized()) {
+//			Py_Initialize();
+//		}			
+//	}
+//
+//	inline static void finalize_python_env() {
+//		if (!Py_IsInitialized()) {
+//			Py_Finalize();
+//		}
+//	}
+//
+//	static PyObject* get_agent() {
+//		static PyObject* naiveAI_module = nullptr;
+//		static PyObject* naiveAI_class = nullptr;
+//		if (!naiveAI_module) {
+//			naiveAI_module = import_module("naiveAI");
+//		}
+//		if (!naiveAI_class) {
+//			naiveAI_class = get_class("naiveAI", naiveAI_module);
+//		}
+//		return get_class_instance(naiveAI_class);
+//	}
+//
+//	inline DeepLearningAI(int i, PyObject* py_agent,
+//		PyObject* py_data_adapter) :
+//		i_player(i), data_adapter(py_data_adapter), agent(py_agent) {
+//		// initialization
+//	}
+//
+//	int get_self_action(Table* status, std::vector<SelfAction> actions);
+//	int get_response_action(Table* status, SelfAction action, Tile* tile, std::vector<ResponseAction> actions);
+//	~DeepLearningAI() {	}
+//	void GameOver(int score);
+//};
 
 #endif

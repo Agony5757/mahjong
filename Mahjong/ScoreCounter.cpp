@@ -879,7 +879,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	}
 
 	if (fu % 10 != 0) {
-		fu = fu / 10 + 10;
+		fu = (fu / 10) * 10 + 10;
 	}
 
 	// 自摸平和 20符

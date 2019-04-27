@@ -58,8 +58,8 @@ int RealPlayer::get_response_action(Table * status, SelfAction action, Tile* til
 int RandomPlayer::get_self_action(Table * status, std::vector<SelfAction> actions)
 {
 	std::default_random_engine generator;
-	std::uniform_int_distribution<int> distribution(0, actions.size() - 1);
-	int dice_roll = distribution(generator);  // generates number in the range 1..6 
+	std::uniform_int_distribution<size_t> distribution(0, actions.size() - 1);
+	size_t dice_roll = distribution(generator);  // generates number in the range 1..6 
 
 	for (int i = 0; i < actions.size(); ++i) {
 		if (actions[i].action == Action::自摸) {
@@ -87,14 +87,14 @@ int RandomPlayer::get_self_action(Table * status, std::vector<SelfAction> action
 		}
 	}
 
-	return dice_roll;
+	return (int)dice_roll;
 }
 
 int RandomPlayer::get_response_action(Table * status, SelfAction action, Tile *tile, std::vector<ResponseAction> actions)
 {
 	std::default_random_engine generator;
-	std::uniform_int_distribution<int> distribution(0, actions.size() - 1);
-	int dice_roll = distribution(generator);  // generates number in the range 1..6
+	std::uniform_int_distribution<size_t> distribution(0, actions.size() - 1);
+	size_t dice_roll = distribution(generator);  // generates number in the range 1..6
 
 	for (int i = 0; i < actions.size(); ++i) {
 		if (actions[i].action == Action::荣和) {
@@ -134,48 +134,54 @@ int RandomPlayer::get_response_action(Table * status, SelfAction action, Tile *t
 			++i;
 		}
 	}
-	return dice_roll;
+	return (int)dice_roll;
 }
-
-static vector<int> tiles_encoder(vector<BaseTile> tiles) {
-
-	vector<int> encode(0, 4 * (9 * 3 + 7));
-	
-	for (auto tile : tiles) {
-		int t = (int)tile;
-		for (int i = 0; i < 4; ++i) {
-			if (encode[i*(9 * 3 + 7) + t] == 0) {
-				encode[i*(9 * 3 + 7) + t] = 1;
-				break;
-			}
-		}
-	}	
-	return encode;
-}
-
-static PyObject* convert_vector_to_PyList(vector<int> s) {
-	if (!Py_IsInitialized())
-		Py_Initialize();
-
-	PyObject* list = PyList_New(s.size());
-	for (int i = 0; i < s.size(); ++i)
-		PyList_SetItem(list, i, PyFloat_FromDouble((double)s[i]));
-
-	return list;
-}
-
-int DeepLearningAI::get_self_action(Table * status, std::vector<SelfAction> actions)
-{
-	return 0;
-}
-
-int DeepLearningAI::get_response_action(Table * status, SelfAction action, Tile * tile, std::vector<ResponseAction> actions)
-{
-	for (int i = 0; i < actions.size(); ++i) {
-		if (actions[i].action == Action::荣和) {
-			return i;
-			break;
-		}
-	}
-	return 0;
-}
+//
+//static vector<int> tiles_encoder(vector<BaseTile> tiles) {
+//
+//	vector<int> encode(0, 4 * (9 * 3 + 7));
+//	
+//	for (auto tile : tiles) {
+//		int t = (int)tile;
+//		for (int i = 0; i < 4; ++i) {
+//			if (encode[i*(9 * 3 + 7) + t] == 0) {
+//				encode[i*(9 * 3 + 7) + t] = 1;
+//				break;
+//			}
+//		}
+//	}	
+//	return encode;
+//}
+//
+//static PyObject* convert_vector_to_PyList(vector<int> s) {
+//	if (!Py_IsInitialized())
+//		Py_Initialize();
+//
+//	PyObject* list = PyList_New(s.size());
+//	for (int i = 0; i < s.size(); ++i)
+//		PyList_SetItem(list, i, PyFloat_FromDouble((double)s[i]));
+//
+//	return list;
+//}
+//
+//bool DeepLearningAI::is_initialized = false;
+//
+//int DeepLearningAI::get_self_action(Table * status, std::vector<SelfAction> actions)
+//{
+//	return 0;
+//}
+//
+//int DeepLearningAI::get_response_action(Table * status, SelfAction action, Tile * tile, std::vector<ResponseAction> actions)
+//{
+//	for (int i = 0; i < actions.size(); ++i) {
+//		if (actions[i].action == Action::荣和) {
+//			return i;
+//			break;
+//		}
+//		if (actions[i].action == Action::立直) {
+//			return i;
+//			break;
+//		}
+//	}
+//	return 0;
+//}
