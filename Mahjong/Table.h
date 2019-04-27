@@ -152,12 +152,9 @@ class Agent;
 class Table
 {
 private:
-
 	int river_counter = 0;
-
 	Tile tiles[N_TILES];
 public:
-
 	Agent* agents[4];
 
 	// 翻开了几张宝牌指示牌
@@ -270,7 +267,6 @@ public:
 
 	std::vector<Tile*> 牌山;
 	Player player[4];
-	~Table();
 
 	void test_show_yama_with_王牌();
 	void test_show_yama();

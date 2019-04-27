@@ -1822,7 +1822,3 @@ void Table::make_selection(int selection)
 
 	}
 }
-
-Table::~Table()
-{
-}

@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.1)
+project(test)
+file(GLOB_RECURSE MahjongSrc ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+add_executable(${PROJECT_NAME} ${MahjongSrc})
+target_link_libraries(${PROJECT_NAME} Mahjong MahjongAlgorithm)
