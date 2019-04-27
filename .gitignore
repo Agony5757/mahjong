@@ -7,3 +7,6 @@ x64/
 build/
 .ipynb_checkpoints/
 __pycache__/
+*.pyd
+*.so
+*.dylib
