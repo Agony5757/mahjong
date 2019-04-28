@@ -54,14 +54,23 @@ PYBIND11_MODULE(MahjongPy, m)
 		.value("chu", BaseTile::中)
 		;
 
+	py::class_<Fulu>(m, "Fulu")
+		.def_readonly("type", &Fulu::type)
+		.def_readonly("tiles", &Fulu::tiles)
+		.def_readonly("take", &Fulu::take)
+		.def("to_string", &Fulu::to_string)
+		;
+
 	py::class_<Tile>(m, "Tile")
 		.def_readonly("tile", &Tile::tile)
 		.def_readonly("red_dora", &Tile::red_dora)
+		.def("to_string", &Tile::to_string)
 		;
 
 	py::class_<River>(m, "River")
 		.def_readonly("river", &River::river)
 		.def("size", &River::size)
+		.def("to_string", &River::to_string)
 		;
 
 	py::enum_<Wind>(m, "Wind")
@@ -92,11 +101,13 @@ PYBIND11_MODULE(MahjongPy, m)
 	py::class_<SelfAction>(m, "SelfAction")
 		.def_readonly("action", &SelfAction::action)
 		.def_readonly("correspond_tiles", &SelfAction::correspond_tiles)
+		.def("to_string", &SelfAction::to_string)
 		;
 
 	py::class_<ResponseAction>(m, "ResponseAction")
 		.def_readonly("action", &ResponseAction::action)
 		.def_readonly("correspond_tiles", &ResponseAction::correspond_tiles)
+		.def("to_string", &ResponseAction::to_string)
 		;
 
 	py::class_<Player>(m, "Player")
@@ -117,6 +128,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		
 		// 函数们
 		.def("is_furiten", &Player::is振听)
+		.def("to_string", &Player::to_string)
 		;
 
 	py::class_<Table>(m, "Table")
@@ -154,6 +166,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("get_ura_dora", &Table::get_ura_dora)
 		.def("get_remain_kan_tile", &Table::get_remain_kan_tile)
 		.def("get_remain_tile", &Table::get_remain_tile)
+		.def("to_string", &Table::to_string)
 		;
 
 	py::enum_<ResultType>(m, "ResultType")
@@ -168,6 +181,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def_readonly("result_type", &Result::result_type)
 		.def_readonly("results", &Result::results)
 		.def_readonly("score", &Result::score)
+		.def("to_string", &Result::to_string)
 		;		
 
 	py::enum_<Table::_Phase_>(m, "_Phase_")
