@@ -5,6 +5,7 @@
 #include "Action.h"
 #include "GameLog.h"
 #include "GameResult.h"
+#include "macro.h"
 
 constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
@@ -155,12 +156,18 @@ private:
 	int river_counter = 0;
 	Tile tiles[N_TILES];
 public:
-	Agent* agents[4];
-
-	// 翻开了几张宝牌指示牌
-	int dora_spec;
+	Agent* agents[4];	
+	int dora_spec; // 翻开了几张宝牌指示牌
 	std::vector<Tile*> 宝牌指示牌;
 	std::vector<Tile*> 里宝牌指示牌;
+	std::vector<Tile*> 牌山;
+	Player players[4];
+	int turn;
+	Action last_action = Action::出牌;
+	Wind 场风 = Wind::East;
+	int 庄家 = 0; // 庄家
+	int n本场 = 0;
+	int n立直棒 = 0;
 
 	inline std::vector<BaseTile> get_dora() {
 		std::vector<BaseTile> doratiles;
@@ -187,10 +194,6 @@ public:
 		return int(牌山.size() - 14);
 	}
 
-	Wind 场风 = Wind::East;
-	int 庄家 = 0; // 庄家
-	int n本场 = 0;
-	int n立直棒 = 0;
 	void init_tiles();
 	void init_red_dora_3();
 	void shuffle_tiles();
@@ -224,9 +227,6 @@ public:
 	std::string to_string(int option =
 		YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE);
 
-	int turn;
-	
-	Action last_action = Action::出牌;
 	inline bool after_chipon(){
 		return last_action == Action::吃 ||
 			last_action == Action::碰;
@@ -248,7 +248,8 @@ public:
 		return after_daiminkan() || after_加杠();
 	}
 
-	Table(int 庄家 = 0, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);
+	Table() = default;
+	Table(int 庄家, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);
 	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4]);
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
@@ -264,9 +265,6 @@ public:
 
 	// 根据turn打出的tile，可以做出的抢杠决定
 	std::vector<ResponseAction> Get抢杠(int player, Tile* tile);
-
-	std::vector<Tile*> 牌山;
-	Player player[4];
 
 	void test_show_yama_with_王牌();
 	void test_show_yama();
@@ -311,7 +309,25 @@ private:
 	Action final_action = Action::pass;
 	void _from_beginning();
 public:
-	void game_init();
+	inline void game_init()	{
+		init_tiles();
+		init_red_dora_3();
+		shuffle_tiles();
+		init_yama();
+
+		// 每人发13张牌
+		_deal(0, 13);
+		_deal(1, 13);
+		_deal(2, 13);
+		_deal(3, 13);
+		ALLSORT;
+
+		// 初始化每人自风
+		init_wind();
+
+		turn = 庄家;
+		_from_beginning();
+	}
 	inline int get_phase() { return (int)phase; }
 	void make_selection(int selection);
 	inline Table* get_info() { return this; }

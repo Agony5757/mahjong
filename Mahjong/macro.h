@@ -11,7 +11,7 @@
 #define VERBOSE if (verbose)
 #define SORT(player) player.sort_hand();
 #define SORT_TILES(hand) std::sort(hand.begin(), hand.end(), tile_comparator);
-#define ALLSORT player[0].sort_hand();player[1].sort_hand();player[2].sort_hand();player[3].sort_hand();
+#define ALLSORT players[0].sort_hand();players[1].sort_hand();players[2].sort_hand();players[3].sort_hand();
 
 #define TEST_EQ_VERBOSE(value, expected) if (value == expected) cout<<"PASS"<<endl; else cout<<"FAIL"<<endl;
 

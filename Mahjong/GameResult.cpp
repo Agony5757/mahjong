@@ -10,7 +10,7 @@ static Result 中途流局结算(Table *table) {
 	Result result;
 	result.result_type = ResultType::中途流局;
 	for (int i = 0; i < 4; ++i)
-		result.score[i] = table->player[i].score;
+		result.score[i] = table->players[i].score;
 
 	result.连庄 = true;
 	result.n本场 = table->n本场 + 1;
@@ -58,13 +58,13 @@ Result 荒牌流局结算(Table * table)
 	Result result;
 	
 	for (int i = 0; i < 4; ++i)
-		result.score[i] = table->player[i].score;
+		result.score[i] = table->players[i].score;
 
 	int 流局满贯人数 = 0;
 	bool 流局满贯[4] = { false,false,false,false };
 	// 统计流局满贯的人数
 	for (int i = 0; i < 4; ++i) {
-		if (is流局满贯(table->player[i].river)) {
+		if (is流局满贯(table->players[i].river)) {
 			流局满贯[i] = true;
 			流局满贯人数++;
 		}
@@ -155,7 +155,7 @@ Result 荒牌流局结算(Table * table)
 		bool 听牌[4];
 
 		for (int i = 0; i < 4; ++i) {
-			if (get听牌(convert_tiles_to_base_tiles(table->player[i].hand)).size() > 0) {
+			if (get听牌(convert_tiles_to_base_tiles(table->players[i].hand)).size() > 0) {
 				听牌[i] = true;
 			}
 		}
@@ -206,7 +206,7 @@ Result 自摸结算(Table * table)
 	int winner;
 	// 先通过table的状态看看谁要和牌
 	for (int i = 0; i < 4; ++i) {
-		if (table->player[i].hand.size() % 3 == 2) {
+		if (table->players[i].hand.size() % 3 == 2) {
 			// 放心，肯定有且仅有一个手牌=3n+2的玩家，肯定是他
 			// 宣告胜利
 			winner = i;
@@ -219,14 +219,14 @@ Result 自摸结算(Table * table)
 	// 三人输
 	for (int i = 0; i < 4; ++i) if (i != winner) result.loser.push_back(i);
 
-	auto yakus = yaku_counter(table, table->turn, nullptr, false, false, table->player[winner].wind, table->场风);
+	auto yakus = yaku_counter(table, table->turn, nullptr, false, false, table->players[winner].wind, table->场风);
 	bool is亲 = false;
 	if (table->turn == table->庄家)
 		is亲 = true;
 	yakus.calculate_score(is亲, true);
 
 	for (int i = 0; i < 4; ++i) {
-		result.score[i] = table->player[i].score;
+		result.score[i] = table->players[i].score;
 	}
 
 	if (is亲) {
@@ -287,11 +287,11 @@ Result 荣和结算(Table * table, Tile* agari_tile, std::vector<int> response_p
 	result.winner.assign(response_player.begin(), response_player.end());
 
 	for (int i = 0; i < 4; ++i) {
-		result.score[i] = table->player[i].score;
+		result.score[i] = table->players[i].score;
 	}
 
 	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, winner, agari_tile, false, false, table->player[winner].wind, table->场风);
+		auto yaku = yaku_counter(table, winner, agari_tile, false, false, table->players[winner].wind, table->场风);
 		yaku.calculate_score(winner == table->庄家, false);
 
 		result.results.insert({ winner, yaku });
