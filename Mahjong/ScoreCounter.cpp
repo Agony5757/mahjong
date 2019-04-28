@@ -475,6 +475,10 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		throw runtime_error("??");
 	});
 
+	// 判断是不是七对子
+	// TODO:将七对转化为字符串数组，然后改为判断手役的方式去判断
+	// 对对和的条件需要加上不是七对子
+
 	// 判断有没有顺子
 	bool has顺子 = any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
 		if (s[2] == 'S') return true;
