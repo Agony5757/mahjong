@@ -898,6 +898,8 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		fu = 20;
 	}
 
+	// TODO: 注意七对子统一25符，并且不跳符。
+
 	return { yakus, fu };
 }
 
