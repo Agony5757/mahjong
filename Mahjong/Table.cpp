@@ -1636,7 +1636,6 @@ void Table::make_selection(int selection)
 
 			players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
 
-
 			// 消除第一巡
 			players[turn].first_round = false;
 

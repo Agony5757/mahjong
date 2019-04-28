@@ -9,31 +9,7 @@ import tensorflow as tf
 import numpy as np
 from copy import deepcopy
 from buffer import PrioritizedReplayBuffer
-import gym
-import MahjongPy as mp
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-from naiveAI import AgentNaive, NMnaive
-import tensorflow as tf
-import numpy as np
-from copy import deepcopy
-from buffer import PrioritizedReplayBuffer
-import gym
+#import gym
 import MahjongPy as mp
 
 Phases = ("P1_ACTION", "P2_ACTION", "P3_ACTION", "P4_ACTION", "P1_RESPONSE", "P2_RESPONSE", "P3_RESPONSE", "P4_RESPONSE",

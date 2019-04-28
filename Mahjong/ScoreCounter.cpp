@@ -734,8 +734,16 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		三色同顺tiles.push_back((char(i + '0')) + "mS");
 		三色同顺tiles.push_back((char(i + '0')) + "pS");
 
-		if (includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
-			三色同顺tiles.begin(), 三色同顺tiles.end())) {
+		// avoid using includes: it may only apply on an ordered sequence
+		
+		//if (includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
+		//	三色同顺tiles.begin(), 三色同顺tiles.end())) {
+		//	三色同顺 = true;
+		//	break;
+		//}
+		
+		if (all_of(三色同顺tiles.begin(), 三色同顺tiles.end(),
+			[&tile_group_string_no_4](string tiles) {return is_in(tile_group_string_no_4, tiles); })) {
 			三色同顺 = true;
 			break;
 		}
@@ -753,8 +761,16 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		三色同刻tiles.push_back((char(i + '0')) + "mK");
 		三色同刻tiles.push_back((char(i + '0')) + "pK");
 
-		if (includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
-			三色同刻tiles.begin(), 三色同刻tiles.end())) {
+		// avoid using includes: it may only apply on an ordered sequence
+
+		//if (includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
+		//	三色同刻tiles.begin(), 三色同刻tiles.end())) {
+		//	三色同刻 = true;
+		//	break;
+		//}
+
+		if (all_of(三色同刻tiles.begin(), 三色同刻tiles.end(),
+			[&tile_group_string_no_4](string tiles) {return is_in(tile_group_string_no_4, tiles); })) {
 			三色同刻 = true;
 			break;
 		}
@@ -766,13 +782,21 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	vector<string> 一气通贯S = { "1sS", "4sS", "7sS" };
 	vector<string> 一气通贯M = { "1sM", "4sM", "7sM" };
 	vector<string> 一气通贯P = { "1sP", "4sP", "7sP" };
+	
+	// avoid using includes: it may only apply on an ordered sequence
+	//一气通贯 |= includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
+	//	一气通贯S.begin(), 一气通贯S.end());
+	//一气通贯 |= includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
+	//	一气通贯M.begin(), 一气通贯M.end());
+	//一气通贯 |= includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
+	//	一气通贯P.begin(), 一气通贯P.end());
 
-	一气通贯 |= includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
-		一气通贯S.begin(), 一气通贯S.end());
-	一气通贯 |= includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
-		一气通贯M.begin(), 一气通贯M.end());
-	一气通贯 |= includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
-		一气通贯P.begin(), 一气通贯P.end());
+	一气通贯 |= all_of(一气通贯S.begin(), 一气通贯S.end(),
+		[&tile_group_string_no_4](string tiles) {return is_in(tile_group_string_no_4, tiles); });
+	一气通贯 |= all_of(一气通贯M.begin(), 一气通贯M.end(),
+		[&tile_group_string_no_4](string tiles) {return is_in(tile_group_string_no_4, tiles); });
+	一气通贯 |= all_of(一气通贯P.begin(), 一气通贯P.end(),
+		[&tile_group_string_no_4](string tiles) {return is_in(tile_group_string_no_4, tiles); });
 
 	if (一气通贯) {
 		if (门清) yakus.push_back(Yaku::一气通贯);
