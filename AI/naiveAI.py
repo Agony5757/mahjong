@@ -1,7 +1,6 @@
 import tensorflow as tf
-from buffer import PrioritizedReplayBuffer
+from buffer import SimpleMahjongBuffer
 import numpy as np
-
 
 
 class NMnaive():
@@ -51,7 +50,7 @@ class NMnaive():
 
         self.value_output = tf.layers.dense(inputs=fc2, units=1, activation=None)
 
-        self.value_target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='Features')
+        self.value_target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='value_targets')
 
         self.loss = tf.losses.mean_squared_error(self.value_target, self.value_output)
         self.optimizer = tf.train.AdamOptimizer(lr)
@@ -68,7 +67,7 @@ class NMnaive():
     def train(self, input, target):
 
         loss, _ = self.session.run([self.loss, self.train_step], feed_dict={self.features: input,
-                                                                           self.value_target: target})
+                                                                            self.value_target: target})
 
         return loss
 
@@ -77,11 +76,13 @@ class AgentNaive():
     """
     Mahjong AI agent naive version
     """
-    def __init__(self, nn: NMnaive, memory:PrioritizedReplayBuffer, gamma=0.99999, greedy=1e-3):
+    def __init__(self, nn: NMnaive, memory, gamma=0.99999, greedy=1e-3, batch_size=64, lambd=0.99):
         self.nn = nn
         self.gamma = gamma  # discount factor
         self.greedy = greedy
         self.memory = memory
+        self.batch_size = batch_size
+        self.lambd = lambd
 
     def select(self, aval_next_states):
         """
@@ -104,19 +105,34 @@ class AgentNaive():
 
         return action, policy
 
-    def remember(self, this_state, action, next_state, score, done, next_aval_states, policy):
-        self.this_state = this_state
-        self.next_state = next_state
-        self.score = score
-        self.done = done
+    def remember(self, this_state, action, next_state, reward, done, next_aval_states, policy):
+        self.memory.append(this_state.reshape([34, 4, 1]), reward, next_state.reshape([34, 4, 1]), 1 if done else 0)
 
     def learn(self):
 
-        if not self.done:
-            target_value = self.score + self.gamma * self.nn.output(self.next_state)
+        if self.memory.filled > 2 * self.batch_size:
+            state, r, d = self.memory.sample(self.batch_size)
+
+            this_state = state[:-1]
+            next_state = state[1:]
+
+            target_value = np.zeros([self.batch_size, 1], dtype=np.float32)
+
+            v = self.nn.output(this_state)
+            vp = self.nn.output(next_state)
+
+            td_prime = 0
+
+            for i in reversed(range(self.batch_size)):
+
+                td_error = r[i] + (1. - d[i]) * self.gamma * vp[i, 0] - v[i, 0]
+
+                target_value[i, 0] = v[i,0] + td_error + self.lambd * td_prime
+
+                td_prime += self.lambd * td_error
+
+            self.nn.train(this_state, target_value)
+
         else:
-            target_value = np.reshape(self.score, [-1, 1])
-
-        self.nn.train(self.this_state, target_value)
-
+            pass
 

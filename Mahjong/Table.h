@@ -6,6 +6,7 @@
 #include "GameLog.h"
 #include "GameResult.h"
 #include "macro.h"
+#include <array>
 
 constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
@@ -161,7 +162,8 @@ public:
 	std::vector<Tile*> 宝牌指示牌;
 	std::vector<Tile*> 里宝牌指示牌;
 	std::vector<Tile*> 牌山;
-	Player players[4];
+	// Player players[4];
+	std::array<Player, 4> players;
 	int turn;
 	Action last_action = Action::出牌;
 	Wind 场风 = Wind::East;
