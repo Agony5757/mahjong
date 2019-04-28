@@ -422,7 +422,8 @@ static inline bool 纯老头(string s) {
 
 static inline bool 纯绿牌(string s) {
 	string first3(s.begin(), s.begin() + 3);
-	return is_in({ "2sK", "3sK", "4sK", "2sS", "6sK", "8sK", "6zK" }, first3);
+	return is_in({ "2sK", "3sK", "4sK", "2sS", "6sK", "8sK", "6zK", 
+		"2s:", "3s:", "4s:", "6s:", "8s:","6z:" }, first3);
 }
 
 static inline bool 幺九刻子(string s) {
@@ -468,11 +469,15 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	});
 
 	// 判断门清
-	bool 门清 = none_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool 门清 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
 		if (s.size() == 3) return true;
 		if (s.size() == 4) return s[3] != '-';
 		throw runtime_error("??");
 	});
+
+	// 判断是不是七对子
+	// TODO:将七对转化为字符串数组，然后改为判断手役的方式去判断
+	// 对对和的条件需要加上不是七对子
 
 	// 判断有没有顺子
 	bool has顺子 = any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
@@ -892,6 +897,8 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	}) && (平和)) {
 		fu = 20;
 	}
+
+	// TODO: 注意七对子统一25符，并且不跳符。
 
 	return { yakus, fu };
 }

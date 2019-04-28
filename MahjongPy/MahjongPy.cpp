@@ -1,4 +1,4 @@
-#include "pybind11/pybind11.h"
+ï»¿#include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 #include "pybind11/complex.h"
 #include "pybind11/functional.h"
@@ -49,9 +49,9 @@ PYBIND11_MODULE(MahjongPy, m)
 		.value("south", BaseTile::south)
 		.value("west", BaseTile::west)
 		.value("north", BaseTile::north)
-		.value("haku", BaseTile::°×)
-		.value("hatsu", BaseTile::·¢)
-		.value("chu", BaseTile::ÖĞ)
+		.value("haku", BaseTile::ç™½)
+		.value("hatsu", BaseTile::å‘)
+		.value("chu", BaseTile::ä¸­)
 		;
 
 	py::class_<Tile>(m, "Tile")
@@ -73,72 +73,83 @@ PYBIND11_MODULE(MahjongPy, m)
 
 	py::enum_<Action>(m, "Action")
 		.value("pass", Action::pass)
-		.value("Chi", Action::³Ô)
-		.value("Pon", Action::Åö)
-		.value("Kan", Action::¸Ü)
-		.value("Ron", Action::ÈÙºÍ)
+		.value("Chi", Action::åƒ)
+		.value("Pon", Action::ç¢°)
+		.value("Kan", Action::æ )
+		.value("Ron", Action::è£å’Œ)
 
-		.value("ChanAnKan", Action::ÇÀ°µ¸Ü)
-		.value("ChanKan", Action::ÇÀ¸Ü)
+		.value("ChanAnKan", Action::æŠ¢æš—æ )
+		.value("ChanKan", Action::æŠ¢æ )
 
-		.value("Ankan", Action::°µ¸Ü)
-		.value("Kakan", Action::¼Ó¸Ü)
-		.value("Play", Action::³öÅÆ)
-		.value("Riichi", Action::Á¢Ö±)
-		.value("Tsumo", Action::×ÔÃş)
-		.value("KyuShuKyuHai", Action::¾ÅÖÖ¾ÅÅÆ)
+		.value("Ankan", Action::æš—æ )
+		.value("Kakan", Action::åŠ æ )
+		.value("Play", Action::å‡ºç‰Œ)
+		.value("Riichi", Action::ç«‹ç›´)
+		.value("Tsumo", Action::è‡ªæ‘¸)
+		.value("KyuShuKyuHai", Action::ä¹ç§ä¹ç‰Œ)
+		;
+
+	py::class_<SelfAction>(m, "SelfAction")
+		.def_readonly("action", &SelfAction::action)
+		.def_readonly("correspond_tiles", &SelfAction::correspond_tiles)
+		;
+
+	py::class_<ResponseAction>(m, "ResponseAction")
+		.def_readonly("action", &ResponseAction::action)
+		.def_readonly("correspond_tiles", &ResponseAction::correspond_tiles)
 		;
 
 	py::class_<Player>(m, "Player")
-		// ³ÉÔ±±äÁ¿ÃÇ
+		// æˆå‘˜å˜é‡ä»¬
 		.def_readonly("double_riichi", &Player::double_riichi)
 		.def_readonly("riichi", &Player::riichi)
-		.def_readonly("menchin", &Player::ÃÅÇå)
+		.def_readonly("menchin", &Player::é—¨æ¸…)
 		.def_readonly("wind", &Player::wind)
-		.def_readonly("oya", &Player::Ç×¼Ò)
-		.def_readonly("furiten", &Player::ÕñÌı)
-		.def_readonly("riichi_furiten", &Player::Á¢Ö±ÕñÌı)
+		.def_readonly("oya", &Player::äº²å®¶)
+		.def_readonly("furiten", &Player::æŒ¯å¬)
+		.def_readonly("riichi_furiten", &Player::ç«‹ç›´æŒ¯å¬)
 		.def_readonly("score", &Player::score)
 		.def_readonly("hand", &Player::hand)
-		.def_readonly("fulus", &Player::¸±Â¶s)
+		.def_readonly("fulus", &Player::å‰¯éœ²s)
 		.def_readonly("river", &Player::river)
-		.def_readonly("ippatsu", &Player::Ò»·¢)
+		.def_readonly("ippatsu", &Player::ä¸€å‘)
 		.def_readonly("first_round", &Player::first_round)
 		
-		// º¯ÊıÃÇ
-		.def("is_furiten", &Player::isÕñÌı)
+		// å‡½æ•°ä»¬
+		.def("is_furiten", &Player::isæŒ¯å¬)
 		;
 
 	py::class_<Table>(m, "Table")
 		.def(py::init<>())
 
-		// º¯ÊıÃÇ
+		// å‡½æ•°ä»¬
 		.def("game_init", &Table::game_init)
 		.def("get_phase", &Table::get_phase)
 		.def("make_selection", &Table::make_selection)
 		.def("get_info", &Table::get_info, py::return_value_policy::reference)
 		.def("get_selected_action", &Table::get_selected_action)
 		.def("who_make_selection", &Table::who_make_selection)
-		.def("get_tile", &Table::get_tile, py::return_value_policy::reference)
+		.def("get_selelceted_action_tile", &Table::get_selelceted_action_tile, py::return_value_policy::reference)
+		.def("get_full_selected_action", &Table::get_full_selected_action)
 		.def("get_result", &Table::get_result)
 		.def("get_self_actions", &Table::get_self_actions)
 		.def("get_response_actions", &Table::get_response_actions)
 
-		// ³ÉÔ±±äÁ¿ÃÇ
+		// æˆå‘˜å˜é‡ä»¬
 		.def_readonly("dora_spec", &Table::dora_spec)
-		.def_readonly("DORA", &Table::±¦ÅÆÖ¸Ê¾ÅÆ)
-		.def_readonly("URA_DORA", &Table::Àï±¦ÅÆÖ¸Ê¾ÅÆ)
-		.def_readonly("YAMA", &Table::ÅÆÉ½)
+		.def_readonly("DORA", &Table::å®ç‰ŒæŒ‡ç¤ºç‰Œ)
+		.def_readonly("URA_DORA", &Table::é‡Œå®ç‰ŒæŒ‡ç¤ºç‰Œ)
+		.def_readonly("YAMA", &Table::ç‰Œå±±)
 		.def_readonly("players", &Table::players)
 		.def_readonly("turn", &Table::turn)
 		.def_readonly("last_action", &Table::last_action)
-		.def_readonly("game_wind", &Table::³¡·ç)
+		.def_readonly("game_wind", &Table::åœºé£)
 		.def_readonly("last_action", &Table::last_action)
-		.def_readonly("oya", &Table::×¯¼Ò)
-		.def_readonly("honba", &Table::n±¾³¡)
-		.def_readonly("riichibo", &Table::nÁ¢Ö±°ô)
+		.def_readonly("oya", &Table::åº„å®¶)
+		.def_readonly("honba", &Table::næœ¬åœº)
+		.def_readonly("riichibo", &Table::nç«‹ç›´æ£’)
 		
-		// ¸¨Öúº¯ÊıÃÇ
+		// è¾…åŠ©å‡½æ•°ä»¬
 		.def("get_dora", &Table::get_dora)
 		.def("get_ura_dora", &Table::get_ura_dora)
 		.def("get_remain_kan_tile", &Table::get_remain_kan_tile)
@@ -146,11 +157,11 @@ PYBIND11_MODULE(MahjongPy, m)
 		;
 
 	py::enum_<ResultType>(m, "ResultType")
-		.value("RonAgari", ResultType::ÈÙºÍÖÕ¾Ö)
-		.value("TsumoAgari", ResultType::×ÔÃşÖÕ¾Ö)
-		.value("IntervalRyuuKyoku", ResultType::ÖĞÍ¾Á÷¾Ö)
-		.value("NoTileRyuuKyoku", ResultType::»ÄÅÆÁ÷¾Ö)
-		.value("RyuuKyokuMangan", ResultType::Á÷¾ÖÂú¹á)
+		.value("RonAgari", ResultType::è£å’Œç»ˆå±€)
+		.value("TsumoAgari", ResultType::è‡ªæ‘¸ç»ˆå±€)
+		.value("IntervalRyuuKyoku", ResultType::ä¸­é€”æµå±€)
+		.value("NoTileRyuuKyoku", ResultType::è’ç‰Œæµå±€)
+		.value("RyuuKyokuMangan", ResultType::æµå±€æ»¡è´¯)
 		;
 
 	py::class_<Result>(m, "Result")
@@ -171,15 +182,15 @@ PYBIND11_MODULE(MahjongPy, m)
 		.value("P3_RESPONSE", Table::_Phase_::P3_RESPONSE)
 		.value("P4_RESPONSE", Table::_Phase_::P4_RESPONSE)
 		
-		.value("P1_chankan", Table::_Phase_::P1_ÇÀ¸ÜRESPONSE)
-		.value("P2_chankan", Table::_Phase_::P2_ÇÀ¸ÜRESPONSE)
-		.value("P3_chankan", Table::_Phase_::P3_ÇÀ¸ÜRESPONSE)
-		.value("P4_chankan", Table::_Phase_::P4_ÇÀ¸ÜRESPONSE)
+		.value("P1_chankan", Table::_Phase_::P1_æŠ¢æ RESPONSE)
+		.value("P2_chankan", Table::_Phase_::P2_æŠ¢æ RESPONSE)
+		.value("P3_chankan", Table::_Phase_::P3_æŠ¢æ RESPONSE)
+		.value("P4_chankan", Table::_Phase_::P4_æŠ¢æ RESPONSE)
 		
-		.value("P1_chanankan", Table::_Phase_::P1_ÇÀ°µ¸ÜRESPONSE)
-		.value("P2_chanankan", Table::_Phase_::P2_ÇÀ°µ¸ÜRESPONSE)
-		.value("P3_chanankan", Table::_Phase_::P3_ÇÀ°µ¸ÜRESPONSE)
-		.value("P4_chanankan", Table::_Phase_::P4_ÇÀ°µ¸ÜRESPONSE)
+		.value("P1_chanankan", Table::_Phase_::P1_æŠ¢æš—æ RESPONSE)
+		.value("P2_chanankan", Table::_Phase_::P2_æŠ¢æš—æ RESPONSE)
+		.value("P3_chanankan", Table::_Phase_::P3_æŠ¢æš—æ RESPONSE)
+		.value("P4_chanankan", Table::_Phase_::P4_æŠ¢æš—æ RESPONSE)
 		;
 
 }

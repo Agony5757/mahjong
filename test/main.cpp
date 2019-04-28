@@ -277,7 +277,7 @@ void test_passive_table() {
 			default:
 				throw runtime_error("Unknown action.");
 			}
-			cout << table.get_tile()->to_string() << endl;
+			cout << table.get_selelceted_action_tile()->to_string() << endl;
 			cout << "Select:" << endl;			
 			int selection = 0;
 			if (table.get_response_actions().size() > 1) {

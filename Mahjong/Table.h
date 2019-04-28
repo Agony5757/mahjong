@@ -309,6 +309,8 @@ private:
 	Action final_action = Action::pass;
 	void _from_beginning();
 public:
+
+	// Initialize the game.
 	inline void game_init()	{
 		init_tiles();
 		init_red_dora_3();
@@ -328,12 +330,26 @@ public:
 		turn = 庄家;
 		_from_beginning();
 	}
+	
+	// Get the phase of the game
 	inline int get_phase() { return (int)phase; }
+
+	// Make a selection and game moves on.
 	void make_selection(int selection);
+	
+	// Get Information. Return the table itself.
 	inline Table* get_info() { return this; }
-	Action get_selected_action() { return selected_action.action; }
-	inline int who_make_selection() { return (get_phase() - Table::P1_RESPONSE) % 4; }
-	inline Tile* get_tile() { return tile; };
+
+	// When a player needs response, it can refer to the selection made by the "self-action" player
+	inline SelfAction get_full_selected_action() { return selected_action; }
+	inline Action get_selected_action() { return selected_action.action; }	
+	inline Tile* get_selelceted_action_tile() { return tile; };
+
+	// Tells that who has to make the selection.
+	inline int who_make_selection() { return (get_phase() - Table::P1_ACTION) % 4; }
+
+	// get 
+
 	inline Result get_result() { return result; }
 	
 	inline std::vector<SelfAction> get_self_actions() { return self_action; }
