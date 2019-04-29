@@ -42,7 +42,7 @@ public:
 		}
 		return basetiles;
 	}
-	inline std::string to_string() {
+	inline std::string to_string() const {
 		std::stringstream ss;
 
 		for (auto tile : river) {
@@ -91,10 +91,10 @@ public:
 	std::vector<Tile*> hand;
 	River river;
 	std::vector<Fulu> 副露s;
-	std::string hand_to_string();
-	std::string river_to_string();
+	std::string hand_to_string() const;
+	std::string river_to_string() const;
 
-	std::string to_string();
+	std::string to_string() const;
 
 	bool 一发;
 	bool first_round = true;
@@ -171,7 +171,7 @@ public:
 	int n本场 = 0;
 	int n立直棒 = 0;
 
-	inline std::vector<BaseTile> get_dora() {
+	inline std::vector<BaseTile> get_dora() const {
 		std::vector<BaseTile> doratiles;
 		for (int i = 0; i < dora_spec; ++i) {
 			doratiles.push_back(get_dora_next(宝牌指示牌[i]->tile));
@@ -179,7 +179,7 @@ public:
 		return doratiles;
 	}
 
-	inline std::vector<BaseTile> get_ura_dora() {
+	inline std::vector<BaseTile> get_ura_dora() const {
 		std::vector<BaseTile> doratiles;
 		for (int i = 0; i < dora_spec; ++i) {
 			doratiles.push_back(get_dora_next(里宝牌指示牌[i]->tile));
@@ -187,12 +187,12 @@ public:
 		return doratiles;
 	}
 
-	inline int get_remain_kan_tile() {
+	inline int get_remain_kan_tile() const {
 		auto iter = find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]);
 		return int(iter - 牌山.begin() - 1);
 	}
 
-	inline int get_remain_tile() {
+	inline int get_remain_tile() const {
 		return int(牌山.size() - 14);
 	}
 
@@ -227,7 +227,7 @@ public:
 	};
 
 	std::string to_string(int option =
-		YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE);
+		YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE) const;
 
 	inline bool after_chipon(){
 		return last_action == Action::吃 ||

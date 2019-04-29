@@ -212,7 +212,7 @@ class Tile {
 public:
 	BaseTile tile;
 	bool red_dora;
-	inline std::string to_string() {
+	inline std::string to_string() const {
 		std::string ret;
 		if (0 <= tile && tile <= 8) {
 			ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
@@ -312,7 +312,7 @@ struct Fulu {
 	// take在type==Chi的时候才有效，其他时候不用
 
 	Type type;
-	inline std::string to_string() {
+	inline std::string to_string() const {
 		std::stringstream ss;
 		switch (type) {
 		case Chi: {

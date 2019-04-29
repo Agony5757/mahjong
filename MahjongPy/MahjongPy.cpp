@@ -5,7 +5,8 @@
 #include "pybind11/operators.h"
 #include "Mahjong/Table.h"
 #include "ScoreCounter.h"
-#include <map>
+#include <codecvt>
+#include <windows.h>
 
 using namespace std;
 using namespace pybind11::literals;
@@ -62,17 +63,23 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("to_string", &Fulu::to_string)
 		;
 
+	m.def("FuluToString", [](const Fulu &fulu) {return py::bytes(fulu.to_string()); });
+
 	py::class_<Tile>(m, "Tile")
 		.def_readonly("tile", &Tile::tile)
 		.def_readonly("red_dora", &Tile::red_dora)
 		.def("to_string", &Tile::to_string)
 		;
 
+	m.def("TileToString", [](const Tile *tile) {return py::bytes(tile->to_string()); });
+
 	py::class_<River>(m, "River")
 		.def_readonly("river", &River::river)
 		.def("size", &River::size)
 		.def("to_string", &River::to_string)
 		;
+
+	m.def("RiverToString", [](const River& river) {return py::bytes(river.to_string()); });
 
 	py::enum_<Wind>(m, "Wind")
 		.value("East", Wind::East)
@@ -105,11 +112,15 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("to_string", &SelfAction::to_string)
 		;
 
+	m.def("SelfActionToString", [](const SelfAction &sa) {return py::bytes(sa.to_string()); });
+
 	py::class_<ResponseAction>(m, "ResponseAction")
 		.def_readonly("action", &ResponseAction::action)
 		.def_readonly("correspond_tiles", &ResponseAction::correspond_tiles)
 		.def("to_string", &ResponseAction::to_string)
 		;
+
+	m.def("ResponseActionToString", [](const ResponseAction &ra) {return py::bytes(ra.to_string()); });
 
 	py::class_<Player>(m, "Player")
 		// 成员变量们
@@ -131,6 +142,8 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("is_furiten", &Player::is振听)
 		.def("to_string", &Player::to_string)
 		;
+
+	m.def("PlayerToString", [](const Player& player) {return py::bytes(player.to_string()); });
 
 	py::class_<Table>(m, "Table")
 		.def(py::init<>())
@@ -170,6 +183,8 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("to_string", &Table::to_string)
 		;
 
+	m.def("TableToString", [](const Table& table, int mode) {return py::bytes(table.to_string(mode)); });
+
 	py::enum_<ResultType>(m, "ResultType")
 		.value("RonAgari", ResultType::荣和终局)
 		.value("TsumoAgari", ResultType::自摸终局)
@@ -184,6 +199,8 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def_readonly("score", &Result::score)
 		.def("to_string", &Result::to_string)
 		;	
+
+	m.def("ResultToString", [](const Result& result) {return py::bytes(result.to_string()); });
 
 	py::enum_<Yaku>(m, "Yaku")
 		.value("NoYaku", Yaku::None)
@@ -290,5 +307,5 @@ PYBIND11_MODULE(MahjongPy, m)
 		.value("P4_chanankan", Table::_Phase_::P4_抢暗杠RESPONSE)
 		;
 
-	m.def("yakus_to_string", &yakus_to_string);
+	m.def("yakus_to_string", [](std::vector<Yaku> yakus) {return py::bytes(yakus_to_string(yakus)); });
 }

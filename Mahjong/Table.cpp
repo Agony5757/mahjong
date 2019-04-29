@@ -11,7 +11,7 @@ Player::Player()
 	:riichi(false), score(INIT_SCORE)
 { }
 
-std::string Player::hand_to_string()
+std::string Player::hand_to_string() const
 {
 	stringstream ss;
 
@@ -21,12 +21,12 @@ std::string Player::hand_to_string()
 	return ss.str();
 }
 
-std::string Player::river_to_string()
+std::string Player::river_to_string() const
 {
 	return river.to_string();
 }
 
-std::string Player::to_string()
+std::string Player::to_string() const
 {
 	stringstream ss;
 	ss << "点数:" << score << endl;
@@ -1122,7 +1122,7 @@ void Table::发岭上牌(int i_player)
 	//fullGameLog.log摸牌(i_player, player[i_player].hand.back());
 }
 
-std::string Table::to_string(int option)
+std::string Table::to_string(int option) const
 {
 	stringstream ss;
 	if (option & ToStringOption::YAMA) {
