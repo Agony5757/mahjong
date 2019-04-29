@@ -185,6 +185,97 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("to_string", &Result::to_string)
 		;	
 
+	py::enum_<Yaku>(m, "Yaku")
+		.value("无役", Yaku::None)
+
+		.value("立直", Yaku::立直)
+		.value("断幺九", Yaku::断幺九)
+		.value("门前清自摸和", Yaku::门前清自摸和)
+		.value("自风_东", Yaku::自风_东)
+		.value("自风_南", Yaku::自风_南)
+		.value("自风_西", Yaku::自风_西)
+		.value("自风_北", Yaku::自风_北)
+		.value("场风_东", Yaku::场风_东)
+		.value("场风_南", Yaku::场风_南)
+		.value("场风_西", Yaku::场风_西)
+		.value("场风_北", Yaku::场风_北)
+		.value("役牌_白", Yaku::役牌_白)
+		.value("役牌_发", Yaku::役牌_发)
+		.value("役牌_中", Yaku::役牌_中)
+		.value("平和", Yaku::平和)
+		.value("一杯口", Yaku::一杯口)
+		.value("抢杠", Yaku::抢杠)
+		.value("岭上开花", Yaku::岭上开花)
+		.value("海底捞月", Yaku::海底捞月)
+		.value("河底捞鱼", Yaku::河底捞鱼)
+		.value("一发", Yaku::一发)
+		.value("宝牌", Yaku::宝牌)
+		.value("里宝牌", Yaku::里宝牌)
+		.value("赤宝牌", Yaku::赤宝牌)
+		.value("北宝牌", Yaku::北宝牌)
+		.value("混全带幺九副露版", Yaku::混全带幺九副露版)
+		.value("一气通贯副露版", Yaku::一气通贯副露版)
+		.value("三色同顺副露版", Yaku::三色同顺副露版)
+
+		.value("一番", Yaku::一番)
+
+		.value("两立直", Yaku::两立直)
+		.value("三色同刻", Yaku::三色同刻)
+		.value("三杠子", Yaku::三杠子)
+		.value("对对和", Yaku::对对和)
+		.value("三暗刻", Yaku::三暗刻)
+		.value("小三元", Yaku::小三元)
+		.value("混老头", Yaku::混老头)
+		.value("七对子", Yaku::七对子)
+		.value("混全带幺九", Yaku::混全带幺九)
+		.value("一气通贯", Yaku::一气通贯)
+		.value("三色同顺", Yaku::三色同顺)
+		.value("纯全带幺九副露版", Yaku::纯全带幺九副露版)
+		.value("混一色副露版", Yaku::混一色副露版)
+
+		.value("二番", Yaku::二番)
+
+		.value("二杯口", Yaku::二杯口)
+		.value("纯全带幺九", Yaku::纯全带幺九)
+		.value("混一色", Yaku::混一色)
+
+		.value("三番", Yaku::三番)
+
+		.value("清一色副露版", Yaku::清一色副露版)
+
+		.value("五番", Yaku::五番)
+
+		.value("清一色", Yaku::清一色)
+
+		.value("六番", Yaku::六番)
+
+		.value("流局满贯", Yaku::流局满贯)
+
+		.value("满贯", Yaku::满贯)
+
+		.value("天和", Yaku::天和)
+		.value("地和", Yaku::地和)
+		.value("大三元", Yaku::大三元)
+		.value("四暗刻", Yaku::四暗刻)
+		.value("字一色", Yaku::字一色)
+		.value("绿一色", Yaku::绿一色)
+		.value("清老头", Yaku::清老头)
+		.value("国士无双", Yaku::国士无双)
+		.value("小四喜", Yaku::小四喜)
+		.value("四杠子", Yaku::四杠子)
+		.value("九莲宝灯", Yaku::九莲宝灯)
+
+		.value("役满", Yaku::役满)
+
+		.value("四暗刻单骑", Yaku::四暗刻单骑)
+		.value("国士无双十三面", Yaku::国士无双十三面)
+		.value("纯正九莲宝灯", Yaku::纯正九莲宝灯)
+		.value("大四喜", Yaku::大四喜)
+
+		.value("双倍役满", Yaku::双倍役满)
+		;
+		
+
 	py::class_<CounterResult>(m, "CounterResult")
 		.def_readonly("yakus", &CounterResult::yakus)
 		.def_readonly("fan", &CounterResult::fan)
