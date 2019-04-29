@@ -5,6 +5,7 @@
 #include "Yaku.h"
 #include <vector>
 #include "Tile.h"
+#include <sstream>
 
 struct CounterResult {
 	std::vector<Yaku> yakus;

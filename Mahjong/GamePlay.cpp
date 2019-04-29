@@ -12,7 +12,6 @@ std::array<int, 4> 南风局(array<Agent *, 4> agents, stringstream &ss) {
 	return FullGame(Wind::South, agents, ss);
 }
 
-
 std::array<int, 4> FullGame(Wind 局风, std::array<Agent*, 4> agents, std::stringstream &ss)
 {
 	std::array<int, 4> score = { 25000,25000,25000,25000 };
