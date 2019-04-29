@@ -22,7 +22,7 @@ memory = SimpleMahjongBuffer(size=100000)
 agents = [AgentNaive(nn, memory, greedy=10.0 ** np.random.uniform(-4, -1)) for _ in range(4)]
 
 
-n_games = 3000
+n_games = 100000
 
 for n in range(n_games):
     done = 0

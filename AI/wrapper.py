@@ -56,14 +56,13 @@ class EnvMahjong(gym.Env):
 
         if self.Phases[self.t.get_phase()] == "GAME_OVER":
             done = 1
-
-            if self.t.get_result().result_type == mp.ResultType.RonAgari or self.t.get_result().result_type == mp.ResultType.TsumoAgari:
-                self.rons.append(self.get_final_score_change())
-            else:
-                self.rons.append(np.zeros([4], dtype=np.float32))
+            self.rons.append(self.get_final_score_change())
 
         else:
             done = 0
+
+        for i in range(4):
+            self.scores_before[i] = self.t.players[i].score
 
         return new_state, reward, done, info
 
@@ -87,26 +86,24 @@ class EnvMahjong(gym.Env):
 
         if self.Phases[self.t.get_phase()] == "GAME_OVER":
             done = 1
-
-            if self.t.get_result().result_type == mp.ResultType.RonAgari or self.t.get_result().result_type == mp.ResultType.TsumoAgari:
-                self.rons.append(get_final_score_change())
-            else:
-                self.rons.append(np.zeros([4], dtype=np.float32))
-
+            self.rons.append(self.get_final_score_change())
         else:
             done = 0
+
+        for i in range(4):
+            self.scores_before[i] = self.t.players[i].score
 
         return new_state, reward, done, info
 
     def get_final_score_change(self):
         rewards = np.zeros([4], dtype=np.float32)
+
         for i in range(4):
-            rewards[i] = self.t.players[i].score - self.scores_before[i]
+            rewards[i] = self.t.get_result().score[i] - self.scores_before[i]
 
         return rewards
 
     def get_state_(self, playerNo: int):
-
 
         hand = self.t.players[playerNo].hand
 
