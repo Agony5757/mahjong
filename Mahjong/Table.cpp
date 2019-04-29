@@ -1265,12 +1265,56 @@ std::vector<ResponseAction> Table::GetValidResponse(
 		merge_into(actions, the_player.get_Pon(tile));
 		merge_into(actions, the_player.get_Kan(tile));
 
-		if (is下家)
+		if (is下家) {
 			merge_into(actions, the_player.get_Chi(tile));
+		}
 	}
 
 	// 过滤器
 	auto &response = actions;
+
+	// 如果吃了之后，手上只有食替牌，那么就移除这个吃
+	{
+		auto iter = remove_if(response.begin(), response.end(),
+			[&the_player](ResponseAction &ra) {
+			if (ra.action != Action::吃) return false;
+			auto tiles = ra.correspond_tiles;
+			// 计算食替牌
+			vector<BaseTile> 食替牌;
+
+			if (tiles[1] > tiles[0]) {
+				if (tiles[0]->tile != _1m && tiles[0]->tile != _1s && tiles[0]->tile != _1p) {
+					食替牌.push_back(BaseTile(tiles[0]->tile - 1));
+				}
+				if (tiles[1]->tile != _9m && tiles[1]->tile != _9s && tiles[1]->tile != _9p) {
+					食替牌.push_back(BaseTile(tiles[1]->tile + 1));
+				}
+			}
+			else if (tiles[1] < tiles[0]) {
+				if (tiles[1]->tile != _1m && tiles[1]->tile != _1s && tiles[1]->tile != _1p) {
+					食替牌.push_back(BaseTile(tiles[1]->tile - 1));
+				}
+				if (tiles[0]->tile != _9m && tiles[0]->tile != _9s && tiles[0]->tile != _9p) {
+					食替牌.push_back(BaseTile(tiles[0]->tile + 1));
+				}
+			}
+			else throw runtime_error("Error in response action: chi.");
+
+			// 去掉这些吃牌
+			auto copyhand = the_player.hand;
+			copyhand.erase(remove_if(copyhand.begin(), copyhand.end(), [&tiles](Tile* tile) {
+				return is_in(tiles, tile);
+			}));
+
+			// 全部是食替牌
+			return all_of(copyhand.begin(), copyhand.end(), [&食替牌](Tile* tile) {
+				return is_in(食替牌, tile->tile);
+			});
+		});
+		response.erase(iter, response.end());
+	}
+
+
 
 	// 如果是海底状态，删除掉除了荣和和pass之外的所有情况
 	if (get_remain_tile() == 0) {
