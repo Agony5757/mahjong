@@ -4,6 +4,7 @@
 #include "pybind11/functional.h"
 #include "pybind11/operators.h"
 #include "Mahjong/Table.h"
+#include "ScoreCounter.h"
 #include <map>
 
 using namespace std;
@@ -182,7 +183,15 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def_readonly("results", &Result::results)
 		.def_readonly("score", &Result::score)
 		.def("to_string", &Result::to_string)
-		;		
+		;	
+
+	py::class_<CounterResult>(m, "CounterResult")
+		.def_readonly("yakus", &CounterResult::yakus)
+		.def_readonly("fan", &CounterResult::fan)
+		.def_readonly("fu", &CounterResult::fu)
+		.def_readonly("score1", &CounterResult::score1)
+		.def_readonly("score2", &CounterResult::score2)
+		;
 
 	py::enum_<Table::_Phase_>(m, "_Phase_")
 		.value("GAME_OVER", Table::_Phase_::GAME_OVER)
@@ -207,4 +216,5 @@ PYBIND11_MODULE(MahjongPy, m)
 		.value("P4_chanankan", Table::_Phase_::P4_抢暗杠RESPONSE)
 		;
 
+	m.def("yakus_to_string", &yakus_to_string);
 }

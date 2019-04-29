@@ -1314,8 +1314,6 @@ std::vector<ResponseAction> Table::GetValidResponse(
 		response.erase(iter, response.end());
 	}
 
-
-
 	// 如果是海底状态，删除掉除了荣和和pass之外的所有情况
 	if (get_remain_tile() == 0) {
 		auto iter =
