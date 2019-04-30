@@ -12,3 +12,4 @@ __pycache__/
 *.dylib
 *.mat
 *.DONGQI-TANIU-OI
+log/
