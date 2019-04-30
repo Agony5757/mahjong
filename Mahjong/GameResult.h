@@ -5,6 +5,7 @@
 #include <sstream>
 #include <unordered_map>
 #include "ScoreCounter.h"
+#include <array>
 
 enum ResultType {
 	荣和终局,
@@ -18,7 +19,7 @@ struct Result {
 	ResultType result_type;
 	std::unordered_map<int, CounterResult> results;
 
-	int score[4];	
+	std::array<int, 4> score;
 	int 役满倍数[4];
 	int n立直棒;
 	int n本场;
