@@ -230,7 +230,8 @@ class AgentPER():
 
             td_prime = 0
 
-            for i in reversed(r.shape[0]):
+            # for i in reversed(r.shape[0]):
+            for i in reversed(range(r.shape[0])):
 
                 if care_others:
                     td_error = r[i] + (1. - d[i]) * self.gamma * vp[i, 0] - v[i, 0]
