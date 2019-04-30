@@ -117,6 +117,54 @@ class EnvMahjong(gym.Env):
 
         return hand_matrix_naive
 
+    def symmetric_hand(self, hand_matrix_tensor):
+        """
+        Generating a random alternative of hand_matrix, which is symmetric to the original one
+        !!!! Not applicable to AI naive since it only cares about itself's hand
+        :param hand_matrix_tensor: a B by 34 by 4 matrix, where B is batch_size
+        :return: a new, symmetric hand_matrix
+        """
+        perm_msp = np.random.permutation(3)
+        perm_eswn = np.random.permutation(4)
+        perm_chh = np.random.permutation(4)
+
+        hand_matrix_tensor_new = np.zeros_like(hand_matrix_tensor)
+
+        ## msp
+        tmp = []
+
+        tmp.append(hand_matrix_tensor[:, 0:9, :])
+        tmp.append(hand_matrix_tensor[:, 9:18, :])
+        tmp.append(hand_matrix_tensor[:, 18:27, :])
+
+        hand_matrix_tensor_new[:, 0:9, :] = tmp[perm_msp[0]]
+        hand_matrix_tensor_new[:, 9:18, :] = tmp[perm_msp[1]]
+        hand_matrix_tensor_new[:, 18:27, :] = tmp[perm_msp[2]]
+
+        ## eswn
+        tmp = []
+
+        tmp.append(hand_matrix_tensor[:, 27, :])
+        tmp.append(hand_matrix_tensor[:, 28, :])
+        tmp.append(hand_matrix_tensor[:, 29, :])
+        tmp.append(hand_matrix_tensor[:, 30, :])
+
+        hand_matrix_tensor_new[:, 27, :] = tmp[perm_eswn[0]]
+        hand_matrix_tensor_new[:, 28, :] = tmp[perm_eswn[1]]
+        hand_matrix_tensor_new[:, 29, :] = tmp[perm_eswn[2]]
+        hand_matrix_tensor_new[:, 30, :] = tmp[perm_eswn[3]]
+
+        tmp = []
+
+        tmp.append(hand_matrix_tensor[:, 31, :])
+        tmp.append(hand_matrix_tensor[:, 32, :])
+        tmp.append(hand_matrix_tensor[:, 33, :])
+
+        hand_matrix_tensor_new[:, 31, :] = tmp[perm_chh[0]]
+        hand_matrix_tensor_new[:, 32, :] = tmp[perm_chh[1]]
+        hand_matrix_tensor_new[:, 33, :] = tmp[perm_chh[2]]
+
+
     def get_next_state(self, action: int, playerNo: int):
         # table = t
         hand = self.t.players[playerNo].hand
@@ -268,3 +316,4 @@ class EnvMahjong(gym.Env):
 
     def render(self, mode='human'):
         print(self.t.get_selected_action.action)
+
