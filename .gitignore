@@ -12,3 +12,7 @@ __pycache__/
 *.dylib
 *.mat
 *.DONGQI-TANIU-OI
+*.data-00000-of-00001
+*.meta
+*.index
+log/checkpoint

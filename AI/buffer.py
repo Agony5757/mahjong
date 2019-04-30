@@ -11,22 +11,22 @@ class SimpleMahjongBuffer():
         self.d = np.zeros([size], dtype=np.float32)
 
         self.filled = -1  # up to this index, the buffer is filled
-        self.head = 0  # index to which an experience to be stored next
+        self.tail = 0  # index to which an experience to be stored next
 
     def __len__(self):
         return self.filled
 
     def append(self, s, r, s_next, done):
-        self.s[self.head] = s
-        self.r[self.head] = r
-        self.sp[self.head] = s_next
-        # self.mu[self.head] = mu
-        self.d[self.head] = done
+        self.s[self.tail] = s
+        self.r[self.tail] = r
+        self.sp[self.tail] = s_next
+        # self.mu[self.tail] = mu
+        self.d[self.tail] = done
 
-        self.filled = max(self.filled, self.head)
-        self.head += 1
-        if self.head == self.size:
-            self.head = 0
+        self.filled = max(self.filled, self.tail)
+        self.tail += 1
+        if self.tail == self.size:
+            self.tail = 0
 
     def sample(self, truncated_steps):
         index = np.random.randint(low=truncated_steps, high=self.filled)
@@ -92,8 +92,8 @@ class SimpleMahjongBufferPER():
         self.priority_scale = priority_scale
         self.priority_eps = priority_eps
 
-        self.filled = -1  # up to this index, the buffer is filled
-        self.head = 0  # index to which an experience to be stored next
+        self.filled_size = 0  # up to this index, the buffer is filled
+        self.tail = 0  # index to which an experience to be stored next
 
         tree_size = 2 ** int(np.ceil(np.log2(size)))
         self.sum_tree = SimpleMahjongBufferPER.SumTree(tree_size, priority_scale)
@@ -101,29 +101,28 @@ class SimpleMahjongBufferPER():
         self.min_length = 0
         self.max_length = 0
 
-        self.infinity = 1e9
+        # self.infinity = 1e9
 
-        # initialize priority of saved episodes to inf
-        for i in range(self.size):
-            self.sum_tree.add(i, self.infinity)
-            length = self.length[i]
-            self.sum_steps += length
-            self.min_length = min(self.min_length, length)
-            self.max_length = max(self.max_length, length)
+        # # initialize priority of saved episodes to inf
+        # for i in range(self.saved_size):
+        #     self.sum_tree.add(i, self.infinity)
+        #     length = self.length[i]
+        #     self.sum_steps += length
+        #     self.min_length = min(self.min_length, length)
+        #     self.max_length = max(self.max_length, length)
 
     def append_episode(self, s, r, d, weight=0):
         length = len(r)
-        self.s[self.head, :length+1] = s
-        self.r[self.head, :length] = r
-        # self.mu[self.head] = mu
-        self.d[self.head, length-1] = 1
+        self.s[self.tail, :length+1] = s
+        self.r[self.tail, :length] = r
+        self.length[self.tail] = length
+        self.d[self.tail, length-1] = 1
 
-        self.filled = max(self.filled, self.head)
-        self.head += 1
-        if self.head == self.size:
-            self.head = 0
+        self.sum_tree.add(self.tail, weight + self.priority_eps)
 
-        self.sum_tree.add(self.head, weight + self.priority_eps)
+        self.tail = (self.tail + 1) % self.size
+        self.filled_size = min(self.filled_size + 1, self.size)
+
 
     def sample_episode(self):
         e_index, e_weight = self.sum_tree.sample()

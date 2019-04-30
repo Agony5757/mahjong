@@ -72,9 +72,9 @@ class NMnaive():
 
         self.session.run(tf.global_variables_initializer())
 
-    def save(self):
+    def save(self, agent_id):
         now = datetime.now()
-        datetime_str = now.strftime("%Y%m%d-%H%M%S")
+        datetime_str = "Agent{}-".format(agent_id) + now.strftime("%Y%m%d-%H%M%S")
 
         save_path = self.saver.save(self.session, self.log_dir + datetime_str + ".ckpt")
         print("Model saved in path: %s" % save_path)
@@ -104,7 +104,7 @@ class AgentNaive():
     """
     Mahjong AI agent naive version
     """
-    def __init__(self, nn: NMnaive, memory, gamma=0.9999, greedy=1e-3, batch_size=64, lambd=1.0):
+    def __init__(self, nn: NMnaive, memory, gamma=0.9999, greedy=1.0, batch_size=64, lambd=1.0):
         self.nn = nn
         self.gamma = gamma  # discount factor
         self.greedy = greedy
@@ -129,7 +129,7 @@ class AgentNaive():
         next_value_pred = np.reshape(self.nn.output(aval_next_states), [-1])
 
         # softmax policy
-        policy = np.exp(self.greedy * next_value_pred) / np.sum(np.exp(self.greedy * next_value_pred))
+        policy = np.exp(self.greedy * next_value_pred / 1000) / np.sum(np.exp(self.greedy * next_value_pred / 1000))
         action = np.random.choice(np.size(policy), p=policy)
 
         return action, policy
@@ -180,7 +180,7 @@ class AgentPER():
     """
     Mahjong AI agent with PER
     """
-    def __init__(self, nn: NMnaive, memory:SimpleMahjongBufferPER, gamma=0.9999, greedy=1e-3, lambd=1.0):
+    def __init__(self, nn: NMnaive, memory:SimpleMahjongBufferPER, gamma=0.9999, greedy=1.0, lambd=0.975):
         self.nn = nn
         self.gamma = gamma  # discount factor
         self.greedy = greedy
@@ -204,21 +204,24 @@ class AgentPER():
         next_value_pred = np.reshape(self.nn.output(aval_next_states), [-1])
 
         # softmax policy
-        policy = np.exp(self.greedy * next_value_pred) / np.sum(np.exp(self.greedy * next_value_pred))
+        policy = np.exp(self.greedy * next_value_pred / 1000) / np.sum(np.exp(self.greedy * next_value_pred / 1000))
         action = np.random.choice(np.size(policy), p=policy)
 
         return action, policy
 
     def remember_episode(self, states, rewards, dones, weight):
-        self.memory.append_episode(np.reshape(states, [-1, 34, 4, 1]),
-                                   np.reshape(rewards, [-1,]),
-                                   np.reshape(dones, [-1,]),
-                                   weight=weight)
+        if np.reshape(states, [-1, 34, 4, 1]).shape[0] > 1:
+            self.memory.append_episode(np.reshape(states, [-1, 34, 4, 1]),
+                                       np.reshape(rewards, [-1,]),
+                                       np.reshape(dones, [-1,]),
+                                       weight=weight)
 
-    def learn(self, symmetric_hand, care_others=False):
+    def learn(self, symmetric_hand, care_others=False, episode_start=1):
 
-        if self.memory.filled > 32:
-            state, r, d = self.memory.sample_episode()
+        if self.memory.filled_size >= episode_start:
+            state, r, d, length, e_index, e_weight = self.memory.sample_episode()
+
+            # print(e_index)
 
             this_state = state[:-1]
             next_state = state[1:]
