@@ -150,6 +150,7 @@ PYBIND11_MODULE(MahjongPy, m)
 
 		// 函数们
 		.def("game_init", &Table::game_init)
+		.def("game_init_with_metadata", &Table::game_init_with_metadata)
 		.def("get_phase", &Table::get_phase)
 		.def("make_selection", &Table::make_selection)
 		.def("get_info", &Table::get_info, py::return_value_policy::reference)
@@ -160,6 +161,13 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("get_result", &Table::get_result)
 		.def("get_self_actions", &Table::get_self_actions)
 		.def("get_response_actions", &Table::get_response_actions)
+
+		// MT
+		.def("get_phase_mt", &Table::get_phase_mt)
+		.def("make_selection_mt", &Table::make_selection_mt)
+		.def("get_self_actions_mt", &Table::get_self_actions_mt)
+		.def("get_response_actions_mt", &Table::get_response_actions_mt)
+		.def("should_i_make_selection_mt", &Table::should_i_make_selection_mt)
 
 		// 成员变量们
 		.def_readonly("dora_spec", &Table::dora_spec)

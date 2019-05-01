@@ -1,4 +1,5 @@
 ﻿#include "Table.h"
+#include "Table.h"
 #include "macro.h"
 #include "Rule.h"
 #include "GameResult.h"
@@ -1853,6 +1854,99 @@ WAITING_PHASE:
 		self_action = GetValidActions();
 
 	phase = (_Phase_)turn;
+}
+
+void Table::game_init_with_metadata(std::unordered_map<std::string, std::string> metadata)
+{
+	// yama : "1z1z1z..."
+	using namespace std;
+
+	if (metadata.find("yama") != metadata.end()) {
+		auto val = metadata["yama"];
+		if (val.size() != N_TILES * 2) throw runtime_error("Yama string incomplete.");
+		for (int i = 0; i < N_TILES * 2; i += 2) {
+			bool red_dora;
+			// 逆序插入
+			tiles[N_TILES - 1 - i / 2].tile = char2_to_basetile(val[i], val[i + 1], red_dora);
+			tiles[N_TILES - 1 - i / 2].red_dora = red_dora;
+		}
+	}
+	else {
+		init_tiles();
+		init_red_dora_3();
+		shuffle_tiles();
+	}
+
+	if (metadata.find("oya") != metadata.end()) {
+		auto val = metadata["oya"];
+		if (val == "0") {
+			庄家 = 0;
+		}
+		if (val == "1") {
+			庄家 = 1;
+		}
+		if (val == "2") {
+			庄家 = 2;
+		}
+		if (val == "3") {
+			庄家 = 3;
+		}
+		else throw runtime_error("Cannot Read Option: oya");
+	}
+	else {
+		庄家 = 0;
+	}
+
+	if (metadata.find("wind") != metadata.end()) {
+		auto val = metadata["wind"];
+		if (val == "east") {
+			场风 = Wind::East;
+		}
+		if (val == "west") {
+			场风 = Wind::West;
+		}
+		if (val == "south") {
+			场风 = Wind::South;
+		}
+		if (val == "north") {
+			场风 = Wind::North;
+		}
+		else throw runtime_error("Cannot Read Option: wind");
+	}
+	else {
+		场风 = Wind::East;
+	}
+
+	init_yama();
+
+	// 每人发13张牌
+	if (metadata.find("deal") != metadata.end()) {
+		auto val = metadata["deal"];
+		if (val == "from_oya") {
+			for (int i = 庄家; i < 庄家 + 4; ++i) {
+				_deal(i % 4, 13);
+			}
+		}
+		if (val == "from_0") {
+			_deal(0, 13);
+			_deal(1, 13);
+			_deal(2, 13);
+			_deal(3, 13);
+		}
+		else throw runtime_error("Cannot Read Option: deal");
+	}
+	else {
+		_deal(0, 13);
+		_deal(1, 13);
+		_deal(2, 13);
+		_deal(3, 13);
+	}
+	ALLSORT;
+
+	// 初始化每人自风
+	init_wind();
+	turn = 庄家;
+	_from_beginning();
 }
 
 void Table::make_selection(int selection)

@@ -350,6 +350,9 @@ public:
 		turn = 庄家;
 		_from_beginning();
 	}
+
+	void game_init_with_metadata(
+		std::unordered_map<std::string, std::string> metadata);
 	
 	// Get the phase of the game
 	inline int get_phase() { return (int)phase; }
