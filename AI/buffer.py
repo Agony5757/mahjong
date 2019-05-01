@@ -115,8 +115,8 @@ class SimpleMahjongBufferPER():
         length = len(r)
         self.s[self.tail, :length+1] = s
         self.r[self.tail, :length] = r
+        self.d[self.tail, :length] = d
         self.length[self.tail] = length
-        self.d[self.tail, length-1] = 1
 
         self.sum_tree.add(self.tail, weight + self.priority_eps)
 

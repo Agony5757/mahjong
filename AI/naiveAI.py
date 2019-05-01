@@ -2,81 +2,82 @@ import tensorflow as tf
 from buffer import SimpleMahjongBufferPER
 import numpy as np
 from datetime import datetime
-
+import scipy.special as scisp
 
 
 class NMnaive():
     """
     Mahjong Network naive version
     """
-    def __init__(self, session, lr=3e-4, log_dir="../log/"):
+    def __init__(self, graph, agent_no, lr=3e-4, log_dir="../log/"):
         """Model function for CNN."""
 
-        self.session = session
-        self.log_dir = log_dir
+        self.session = tf.Session(graph=graph)
+        self.graph = graph
+        self.log_dir = log_dir + ('' if log_dir[-1]=='/' else '/')
 
         num_tile_type = 7 + 3 * 9
         num_each_tile = 4
-        self.features = tf.placeholder(dtype=tf.float32, shape=[None, num_tile_type, num_each_tile, 1], name='Features')
 
-        # Input Layer
-        input_layer = self.features
+        with self.graph.as_default():
 
-        # Convolutional Layer #1
-        conv1 = tf.layers.conv2d(
-            inputs=input_layer,
-            filters=64,
-            kernel_size=[3, 1],
-            strides=[1, 1],
-            padding="same",
-            activation=tf.nn.relu)
+            self.features = tf.placeholder(dtype=tf.float32, shape=[None, num_tile_type, num_each_tile, 1], name='Features')
 
-        # Pooling Layer #1
-        pool1 = tf.layers.average_pooling2d(inputs=conv1, pool_size=[1, 2], strides=[1, 2])
+            # Input Layer
+            input_layer = self.features
 
-        # Convolutional Layer #2 and Pooling Layer #2
-        conv2 = tf.layers.conv2d(
-            inputs=pool1,
-            filters=64,
-            kernel_size=[3, 1],
-            strides=[1, 1],
-            padding="same",
-            activation=tf.nn.relu)
-        pool2 = tf.layers.average_pooling2d(inputs=conv2, pool_size=[1, 2], strides=[1, 2])
+            # Convolutional Layer #1
+            conv1 = tf.layers.conv2d(
+                inputs=input_layer,
+                filters=64,
+                kernel_size=[3, 1],
+                strides=[1, 1],
+                padding="same",
+                activation=tf.nn.relu)
 
-        # Dense Layers
-        conv2_flat = tf.layers.flatten(pool2)
-        fc1 = tf.layers.dense(inputs=conv2_flat, units=128, activation=tf.nn.relu)
-        fc2 = tf.layers.dense(inputs=fc1, units=128, activation=tf.nn.relu)
-        # dropout = tf.layers.dropout(
-        #     inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
+            # Pooling Layer #1
+            pool1 = tf.layers.average_pooling2d(inputs=conv1, pool_size=[1, 2], strides=[1, 2])
 
-        self.value_output = tf.layers.dense(inputs=fc2, units=1, activation=None)
+            # Convolutional Layer #2 and Pooling Layer #2
+            conv2 = tf.layers.conv2d(
+                inputs=pool1,
+                filters=64,
+                kernel_size=[3, 1],
+                strides=[1, 1],
+                padding="same",
+                activation=tf.nn.relu)
+            pool2 = tf.layers.average_pooling2d(inputs=conv2, pool_size=[1, 2], strides=[1, 2])
 
-        self.value_target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='value_targets')
+            # Dense Layers
+            conv2_flat = tf.layers.flatten(pool2)
+            fc1 = tf.layers.dense(inputs=conv2_flat, units=128, activation=tf.nn.relu)
+            fc2 = tf.layers.dense(inputs=fc1, units=128, activation=tf.nn.relu)
+            # dropout = tf.layers.dropout(
+            #     inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
 
-        self.loss = tf.losses.mean_squared_error(self.value_target, self.value_output)
-        self.optimizer = tf.train.AdamOptimizer(lr)
-        self.train_step = self.optimizer.minimize(self.loss)
+            self.value_output = tf.layers.dense(inputs=fc2, units=1, activation=None)
 
-        self.saver =tf.train.Saver()
+            self.value_target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='value_targets')
 
-        tf.summary.scalar('loss', self.loss)
-        tf.summary.histogram('value_pred', self.value_output)
+            self.loss = tf.losses.mean_squared_error(self.value_target, self.value_output)
+            self.optimizer = tf.train.AdamOptimizer(lr)
+            self.train_step = self.optimizer.minimize(self.loss)
 
-        now = datetime.now()
-        datetime_str = now.strftime("%Y%m%d-%H%M%S")
+            self.saver = tf.train.Saver()
 
-        self.merged = tf.summary.merge_all()
-        self.train_writer = tf.summary.FileWriter(log_dir + 'naiveAI' + datetime_str, self.session.graph)
+            tf.summary.scalar('loss', self.loss)
+            tf.summary.histogram('value_pred', self.value_output)
 
-        self.session.run(tf.global_variables_initializer())
+            now = datetime.now()
+            datetime_str = now.strftime("%Y%m%d-%H%M%S")
 
-    def save(self, agent_id):
-        now = datetime.now()
-        datetime_str = "Agent{}-".format(agent_id) + now.strftime("%Y%m%d-%H%M%S")
+            self.merged = tf.summary.merge_all()
+            self.train_writer = tf.summary.FileWriter(log_dir + 'naiveAIlog-Agent{}-'.format(agent_no) + datetime_str, self.session.graph)
 
-        save_path = self.saver.save(self.session, self.log_dir + datetime_str + ".ckpt")
+            self.session.run(tf.global_variables_initializer())
+
+    def save(self, model_dir):
+        save_path = self.saver.save(self.session, self.log_dir + model_dir + ('' if model_dir[-1]=='/' else '/') + "naiveAI.ckpt")
         print("Model saved in path: %s" % save_path)
 
     def restore(self, model_path):
@@ -84,18 +85,18 @@ class NMnaive():
         print("Model restored from" + model_path)
 
     def output(self, input):
-
-        value_pred = self.session.run(self.value_output, feed_dict={self.features: input})
+        with self.graph.as_default():
+            value_pred = self.session.run(self.value_output, feed_dict={self.features: input})
 
         return value_pred
 
     def train(self, input, target, logging, global_step):
+        with self.graph.as_default():
+            loss, _ , summary = self.session.run([self.loss, self.train_step, self.merged],
+                                                 feed_dict={self.features: input, self.value_target: target})
 
-        loss, _ , summary = self.session.run([self.loss, self.train_step, self.merged],
-                                             feed_dict={self.features: input, self.value_target: target})
-
-        if logging:
-            self.train_writer.add_summary(summary, global_step=global_step)
+            if logging:
+                self.train_writer.add_summary(summary, global_step=global_step)
 
         return loss
 
@@ -129,7 +130,7 @@ class AgentNaive():
         next_value_pred = np.reshape(self.nn.output(aval_next_states), [-1])
 
         # softmax policy
-        policy = np.exp(self.greedy * next_value_pred / 1000) / np.sum(np.exp(self.greedy * next_value_pred / 1000))
+        policy = scisp.softmax(self.greedy * next_value_pred / 1000)
         action = np.random.choice(np.size(policy), p=policy)
 
         return action, policy
@@ -204,7 +205,7 @@ class AgentPER():
         next_value_pred = np.reshape(self.nn.output(aval_next_states), [-1])
 
         # softmax policy
-        policy = np.exp(self.greedy * next_value_pred / 1000) / np.sum(np.exp(self.greedy * next_value_pred / 1000))
+        policy = scisp.softmax(self.greedy * next_value_pred / 1000)
         action = np.random.choice(np.size(policy), p=policy)
 
         return action, policy
@@ -254,8 +255,8 @@ class AgentPER():
 
             # also train symmetric hand
 
-            all_state = np.concatenate([symmetric_hand(this_state) for _ in range(5)], axis=0)
-            all_target_value = np.concatenate([target_value for _ in range(5)], axis=0)
+            all_state = np.concatenate([symmetric_hand(this_state) for _ in range(5)], axis=0).astype(np.float32)
+            all_target_value = np.concatenate([target_value for _ in range(5)], axis=0).astype(np.float32)
 
             self.nn.train(all_state, all_target_value, logging=True, global_step=self.global_step)
 
