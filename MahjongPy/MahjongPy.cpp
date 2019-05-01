@@ -5,8 +5,6 @@
 #include "pybind11/operators.h"
 #include "Mahjong/Table.h"
 #include "ScoreCounter.h"
-#include <codecvt>
-#include <windows.h>
 
 using namespace std;
 using namespace pybind11::literals;
