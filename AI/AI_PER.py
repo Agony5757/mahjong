@@ -1,7 +1,6 @@
 
 # coding: utf-8
 
-
 from naiveAI import AgentPER, NMnaive
 import tensorflow as tf
 import numpy as np
@@ -15,16 +14,12 @@ from datetime import datetime
 now = datetime.now()
 datetime_str = now.strftime("%Y%m%d-%H%M%S")
 
-sess = tf.InteractiveSession()
+graphs = [tf.Graph(), tf.Graph(), tf.Graph(), tf.Graph() ]
 
-nn = NMnaive(sess)
+
 env = EnvMahjong()
 
-memory = SimpleMahjongBufferPER(size=1024)
-
-agents = [AgentPER(nn, memory, greedy=10.0 ** np.random.uniform(-1, 1)) for _ in range(4)]
-
-
+agents = [AgentPER(nn=NMnaive(graphs[i], agent_no=i), memory=SimpleMahjongBufferPER(size=1024), greedy=10.0 ** np.random.uniform(-1, 1)) for i in range(4)]
 
 #### Note:
 
@@ -40,10 +35,11 @@ print("Start!")
 
 for n in range(n_games):
 
-    print("\r Game {}".format(n), end='')
-    if n % 10000 == 0:  ## save network
+    if n % 10000 == 0:
         for i in range(4):
-            agents[i].nn.save(agent_id=i)
+            agents[i].nn.save(model_dir="Agent{}-".format(i) + datetime_str + "-Game{}".format(
+                n))  # save network parameters every 10000 episodes
+    print("\r Game {}".format(n), end='')
 
     episode_dones = [[], [], [], []]
     episode_states = [[], [], [], []]
@@ -165,19 +161,22 @@ for n in range(n_games):
                     ##################################################
 
             if not np.max(final_score_change) == 0:  ## score change
-                agents[i].remember_episode(episode_states[i], episode_rewards[i], episode_dones[i],
-                                           weight=np.max(final_score_change))
+                for i in range(4):
+                    agents[i].remember_episode(episode_states[i], episode_rewards[i], episode_dones[i],
+                                               weight=np.max(final_score_change))
                 print(' ')
                 print(env.t.get_result().result_type)
             else:
                 if np.random.rand() < 0.1:  ## no score change
-                    agents[i].remember_episode(episode_states[i], episode_rewards[i], episode_dones[i], weight=0)
+                    for i in range(4):
+                        agents[i].remember_episode(episode_states[i], episode_rewards[i], episode_dones[i], weight=0)
                     print(' ')
                     print(env.t.get_result().result_type)
 
-            for n_train in range(10):
+            for n_train in range(5):
                 for i in range(4):
-                    agents[i].learn(env.symmetric_hand, episode_start=128, care_others=False)
+                    agents[i].learn(env.symmetric_hand, episode_start=2, care_others=False)
 
 data = {"rons": env.rons}
 sio.savemat("./PERrons" + datetime_str + ".mat", data)
+
