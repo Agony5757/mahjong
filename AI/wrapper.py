@@ -52,7 +52,11 @@ class EnvMahjong(gym.Env):
         self.t.make_selection(action)
 
         new_state = self.get_state_(playerNo)
-        reward = self.t.players[playerNo].score - score_before
+
+        if self.Phases[self.t.get_phase()] == "GAME_OVER":
+            reward = self.get_final_score_change()[playerNo]
+        else:
+            reward = self.t.players[playerNo].score - score_before
 
         if self.Phases[self.t.get_phase()] == "GAME_OVER":
             done = 1
@@ -82,7 +86,11 @@ class EnvMahjong(gym.Env):
         self.t.make_selection(action)
 
         new_state = self.get_state_(playerNo)
-        reward = self.t.players[playerNo].score - score_before
+
+        if self.Phases[self.t.get_phase()] == "GAME_OVER":
+            reward = self.get_final_score_change()[playerNo]
+        else:
+            reward = self.t.players[playerNo].score - score_before
 
         if self.Phases[self.t.get_phase()] == "GAME_OVER":
             done = 1
@@ -126,7 +134,7 @@ class EnvMahjong(gym.Env):
         """
         perm_msp = np.random.permutation(3)
         perm_eswn = np.random.permutation(4)
-        perm_chh = np.random.permutation(4)
+        perm_chh = np.random.permutation(3)
 
         hand_matrix_tensor_new = np.zeros_like(hand_matrix_tensor)
 
@@ -164,6 +172,7 @@ class EnvMahjong(gym.Env):
         hand_matrix_tensor_new[:, 32, :] = tmp[perm_chh[1]]
         hand_matrix_tensor_new[:, 33, :] = tmp[perm_chh[2]]
 
+        return hand_matrix_tensor_new
 
     def get_next_state(self, action: int, playerNo: int):
         # table = t

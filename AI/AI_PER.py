@@ -22,7 +22,7 @@ env = EnvMahjong()
 
 memory = SimpleMahjongBufferPER(size=1024)
 
-agents = [AgentPER(nn, memory, greedy=10.0 ** np.random.uniform(-4, -1)) for _ in range(4)]
+agents = [AgentPER(nn, memory, greedy=10.0 ** np.random.uniform(-1, 1)) for _ in range(4)]
 
 
 
@@ -32,6 +32,8 @@ agents = [AgentPER(nn, memory, greedy=10.0 ** np.random.uniform(-4, -1)) for _ i
 
 # Also, 能和则和，能立直则立直
 
+
+
 n_games = 1000000
 
 print("Start!")
@@ -39,6 +41,9 @@ print("Start!")
 for n in range(n_games):
 
     print("\r Game {}".format(n), end='')
+    if n % 10000 == 0:  ## save network
+        for i in range(4):
+            agents[i].nn.save(agent_id=i)
 
     episode_dones = [[], [], [], []]
     episode_states = [[], [], [], []]
@@ -90,7 +95,7 @@ for n in range(n_games):
 
             episode_dones[who].append(done)
             episode_states[who].append(this_states[who])
-            episode_rewards[who].append(min(0., r))
+            episode_rewards[who].append(max(0., r))
 
             #             agents[who].learn()
 
@@ -135,7 +140,7 @@ for n in range(n_games):
                 next_states[i] = env.get_state_(i)
                 episode_dones[i].append(done)
                 episode_states[i].append(this_states[i])
-                episode_rewards[i].append(min(0., rs[i]))
+                episode_rewards[i].append(max(0., rs[i]))
             # agents[i].learn()
 
             ## next step
@@ -151,28 +156,28 @@ for n in range(n_games):
             final_score_change = env.get_final_score_change()
             for i in range(4):
                 episode_states[i].append(env.get_state_(i))
-                episode_dones[i][-1] = 1
-                #### Disable the following line if not care others
-            #                 episode_rewards[i][-1] = final_score_change[i]
-            ##################################################
 
-            if not np.max(final_score_change) == 0:
+                if len(episode_dones[i]) >= 1:  # if not 1st turn end
+                    episode_dones[i][-1] = 1
+
+                    #### Disable the following line if not care others
+                    #                 episode_rewards[i][-1] = final_score_change[i]
+                    ##################################################
+
+            if not np.max(final_score_change) == 0:  ## score change
                 agents[i].remember_episode(episode_states[i], episode_rewards[i], episode_dones[i],
                                            weight=np.max(final_score_change))
                 print(' ')
                 print(env.t.get_result().result_type)
             else:
-                if np.random.rand() < 0.002:
+                if np.random.rand() < 0.1:  ## no score change
                     agents[i].remember_episode(episode_states[i], episode_rewards[i], episode_dones[i], weight=0)
                     print(' ')
                     print(env.t.get_result().result_type)
 
-            for n_train in range(15):
+            for n_train in range(10):
                 for i in range(4):
-                    agents[i].learn(env.symmetric_hand, care_others=False)
+                    agents[i].learn(env.symmetric_hand, episode_start=128, care_others=False)
 
 data = {"rons": env.rons}
 sio.savemat("./PERrons" + datetime_str + ".mat", data)
-
-
-
