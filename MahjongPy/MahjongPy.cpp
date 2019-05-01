@@ -281,8 +281,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		.value("Koukushimusou_13", Yaku::国士无双十三面)
 		.value("Pure_Churenpoutou", Yaku::纯正九莲宝灯)
 		.value("Daisushi", Yaku::大四喜)
-		;
-		
+		;		
 
 	py::class_<CounterResult>(m, "CounterResult")
 		.def_readonly("yakus", &CounterResult::yakus)
