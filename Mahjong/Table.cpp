@@ -583,8 +583,8 @@ void Table::init_yama()
 	}
 
 	dora_spec = 1;
-	宝牌指示牌 = { 牌山[5],牌山[7],牌山[9],牌山[11],牌山[13] };
-	里宝牌指示牌 = { 牌山[6],牌山[8],牌山[10],牌山[12],牌山[14] };
+	里宝牌指示牌 = { 牌山[5],牌山[7],牌山[9],牌山[11],牌山[13] };
+	宝牌指示牌 = { 牌山[4],牌山[6],牌山[8],牌山[10],牌山[12] };
 
 }
 
@@ -1393,6 +1393,344 @@ std::vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
 	return actions;
 }
 
+void Table::_action_phase_mt(int selection)
+{
+	// Brief: 进行选择，根据选择生成接下来的玩家的Responses或者终局
+	lock.lock();
+	selected_action = self_action[selection];
+	switch (selected_action.action) {
+	case Action::九种九牌:
+		result = 九种九牌流局结算(this);
+		phase_mt = GAME_OVER_MT;
+		return;
+	case Action::自摸:
+		result = 自摸结算(this);
+		phase_mt = GAME_OVER_MT;
+		return;
+	case Action::出牌:
+	case Action::立直:
+	{
+		// 决定不胡牌，则不具有一发状态
+		players[turn].一发 = false;
+
+		tile = selected_action.correspond_tiles[0];
+		// 等待回复
+
+		// 大部分情况都是手切, 除了上一步动作为 出牌 加杠 暗杠
+		// 并且判定抉择弃牌是不是最后一张牌
+
+		FROM_手切摸切 = FROM_手切;
+		if (last_action == Action::出牌 || last_action == Action::加杠 || last_action == Action::暗杠) {
+			// tile是不是最后一张
+			if (tile == players[turn].hand.back())
+				FROM_手切摸切 = FROM_摸切;
+		}
+		phase_mt = RESPONSE_MT;
+		for (int i = 0; i < 4; ++i) {
+			if (i == turn) {
+				continue;
+			}
+			else {
+				// 对于所有其他人
+				bool is下家 = false;
+				if (i == (turn + 1) % 4)
+					is下家 = true;
+				response_action_mt.insert({ i, GetValidResponse(0, tile, is下家) });
+			}
+		}
+		return;
+	}
+	case Action::暗杠:
+	{
+		tile = selected_action.correspond_tiles[0];
+
+		// 暗杠的情况，第一巡也消除了
+		players[turn].first_round = false;
+		// 等待回复
+		phase_mt = RESPONSE_MT;
+		for (int i = 0; i < 4; ++i) {
+			if (i == turn) {
+				continue;
+			}
+			else {
+				response_action_mt.insert({ i, Get抢暗杠(0, tile) });
+			}
+		}
+
+		return;
+	}
+	case Action::加杠:
+	{
+		tile = selected_action.correspond_tiles[0];
+
+		// 暗杠的情况，第一巡也消除了
+		players[turn].first_round = false;
+		// 等待回复
+		phase_mt = RESPONSE_MT;
+		for (int i = 0; i < 4; ++i) {
+			if (i == turn) {
+				continue;
+			}
+			else {
+				response_action_mt.insert({ i, Get抢杠(0, tile) });
+			}
+		}
+		return;
+	}
+	default:
+		throw runtime_error("Unknown SelfAction");
+	}
+
+	lock.unlock();
+}
+
+void Table::_final_response_mt()
+{
+	lock.lock();
+	actions.push_back(response_action[selection]);
+	// 从actions中获得优先级
+	if (response_action[selection].action > final_action)
+		final_action = response_action[selection].action;
+
+	// 选择优先级，并且进行response结算
+	std::vector<int> response_player;
+	for (int i = 0; i < 4; ++i) {
+		if (actions[i].action == final_action) {
+			response_player.push_back(i);
+		}
+	}
+	int response = response_player[0];
+	// 根据最终的final_action来进行判断
+	// response_player里面保存了所有最终action和final_action相同的玩家
+	// 只有在pass和荣和的时候才会出现这种情况
+	// 其他情况用response来代替
+
+	switch (final_action) {
+	case Action::pass:
+	{
+		if (selected_action.action == Action::暗杠) {
+			players[turn].play_暗杠(selected_action.correspond_tiles[0]->tile);
+			last_action = Action::暗杠;
+			// 立即翻宝牌指示牌
+			dora_spec++;
+			// 这是暗杠，消除所有人第一巡和一发
+			for (int i = 0; i < 4; ++i) {
+				players[i].first_round = false;
+				players[i].一发 = false;
+			}
+		}
+		else if (selected_action.action == Action::加杠) {
+
+			players[turn].play_加杠(selected_action.correspond_tiles[0]);
+			last_action = Action::加杠;
+
+			// 这是鸣牌，消除所有人第一巡和一发
+			for (int i = 0; i < 4; ++i) {
+				players[i].first_round = false;
+				players[i].一发 = false;
+			}
+		}
+		else {
+			// 立直成功
+			if (selected_action.action == Action::立直) {
+				if (players[turn].first_round) {
+					players[turn].double_riichi = true;
+				}
+				players[turn].riichi = true;
+				n立直棒++;
+				players[turn].score -= 1000;
+				players[turn].一发 = true;
+			}
+
+			// 杠，打出牌之后且其他人pass
+			if (after_杠()) { dora_spec++; }
+
+			// 什么都不做。将action对应的牌从手牌移动到牌河里面	
+
+			players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
+
+			// 消除第一巡
+			players[turn].first_round = false;
+
+			last_action = Action::出牌;
+			next_turn();
+		}
+		break;
+	}
+	case Action::吃:
+	case Action::碰:
+	case Action::杠:
+	{
+		if (selected_action.action == Action::立直) {
+			// 立直成功
+			if (players[turn].first_round) {
+				players[turn].double_riichi = true;
+			}
+			players[turn].riichi = true;
+			n立直棒++;
+			players[turn].score -= 1000;
+			// 立直即鸣牌，一定没有一发
+		}
+
+		players[turn].remove_from_hand(tile);
+		players[turn].move_from_hand_to_river_log_only(tile, river_counter, FROM_手切摸切);
+
+		players[response].门清 = false;
+		players[response].move_from_hand_to_fulu(
+			actions[response].correspond_tiles, tile);
+		turn = response;
+
+		// 这是鸣牌，消除所有人第一巡和一发
+		for (int i = 0; i < 4; ++i) {
+			players[i].first_round = false;
+			players[i].一发 = false;
+		}
+
+		// 明杠，打出牌之后且其他人吃碰
+		if (after_杠()) { dora_spec++; }
+		last_action = final_action;
+		break;
+	}
+	case Action::荣和:
+	case Action::抢杠:
+	case Action::抢暗杠:
+		result = 荣和结算(this, selected_action.correspond_tiles[0], response_player);
+		phase = GAME_OVER;
+		return;
+	default:
+		throw runtime_error("Invalid Selection.");
+	}
+	
+	// 回到循环的最开始
+	_from_beginning_mt();
+
+	lock.unlock();
+	return;
+}
+
+void Table::_from_beginning_mt()
+{// 四风连打判定
+	if (
+		players[0].river.size() == 1 &&
+		players[1].river.size() == 1 &&
+		players[2].river.size() == 1 &&
+		players[3].river.size() == 1 &&
+		players[0].副露s.size() == 0 &&
+		players[1].副露s.size() == 0 &&
+		players[2].副露s.size() == 0 &&
+		players[3].副露s.size() == 0 &&
+		players[0].river[0].tile->tile == players[1].river[0].tile->tile &&
+		players[1].river[0].tile->tile == players[2].river[0].tile->tile &&
+		players[2].river[0].tile->tile == players[3].river[0].tile->tile)
+	{
+		result = 四风连打流局结算(this);
+		phase = GAME_OVER;
+		return;
+	}
+
+	if (
+		players[0].riichi &&
+		players[1].riichi &&
+		players[2].riichi &&
+		players[3].riichi) {
+		result = 四立直流局结算(this);
+		phase = GAME_OVER;
+		return;
+	}
+
+	// 判定四杠散了
+	if (get_remain_kan_tile() == 0) {
+		int n_杠 = 0;
+		for (int i = 0; i < 4; ++i) {
+			if (any_of(players[i].副露s.begin(), players[i].副露s.end(),
+				[](Fulu &f) {
+				return f.type == Fulu::暗杠 ||
+					f.type == Fulu::大明杠 ||
+					f.type == Fulu::加杠;
+			})) {
+				// 统计一共有多少个人杠过
+				n_杠++;
+			}
+		}
+		if (n_杠 >= 1) {
+			result = 四杠流局结算(this);
+			phase = GAME_OVER;
+			return;
+		}
+	}
+
+	if (get_remain_tile() == 0) {
+		result = 荒牌流局结算(this);
+		phase = GAME_OVER;
+		return;
+	}
+
+	// 全部自动整理手牌
+	for (int i = 0; i < 4; ++i) {
+		if (i != turn)
+			players[i].sort_hand();
+	}
+
+	// 如果是after_minkan, 从岭上抓
+	if (after_daiminkan()) {
+		发岭上牌(turn);
+		goto WAITING_PHASE;
+	}
+
+	// 如果是after_ankan, 从岭上抓
+	if (after_ankan()) {
+		发岭上牌(turn);
+		goto WAITING_PHASE;
+	}
+
+	// 如果是after_chipon, 不抓
+	if (after_chipon()) {
+		goto WAITING_PHASE;
+	}
+
+	// 如果是after_chipon, 从岭上抓
+	if (after_加杠()) {
+		发岭上牌(turn);
+		goto WAITING_PHASE;
+	}
+
+	// 剩下的情况正常抓
+	发牌(turn);
+
+WAITING_PHASE:
+
+	// 此时统计每个人的牌河振听状态
+	// turn可以解除振听，即使player[turn]确实振听了，在下一次WAITING_PHASE之前，也会追加振听效果
+	// 其他人按照规则追加振听效果
+	for (int i = 0; i < 4; ++i) {
+		if (i == turn) {
+			players[turn].振听 = false;
+			continue;
+		}
+
+		auto &hand = players[i].hand;
+		auto tiles = get听牌(convert_tiles_to_base_tiles(hand));
+		auto river = players[i].river.to_basetile();
+
+		// 检查river和tiles是否有重合
+		for (auto& tile : tiles) {
+			if (find(river.begin(), river.end(), tile) != river.end()) {
+				// 只要找到一个
+				players[i].振听 = true;
+				continue;
+			}
+		}
+	}
+
+	vector<SelfAction> actions;
+	if (players[turn].is_riichi())
+		self_action = GetRiichiActions();
+	else
+		self_action = GetValidActions();
+
+	phase_mt = (_Phase_MultiThread_)turn;
+}
+
 void Table::_from_beginning()
 {
 	// 四风连打判定
@@ -1831,7 +2169,7 @@ void Table::make_selection(int selection)
 		// 立即翻宝牌指示牌
 		dora_spec++;
 
-		// 这是鸣牌，消除所有人第一巡和一发
+		// 这是暗杠，消除所有人第一巡和一发
 		for (int i = 0; i < 4; ++i) {
 			players[i].first_round = false;
 			players[i].一发 = false;
@@ -1840,5 +2178,89 @@ void Table::make_selection(int selection)
 		return;
 	}
 
+	}
+}
+
+int Table::get_phase_mt() const
+{
+	return phase_mt;
+}
+
+bool Table::make_selection_mt(int player, int selection)
+{
+	// 如果不轮到这个玩家，做出的选择无效
+	if (should_i_make_selection_mt(player)) {
+		// 这里也去除了GAME_OVER_MT的情况
+		return false;
+	}
+	else {
+		if (phase_mt == RESPONSE_MT) {
+			// 回复阶段
+			lock.lock();
+			decided_response_action_mt.insert({ player,
+				response_action_mt[player][selection] });
+			lock.unlock(); 
+
+			if (decided_response_action_mt.size() == 3) {
+				// 已经有3个玩家做出回复
+				_final_response_mt();
+			}
+		}
+		else {
+			_action_phase_mt(selection);
+		}
+		
+		// 选择有效
+		return true;
+	}
+}
+
+const vector<SelfAction> Table::get_self_actions_mt(int player) {
+	// if not your turn, or you have already made selection, return nothing
+	if (!should_i_make_selection_mt(player)) {
+		return vector<SelfAction>();
+	}
+	else {
+		return self_action;
+	}
+}
+
+const std::vector<ResponseAction> Table::get_response_actions_mt(int player)
+{
+	if (!should_i_make_selection_mt(player)) {
+		return vector<ResponseAction>();
+	}
+	else {
+		return response_action_mt[player];
+	}
+}
+
+bool Table::should_i_make_selection_mt(int player) {
+
+	// 等待其他玩家释放锁，因为有可能进入了selection状态
+	lock.lock();
+	lock.unlock();
+
+	switch (phase_mt) {
+	case P1_ACTION_MT:
+	case P2_ACTION_MT:
+	case P3_ACTION_MT:
+	case P4_ACTION_MT:
+		if (phase_mt == player) return true;
+		else return false;
+
+	case RESPONSE_MT:
+		if (turn == player) return false;
+		else {
+			if (decided_response_action_mt.find(player)
+				== decided_response_action_mt.end()) {
+				return true;
+			}
+			return false;
+		}
+	case GAME_OVER_MT:
+		return false;
+	default:
+		throw runtime_error("Error in _phase_mt");
 	}
 }
