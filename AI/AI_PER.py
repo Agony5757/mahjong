@@ -175,7 +175,7 @@ for n in range(n_games):
 
             for n_train in range(5):
                 for i in range(4):
-                    agents[i].learn(env.symmetric_hand, episode_start=2, care_others=False)
+                    agents[i].learn(env.symmetric_hand, episode_start=128, care_others=False)
 
 data = {"rons": env.rons}
 sio.savemat("./PERrons" + datetime_str + ".mat", data)
