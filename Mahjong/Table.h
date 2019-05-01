@@ -7,6 +7,7 @@
 #include "GameResult.h"
 #include "macro.h"
 #include <array>
+#include <mutex>
 
 constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
@@ -42,7 +43,7 @@ public:
 		}
 		return basetiles;
 	}
-	inline std::string to_string() {
+	inline std::string to_string() const {
 		std::stringstream ss;
 
 		for (auto tile : river) {
@@ -91,10 +92,10 @@ public:
 	std::vector<Tile*> hand;
 	River river;
 	std::vector<Fulu> 副露s;
-	std::string hand_to_string();
-	std::string river_to_string();
+	std::string hand_to_string() const;
+	std::string river_to_string() const;
 
-	std::string to_string();
+	std::string to_string() const;
 
 	bool 一发;
 	bool first_round = true;
@@ -171,7 +172,7 @@ public:
 	int n本场 = 0;
 	int n立直棒 = 0;
 
-	inline std::vector<BaseTile> get_dora() {
+	inline std::vector<BaseTile> get_dora() const {
 		std::vector<BaseTile> doratiles;
 		for (int i = 0; i < dora_spec; ++i) {
 			doratiles.push_back(get_dora_next(宝牌指示牌[i]->tile));
@@ -179,7 +180,7 @@ public:
 		return doratiles;
 	}
 
-	inline std::vector<BaseTile> get_ura_dora() {
+	inline std::vector<BaseTile> get_ura_dora() const {
 		std::vector<BaseTile> doratiles;
 		for (int i = 0; i < dora_spec; ++i) {
 			doratiles.push_back(get_dora_next(里宝牌指示牌[i]->tile));
@@ -187,12 +188,12 @@ public:
 		return doratiles;
 	}
 
-	inline int get_remain_kan_tile() {
+	inline int get_remain_kan_tile() const {
 		auto iter = find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]);
 		return int(iter - 牌山.begin() - 1);
 	}
 
-	inline int get_remain_tile() {
+	inline int get_remain_tile() const {
 		return int(牌山.size() - 14);
 	}
 
@@ -227,7 +228,7 @@ public:
 	};
 
 	std::string to_string(int option =
-		YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE);
+		YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE) const;
 
 	inline bool after_chipon(){
 		return last_action == Action::吃 ||
@@ -289,6 +290,7 @@ public:
 
 	// The following part is for the manual instead of the automatic.
 	// Never mix using GameProcess and using the following functions. 
+public:
 	enum _Phase_ {
 		P1_ACTION, P2_ACTION, P3_ACTION, P4_ACTION,
 		P1_RESPONSE, P2_RESPONSE, P3_RESPONSE, P4_RESPONSE,
@@ -297,9 +299,25 @@ public:
 		GAME_OVER,
 	};
 
+	// These Phases specifies the multithreading cases.
+	enum _Phase_MultiThread_ {
+		P1_ACTION_MT, P2_ACTION_MT, P3_ACTION_MT, P4_ACTION_MT,
+		RESPONSE_MT,
+		GAME_OVER_MT,
+	};
+
 private:
 	std::vector<SelfAction> self_action;
 	std::vector<ResponseAction> response_action;
+
+	// specially for multi thread
+	std::unordered_map<int, std::vector<ResponseAction>> response_action_mt;
+	std::unordered_map<int, ResponseAction> decided_response_action_mt;
+	std::mutex lock;
+	_Phase_MultiThread_ phase_mt;
+	void _action_phase_mt(int selection);
+	void _final_response_mt();
+	void _from_beginning_mt();
 
 	Result result;
 	_Phase_ phase;
@@ -332,12 +350,22 @@ public:
 		turn = 庄家;
 		_from_beginning();
 	}
+
+	void game_init_with_metadata(
+		std::unordered_map<std::string, std::string> metadata);
 	
 	// Get the phase of the game
 	inline int get_phase() { return (int)phase; }
 
 	// Make a selection and game moves on.
 	void make_selection(int selection);
+
+	// Multithread selection control, return the status.
+	int get_phase_mt() const;
+	bool make_selection_mt(int player, int selection);
+	const std::vector<SelfAction> get_self_actions_mt(int player);
+	const std::vector<ResponseAction> get_response_actions_mt(int player);
+	bool should_i_make_selection_mt(int player);
 	
 	// Get Information. Return the table itself.
 	inline Table* get_info() { return this; }
@@ -345,13 +373,11 @@ public:
 	// When a player needs response, it can refer to the selection made by the "self-action" player
 	inline SelfAction get_full_selected_action() { return selected_action; }
 	inline Action get_selected_action() { return selected_action.action; }	
-	inline Tile* get_selelceted_action_tile() { return tile; };
+	inline Tile* get_selected_action_tile() { return tile; };
 
 	// Tells that who has to make the selection.
 	inline int who_make_selection() { return (get_phase() - Table::P1_ACTION) % 4; }
-
-	// get 
-
+	
 	inline Result get_result() { return result; }
 	
 	inline std::vector<SelfAction> get_self_actions() { return self_action; }

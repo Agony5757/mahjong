@@ -25,7 +25,7 @@ struct Result {
 	int n本场;
 	bool 连庄;
 
-	inline std::string to_string() {
+	inline std::string to_string() const {
 		using namespace std;
 		stringstream ss;
 		switch (result_type) {

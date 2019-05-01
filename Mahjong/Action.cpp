@@ -10,7 +10,7 @@ SelfAction::SelfAction(Action action, std::vector<Tile*> tiles)
 {
 }
 
-std::string SelfAction::to_string()
+std::string SelfAction::to_string() const
 {
 	switch (action) {	
 	case Action::暗杠:
@@ -34,7 +34,7 @@ ResponseAction::ResponseAction()
 {
 }
 
-std::string ResponseAction::to_string() {
+std::string ResponseAction::to_string() const {
 	switch (action) {
 	case Action::pass:
 		return "pass";

@@ -5,7 +5,8 @@
 #include "pybind11/operators.h"
 #include "Mahjong/Table.h"
 #include "ScoreCounter.h"
-#include <map>
+#include <codecvt>
+#include <windows.h>
 
 using namespace std;
 using namespace pybind11::literals;
@@ -62,17 +63,23 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("to_string", &Fulu::to_string)
 		;
 
+	m.def("FuluToString", [](const Fulu &fulu) {return py::bytes(fulu.to_string()); });
+
 	py::class_<Tile>(m, "Tile")
 		.def_readonly("tile", &Tile::tile)
 		.def_readonly("red_dora", &Tile::red_dora)
 		.def("to_string", &Tile::to_string)
 		;
 
+	m.def("TileToString", [](const Tile *tile) {return py::bytes(tile->to_string()); });
+
 	py::class_<River>(m, "River")
 		.def_readonly("river", &River::river)
 		.def("size", &River::size)
 		.def("to_string", &River::to_string)
 		;
+
+	m.def("RiverToString", [](const River& river) {return py::bytes(river.to_string()); });
 
 	py::enum_<Wind>(m, "Wind")
 		.value("East", Wind::East)
@@ -105,11 +112,15 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("to_string", &SelfAction::to_string)
 		;
 
+	m.def("SelfActionToString", [](const SelfAction &sa) {return py::bytes(sa.to_string()); });
+
 	py::class_<ResponseAction>(m, "ResponseAction")
 		.def_readonly("action", &ResponseAction::action)
 		.def_readonly("correspond_tiles", &ResponseAction::correspond_tiles)
 		.def("to_string", &ResponseAction::to_string)
 		;
+
+	m.def("ResponseActionToString", [](const ResponseAction &ra) {return py::bytes(ra.to_string()); });
 
 	py::class_<Player>(m, "Player")
 		// 成员变量们
@@ -132,21 +143,31 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("to_string", &Player::to_string)
 		;
 
+	m.def("PlayerToString", [](const Player& player) {return py::bytes(player.to_string()); });
+
 	py::class_<Table>(m, "Table")
 		.def(py::init<>())
 
 		// 函数们
 		.def("game_init", &Table::game_init)
+		.def("game_init_with_metadata", &Table::game_init_with_metadata)
 		.def("get_phase", &Table::get_phase)
 		.def("make_selection", &Table::make_selection)
 		.def("get_info", &Table::get_info, py::return_value_policy::reference)
 		.def("get_selected_action", &Table::get_selected_action)
 		.def("who_make_selection", &Table::who_make_selection)
-		.def("get_selelceted_action_tile", &Table::get_selelceted_action_tile, py::return_value_policy::reference)
+		.def("get_selected_action_tile", &Table::get_selected_action_tile, py::return_value_policy::reference)
 		.def("get_full_selected_action", &Table::get_full_selected_action)
 		.def("get_result", &Table::get_result)
 		.def("get_self_actions", &Table::get_self_actions)
 		.def("get_response_actions", &Table::get_response_actions)
+
+		// MT
+		.def("get_phase_mt", &Table::get_phase_mt)
+		.def("make_selection_mt", &Table::make_selection_mt)
+		.def("get_self_actions_mt", &Table::get_self_actions_mt)
+		.def("get_response_actions_mt", &Table::get_response_actions_mt)
+		.def("should_i_make_selection_mt", &Table::should_i_make_selection_mt)
 
 		// 成员变量们
 		.def_readonly("dora_spec", &Table::dora_spec)
@@ -170,6 +191,8 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("to_string", &Table::to_string)
 		;
 
+	m.def("TableToString", [](const Table& table, int mode) {return py::bytes(table.to_string(mode)); });
+
 	py::enum_<ResultType>(m, "ResultType")
 		.value("RonAgari", ResultType::荣和终局)
 		.value("TsumoAgari", ResultType::自摸终局)
@@ -184,6 +207,81 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def_readonly("score", &Result::score)
 		.def("to_string", &Result::to_string)
 		;	
+
+	m.def("ResultToString", [](const Result& result) {return py::bytes(result.to_string()); });
+
+	py::enum_<Yaku>(m, "Yaku")
+		.value("NoYaku", Yaku::None)
+
+		.value("Riichi", Yaku::立直)
+		.value("Tanyao", Yaku::断幺九)
+		.value("Menzentsumo", Yaku::门前清自摸和)
+		.value("SelfWind_East", Yaku::自风_东)
+		.value("SelfWind_South", Yaku::自风_南)
+		.value("SelfWind_West", Yaku::自风_西)
+		.value("SelfWind_North", Yaku::自风_北)
+		.value("GameWind_East", Yaku::场风_东)
+		.value("GameWind_South", Yaku::场风_南)
+		.value("GameWind_West", Yaku::场风_西)
+		.value("GameWind_North", Yaku::场风_北)
+		.value("Yakuhai_haku", Yaku::役牌_白)
+		.value("Yakuhai_hastu", Yaku::役牌_发)
+		.value("Yakuhai_chu", Yaku::役牌_中)
+		.value("Pinfu", Yaku::平和)
+		.value("Yiipeikou", Yaku::一杯口)
+		.value("Chankan", Yaku::抢杠)
+		.value("Rinshankaihou", Yaku::岭上开花)
+		.value("Haitiraoyue", Yaku::海底捞月)
+		.value("Houtiraoyui", Yaku::河底捞鱼)
+		.value("Ippatsu", Yaku::一发)
+		.value("Dora", Yaku::宝牌)
+		.value("UraDora", Yaku::里宝牌)
+		.value("AkaDora", Yaku::赤宝牌)
+		.value("Chantai_", Yaku::混全带幺九副露版)
+		.value("Ikkitsukan_", Yaku::一气通贯副露版)
+		.value("Sanshokudoujun_", Yaku::三色同顺副露版)
+
+		.value("DoubleRiichi", Yaku::两立直)
+		.value("Sanshokudoukou", Yaku::三色同刻)
+		.value("Sankantsu", Yaku::三杠子)
+		.value("Toitoi", Yaku::对对和)
+		.value("Sanankou", Yaku::三暗刻)
+		.value("Shosangen", Yaku::小三元)
+		.value("Honrotou", Yaku::混老头)
+		.value("Chitoitsu", Yaku::七对子)
+		.value("Chantai", Yaku::混全带幺九)
+		.value("Ikkitsuukan", Yaku::一气通贯)
+		.value("Sanshokudoujun", Yaku::三色同顺)
+		.value("Junchan_", Yaku::纯全带幺九副露版)
+		.value("Honitsu_", Yaku::混一色副露版)
+
+		.value("Ryanpeikou", Yaku::二杯口)
+		.value("Junchan", Yaku::纯全带幺九)
+		.value("Honitsu", Yaku::混一色)
+
+		.value("Chinitsu_", Yaku::清一色副露版)
+
+		.value("Chinitsu", Yaku::清一色)
+
+		.value("RyuukokuMangan", Yaku::流局满贯)
+
+		.value("Tenho", Yaku::天和)
+		.value("Chiiho", Yaku::地和)
+		.value("Daisangen", Yaku::大三元)
+		.value("Suuanko", Yaku::四暗刻)
+		.value("Tsuuiisou", Yaku::字一色)
+		.value("Ryuiisou", Yaku::绿一色)
+		.value("Chinroutou", Yaku::清老头)
+		.value("Koukushimusou", Yaku::国士无双)
+		.value("Shosushi", Yaku::小四喜)
+		.value("Suukantsu", Yaku::四杠子)
+		.value("Churenpoutou", Yaku::九莲宝灯)
+
+		.value("SuuankoTanki", Yaku::四暗刻单骑)
+		.value("Koukushimusou_13", Yaku::国士无双十三面)
+		.value("Pure_Churenpoutou", Yaku::纯正九莲宝灯)
+		.value("Daisushi", Yaku::大四喜)
+		;		
 
 	py::class_<CounterResult>(m, "CounterResult")
 		.def_readonly("yakus", &CounterResult::yakus)
@@ -216,5 +314,5 @@ PYBIND11_MODULE(MahjongPy, m)
 		.value("P4_chanankan", Table::_Phase_::P4_抢暗杠RESPONSE)
 		;
 
-	m.def("yakus_to_string", &yakus_to_string);
+	m.def("yakus_to_string", [](std::vector<Yaku> yakus) {return py::bytes(yakus_to_string(yakus)); });
 }

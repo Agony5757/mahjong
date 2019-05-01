@@ -176,19 +176,22 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 		AllYakusAndFu.push_back({ yakus, 0 });
 	}
 
-	// 接下来统计七对子
-	if (is七对和牌型(convert_tiles_to_base_tiles(tiles))) {
-		vector<Yaku> yakus;
-		merge_into(yakus, 场役);
-		merge_into(yakus, Dora役);
-		yakus.push_back(Yaku::七对子);
-
-		// 7对固定25符
-		AllYakusAndFu.push_back({ yakus, 25 });
-	}
-
 	// 接下来对牌进行拆解
 	auto complete_tiles_list = getCompletedTiles(convert_tiles_to_base_tiles(tiles));
+
+	// 接下来统计七对子
+	if (is七对和牌型(convert_tiles_to_base_tiles(tiles))) {
+		CompletedTiles ct;
+		for (int i = 0; i < 14; i+=2) {
+			TileGroup tg;
+			tg.type = TileGroup::Toitsu;
+			tg.tiles.push_back(tiles[i]->tile);
+			tg.tiles.push_back(tiles[i]->tile);
+			ct.body.push_back(tg);
+		}
+		complete_tiles_list.push_back(ct);
+	}
+
 	for (auto &complete_tiles : complete_tiles_list) {
 		auto yaku_fus = get_手役_from_complete_tiles(complete_tiles, player.副露s, correspond_tile, player.hand.back()->tile, 自风, 场风);
 		for (auto &yaku_fu : yaku_fus) {
@@ -628,11 +631,11 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		}
 	});
 
-	if (混全带幺九) {
+	if (混全带幺九 && !混老头) {
 		if (门清) yakus.push_back(Yaku::混全带幺九);
 		else yakus.push_back(Yaku::混全带幺九副露版);
 	}
-	else if (纯全带幺九) {
+	else if (纯全带幺九 && !清老头) {
 		if (门清) yakus.push_back(Yaku::纯全带幺九);
 		else yakus.push_back(Yaku::纯全带幺九副露版);
 	}
@@ -922,7 +925,10 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		fu = 20;
 	}
 
-	// TODO: 注意七对子统一25符，并且不跳符。
+	// 注意七对子统一25符，并且不跳符。
+	if (tile_group_string.size() == 7) {
+		fu = 25;
+	}
 
 	return { yakus, fu };
 }
@@ -950,7 +956,18 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 	std::vector<std::vector<std::string>> tile_group_strings;
 	
 	std::vector<std::string> raw_tile_group_string;
-	raw_tile_group_string.push_back(basetile_to_string_simple(ct.head.tiles[0]) + ":"); //例如1z2
+
+	if (ct.head.tiles.size() != 0)
+		raw_tile_group_string.push_back(basetile_to_string_simple(ct.head.tiles[0]) + ":"); //例如1z2
+	else if (ct.body.size() != 7)
+		throw runtime_error("Unknown CompletedTiles Setting. No Head and Not 7-toitsu");
+	else // 七对的情况（即没有雀头，BODY_SIZE正好为7）
+	{
+		for (int i = 0; i < 7; ++i) {
+			raw_tile_group_string.push_back(basetile_to_string(ct.body[i].tiles[0]) + ":");
+		}
+	}
+
 	for (auto fulu : fulus) {
 		switch (fulu.type) {
 		case Fulu::Chi:

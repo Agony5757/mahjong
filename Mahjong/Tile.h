@@ -43,6 +43,28 @@ inline std::string basetile_to_string_simple(BaseTile bt) {
 	return names[int(bt)];
 }
 
+inline BaseTile char2_to_basetile(char number, char color, bool& red_dora) {
+	int num = number - '0';
+	red_dora = false;
+	if (num == 0) {
+		red_dora = true;
+		num = 5;
+	}
+	if (color == 'm') {
+		return BaseTile(_1m + num - 1);
+	}	
+	if (color == 's') {
+		return BaseTile(_1s + num - 1);
+	}	
+	if (color == 'p') {
+		return BaseTile(_1p + num - 1);
+	}	
+	if (color == 'z') {
+		return BaseTile(east + num - 1);
+	}
+	throw std::runtime_error("Unknown Tile String");
+}
+
 inline BaseTile get_dora_next(BaseTile tile) {
 	if (tile == _9m) return _1m;
 	else if (tile == _9s) return _1s;
@@ -212,7 +234,7 @@ class Tile {
 public:
 	BaseTile tile;
 	bool red_dora;
-	inline std::string to_string() {
+	inline std::string to_string() const {
 		std::string ret;
 		if (0 <= tile && tile <= 8) {
 			ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
@@ -312,7 +334,7 @@ struct Fulu {
 	// take在type==Chi的时候才有效，其他时候不用
 
 	Type type;
-	inline std::string to_string() {
+	inline std::string to_string() const {
 		std::stringstream ss;
 		switch (type) {
 		case Chi: {
