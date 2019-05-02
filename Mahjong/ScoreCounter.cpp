@@ -769,9 +769,9 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	bool 三色同顺 = false;
 	for (int i = 1; i <= 7; ++i) {
 		vector<string> 三色同顺tiles;
-		三色同顺tiles.push_back((char(i + '0')) + "sS");
-		三色同顺tiles.push_back((char(i + '0')) + "mS");
-		三色同顺tiles.push_back((char(i + '0')) + "pS");
+		三色同顺tiles.push_back(string() + char(i + '0') + "sS");
+		三色同顺tiles.push_back(string() + char(i + '0') + "mS");
+		三色同顺tiles.push_back(string() + char(i + '0') + "pS");
 
 		// avoid using includes: it may only apply on an ordered sequence
 		
@@ -796,9 +796,9 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	bool 三色同刻 = false;
 	for (int i = 1; i <= 9; ++i) {
 		vector<string> 三色同刻tiles;
-		三色同刻tiles.push_back((char(i + '0')) + "sK");
-		三色同刻tiles.push_back((char(i + '0')) + "mK");
-		三色同刻tiles.push_back((char(i + '0')) + "pK");
+		三色同刻tiles.push_back(string() + char(i + '0') + "sK");
+		三色同刻tiles.push_back(string() + char(i + '0') + "mK");
+		三色同刻tiles.push_back(string() + char(i + '0') + "pK");
 
 		// avoid using includes: it may only apply on an ordered sequence
 
