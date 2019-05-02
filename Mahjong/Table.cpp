@@ -591,7 +591,7 @@ void Table::init_yama()
 
 string Table::export_yama() {
 	stringstream ss;
-	for (int i = 0; i < N_TILES; ++i) {
+	for (int i = N_TILES - 1; i >= 0; --i) {
 		ss << tiles[i].to_simple_string();
 	}
 	return ss.str();
