@@ -1,9 +1,13 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-
 import numpy as np
 import MahjongPy as mp
+import platform
+
+sysstr = platform.system()
+decoder = None
+if sysstr == "Windows":
+    decoder = 'GBK'
+elif sysstr == "Linux":
+    decoder = 'UTF-8'
 
 Phases = ("P1_ACTION", "P2_ACTION", "P3_ACTION", "P4_ACTION", "P1_RESPONSE", "P2_RESPONSE", "P3_RESPONSE", "P4_RESPONSE",
     "P1_抢杠RESPONSE", "P2_抢杠RESPONSE", "P3_抢杠RESPONSE", "P4_抢杠RESPONSE",

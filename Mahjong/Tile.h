@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+// #define MAJ_DEBUG
+
 enum Wind {
 	East = 1, South, West, North
 };

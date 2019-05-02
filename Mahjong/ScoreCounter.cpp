@@ -179,6 +179,32 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	// 接下来对牌进行拆解
 	auto complete_tiles_list = getCompletedTiles(convert_tiles_to_base_tiles(tiles));
 
+#ifdef MAJ_DEBUG
+	bool MAJ_DEBUG_SIG = false;
+	if (complete_tiles_list.size() > 2) {
+		cout << "MAJ_DEBUG: Start Remove Duplicate CompletedTiles" << endl;
+		MAJ_DEBUG_SIG = true;
+		for (auto ct : complete_tiles_list) {
+			cout << ct.to_string() << endl;
+		}
+	}
+#endif
+	{
+		sort(complete_tiles_list.begin(), complete_tiles_list.end(),
+			[](CompletedTiles c1, CompletedTiles c2) {
+			return c1 < c2;
+		});
+		auto iter = unique(complete_tiles_list.begin(), complete_tiles_list.end());
+		complete_tiles_list.erase(iter, complete_tiles_list.end());
+	}
+#ifdef MAJ_DEBUG
+	if (MAJ_DEBUG_SIG) {
+		cout << "MAJ_DEBUG: Removed Duplicate CompletedTiles" << endl;
+		for (auto ct : complete_tiles_list) {
+			cout << ct.to_string() << endl;
+		}
+	}
+#endif
 	// 接下来统计七对子
 	if (is七对和牌型(convert_tiles_to_base_tiles(tiles))) {
 		CompletedTiles ct;
@@ -463,6 +489,15 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 
 	vector<Yaku> yakus;
 	int fu = 20;
+
+#ifdef MAJ_DEBUG
+	{
+		cout << "DEBUG_MODE: TILE_GROUP_STRING" << endl;
+		for (auto tgs : tile_group_string)
+			cout << tgs << " ";
+		cout << endl;
+	}
+#endif
 
 	// 判断单骑
 	bool 单骑 = any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
@@ -1008,6 +1043,7 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 				if (tsumo) tile_group += '!'; 
 				else tile_group += '$';
 				tile_group_strings.push_back(raw_tile_group_string);
+				tile_group.pop_back();
 				continue;
 			}
 			else continue;
@@ -1017,24 +1053,59 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 				if (tsumo) tile_group += '!';
 				else tile_group += '$';
 				tile_group_strings.push_back(raw_tile_group_string);
+				tile_group.pop_back();
 				continue;
 			}
 			else if ((tile_group[0] + 1) == last_tile_string[0] && tile_group[1] == last_tile_string[1]) {
 				if (tsumo) tile_group += '@';
 				else tile_group += '%';
 				tile_group_strings.push_back(raw_tile_group_string);
+				tile_group.pop_back();
 				continue;
 			}
 			else if ((tile_group[0] + 2) == last_tile_string[0] && tile_group[1] == last_tile_string[1]) {
 				if (tsumo) tile_group += '#';
 				else tile_group += '^';
 				tile_group_strings.push_back(raw_tile_group_string);
+				tile_group.pop_back();
 				continue;
 			}
 			else continue;
 		}
 		else continue;
 	}
+
+	// 消去tile_group_strings中完全相同的元素
+
+#ifdef MAJ_DEBUG
+	bool MAJ_DEBUG_SIG = false;
+	if (tile_group_strings.size() >= 2) {
+		MAJ_DEBUG_SIG = true;
+		cout << "MAJ_DEBUG: Start Remove Duplicate" << endl;
+		for (auto tgs : tile_group_strings) {
+			for (auto tg : tgs) {
+				cout << tg << " ";
+			}
+			cout << endl;
+		}
+	}
+#endif
+
+	sort(tile_group_strings.begin(), tile_group_strings.end());
+	auto iter = unique(tile_group_strings.begin(), tile_group_strings.end());
+	tile_group_strings.erase(iter, tile_group_strings.end());
+
+#ifdef MAJ_DEBUG
+	if (MAJ_DEBUG_SIG) {
+		cout << "MAJ_DEBUG: Already Remove Duplicate" << endl;
+		for (auto tgs : tile_group_strings) {
+			for (auto tg : tgs) {
+				cout << tg << " ";
+			}
+			cout << endl;
+		}
+	}
+#endif
 
 	for (auto tile_group : tile_group_strings) {
 		auto yaku_fu = get_手役_from_complete_tiles_固定位置(tile_group, 自风, 场风);

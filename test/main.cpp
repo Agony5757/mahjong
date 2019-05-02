@@ -5,6 +5,8 @@
 #include <fstream>
 #include "GamePlay.h"
 #include <random>
+#include <iostream>
+
 using namespace std;
 
 #pragma region(test和牌)
@@ -189,11 +191,20 @@ void testGamePlay1(string filename, int shots = 10) {
 void test_passive_table_auto() {
 	size_t i = 0;
 	while (1) {
-		try {
+		//try {
 
 			i++;
+#if defined(_MSC_VER)
+#ifndef _DEBUG
 			if (i % 10 == 0)
 				cout << "Game: " << i << endl;
+#else
+			cout << "Game: " << i << endl;
+#endif
+#else
+			if (i % 10 == 0)
+				cout << "Game: " << i << endl;
+#endif 
 
 			Table table;
 			table.game_init();
@@ -233,10 +244,10 @@ void test_passive_table_auto() {
 					table.make_selection((int)dice_roll);
 				}
 			}
-		}
-		catch (exception& e) {
-			cout << e.what() << endl;
-		}
+		//}
+		//catch (exception& e) {
+		//	cout << e.what() << endl;
+		//}
 	}
 }
 
