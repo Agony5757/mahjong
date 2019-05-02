@@ -589,15 +589,13 @@ void Table::init_yama()
 
 }
 
-// string Table::export_yama() {
-// 	constexpr int LENGTH = N_TILES * sizeof(Tile);
-// 	unsigned char s[LENGTH];
-// 	for (int i = 0; i < N_TILES; i++) {
-// 		memcpy(s + i * sizeof(Tile), tiles + i, sizeof(Tile));
-// 	}
-// 	Base64 base64;
-// 	return base64.Encode(s, LENGTH);
-// }
+string Table::export_yama() {
+	stringstream ss;
+	for (int i = 0; i < N_TILES; ++i) {
+		ss << tiles[i].to_simple_string();
+	}
+	return ss.str();
+}
 
 // void Table::import_yama(std::string yama) {
 // 	constexpr int LENGTH = N_TILES * sizeof(Tile);

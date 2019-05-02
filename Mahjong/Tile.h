@@ -236,6 +236,29 @@ class Tile {
 public:
 	BaseTile tile;
 	bool red_dora;
+
+	inline std::string to_simple_string() const {
+		std::stringstream ss;
+		int number = tile % 9 + 1;
+		if (red_dora)
+			number = 0;
+		switch (tile / 9) {
+		case 0:
+			ss << number << "m";
+			return ss.str();
+		case 1:
+			ss << number << "s";
+			return ss.str();
+		case 2:
+			ss << number << "p";
+			return ss.str();
+		case 3:
+			ss << number << "z";
+			return ss.str();
+		}
+		throw runtime_error("Error Tile.");
+	}
+
 	inline std::string to_string() const {
 		std::string ret;
 		if (0 <= tile && tile <= 8) {

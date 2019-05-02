@@ -172,6 +172,8 @@ public:
 	int n本场 = 0;
 	int n立直棒 = 0;
 
+	std::string export_yama();
+
 	inline std::vector<BaseTile> get_dora() const {
 		std::vector<BaseTile> doratiles;
 		for (int i = 0; i < dora_spec; ++i) {

@@ -187,12 +187,55 @@ void testGamePlay1(string filename, int shots = 10) {
 	}
 }
 
+void resume_from_seed_and_yama(unsigned seed, string yama) {
+	std::default_random_engine generator(seed);
+	Table table;
+	table.game_init_with_metadata({string("yama"), yama});
+	while (table.get_phase() != Table::GAME_OVER) {
+		if (table.get_phase() <= Table::P4_ACTION) {
+			std::uniform_int_distribution<size_t> distribution(0, table.get_self_actions().size() - 1);
+			size_t dice_roll = distribution(generator);  // generates number in the range 1..6 
+
+			for (int i = 0; i < table.get_self_actions().size(); ++i) {
+				if (table.get_self_actions()[i].action == Action::自摸) {
+					dice_roll = i; break;
+				}
+				if (table.get_self_actions()[i].action == Action::立直) {
+					dice_roll = i; break;
+				}
+				if (table.get_self_actions()[i].action == Action::九种九牌) {
+					dice_roll = i; break;
+				}
+			}
+			table.make_selection((int)dice_roll);
+		}
+		else {
+			size_t dice_roll = 0;
+			if (table.get_response_actions().size() > 1) {
+				std::uniform_int_distribution<size_t> distribution(0, table.get_response_actions().size() - 1);
+				dice_roll = distribution(generator);  // generates number in the range 1..6
+
+				for (int i = 0; i < table.get_response_actions().size(); ++i) {
+					if (table.get_response_actions()[i].action == Action::荣和) {
+						dice_roll = i;
+						break;
+					}
+				}
+			}
+			table.make_selection((int)dice_roll);
+		}
+	}
+}
+
 
 void test_passive_table_auto() {
 	size_t i = 0;
+	unsigned seed;
+	string yama;
 	while (1) {
-		//try {
-
+		try {
+			seed = std::chrono::system_clock::now().time_since_epoch().count();
+			std::default_random_engine generator(seed);
 			i++;
 #if defined(_MSC_VER)
 #ifndef _DEBUG
@@ -205,12 +248,11 @@ void test_passive_table_auto() {
 			if (i % 10 == 0)
 				cout << "Game: " << i << endl;
 #endif 
-
 			Table table;
 			table.game_init();
+			yama = table.export_yama();
 			while (table.get_phase() != Table::GAME_OVER) {
 				if (table.get_phase() <= Table::P4_ACTION) {
-					std::default_random_engine generator;
 					std::uniform_int_distribution<size_t> distribution(0, table.get_self_actions().size() - 1);
 					size_t dice_roll = distribution(generator);  // generates number in the range 1..6 
 
@@ -230,7 +272,6 @@ void test_passive_table_auto() {
 				else {
 					size_t dice_roll = 0;
 					if (table.get_response_actions().size() > 1) {
-						std::default_random_engine generator;
 						std::uniform_int_distribution<size_t> distribution(0, table.get_response_actions().size() - 1);
 						dice_roll = distribution(generator);  // generates number in the range 1..6
 
@@ -244,10 +285,13 @@ void test_passive_table_auto() {
 					table.make_selection((int)dice_roll);
 				}
 			}
-		//}
-		//catch (exception& e) {
-		//	cout << e.what() << endl;
-		//}
+		}
+		catch (exception& e) {
+			cout << e.what() << endl;
+			cout << "Seed" << seed << endl;
+			cout << "Yama" << yama << endl;
+			getchar();
+		}
 	}
 }
 
