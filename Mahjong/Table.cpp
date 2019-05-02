@@ -1281,7 +1281,7 @@ std::vector<ResponseAction> Table::GetValidResponse(
 			// 计算食替牌
 			vector<BaseTile> 食替牌;
 
-			if (tiles[1] > tiles[0]) {
+			if (tiles[1]->tile > tiles[0]->tile) {
 				if (tiles[0]->tile != _1m && tiles[0]->tile != _1s && tiles[0]->tile != _1p) {
 					食替牌.push_back(BaseTile(tiles[0]->tile - 1));
 				}
@@ -1289,7 +1289,7 @@ std::vector<ResponseAction> Table::GetValidResponse(
 					食替牌.push_back(BaseTile(tiles[1]->tile + 1));
 				}
 			}
-			else if (tiles[1] < tiles[0]) {
+			else if (tiles[1]->tile < tiles[0]->tile) {
 				if (tiles[1]->tile != _1m && tiles[1]->tile != _1s && tiles[1]->tile != _1p) {
 					食替牌.push_back(BaseTile(tiles[1]->tile - 1));
 				}
