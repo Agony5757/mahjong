@@ -1957,6 +1957,11 @@ void Table::make_selection(int selection)
 	case P2_ACTION:
 	case P3_ACTION:
 	case P4_ACTION: {
+
+		if (self_action.size() == 0) {
+			throw runtime_error("Empty Selection Lists.");
+		}
+
 		selected_action = self_action[selection];
 		switch (selected_action.action) {
 		case Action::九种九牌:
@@ -2046,6 +2051,11 @@ void Table::make_selection(int selection)
 	case P2_RESPONSE:
 	case P3_RESPONSE: {
 		// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase
+
+		if (response_action.size() == 0) {
+				throw runtime_error("Empty Selection Lists.");	
+		}
+
 		actions.push_back(response_action[selection]);
 		// 从actions中获得优先级
 		if (response_action[selection].action > final_action)
@@ -2069,6 +2079,11 @@ void Table::make_selection(int selection)
 	}
 	case P4_RESPONSE: {
 		// 做出选择		
+
+		if (response_action.size() == 0) {
+			throw runtime_error("Empty Selection Lists.");
+		}
+
 		actions.push_back(response_action[selection]);
 		// 从actions中获得优先级
 		if (response_action[selection].action > final_action)
@@ -2170,6 +2185,11 @@ void Table::make_selection(int selection)
 	case P2_抢杠RESPONSE:
 	case P3_抢杠RESPONSE: {
 		// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase
+
+		if (response_action.size() == 0) {
+			throw runtime_error("Empty Selection Lists.");
+		}
+
 		actions.push_back(response_action[selection]);
 		// 从actions中获得优先级
 		if (response_action[selection].action > final_action)
@@ -2189,6 +2209,11 @@ void Table::make_selection(int selection)
 	}
 	case P4_抢杠RESPONSE: {
 		// 做出选择		
+		
+		if (response_action.size() == 0) {
+			throw runtime_error("Empty Selection Lists.");
+		}
+
 		actions.push_back(response_action[selection]);
 
 		// 选择优先级，并且进行response结算
@@ -2222,6 +2247,11 @@ void Table::make_selection(int selection)
 	case P2_抢暗杠RESPONSE:
 	case P3_抢暗杠RESPONSE: {
 		// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase
+
+		if (response_action.size() == 0) {
+			throw runtime_error("Empty Selection Lists.");
+		}
+
 		actions.push_back(response_action[selection]);
 		// 从actions中获得优先级
 		if (response_action[selection].action > final_action)
@@ -2241,6 +2271,11 @@ void Table::make_selection(int selection)
 	}
 	case P4_抢暗杠RESPONSE: {
 		// 做出选择		
+
+		if (response_action.size() == 0) {
+			throw runtime_error("Empty Selection Lists.");
+		}
+
 		actions.push_back(response_action[selection]);
 
 		// 选择优先级，并且进行response结算
