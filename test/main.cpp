@@ -187,10 +187,10 @@ void testGamePlay1(string filename, int shots = 10) {
 	}
 }
 
-void resume_from_seed_and_yama(unsigned seed, string yama) {
+void resume_from_seed_and_yama(long long seed, string yama) {
 	std::default_random_engine generator(seed);
 	Table table;
-	table.game_init_with_metadata({string("yama"), yama});
+	table.game_init_with_metadata({ {string("yama"), yama} });
 	while (table.get_phase() != Table::GAME_OVER) {
 		if (table.get_phase() <= Table::P4_ACTION) {
 			std::uniform_int_distribution<size_t> distribution(0, table.get_self_actions().size() - 1);
@@ -227,10 +227,9 @@ void resume_from_seed_and_yama(unsigned seed, string yama) {
 	}
 }
 
-
 void test_passive_table_auto() {
 	size_t i = 0;
-	unsigned seed;
+	long long seed;
 	string yama;
 	while (1) {
 		try {
@@ -360,6 +359,8 @@ int main() {
 	//testGamePlay1("GamePlay.txt");
 	
 	test_passive_table_auto();
+
+	//resume_from_seed_and_yama();
 
 	//testCompletedTiles2();
 	//testCompletedTiles1();

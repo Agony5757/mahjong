@@ -256,7 +256,7 @@ public:
 			ss << number << "z";
 			return ss.str();
 		}
-		throw runtime_error("Error Tile.");
+		throw std::runtime_error("Error Tile.");
 	}
 
 	inline std::string to_string() const {
