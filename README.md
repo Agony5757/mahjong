@@ -48,7 +48,7 @@
         
 ## Table通用接口
 
-### Table::init_game_from_metadata
+### Table::init_game_with_metadata
 
 参数类型:
 unordered_map: string, string 表示元数据
