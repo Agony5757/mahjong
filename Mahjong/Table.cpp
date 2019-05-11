@@ -674,18 +674,6 @@ void Table::test_show_all_player_info()
 		test_show_player_info(i);
 }
 
-void Table::test_show_open_gamelog()
-{
-	cout << "Open GameLog:" << endl;
-	cout << openGameLog.to_string();
-}
-
-void Table::test_show_full_gamelog()
-{
-	cout << "Full GameLog:" << endl;
-	cout << fullGameLog.to_string();
-}
-
 Result Table::GameProcess(bool verbose, std::string yama)
 {
 	if (yama == "") {
@@ -1110,15 +1098,14 @@ void Table::_deal(int i_player, int n_tiles)
 void Table::发牌(int i_player)
 {
 	_deal(i_player);
-	//openGameLog.log摸牌(i_player, nullptr);
-	//fullGameLog.log摸牌(i_player, player[i_player].hand.back());
+	game_log.log摸牌(i_player, players[i_player].hand.back());
 }
 
 void Table::发岭上牌(int i_player)
 {
-	_deal(i_player);
-	//openGameLog.log摸牌(i_player, nullptr);
-	//fullGameLog.log摸牌(i_player, player[i_player].hand.back());
+	players[i_player].hand.push_back(牌山[4 - remain_岭上牌]);
+	remain_岭上牌--;
+	game_log.log摸牌(i_player, players[i_player].hand.back());
 }
 
 std::string Table::to_string(int option) const
@@ -1241,6 +1228,17 @@ std::vector<SelfAction> Table::GetRiichiActions()
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
 	merge_into(actions, the_player.riichi_get_暗杠(this));
+
+	// 如果已经有了4个杠子，禁止接下来的杠
+	if (get_remain_kan_tile() == 0) {
+		auto iter = remove_if(actions.begin(), actions.end(),
+			[](SelfAction& sa) {
+			if (sa.action == Action::暗杠) return true;
+			return false;
+		});
+		actions.erase(iter, actions.end());
+	}
+
 	merge_into(actions, the_player.riichi_get_打牌());
 	merge_into(actions, the_player.get_自摸(this));
 
@@ -1747,6 +1745,7 @@ void Table::_from_beginning()
 		players[2].river[0].tile->tile == players[3].river[0].tile->tile)
 	{
 		result = 四风连打流局结算(this);
+		game_log.logGameOver(result);
 		phase = GAME_OVER;
 		return;
 	}
@@ -1757,6 +1756,7 @@ void Table::_from_beginning()
 		players[2].riichi &&
 		players[3].riichi) {
 		result = 四立直流局结算(this);
+		game_log.logGameOver(result);
 		phase = GAME_OVER;
 		return;
 	}
@@ -1775,8 +1775,9 @@ void Table::_from_beginning()
 				n_杠++;
 			}
 		}
-		if (n_杠 >= 1) {
+		if (n_杠 > 1) {
 			result = 四杠流局结算(this);
+			game_log.logGameOver(result);
 			phase = GAME_OVER;
 			return;
 		}
@@ -1784,6 +1785,7 @@ void Table::_from_beginning()
 
 	if (get_remain_tile() == 0) {
 		result = 荒牌流局结算(this);
+		game_log.logGameOver(result);
 		phase = GAME_OVER;
 		return;
 	}
@@ -1944,6 +1946,8 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 	// 初始化每人自风
 	init_wind();
 	turn = 庄家;
+
+	game_log.logGameStart(n本场, n立直棒, 庄家, 场风, get_scores());
 	_from_beginning();
 }
 
@@ -1966,10 +1970,13 @@ void Table::make_selection(int selection)
 		switch (selected_action.action) {
 		case Action::九种九牌:
 			result = 九种九牌流局结算(this);
+			game_log.log九种九牌(turn);
+			game_log.logGameOver(result);
 			phase = GAME_OVER;
 			return;
 		case Action::自摸:
 			result = 自摸结算(this);
+			game_log.logGameOver(result);
 			phase = GAME_OVER;
 			return;
 		case Action::出牌:
@@ -1990,6 +1997,15 @@ void Table::make_selection(int selection)
 				if (tile == players[turn].hand.back())
 					FROM_手切摸切 = FROM_摸切;
 			}
+
+			// 游戏记录
+			if (selected_action.action == Action::立直) {
+				game_log.log立直(turn, tile, FROM_手切摸切);
+			}
+			else {
+				game_log.log出牌(turn, tile, FROM_手切摸切);
+			}
+
 			phase = P1_RESPONSE;
 			if (0 == turn) {
 				ResponseAction ra;
@@ -2009,8 +2025,11 @@ void Table::make_selection(int selection)
 		{	
 			tile = selected_action.correspond_tiles[0];
 
-			// 暗杠的情况，第一巡也消除了
+			// 暗杠的情况，第一巡和一发也消除了
 			players[turn].first_round = false;
+
+			game_log.log暗杠(turn, selected_action.correspond_tiles);
+
 			// 等待回复
 			phase = P1_抢暗杠RESPONSE;
 			if (0 == turn) {
@@ -2028,8 +2047,14 @@ void Table::make_selection(int selection)
 		{
 			tile = selected_action.correspond_tiles[0];
 
-			// 暗杠的情况，第一巡也消除了
+			// 第一巡和一发消除
 			players[turn].first_round = false;
+			for (int i = 0; i < 4; ++i) {
+				players[i].一发 = false;
+			}
+
+			game_log.log加杠(turn, tile);
+
 			// 等待回复
 			phase = P1_抢杠RESPONSE;
 			if (0 == turn) {
@@ -2114,13 +2139,13 @@ void Table::make_selection(int selection)
 				n立直棒++;
 				players[turn].score -= 1000;
 				players[turn].一发 = true;
+				game_log.log立直通过(this);
 			}
 
 			// 杠，打出牌之后且其他人pass
 			if (after_杠()) { dora_spec++; }
 
 			// 什么都不做。将action对应的牌从手牌移动到牌河里面	
-
 			players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
 
 			// 消除第一巡
@@ -2160,6 +2185,9 @@ void Table::make_selection(int selection)
 				players[i].一发 = false;
 			}
 
+			game_log.log_response_鸣牌(response, turn, tile, actions[response].correspond_tiles,
+				final_action);
+
 			// 明杠，打出牌之后且其他人吃碰
 			if (after_杠()) { dora_spec++; }
 			last_action = final_action;
@@ -2168,6 +2196,7 @@ void Table::make_selection(int selection)
 
 		case Action::荣和:
 			result = 荣和结算(this, selected_action.correspond_tiles[0], response_player);
+			game_log.logGameOver(result);
 			phase = GAME_OVER;
 			return;
 		default:
@@ -2226,6 +2255,7 @@ void Table::make_selection(int selection)
 		if (response_player.size() != 0) {
 			// 有人抢杠则进行结算，除非加杠宣告成功，否则一发状态仍然存在
 			result = 抢杠结算(this, tile, response_player);
+			game_log.logGameOver(result);
 			phase = GAME_OVER;
 			return;
 		}
@@ -2288,6 +2318,7 @@ void Table::make_selection(int selection)
 		if (response_player.size() != 0) {
 			// 有人抢暗杠则进行结算
 			result = 抢暗杠结算(this, tile, response_player);
+			game_log.logGameOver(result);
 			phase = GAME_OVER;
 			return;
 		}

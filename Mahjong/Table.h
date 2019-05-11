@@ -163,6 +163,9 @@ public:
 	std::vector<Tile*> 宝牌指示牌;
 	std::vector<Tile*> 里宝牌指示牌;
 	std::vector<Tile*> 牌山;
+
+	int remain_岭上牌 = 4;
+
 	// Player players[4];
 	std::array<Player, 4> players;
 	int turn;
@@ -191,8 +194,7 @@ public:
 	}
 
 	inline int get_remain_kan_tile() const {
-		auto iter = find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]);
-		return int(iter - 牌山.begin() - 1);
+		return remain_岭上牌;
 	}
 
 	inline int get_remain_tile() const {
@@ -216,8 +218,7 @@ public:
 
 	inline void next_turn() { turn++; turn = turn % 4; }
 
-	GameLog openGameLog;
-	GameLog fullGameLog;
+	GameLog game_log;
 
 	enum ToStringOption : int {
 		YAMA = 1 << 0,
@@ -253,6 +254,13 @@ public:
 		return after_daiminkan() || after_加杠();
 	}
 
+	inline std::array<int, 4> get_scores() {
+		std::array<int, 4> scores;
+		for (int i = 0; i < 4; ++i) 
+			scores[i] = players[i].score;
+		return scores;
+	}
+
 	Table() = default;
 	Table(int 庄家, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);
 	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4]);
@@ -277,8 +285,6 @@ public:
 	void test_show_all_player_hand();
 	void test_show_player_info(int i_player);
 	void test_show_all_player_info();
-	void test_show_open_gamelog();
-	void test_show_full_gamelog();
 
 	inline void test_show_all() {
 		test_show_yama_with_王牌();
@@ -350,6 +356,8 @@ public:
 		init_wind();
 
 		turn = 庄家;
+
+		game_log.logGameStart(n本场, n立直棒, 庄家, 场风, get_scores());
 		_from_beginning();
 	}
 
