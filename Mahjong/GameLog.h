@@ -36,14 +36,10 @@ public:
 	LogAction action;
 	Tile* 牌;
 	std::vector<Tile*> 副露;
+	std::array<int, 4> score;
 	
 	BaseGameLog(int, int, LogAction, Tile*, std::vector<Tile*>);
-	virtual std::string to_string();
-};
-
-struct RiichiPassGameLog : public BaseGameLog {
-	RiichiPassGameLog(Table* table);
-	std::array<int, 4> score;
+	BaseGameLog(std::array<int, 4> scores);
 	virtual std::string to_string();
 };
 
@@ -52,6 +48,7 @@ public:
 	std::vector<int> winner;
 	std::vector<int> loser;
 	std::array<int, 4> start_scores;
+	std::string yama;
 	int start本场;
 	int end本场;
 
@@ -70,7 +67,9 @@ public:
 
 	void _log(BaseGameLog log);
 
-	void logGameStart(int start本场, int start立直棒, int oya, Wind 场风, std::array<int,4>);
+	void logGameStart(int start本场, int start立直棒, int oya, Wind 场风, 
+		std::string yama,
+		std::array<int,4>);
 
 	void log摸牌(int player, Tile*);
 	void log摸切(int player, Tile*);

@@ -357,7 +357,7 @@ public:
 
 		turn = 庄家;
 
-		game_log.logGameStart(n本场, n立直棒, 庄家, 场风, get_scores());
+		game_log.logGameStart(n本场, n立直棒, 庄家, 场风, export_yama(), get_scores());
 		_from_beginning();
 	}
 

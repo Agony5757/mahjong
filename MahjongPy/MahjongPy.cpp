@@ -180,6 +180,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def_readonly("oya", &Table::庄家)
 		.def_readonly("honba", &Table::n本场)
 		.def_readonly("riichibo", &Table::n立直棒)
+		.def_readonly("game_log", &Table::game_log)
 		
 		// 辅助函数们
 		.def("get_dora", &Table::get_dora)
@@ -313,4 +314,9 @@ PYBIND11_MODULE(MahjongPy, m)
 		;
 
 	m.def("yakus_to_string", [](std::vector<Yaku> yakus) {return py::bytes(yakus_to_string(yakus)); });
+
+	py::class_<GameLog>(m, "GameLog")
+		.def("to_string", &GameLog::to_string);
+
+	m.def("GameLogToString", [](GameLog log) {return py::bytes(log.to_string()); });
 }

@@ -1947,7 +1947,7 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 	init_wind();
 	turn = 庄家;
 
-	game_log.logGameStart(n本场, n立直棒, 庄家, 场风, get_scores());
+	game_log.logGameStart(n本场, n立直棒, 庄家, 场风, export_yama(), get_scores());
 	_from_beginning();
 }
 

@@ -2,6 +2,7 @@
 #include "GameLog.h"
 #include "GameLog.h"
 #include "GameLog.h"
+#include "GameLog.h"
 #include "Table.h"
 #include <sstream>
 
@@ -13,17 +14,9 @@ BaseGameLog::BaseGameLog(int p1, int p2, LogAction action, Tile *tile,
 {
 }
 
-RiichiPassGameLog::RiichiPassGameLog(Table* table) {
-	for (int i = 0; i < 4; ++i) {
-		score[i] = table->players[i].score;
-	}
-	action = LogAction::立直通过;
-	player = table->turn;
-}
-
-std::string RiichiPassGameLog::to_string()
+BaseGameLog::BaseGameLog(std::array<int, 4> scores)
 {
-	return "立直通过" + score_to_string(score);
+	score = scores;
 }
 
 std::string BaseGameLog::to_string()
@@ -58,8 +51,11 @@ std::string BaseGameLog::to_string()
 	case LogAction::九种九牌:
 		ss << "九种九牌";
 		return ss.str();
+	case LogAction::立直通过:
+		ss << "立直通过:" << score_to_string(score);
+		return ss.str();
 	default:
-		throw runtime_error("Invalid LogAction.");
+		throw runtime_error("Invalid LogAction. Action: " + std::to_string(int(action)));
 	}
 }
 
@@ -69,7 +65,8 @@ std::string GameLog::to_string()
 	ss << "庄家: Player " << 庄家 << endl
 		<< "场风: " << wind_to_string(场风) << endl
 		<< start本场 << "本场 " << start立直棒 << "立直棒" << endl
-		<< "点数:" << score_to_string(start_scores) << endl;
+		<< "点数:" << score_to_string(start_scores) << endl
+		<< "牌山:" << yama << endl;
 	for (auto log : logs) {
 		ss << log.to_string() << endl;
 	}
@@ -82,12 +79,15 @@ void GameLog::_log(BaseGameLog log) {
 	logs.push_back(log);
 }
 
-void GameLog::logGameStart(int _start本场, int _start立直棒, int _oya, Wind _场风, std::array<int,4> scores)
+void GameLog::logGameStart(
+	int _start本场, int _start立直棒, int _oya, Wind _场风, string _yama,
+	std::array<int,4> scores)
 {
 	start本场 = _start本场;
 	start立直棒 = _start立直棒;
 	庄家 = _oya;
 	场风 = _场风;
+	yama = _yama;
 	start_scores = scores;
 }
 
@@ -124,12 +124,18 @@ void GameLog::log_response_鸣牌(int player_call, int player_turn,
 	{
 	case Action::吃:
 		la = LogAction::吃;
+		break;
 	case Action::碰:
 		la = LogAction::碰;
+		break;
 	case Action::杠:
 		la = LogAction::杠;
+		break;
 	default:
-		throw runtime_error("Invalid Action when logging.");
+		throw runtime_error(
+			"Invalid Action when logging. Action:" + 
+			std::to_string(int(action))
+		);
 	}
 	_log({ player_call, player_turn, la, tile, tiles });
 }
@@ -146,7 +152,9 @@ void GameLog::log暗杠(int player, vector<Tile*> tiles)
 
 void GameLog::log立直通过(Table * table)
 {
-	RiichiPassGameLog gamelog(table);
+	BaseGameLog gamelog(table->get_scores());
+	gamelog.player = table->turn;
+	gamelog.action = LogAction::立直通过;
 	logs.push_back(gamelog);
 }
 
