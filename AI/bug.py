@@ -41,7 +41,6 @@ for n in range(1):
             break
 
 
-
 ## Check tiles once, fulus is OK!
 
 for p in range(4):
@@ -56,7 +55,6 @@ for p in range(4):
         for m in range(len(fulus[k].tiles)):
             print(fulus[k].tiles[m].tile)
         print(fulus[k].take)
-
 
 
 ## Check tiles twice, fulus[k].tiles becomes a empty list

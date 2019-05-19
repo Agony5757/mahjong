@@ -108,8 +108,6 @@ class MahjongNetFrost2():
 
         return loss
 
-
-
 class AgentFrost2():
     """
     Mahjong AI agent with PER
@@ -151,14 +149,18 @@ class AgentFrost2():
         return action, policy
 
     def remember_episode(self, states, rewards, dones, behavior_policies, weight):
-        try:
+        # try:
+
+        if len(dones) == 0:
+            print("Episode Length 0! Not recorded!")
+        else:
             self.memory.append_episode(states,
                                        np.reshape(rewards, [-1,]),
                                        np.reshape(dones, [-1,]),
                                        behavior_policies,
                                        weight=weight)
-        except:
-            print("Episode Length 0! Not recorded!")
+        # except:
+        #     print("Episode Length 0! Not recorded!")
 
 
     def learn(self, symmetric_hand=None, episode_start=1, logging=True):

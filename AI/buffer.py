@@ -40,7 +40,7 @@ class MahjongBufferFrost2():
             pass
 
     def __init__(self, size=256, episode_length=256, priority_eps=10000, priority_scale=0.0, IS_scale=1.0, saved=None,
-                 num_tile_type=34, num_each_tile=74, num_vf=20):
+                 num_tile_type=34, num_each_tile=55, num_vf=29):
         # Mahjong episode length usually < 256
         self.size = size
         self.length = np.zeros([size,], dtype=np.int)
