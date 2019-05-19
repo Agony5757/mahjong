@@ -1,5 +1,5 @@
 ﻿#include "Action.h"
-#include "Action.h"
+#include "macro.h"
 
 SelfAction::SelfAction()
 {
@@ -25,8 +25,8 @@ std::string SelfAction::to_string() const
 		return "自摸";
 	case Action::九种九牌:
 		return "九种九牌";
-	default:
-		throw std::runtime_error("Invalid Action");
+	default:		
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Invalid Action");
 	}
 }
 
@@ -47,6 +47,6 @@ std::string ResponseAction::to_string() const {
 	case Action::荣和:
 		return "荣和"; 
 	default:
-			throw std::runtime_error("Invalid Action");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Invalid Action");
 	}
 }

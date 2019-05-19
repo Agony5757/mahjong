@@ -38,7 +38,7 @@ int RealPlayer::get_response_action(Table * status, SelfAction action, Tile* til
 		cout << " 加杠 ";
 		break;
 	default:
-		throw runtime_error("Unknown action.");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Unknown action.");
 	}
 	cout<< tile->to_string() << endl;
 	
@@ -121,7 +121,7 @@ int RandomPlayer::get_response_action(Table * status, SelfAction action, Tile *t
 				ss << " 加杠 ";
 				break;
 			default:
-				throw runtime_error("Unknown action.");
+				throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Unknown action.");
 			}
 			ss << tile->to_string() << endl;
 		}

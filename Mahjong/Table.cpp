@@ -147,10 +147,10 @@ static bool is食替(Player* player, BaseTile t) {
 				else return false;
 			}
 		}
-		else throw runtime_error("??");
+		else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("??");
 	}
 	else 
-		throw runtime_error("最后一手既不是吃又不是碰，不考虑食替");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("最后一手既不是吃又不是碰，不考虑食替");
 }
 
 std::vector<SelfAction> Player::get_打牌(bool after_chipon)
@@ -689,7 +689,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 	}
 	else {
 		// import_yama(yama);
-		throw runtime_error("Yama export is not available now.");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Yama export is not available now.");
 		init_yama();
 
 		VERBOSE{
@@ -712,7 +712,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 	// 测试Agent
 	for (int i = 0; i < 4; ++i) {
 		if (agents[i] == nullptr)
-			throw runtime_error("Agent " + to_string(i) + " is not registered!");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Agent " + to_string(i) + " is not registered!");
 	}
 
 	// 游戏进程的主循环,循环的开始是某人有3n+2张牌
@@ -977,7 +977,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 			case Action::荣和:
 				return 荣和结算(this, selected_action.correspond_tiles[0], response_player);
 			default:
-				throw runtime_error("Invalid Selection.");
+				throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Invalid Selection.");
 			}
 		}
 		case Action::暗杠: {
@@ -1077,7 +1077,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 		}
 
 		default:
-			throw runtime_error("Selection invalid!");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Selection invalid!");
 		}
 	}
 }
@@ -1295,7 +1295,7 @@ std::vector<ResponseAction> Table::GetValidResponse(
 					食替牌.push_back(BaseTile(tiles[0]->tile + 1));
 				}
 			}
-			else throw runtime_error("Error in response action: chi.");
+			else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Error in response action: chi.");
 
 			// 去掉这些吃牌
 			auto copyhand = the_player.hand;
@@ -1475,7 +1475,7 @@ void Table::_action_phase_mt(int selection)
 		return;
 	}
 	default:
-		throw runtime_error("Unknown SelfAction");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Unknown SelfAction");
 	}
 
 	lock.unlock();
@@ -1595,7 +1595,7 @@ void Table::_final_response_mt()
 		phase = GAME_OVER;
 		return;
 	default:
-		throw runtime_error("Invalid Selection.");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Invalid Selection.");
 	}
 	
 	// 回到循环的最开始
@@ -1863,7 +1863,7 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 
 	if (metadata.find("yama") != metadata.end()) {
 		auto val = metadata["yama"];
-		if (val.size() != N_TILES * 2) throw runtime_error("Yama string incomplete.");
+		if (val.size() != N_TILES * 2) throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Yama string incomplete.");
 		for (int i = 0; i < N_TILES * 2; i += 2) {
 			bool red_dora;
 			// 逆序插入
@@ -1891,7 +1891,7 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 		if (val == "3") {
 			庄家 = 3;
 		}
-		else throw runtime_error("Cannot Read Option: oya");
+		else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Cannot Read Option: oya");
 	}
 	else {
 		庄家 = 0;
@@ -1911,7 +1911,7 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 		if (val == "north") {
 			场风 = Wind::North;
 		}
-		else throw runtime_error("Cannot Read Option: wind");
+		else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Cannot Read Option: wind");
 	}
 	else {
 		场风 = Wind::East;
@@ -1933,7 +1933,7 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 			_deal(2, 13);
 			_deal(3, 13);
 		}
-		else throw runtime_error("Cannot Read Option: deal");
+		else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Cannot Read Option: deal");
 	}
 	else {
 		_deal(0, 13);
@@ -1963,7 +1963,7 @@ void Table::make_selection(int selection)
 	case P4_ACTION: {
 
 		if (self_action.size() == 0) {
-			throw runtime_error("Empty Selection Lists.");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Empty Selection Lists.");
 		}
 
 		selected_action = self_action[selection];
@@ -2078,7 +2078,7 @@ void Table::make_selection(int selection)
 		// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase
 
 		if (response_action.size() == 0) {
-				throw runtime_error("Empty Selection Lists.");	
+				throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Empty Selection Lists.");	
 		}
 
 		actions.push_back(response_action[selection]);
@@ -2106,7 +2106,7 @@ void Table::make_selection(int selection)
 		// 做出选择		
 
 		if (response_action.size() == 0) {
-			throw runtime_error("Empty Selection Lists.");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Empty Selection Lists.");
 		}
 
 		actions.push_back(response_action[selection]);
@@ -2200,7 +2200,7 @@ void Table::make_selection(int selection)
 			phase = GAME_OVER;
 			return;
 		default:
-			throw runtime_error("Invalid Selection.");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Invalid Selection.");
 		}
 
 		// 回到循环的最开始
@@ -2216,7 +2216,7 @@ void Table::make_selection(int selection)
 		// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase
 
 		if (response_action.size() == 0) {
-			throw runtime_error("Empty Selection Lists.");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Empty Selection Lists.");
 		}
 
 		actions.push_back(response_action[selection]);
@@ -2240,7 +2240,7 @@ void Table::make_selection(int selection)
 		// 做出选择		
 		
 		if (response_action.size() == 0) {
-			throw runtime_error("Empty Selection Lists.");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Empty Selection Lists.");
 		}
 
 		actions.push_back(response_action[selection]);
@@ -2279,7 +2279,7 @@ void Table::make_selection(int selection)
 		// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase
 
 		if (response_action.size() == 0) {
-			throw runtime_error("Empty Selection Lists.");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Empty Selection Lists.");
 		}
 
 		actions.push_back(response_action[selection]);
@@ -2303,7 +2303,7 @@ void Table::make_selection(int selection)
 		// 做出选择		
 
 		if (response_action.size() == 0) {
-			throw runtime_error("Empty Selection Lists.");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Empty Selection Lists.");
 		}
 
 		actions.push_back(response_action[selection]);
@@ -2419,6 +2419,6 @@ bool Table::should_i_make_selection_mt(int player) {
 	case GAME_OVER_MT:
 		return false;
 	default:
-		throw runtime_error("Error in _phase_mt");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Error in _phase_mt");
 	}
 }

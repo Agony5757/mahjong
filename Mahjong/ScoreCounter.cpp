@@ -405,7 +405,7 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 	}
 	stringstream ss;
 	ss << "Error fan & fu cases." << fan << " fan, " << fu << " fu." << endl;
-	throw runtime_error(ss.str().c_str());	
+	throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION(ss.str().c_str());	
 }
 
 //1pK -> 1p 1p 1p
@@ -435,13 +435,13 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 static inline bool 副露(string s) {
 	if (s.size() == 3) return false;
 	if (s.size() == 4) return s[3] != '-';
-	throw runtime_error("??");
+	throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("??");
 }
 
 static inline bool 带老头(string s) {
 	if (s[2] == 'K' || s[2] == ':' || s[2] == '|') return s[0] == '1' || s[0] == '9';
 	if (s[2] == 'S') return s[0] == '1' || s[0] == '7';
-	throw runtime_error("??");
+	throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("??");
 }
 
 static inline bool 纯老头(string s) {
@@ -503,14 +503,14 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	bool 单骑 = any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
 		if (s.size() == 3) return false;
 		if (s.size() == 4) return s[3] == ':';
-		throw runtime_error("??");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("??");
 	});
 
 	// 判断门清
 	bool 门清 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
 		if (s.size() == 3) return true;
 		if (s.size() == 4) return s[3] != '-';
-		throw runtime_error("??");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("??");
 	});
 
 	// 判断7对
@@ -996,7 +996,7 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 	if (ct.head.tiles.size() != 0)
 		raw_tile_group_string.push_back(basetile_to_string_simple(ct.head.tiles[0]) + ":"); //例如1z2
 	else if (ct.body.size() != 7)
-		throw runtime_error("Unknown CompletedTiles Setting. No Head and Not 7-toitsu");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Unknown CompletedTiles Setting. No Head and Not 7-toitsu");
 	else // 七对的情况（即没有雀头，BODY_SIZE正好为7）
 	{
 		for (int i = 0; i < 7; ++i) {

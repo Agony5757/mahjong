@@ -5,7 +5,7 @@ using namespace std;
 
 std::vector<CompletedTiles> getCompletedTiles(std::vector<BaseTile> tiles)
 {
-	if (tiles.size() % 3 != 2) throw runtime_error("Not Enough Tiles");	
+	if (tiles.size() % 3 != 2) throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Not Enough Tiles");	
 	auto instance = mahjong::Yaku::GetInstance();
 	auto extern_tiles = convert_basetiles_to_extern_tiles(tiles);
 	auto agari_tile = extern_tiles.back();
@@ -29,7 +29,7 @@ TileGroup convert_extern_tilegroup_to_internal(mahjong::TileGroup tilegroup)
 		tg.type = TileGroup::Type::Koutsu;
 		return tg;
 	default:
-		throw runtime_error("Unhandled TileGroupType");		
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Unhandled TileGroupType");		
 	}
 }
 
