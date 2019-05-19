@@ -79,6 +79,14 @@ PYBIND11_MODULE(MahjongPy, m)
 
 	m.def("RiverToString", [](const River& river) {return py::bytes(river.to_string()); });
 
+	py::class_<RiverTile>(m, "RiverTile")
+		.def_readonly("tile", &RiverTile::tile)
+		.def_readonly("number", &RiverTile::number)
+		.def_readonly("riichi", &RiverTile::riichi)
+		.def_readonly("remain", &RiverTile::remain)
+		.def_readonly("fromhand", &RiverTile::fromhand)
+		;
+
 	py::enum_<Wind>(m, "Wind")
 		.value("East", Wind::East)
 		.value("South", Wind::South)
