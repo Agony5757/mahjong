@@ -11,8 +11,7 @@ from wrapper import EnvMahjong
 import scipy.io as sio
 from datetime import datetime
 
-now = datetime.now()
-datetime_str = now.strftime("%Y%m%d-%H%M%S")
+datetime_str = datetime.now().strftime("%Y%m%d-%H%M%S")
 
 graphs = [tf.Graph(), tf.Graph(), tf.Graph(), tf.Graph() ]
 
@@ -166,8 +165,13 @@ for n in range(n_games):
                                                weight=np.max(final_score_change))
                 print(' ')
                 print(env.t.get_result().result_type)
+                
+                with open("./Paipu/"+datetime.now().strftime("%Y%m%d-%H%M%S")+".txt", 'w') as fp:
+                    fp.write(mp.GameLogToString(env.t.game_log).decode('GBK'))
+                    break
+
             else:
-                if np.random.rand() < 0.1:  ## no score change
+                if np.random.rand() < 0.05:  ## no score change
                     for i in range(4):
                         agents[i].remember_episode(episode_states[i], episode_rewards[i], episode_dones[i], weight=0)
                     print(' ')

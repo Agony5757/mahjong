@@ -3,14 +3,6 @@
 #include "Table.h"
 using namespace std;
 
-bool operator<(const TileGroup & g1, const TileGroup & g2)
-{
-	if (g1.type < g2.type) {
-		return true;
-	}
-	return false;
-}
-
 std::vector<CompletedTiles> getCompletedTiles(std::vector<BaseTile> tiles)
 {
 	if (tiles.size() % 3 != 2) throw runtime_error("Not Enough Tiles");	

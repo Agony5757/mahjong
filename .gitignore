@@ -17,3 +17,5 @@ log/
 *.meta
 *.index
 log/checkpoint
+MahjongRelease/
+AI/Paipu/
