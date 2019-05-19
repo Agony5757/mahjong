@@ -1,49 +1,9 @@
 import numpy as np
 import random
 
-class SimpleMahjongBuffer():
-
-    def __init__(self, size=10000):
-        self.size = size
-        self.s = np.zeros([size, 34, 4, 1], dtype=np.float32)
-        self.sp = np.zeros([size, 34, 4, 1], dtype=np.float32)
-        self.r = np.zeros([size], dtype=np.float32)
-        self.d = np.zeros([size], dtype=np.float32)
-
-        self.filled = -1  # up to this index, the buffer is filled
-        self.tail = 0  # index to which an experience to be stored next
-
-    def __len__(self):
-        return self.filled
-
-    def append(self, s, r, s_next, done):
-        self.s[self.tail] = s
-        self.r[self.tail] = r
-        self.sp[self.tail] = s_next
-        # self.mu[self.tail] = mu
-        self.d[self.tail] = done
-
-        self.filled = max(self.filled, self.tail)
-        self.tail += 1
-        if self.tail == self.size:
-            self.tail = 0
-
-    def sample(self, truncated_steps):
-        index = np.random.randint(low=truncated_steps, high=self.filled)
-
-        s = np.vstack((self.s[index - truncated_steps:index], self.sp[None, index]))
-        ret_tuple = (s,
-                     self.r[index - truncated_steps:index],
-                     self.d[index - truncated_steps:index])
-
-        return ret_tuple
-
-
-
-
-class SimpleMahjongBufferPER():
+class MahjongBuffer2():
     # Record Episodes
-    # Prioritized Experience Replay
+    # Prioritized Experience Replay (currently disabled)
     class SumTree:
         def __init__(self, size, scale):
             self.size = size
@@ -79,12 +39,13 @@ class SimpleMahjongBufferPER():
             return self.sample_subtree(1)
             pass
 
-    def __init__(self, size=1024, episode_length=256, priority_eps=10000,
-                 priority_scale=0.1, IS_scale=1.0, saved=None):
+    def __init__(self, size=256, episode_length=256, priority_eps=10000,
+                 priority_scale=0.0, IS_scale=1.0, saved=None):
         # Mahjong episode length usually <256
         self.size = size
         self.length = np.zeros([size,], dtype=np.int)
-        self.s = np.zeros([size, episode_length, 34, 4, 1], dtype=np.float16)
+        self.S = np.zeros([size, episode_length, 34, 70, 1], dtype=np.float16)
+        self.s = np.zeros([size, episode_length, 20], dtype=np.float16)
         self.r = np.zeros([size, episode_length], dtype=np.float32)
         self.d = np.zeros([size, episode_length], dtype=np.float16)
 
@@ -111,9 +72,19 @@ class SimpleMahjongBufferPER():
         #     self.min_length = min(self.min_length, length)
         #     self.max_length = max(self.max_length, length)
 
-    def append_episode(self, s, r, d, weight=0):
+    def append_episode(self, S, s, r, d, weight=0):
+        """
+        Append an episode
+        :param S: matrix features (L x 34 x 68)
+        :param s: vector features (L x 20)
+        :param r: reward
+        :param d: done
+        :param weight: weight of this epsiode for PER
+        :return: None
+        """
         length = len(r)
         self.s[self.tail, :length+1] = s
+        self.S[self.tail, :length + 1] = S
         self.r[self.tail, :length] = r
         self.d[self.tail, :length] = d
         self.length[self.tail] = length
@@ -123,16 +94,19 @@ class SimpleMahjongBufferPER():
         self.tail = (self.tail + 1) % self.size
         self.filled_size = min(self.filled_size + 1, self.size)
 
+        return None
+
 
     def sample_episode(self):
         e_index, e_weight = self.sum_tree.sample()
 
         d = self.d[e_index, :self.length[e_index]]
+        S = self.S[e_index, :self.length[e_index] + 1]
         s = self.s[e_index, :self.length[e_index]+1]
         r = self.r[e_index, :self.length[e_index]]
         # pi = self.pi[e_index]
 
-        return s, r, d, self.length[e_index], e_index, e_weight
+        return S, s, r, d, self.length[e_index], e_index, e_weight
 
     # def sample_episode_batch(self, batch_size=32):
     #     states_b = []
