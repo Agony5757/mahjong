@@ -95,7 +95,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		;
 
 	py::enum_<Action>(m, "Action")
-		.value("pass", Action::pass)
+		.value("Pass", Action::pass)
 		.value("Chi", Action::吃)
 		.value("Pon", Action::碰)
 		.value("Kan", Action::杠)

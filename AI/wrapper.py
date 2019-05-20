@@ -127,8 +127,9 @@ class EnvMahjong2(gym.Env):
         for i in range(4):
             self.scores_before[i] = self.t.players[i].score
 
-        self.played_a_tile[playerNo] = True
-        self.tile_in_air = self.t.get_selected_action_tile()
+        if self.t.get_selected_action() == mp.Action.Play:
+            self.played_a_tile[playerNo] = True
+            self.tile_in_air = self.t.get_selected_action_tile()
 
         return new_state, reward, done, info
 
