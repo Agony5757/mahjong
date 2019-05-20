@@ -355,6 +355,15 @@ struct Fulu {
 		加杠,
 		暗杠,
 	};
+
+	Fulu() { }
+
+	Fulu(const Fulu& fulu) {
+		this->tiles = fulu.tiles;
+		this->take = fulu.take;
+		this->type = fulu.type;
+	}
+
 	std::vector<Tile*> tiles;
 	int take;
 	// take标记的tiles中第几张牌拿的是别人的

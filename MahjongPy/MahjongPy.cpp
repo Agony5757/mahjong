@@ -55,6 +55,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		;
 
 	py::class_<Fulu>(m, "Fulu")
+		.def(py::init<const Fulu&>())
 		.def_readonly("type", &Fulu::type)
 		.def_readonly("tiles", &Fulu::tiles)
 		.def_readonly("take", &Fulu::take)
@@ -79,6 +80,14 @@ PYBIND11_MODULE(MahjongPy, m)
 
 	m.def("RiverToString", [](const River& river) {return py::bytes(river.to_string()); });
 
+	py::class_<RiverTile>(m, "RiverTile")
+		.def_readonly("tile", &RiverTile::tile)
+		.def_readonly("number", &RiverTile::number)
+		.def_readonly("riichi", &RiverTile::riichi)
+		.def_readonly("remain", &RiverTile::remain)
+		.def_readonly("fromhand", &RiverTile::fromhand)
+		;
+
 	py::enum_<Wind>(m, "Wind")
 		.value("East", Wind::East)
 		.value("South", Wind::South)
@@ -87,7 +96,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		;
 
 	py::enum_<Action>(m, "Action")
-		.value("pass", Action::pass)
+		.value("Pass", Action::pass)
 		.value("Chi", Action::吃)
 		.value("Pon", Action::碰)
 		.value("Kan", Action::杠)
