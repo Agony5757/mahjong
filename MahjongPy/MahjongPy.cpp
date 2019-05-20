@@ -55,6 +55,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		;
 
 	py::class_<Fulu>(m, "Fulu")
+		.def(py::init<const Fulu&>())
 		.def_readonly("type", &Fulu::type)
 		.def_readonly("tiles", &Fulu::tiles)
 		.def_readonly("take", &Fulu::take)

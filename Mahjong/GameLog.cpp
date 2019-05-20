@@ -55,7 +55,7 @@ std::string BaseGameLog::to_string()
 		ss << "立直通过:" << score_to_string(score);
 		return ss.str();
 	default:
-		throw runtime_error("Invalid LogAction. Action: " + std::to_string(int(action)));
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Invalid LogAction. Action: " + std::to_string(int(action)));
 	}
 }
 
@@ -132,7 +132,7 @@ void GameLog::log_response_鸣牌(int player_call, int player_turn,
 		la = LogAction::杠;
 		break;
 	default:
-		throw runtime_error(
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION(
 			"Invalid Action when logging. Action:" + 
 			std::to_string(int(action))
 		);

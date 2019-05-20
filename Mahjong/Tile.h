@@ -12,6 +12,11 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION(errmsg) STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION1(errmsg)
+
+#define STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION1(errmsg) std::runtime_error(\
+std::string("FILE:")+__FILE__+" LINE:"+std::to_string(__LINE__)+" FUNC:"+__FUNCTION__+" MSG:"+ #errmsg)
+
 // #define MAJ_DEBUG
 
 enum Wind {
@@ -64,7 +69,7 @@ inline BaseTile char2_to_basetile(char number, char color, bool& red_dora) {
 	if (color == 'z') {
 		return BaseTile(east + num - 1);
 	}
-	throw std::runtime_error("Unknown Tile String");
+	throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Unknown Tile String");
 }
 
 inline BaseTile get_dora_next(BaseTile tile) {
@@ -160,7 +165,7 @@ inline bool is_场风(BaseTile tile, Wind 场风) {
 	case Wind::North:
 		return tile == BaseTile::north;
 	default:
-		throw std::runtime_error("Unknown wind.");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Unknown wind.");
 	}
 }
 
@@ -175,7 +180,7 @@ inline bool is_自风(BaseTile tile, Wind 自风) {
 	case Wind::North:
 		return tile == BaseTile::north;
 	default:
-		throw std::runtime_error("Unknown wind.");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Unknown wind.");
 	}
 }
 
@@ -228,7 +233,7 @@ inline std::string basetile_to_string(BaseTile tile) {
 	else if (tile == 中) {
 		ret = "[中";
 	}
-	else throw std::runtime_error("unknown tile");
+	else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("unknown tile");
 	return ret + ']';
 }
 
@@ -256,7 +261,7 @@ public:
 			ss << number << "z";
 			return ss.str();
 		}
-		throw std::runtime_error("Error Tile.");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Error Tile.");
 	}
 
 	inline std::string to_string() const {
@@ -291,7 +296,7 @@ public:
 		else if (tile == 中) {
 			ret = "[中";
 		}
-		else throw std::runtime_error("unknown tile");
+		else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("unknown tile");
 
 		if (red_dora) {
 			ret += '*';
@@ -350,6 +355,15 @@ struct Fulu {
 		加杠,
 		暗杠,
 	};
+
+	Fulu() { }
+
+	Fulu(const Fulu& fulu) {
+		this->tiles = fulu.tiles;
+		this->take = fulu.take;
+		this->type = fulu.type;
+	}
+
 	std::vector<Tile*> tiles;
 	int take;
 	// take标记的tiles中第几张牌拿的是别人的

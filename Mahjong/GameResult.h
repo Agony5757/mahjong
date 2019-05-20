@@ -45,7 +45,7 @@ struct Result {
 			ss << "自摸终局" << endl;
 			break;
 		default:
-			throw runtime_error("ResultType Unknown.");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("ResultType Unknown.");
 		}
 		ss << "Score:" << endl;
 		for (int i = 0; i < 4; ++i) {

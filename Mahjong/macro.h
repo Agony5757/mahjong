@@ -72,7 +72,7 @@ inline std::vector<mahjong::Tile> convert_basetiles_to_extern_tiles(std::vector<
 			newtiles.push_back(mahjong::Tile(mt, data, false));
 			continue;
 		default:
-			throw std::runtime_error("??");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("??");
 		}
 	}
 	return newtiles;
@@ -103,7 +103,7 @@ inline std::vector<mahjong::Tile> convert_tiles_to_extern_tiles(std::vector<Tile
 			newtiles.push_back(mahjong::Tile(mt, data, false));
 			continue;
 		default:
-			throw std::runtime_error("??");
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("??");
 		}
 	}
 	return newtiles;
@@ -122,7 +122,7 @@ inline BaseTile convert_extern_tile_to_basetile(mahjong::Tile tile) {
 	case mahjong::TileType::Special:
 		type = 3; break;
 	default:
-		throw std::runtime_error("??");
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("??");
 	}
 	auto basetile_number = type * 9 + number - 1;
 	BaseTile t = static_cast<BaseTile>(basetile_number);
