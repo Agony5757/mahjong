@@ -182,7 +182,6 @@ class EnvMahjong2(gym.Env):
 
     def get_state_(self, playerNo: int):
 
-
         matrix_features = np.zeros(self.matrix_feature_size, dtype=np.float16)
         vector_features = np.zeros(self.vector_feature_size, dtype=np.float16)
 
@@ -226,32 +225,32 @@ class EnvMahjong2(gym.Env):
                         matrix_features[id, self.river_start + 6 * i_relative + 4] += 1.
 
         # ------------- fulus x 4 (34 x 6 x 4)  -----------------------
-        # for i in range(4):
-        #     i_relative = (i - playerNo + 4) % 4
-        #     fulus = self.t.players[i].fulus
-        #     tile_num = np.zeros([34, ], dtype=np.int)
-        #     for k in range(len(fulus)):
-        #
-        #         tiles = fulus[k].tiles
-        #
-        #         for p in range(len(tiles)):
-        #             tile = tiles[p]
-        #             id = self.tile_to_id(tile.tile)
-        #
-        #             matrix_features[id, self.fulu_start + 6 * i_relative + tile_num] += 1.
-        #             tile_num[id] += 1
-        #
-        #             if tile.red_dora:  # red dora
-        #                 matrix_features[id, self.fulu_start + 6 * i_relative + 4] += 1.
-        #
-        #             for m in range(self.t.dora_spec):
-        #                 if self.dora_ind_2_dora_id(self.tile_to_id(self.t.DORA[m].tile)) == id:  # dora
-        #                     matrix_features[id, self.fulu_start + 6 * i_relative + 4] += 1.
+        for i in range(4):
+            i_relative = (i - playerNo + 4) % 4
+            fulus = self.t.players[i].fulus
+            tile_num = np.zeros([34, ], dtype=np.int)
+            for k in range(len(fulus)):
 
-                # take = fulus[k].take
-                # if not tiles[0].tile == tiles[1].tile: # if is Chi, record which one is taken
-                #     take_id = self.tile_to_id(tiles[take].tile)
-                #     matrix_features[take_id, self.fulu_start + 6 * i_relative + 5] += 1.
+                tiles = fulus[k].tiles
+
+                for p in range(len(tiles)):
+                    tile = tiles[p]
+                    id = self.tile_to_id(tile.tile)
+
+                    matrix_features[id, self.fulu_start + 6 * i_relative + tile_num[id]] = 1.
+                    tile_num[id] += 1
+
+                    if tile.red_dora:  # red dora
+                        matrix_features[id, self.fulu_start + 6 * i_relative + 4] += 1.
+
+                    for m in range(self.t.dora_spec):
+                        if self.dora_ind_2_dora_id(self.tile_to_id(self.t.DORA[m].tile)) == id:  # dora
+                            matrix_features[id, self.fulu_start + 6 * i_relative + 4] += 1.
+
+                take = fulus[k].take
+                if not tiles[0].tile == tiles[1].tile: # if is Chi, record which one is taken
+                    take_id = self.tile_to_id(tiles[take].tile)
+                    matrix_features[take_id, self.fulu_start + 6 * i_relative + 5] += 1.
 
         # ------------- self xuan pai (34 x 2)  -----------------------
         if self.played_a_tile[playerNo]:
@@ -261,6 +260,10 @@ class EnvMahjong2(gym.Env):
 
             if self.tile_in_air.red_dora:  # red dora
                 matrix_features[id, -1] += 1.
+
+            for m in range(self.t.dora_spec):
+                if self.dora_ind_2_dora_id(self.tile_to_id(self.t.DORA[m].tile)) == id:  # dora
+                    matrix_features[id, -1] += 1.
 
         vector_features[0] = self.t.turn / 18.0
         vector_features[1] = len(self.t.YAMA) / 72.0
@@ -274,7 +277,7 @@ class EnvMahjong2(gym.Env):
                                            for i in range(4)]).astype(np.float16)
         vector_features[16:20] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].ippatsu else 0
                                            for i in range(4)]).astype(np.float16)
-        vector_features[20:24] = np.array([len(self.t.players[(i - playerNo + 4) % 4].hand)
+        vector_features[20:24] = np.array([len(self.t.players[(i - playerNo + 4) % 4].hand) / 13.0
                                            for i in range(4)]).astype(np.float16)
         vector_features[24:28] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].menchin else 0
                                            for i in range(4)]).astype(np.float16)
@@ -487,76 +490,77 @@ class EnvMahjong2(gym.Env):
         return (matrix_features, vector_features)
 
     def tile_to_id(self, tile):
-        if tile == mp.BaseTile._1m:
-            return 0
-        elif tile == mp.BaseTile._2m:
-            return 1
-        elif tile == mp.BaseTile._3m:
-            return 2
-        elif tile == mp.BaseTile._4m:
-            return 3
-        elif tile == mp.BaseTile._5m:
-            return 4
-        elif tile == mp.BaseTile._6m:
-            return 5
-        elif tile == mp.BaseTile._7m:
-            return 6
-        elif tile == mp.BaseTile._8m:
-            return 7
-        elif tile == mp.BaseTile._9m:
-            return 8
-        elif tile == mp.BaseTile._1p:
-            return 9
-        elif tile == mp.BaseTile._2p:
-            return 10
-        elif tile == mp.BaseTile._3p:
-            return 11
-        elif tile == mp.BaseTile._4p:
-            return 12
-        elif tile == mp.BaseTile._5p:
-            return 13
-        elif tile == mp.BaseTile._6p:
-            return 14
-        elif tile == mp.BaseTile._7p:
-            return 15
-        elif tile == mp.BaseTile._8p:
-            return 16
-        elif tile == mp.BaseTile._9p:
-            return 17
-        elif tile == mp.BaseTile._1s:
-            return 18
-        elif tile == mp.BaseTile._2s:
-            return 19
-        elif tile == mp.BaseTile._3s:
-            return 20
-        elif tile == mp.BaseTile._4s:
-            return 21
-        elif tile == mp.BaseTile._5s:
-            return 22
-        elif tile == mp.BaseTile._6s:
-            return 23
-        elif tile == mp.BaseTile._7s:
-            return 24
-        elif tile == mp.BaseTile._8s:
-            return 25
-        elif tile == mp.BaseTile._9s:
-            return 26
-        elif tile == mp.BaseTile.east:
-            return 27
-        elif tile == mp.BaseTile.south:
-            return 28
-        elif tile == mp.BaseTile.west:
-            return 29
-        elif tile == mp.BaseTile.north:
-            return 30
-        elif tile == mp.BaseTile.chu:
-            return 31
-        elif tile == mp.BaseTile.haku:
-            return 32
-        elif tile == mp.BaseTile.hatsu:
-            return 33
-        else:
-            raise Exception("Input must be a tile!!")
+        # if tile == mp.BaseTile._1m:
+        #     return 0
+        # elif tile == mp.BaseTile._2m:
+        #     return 1
+        # elif tile == mp.BaseTile._3m:
+        #     return 2
+        # elif tile == mp.BaseTile._4m:
+        #     return 3
+        # elif tile == mp.BaseTile._5m:
+        #     return 4
+        # elif tile == mp.BaseTile._6m:
+        #     return 5
+        # elif tile == mp.BaseTile._7m:
+        #     return 6
+        # elif tile == mp.BaseTile._8m:
+        #     return 7
+        # elif tile == mp.BaseTile._9m:
+        #     return 8
+        # elif tile == mp.BaseTile._1s:
+        #     return 9
+        # elif tile == mp.BaseTile._2s:
+        #     return 10
+        # elif tile == mp.BaseTile._3s:
+        #     return 11
+        # elif tile == mp.BaseTile._4s:
+        #     return 12
+        # elif tile == mp.BaseTile._5s:
+        #     return 13
+        # elif tile == mp.BaseTile._6s:
+        #     return 14
+        # elif tile == mp.BaseTile._7s:
+        #     return 15
+        # elif tile == mp.BaseTile._8s:
+        #     return 16
+        # elif tile == mp.BaseTile._9s:
+        #     return 17
+        # elif tile == mp.BaseTile._1p:
+        #     return 18
+        # elif tile == mp.BaseTile._2p:
+        #     return 19
+        # elif tile == mp.BaseTile._3p:
+        #     return 20
+        # elif tile == mp.BaseTile._4p:
+        #     return 21
+        # elif tile == mp.BaseTile._5p:
+        #     return 22
+        # elif tile == mp.BaseTile._6p:
+        #     return 23
+        # elif tile == mp.BaseTile._7p:
+        #     return 24
+        # elif tile == mp.BaseTile._8p:
+        #     return 25
+        # elif tile == mp.BaseTile._9p:
+        #     return 26
+        # elif tile == mp.BaseTile.east:
+        #     return 27
+        # elif tile == mp.BaseTile.south:
+        #     return 28
+        # elif tile == mp.BaseTile.west:
+        #     return 29
+        # elif tile == mp.BaseTile.north:
+        #     return 30
+        # elif tile == mp.BaseTile.haku:
+        #     return 31
+        # elif tile == mp.BaseTile.hatsu:
+        #     return 32
+        # elif tile == mp.BaseTile.chu:
+        #     return 33
+        # else:
+        #     raise Exception("Input must be a tile!!")
+        return int(tile)
 
     def dora_ind_2_dora_id(self, ind_id):
         if ind_id == 8:

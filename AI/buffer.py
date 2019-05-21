@@ -43,6 +43,7 @@ class MahjongBufferFrost2():
                  num_tile_type=34, num_each_tile=55, num_vf=29):
         # Mahjong episode length usually < 256
         self.size = size
+        self.episode_length = episode_length
         self.length = np.zeros([size,], dtype=np.int)
 
         self.S = np.zeros([size, episode_length, num_tile_type, num_each_tile], dtype=np.float16)
@@ -50,7 +51,7 @@ class MahjongBufferFrost2():
 
         self.r = np.zeros([size, episode_length], dtype=np.float32)
         self.d = np.zeros([size, episode_length], dtype=np.float16)
-        self.mu = [[] for _ in range(size)]
+        self.mu = np.zeros([size, episode_length, 40], dtype=np.float32)
 
         self.IS_scale = IS_scale
         self.priority_scale = priority_scale
@@ -92,7 +93,7 @@ class MahjongBufferFrost2():
 
         self.r[self.tail, :length] = r
         self.d[self.tail, :length] = d
-        self.mu[self.tail] = mu
+        self.mu[self.tail, :length] = mu
         self.length[self.tail] = length
 
         self.sum_tree.add(self.tail, weight + self.priority_eps)
@@ -114,7 +115,8 @@ class MahjongBufferFrost2():
 
         return S, s, r, d, mu, self.length[e_index], e_index, e_weight
 
-    # def sample_episode_batch(self, batch_size=32):
+    def sample_episode_batch(self, batch_size=32):
+        pass
     #     states_b = []
     #     actions_b = []
     #     pi_b = []
@@ -146,3 +148,28 @@ class MahjongBufferFrost2():
     #     weights_b = np.stack(weights, axis=0)
     #
     #     return states_b, actions_b, pi_b, r_b, done_b, length_b, mask_b, indices, weights_b
+
+    def save(self, path='./MahjongBufferFrost2.npz'):
+        parameters = np.array([self.size, self.episode_length, self.filled_size, self.tail])
+        np.savez(path, parameters=parameters, S=self.S, s=self.s, r=self.r, mu=self.mu, length=self.length, d=self.d)
+
+        return None
+
+    def load(self, path='./MahjongBufferFrost2.npz'):
+        data = np.load(path)
+
+        self.size = data['parameters'][0]
+        self.episode_length = data['parameters'][1]
+        self.filled_size = data['parameters'][2]
+        self.tail = data['parameters'][3]
+
+        self.length = data['length']
+
+        self.S = data['S']
+        self.s = data['s']
+        self.r = data['r']
+        self.d = data['d']
+        self.mu = data['mu']
+
+        return None
+

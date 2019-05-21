@@ -19,3 +19,4 @@ log/
 log/checkpoint
 MahjongRelease/
 AI/Paipu/
+*.npz
