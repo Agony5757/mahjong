@@ -159,8 +159,10 @@ class MahjongBufferFrost2():
         if not self.saved:
             parameters = np.array([self.size, self.episode_length, self.filled_size, self.tail])
             np.savez(path, parameters=parameters, S=self.S, s=self.s, r=self.r, mu=self.mu, length=self.length, d=self.d)
+            print("Buffer saved in path: %s" % path)
+
         self.saved = True
-        print("Buffer saved in path: %s" % path)
+
         return None
 
     def load(self, path='./MahjongBufferFrost2.npz'):

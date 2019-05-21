@@ -157,7 +157,7 @@ class AgentFrost2():
             self.memory.append_episode(states,
                                        np.reshape(rewards, [-1,]),
                                        np.reshape(dones, [-1,]),
-                                       behavior_policies,
+                                       np.reshape(behavior_policies, [-1, 40]),
                                        weight=weight)
         # except:
         #     print("Episode Length 0! Not recorded!")
