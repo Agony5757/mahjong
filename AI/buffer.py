@@ -42,6 +42,9 @@ class MahjongBufferFrost2():
     def __init__(self, size=256, episode_length=256, priority_eps=10000, priority_scale=0.0, IS_scale=1.0, saved=None,
                  num_tile_type=34, num_each_tile=55, num_vf=29):
         # Mahjong episode length usually < 256
+
+        self.saved = False
+
         self.size = size
         self.episode_length = episode_length
         self.length = np.zeros([size,], dtype=np.int)
@@ -101,6 +104,8 @@ class MahjongBufferFrost2():
         self.tail = (self.tail + 1) % self.size
         self.filled_size = min(self.filled_size + 1, self.size)
 
+        self.saved = False
+
         return None
 
 
@@ -150,9 +155,12 @@ class MahjongBufferFrost2():
     #     return states_b, actions_b, pi_b, r_b, done_b, length_b, mask_b, indices, weights_b
 
     def save(self, path='./MahjongBufferFrost2.npz'):
-        parameters = np.array([self.size, self.episode_length, self.filled_size, self.tail])
-        np.savez(path, parameters=parameters, S=self.S, s=self.s, r=self.r, mu=self.mu, length=self.length, d=self.d)
 
+        if not self.saved:
+            parameters = np.array([self.size, self.episode_length, self.filled_size, self.tail])
+            np.savez(path, parameters=parameters, S=self.S, s=self.s, r=self.r, mu=self.mu, length=self.length, d=self.d)
+        self.saved = True
+        print("Buffer saved in path: %s" % path)
         return None
 
     def load(self, path='./MahjongBufferFrost2.npz'):
