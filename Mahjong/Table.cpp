@@ -1273,29 +1273,38 @@ std::vector<ResponseAction> Table::GetValidResponse(
 	// 如果吃了之后，手上只有食替牌，那么就移除这个吃
 	{
 		auto iter = remove_if(response.begin(), response.end(),
-			[&the_player](ResponseAction &ra) {
+			[&the_player, &tile](ResponseAction &ra) {
+
 			if (ra.action != Action::吃) return false;
 			auto tiles = ra.correspond_tiles;
 			// 计算食替牌
 			vector<BaseTile> 食替牌;
 
-			if (tiles[1]->tile > tiles[0]->tile) {
+			if (tiles[1]->tile - tiles[0]->tile == 1) {
+				// 23(4) 则加(1)，但是12(3)不加
 				if (tiles[0]->tile != _1m && tiles[0]->tile != _1s && tiles[0]->tile != _1p) {
 					食替牌.push_back(BaseTile(tiles[0]->tile - 1));
 				}
+				// (2)34 则加(5)，但是(7)89不加
 				if (tiles[1]->tile != _9m && tiles[1]->tile != _9s && tiles[1]->tile != _9p) {
 					食替牌.push_back(BaseTile(tiles[1]->tile + 1));
 				}
 			}
-			else if (tiles[1]->tile < tiles[0]->tile) {
+			else if (tiles[1]->tile - tiles[0]->tile == -1) {
+				// 23(4) 则加(1)，但是12(3)不加
 				if (tiles[1]->tile != _1m && tiles[1]->tile != _1s && tiles[1]->tile != _1p) {
 					食替牌.push_back(BaseTile(tiles[1]->tile - 1));
 				}
+				// (2)34 则加(5)，但是(7)89不加
 				if (tiles[0]->tile != _9m && tiles[0]->tile != _9s && tiles[0]->tile != _9p) {
 					食替牌.push_back(BaseTile(tiles[0]->tile + 1));
 				}
 			}
-			else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Error in response action: chi.");
+			else if (tiles[1]->tile - tiles[0]->tile == 2 || tiles[1]->tile - tiles[0]->tile == -2) {
+				// 1(2)3 则加(2)
+				食替牌.push_back(tile->tile);
+			}
+			else throw runtime_error("Error in response action: chi.");
 
 			// 去掉这些吃牌
 			auto copyhand = the_player.hand;
