@@ -25,12 +25,22 @@ class EnvMahjong2(gym.Env):
         self.game_count = 0
         self.printing = printing
 
-        self.matrix_feature_size = [34, 55]
+        self.matrix_feature_size = [34, 58]
         self.vector_feature_size = 29
 
+        self.xuanpai_start = 5 + 6 * 4 + 6 * 4
         self.fulu_start = 5 + 6 * 4
         self.river_start = 5
         self.hand_features = 5
+
+        self.hand_dora_id = 4
+        self.fulu_dora_id = self.fulu_start + 4
+        self.xuanpai_dora_id = self.xuanpai_start + 1
+
+        self.hora_id = 28
+        self.riichi_id = 0
+        self.double_riichi_id = 4
+        self.kannum_id = 26
 
         self.scores_init = np.zeros([4], dtype=np.float32)
         for i in range(4):
@@ -256,31 +266,41 @@ class EnvMahjong2(gym.Env):
         if self.played_a_tile[playerNo]:
             id = self.tile_to_id(self.tile_in_air.tile)
 
-            matrix_features[id, -2] = 1.
+            matrix_features[id, self.xuanpai_start] = 1.
 
             if self.tile_in_air.red_dora:  # red dora
-                matrix_features[id, -1] += 1.
+                matrix_features[id, self.xuanpai_start + 1] += 1.
 
             for m in range(self.t.dora_spec):
                 if self.dora_ind_2_dora_id(self.tile_to_id(self.t.DORA[m].tile)) == id:  # dora
-                    matrix_features[id, -1] += 1.
+                    matrix_features[id, self.xuanpai_start + 1] += 1.
 
-        vector_features[0] = self.t.turn / 18.0
-        vector_features[1] = len(self.t.YAMA) / 72.0
-        vector_features[2] = 1. if self.t.players[playerNo].first_round else 0.
-        vector_features[3] = self.t.dora_spec - 1.0
-        vector_features[4:8] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].oya else 0
+        # -------------宝牌指示牌 场风 自风 ---------
+        for m in range(self.t.dora_spec):
+            dora_spec_id = self.tile_to_id(self.t.DORA[m].tile)
+            matrix_features[dora_spec_id, -3] = 1
+        matrix_features[26 + int(self.t.game_wind), -2] = 1
+        matrix_features[26 + int(self.t.players[playerNo].wind), -1] = 1
+
+        # --------------- Vector Features ---------------------
+
+        vector_features[0:4] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].riichi else 0
+                                        for i in range(4)]).astype(np.float16)
+        vector_features[4:8] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].double_riichi else 0
                                          for i in range(4)]).astype(np.float16)
-        vector_features[8:12] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].riichi else 0
+        vector_features[8:12] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].ippatsu else 0
                                           for i in range(4)]).astype(np.float16)
-        vector_features[12:16] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].double_riichi else 0
+        vector_features[12:16] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].oya else 0
                                            for i in range(4)]).astype(np.float16)
-        vector_features[16:20] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].ippatsu else 0
+        vector_features[16:20] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].menchin else 0
                                            for i in range(4)]).astype(np.float16)
         vector_features[20:24] = np.array([len(self.t.players[(i - playerNo + 4) % 4].hand) / 13.0
                                            for i in range(4)]).astype(np.float16)
-        vector_features[24:28] = np.array([1 if self.t.players[(i - playerNo + 4) % 4].menchin else 0
-                                           for i in range(4)]).astype(np.float16)
+        vector_features[24] = self.t.turn / 18.0
+        vector_features[25] = len(self.t.YAMA) / 72.0
+        vector_features[26] = (self.t.dora_spec - 1.0) / 4
+        vector_features[27] = 1. if self.t.players[playerNo].first_round else 0.
+
         vector_features[28] = 1.0 if self.horas[playerNo] else 0.0
 
         return matrix_features, vector_features
@@ -363,7 +383,7 @@ class EnvMahjong2(gym.Env):
             id = self.tile_to_id(aval_actions[action].correspond_tiles[0].tile)
             S[id, self.fulu_start: self.fulu_start + self.hand_features] = deepcopy(S[id, 0:self.hand_features])
             S[id, 0:self.hand_features] = 0
-            s[3] += 1  # 杠数
+            s[self.kannum_id] += 1  # 杠数
 
         elif aval_actions[action].action == mp.Action.Chi or aval_actions[action].action == mp.Action.Pon:
             corr_tiles = aval_actions[action].correspond_tiles
@@ -375,11 +395,11 @@ class EnvMahjong2(gym.Env):
                 tile_num[id] -= 1
 
                 if tile.red_dora:
-                    S[id, 4] -= 1.
+                    S[id, self.hand_dora_id] -= 1.
 
                 for m in range(self.t.dora_spec):
                     if self.dora_ind_2_dora_id(self.tile_to_id(self.t.DORA[m].tile)) == id:  # dora
-                        S[id, 4] -= 1.
+                        S[id, self.hand_dora_id] -= 1.
 
             tile = self.t.get_selected_action_tile()
             id = self.tile_to_id(tile.tile)
@@ -388,37 +408,37 @@ class EnvMahjong2(gym.Env):
             tile_num_fulus[id] += 1
 
             if tile.red_dora:
-                S[id, self.fulu_start + 4] += 1.
+                S[id, self.fulu_dora_id] += 1.
 
             for m in range(self.t.dora_spec):
                 if self.dora_ind_2_dora_id(self.tile_to_id(self.t.DORA[m].tile)) == id:  # dora
-                    S[id, self.fulu_start + 4] += 1.
+                    S[id, self.fulu_dora_id] += 1.
 
         elif aval_actions[action].action == mp.Action.Kakan:
             id = self.tile_to_id(aval_actions[action].correspond_tiles[0].tile)
             S[id, self.fulu_start + 3] = 1
             S[id, 0] = 0
-            S[id, self.fulu_start + 4] += S[id, 4]  # dora num
-            S[id, 4] = 0
+            S[id, self.fulu_dora_id] += S[id, 4]  # dora num
+            S[id, self.hand_dora_id] = 0
 
         elif aval_actions[action].action == mp.Action.Kan:
             id = self.tile_to_id(aval_actions[action].correspond_tiles[0].tile)
             S[id, self.fulu_start: self.fulu_start + self.hand_features] = deepcopy(S[id, 0:self.hand_features])
             S[id, self.fulu_start + 3] = 1  # kan tile
-            S[id, self.fulu_start + 4] += S[id, 4]  # dora num
+            S[id, self.fulu_dora_id] += S[id, 4]  # dora num
             S[id, 0:self.hand_features] = 0 # hand no tile
 
             tile = self.t.get_selected_action_tile()
             id = self.tile_to_id(tile.tile)
 
             if tile.red_dora:
-                S[id, self.fulu_start + 4] += 1.
+                S[id, self.fulu_dora_id] += 1.
             for m in range(self.t.dora_spec):
                 if self.dora_ind_2_dora_id(self.tile_to_id(self.t.DORA[m].tile)) == id:  # dora
-                    S[id, self.fulu_start + 4] += 1.
+                    S[id, self.fulu_dora_id] += 1.
 
         elif aval_actions[action].action == mp.Action.KyuShuKyuHai:
-            s[28] = 1.
+            s[self.hora_id] = 1.
 
         elif aval_actions[action].action == mp.Action.Play:
             tile = aval_actions[action].correspond_tiles[0]
@@ -426,24 +446,25 @@ class EnvMahjong2(gym.Env):
             id = self.tile_to_id(tile.tile)
             S[id, tile_num[id] - 1] = 0.
             tile_num[id] -= 1
-            S[id, -2] = 1.
+            S[id, self.xuanpai_start] = 1.
 
             if tile.red_dora:
-                S[id, 4] -= 1.
-                S[id, -1] += 1.
+                S[id, self.hand_dora_id] -= 1.
+                S[id, self.xuanpai_start + 1] += 1.
 
             for m in range(self.t.dora_spec):
                 if self.dora_ind_2_dora_id(self.tile_to_id(self.t.DORA[m].tile)) == id:  # dora
-                    S[id, 4] -= 1.
-                    S[id, -1] += 1.
+                    S[id, self.hand_dora_id] -= 1.
+                    S[id, self.xuanpai_start + 1] += 1.
 
         elif aval_actions[action].action == mp.Action.Riichi:
             if self.t.players[playerNo].first_round:  # double Riichi
-                s[12] = 1
+                s[self.double_riichi_id] = 1
             else:
-                s[8] = 1
+                s[self.riichi_id] = 1
 
-        elif aval_actions[action].action == mp.Action.Ron or aval_actions[action].action == mp.Action.Ron.ChanKan or aval_actions[action].action == mp.Action.ChanAnKan:
+        elif aval_actions[action].action == mp.Action.Ron or aval_actions[action].action == mp.Action.ChanKan or \
+                        aval_actions[action].action == mp.Action.ChanAnKan:
 
             tile = self.t.get_selected_action_tile()
             id = self.tile_to_id(tile.tile)
@@ -452,16 +473,16 @@ class EnvMahjong2(gym.Env):
             tile_num[id] += 1
 
             if tile.red_dora:
-                S[id, 4] += 1.
+                S[id, self.hand_dora_id] += 1.
 
             for m in range(self.t.dora_spec):
                 if self.dora_ind_2_dora_id(self.tile_to_id(self.t.DORA[m].tile)) == id:  # dora
-                    S[id, 4] += 1.
+                    S[id, self.hand_dora_id] += 1.
 
-            s[28] = 1.
+            s[self.hora_id] = 1.
 
         elif aval_actions[action].action == mp.Action.Tsumo:
-            s[28] = 1.
+            s[self.hora_id] = 1.
 
         else:
             pass

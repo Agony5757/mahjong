@@ -3,7 +3,7 @@ from buffer import MahjongBufferFrost2
 import numpy as np
 from datetime import datetime
 import scipy.special as scisp
-
+import MahjongPy as mp
 
 class MahjongNetFrost2():
     """
@@ -112,7 +112,7 @@ class AgentFrost2():
     """
     Mahjong AI agent with PER
     """
-    def __init__(self, nn: MahjongNetFrost2, memory:MahjongBufferFrost2, gamma=0.9999, greedy=1.0, lambd=0.975,
+    def __init__(self, nn: MahjongNetFrost2, memory:MahjongBufferFrost2, gamma=0.9999, greedy=1.0, lambd=0.8,
                  num_tile_type=34, num_each_tile=55, num_vf=29):
         self.nn = nn
         self.gamma = gamma  # discount factor
@@ -123,6 +123,75 @@ class AgentFrost2():
         self.num_tile_type = num_tile_type  # number of tile types
         self.num_each_tile = num_each_tile # number of features for each tile
         self.num_vf = num_vf # number of vector features
+
+        # statistics
+        self.stat = {}
+        self.stat['num_games'] = 0.
+        self.stat['hora_games'] = 0.
+        self.stat['ron_games'] = 0.
+        self.stat['tsumo_games'] = 0.
+        self.stat['fire_games'] = 0.
+        self.stat['total_scores_get'] = 0.
+
+        self.stat['hora_rate'] = 0.
+        self.stat['tsumo_rate'] = 0.
+        self.stat['fire_rate'] = 0.
+        self.stat['fulu_rate'] = 0.
+        self.stat['riichi_rate'] = 0.
+        self.stat['avg_point_get'] = 0.
+
+        self.stat['hora'] = []
+        self.stat['ron'] = []
+        self.stat['tsumo'] = []
+        self.stat['fire'] = []
+        self.stat['score_change'] = []
+
+    def statistics(self, playerNo, result, final_score_change, turn, riichi, menchin):
+
+        fulu = 1 - menchin
+
+        if result.result_type == mp.ResultType.RonAgari:
+            ron_playerNo = np.argmax(final_score_change)
+            if playerNo == ron_playerNo:
+                self.stat['hora_games'] += 1
+                self.stat['ron_games'] += 1
+                self.stat['total_scores_get'] += np.max(final_score_change)
+                self.stat['ron'].append(1)
+                self.stat['tsumo'].append(0)
+                self.stat['hora'].append(1)
+                self.stat['fire'].append(0)
+            elif riichi * 1000 + final_score_change[playerNo] < 0 and final_score_change[playerNo] <= - (
+                    np.max(final_score_change) - riichi * 1000):
+                self.stat['ron'].append(0)
+                self.stat['tsumo'].append(0)
+                self.stat['hora'].append(0)
+                self.stat['fire'].append(1)
+                self.stat['fire_games'] += 1
+
+        if result.result_type == mp.ResultType.TsumoAgari:
+            tsumo_playerNo = np.argmax(final_score_change)
+            if playerNo == tsumo_playerNo:
+                self.stat['hora_games'] += 1
+                self.stat['tsumo_games'] += 1
+                self.stat['total_scores_get'] += np.max(final_score_change)
+                self.stat['ron'].append(0)
+                self.stat['tsumo'].append(1)
+                self.stat['hora'].append(1)
+                self.stat['fire'].append(0)
+
+        self.stat['score_change'].append(final_score_change[playerNo])
+        self.stat['num_games'] += 1
+
+        self.stat['hora_rate'] = self.stat['hora_games'] / self.stat['num_games']
+        self.stat['tsumo_rate'] = self.stat['tsumo_games'] / self.stat['num_games']
+        self.stat['fire_rate'] = self.stat['fire_games'] / self.stat['num_games']
+
+        self.stat['fulu_rate'] = (self.stat['fulu_rate'] * (self.stat['hora_games'] - 1) + riichi) / self.stat['hora_games'] if self.stat['hora_games'] > 0 else 0
+        self.stat['riichi_rate'] = (self.stat['riichi_rate'] * (self.stat['hora_games'] - 1) + fulu) / self.stat['hora_games'] if self.stat['hora_games'] > 0 else 0
+
+        self.stat['hora_turn'] = (self.stat['hora_turn'] * (self.stat['hora_games'] - 1) + turn) / self.stat['hora_games'] if self.stat['hora_games'] > 0 else 0
+        self.stat['avg_point_get'] = self.stat['total_scores_get'] / self.stat['hora_games'] if self.stat['hora_games'] > 0 else 0
+
 
     def select(self, aval_next_states):
         """
@@ -143,12 +212,12 @@ class AgentFrost2():
         next_value_pred = np.reshape(self.nn.output((aval_next_matrix_features, aval_next_vector_features)), [-1])
 
         # softmax policy
-        policy = scisp.softmax(self.greedy * next_value_pred / 2500)
+        policy = scisp.softmax(self.greedy * next_value_pred / 1000)
         action = np.random.choice(np.size(policy), p=policy)
 
         return action, policy
 
-    def remember_episode(self, states, rewards, dones, behavior_policies, weight):
+    def remember_episode(self, states, rewards, dones, actions, behavior_policies, weight):
         # try:
 
         if len(dones) == 0:
@@ -157,24 +226,24 @@ class AgentFrost2():
             self.memory.append_episode(states,
                                        np.reshape(rewards, [-1,]),
                                        np.reshape(dones, [-1,]),
+                                       np.reshape(actions, [-1]),
                                        np.reshape(behavior_policies, [-1, 40]),
                                        weight=weight)
         # except:
         #     print("Episode Length 0! Not recorded!")
-
-
-    def learn(self, symmetric_hand=None, episode_start=1, logging=True):
+    def learn(self, symmetric_hand=None, episode_start=1, care_lose=True, logging=True):
 
         if self.memory.filled_size >= episode_start:
-            S, s, r, d, mu, length, e_index, e_weight = self.memory.sample_episode()
+            S, Sp, s, sp, r, d, a, mu, length, e_index, e_weight = self.memory.sample_episode_batch()
 
-            # print(e_index)
+            if not care_lose:
+                r = np.maximum(r, 0)
 
-            this_S = S[:-1]
-            next_S = S[1:]
+            this_S = S
+            next_S = Sp
 
-            this_s = s[:-1]
-            next_s = s[1:]
+            this_s = s
+            next_s = sp
 
             target_value = np.zeros([r.shape[0], 1], dtype=np.float32)
 
@@ -187,12 +256,14 @@ class AgentFrost2():
 
                 td_error = r[i] + (1. - d[i]) * self.gamma * vp[i, 0] - v[i, 0]
 
-                target_value[i, 0] = v[i,0] + td_error + self.lambd * td_prime
+                if d[i]:
+                    td_prime = 0
 
-                td_prime += self.lambd * td_error
+                target_value[i, 0] = v[i,0] + 1. * (td_error + self.lambd * td_prime)
+
+                td_prime += 1. * self.lambd * td_error
 
             self.global_step += 1
-
 
             # also train symmetric hand
             if not symmetric_hand == None:
@@ -204,8 +275,8 @@ class AgentFrost2():
                 all_s = this_s
                 all_target_value = target_value
 
-
             self.nn.train((all_S, all_s), all_target_value, logging=logging, global_step=self.global_step)
 
         else:
             pass
+
