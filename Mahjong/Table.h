@@ -8,6 +8,7 @@
 #include "macro.h"
 #include <array>
 #include <mutex>
+#include <algorithm>
 
 constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
@@ -158,7 +159,7 @@ private:
 	int river_counter = 0;
 	Tile tiles[N_TILES];
 public:
-	Agent* agents[4];	
+	Agent* agents[4];
 	int dora_spec; // 翻开了几张宝牌指示牌
 	std::vector<Tile*> 宝牌指示牌;
 	std::vector<Tile*> 里宝牌指示牌;
@@ -357,6 +358,80 @@ public:
 
 		turn = 庄家;
 
+		game_log.logGameStart(n本场, n立直棒, 庄家, 场风, export_yama(), get_scores());
+		_from_beginning();
+	}
+
+	inline void tenhou_game_init(
+		std::array<std::array<int, 13>, 4> hands,
+		std::vector<int> drawtiles,
+		std::vector<int> doras,
+		std::vector<int> uradoras,
+		std::vector<int> kantiles,
+		std::array<int, 4> scores,
+		int riichi,
+		int honba,
+		int oya,
+		int gamewind
+	) {
+		using namespace std;
+		// init_tiles();
+		// init_tiles_as_tenhou_rule
+
+		for (int i = 0; i < N_TILES; ++i) {
+			tiles[i].tile = static_cast<BaseTile>(i / 4);
+			tiles[i].red_dora = false;
+		}
+
+		//init_red_dora_3();
+		tiles[BaseTile::_5m * 4].red_dora = true;
+		tiles[BaseTile::_5p * 4].red_dora = true;
+		tiles[BaseTile::_5s * 4].red_dora = true;
+		/* Generate yama with already known message */
+		//init_yama();
+		vector<Tile*> empty;
+		牌山.swap(empty);
+		for (int i = 0; i < 4; i++)	{
+			for (int j = 0; j < 13; j++) {
+				牌山.push_back(&tiles[hands[i][j]]);
+			}
+		}
+		dora_spec = 1;
+		for (int i = 0; i < 5; ++i) {
+			if (i < doras.size()) 宝牌指示牌[i] = &tiles[doras[i]];
+			else 宝牌指示牌[i] = tiles;
+		}
+		for (int i = 0; i < 5; ++i) {
+			if (i < doras.size()) 里宝牌指示牌[i] = &tiles[uradoras[i]];
+			else 里宝牌指示牌[i] = tiles;
+		}
+		for (int i = 0; i < drawtiles.size(); ++i) {
+			牌山.push_back(&tiles[drawtiles[i]]);
+		}
+		for (int i = 0; i < N_TILES - kantiles.size() - 13 * 4 - drawtiles.size(); ++i)
+			牌山.push_back(tiles);
+
+		for (int i = 0; i < kantiles.size(); ++i) {
+			牌山.push_back(&tiles[kantiles[kantiles.size() - 1 - i]]);
+		}
+		std::reverse(牌山.begin(), 牌山.end());
+
+		for (int i = 0; i < 4; ++i)
+		{
+			players[i].score = scores[i];
+		}
+		n立直棒 = riichi;
+		n本场 = honba;
+		庄家 = oya;
+		场风 = (Wind)gamewind;
+
+		_deal(0, 13);
+		_deal(1, 13);
+		_deal(2, 13);
+		_deal(3, 13);
+
+		init_wind();
+		turn = 庄家;
 		game_log.logGameStart(n本场, n立直棒, 庄家, 场风, export_yama(), get_scores());
 		_from_beginning();
 	}

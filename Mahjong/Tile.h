@@ -15,7 +15,7 @@
 #define STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION(errmsg) STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION1(errmsg)
 
 #define STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION1(errmsg) std::runtime_error(\
-std::string("FILE:")+__FILE__+" LINE:"+std::to_string(__LINE__)+" FUNC:"+__FUNCTION__+" MSG:"+ #errmsg)
+std::string("FILE:")+__FILE__+" LINE:"+std::to_string(__LINE__)+" FUNC:"+__FUNCTION__+" MSG:"+ errmsg)
 
 // #define MAJ_DEBUG
 
@@ -33,8 +33,8 @@ enum class Belong : unsigned char {
 
 enum BaseTile : unsigned char {
 	_1m, _2m, _3m, _4m, _5m, _6m, _7m, _8m, _9m,
-	_1s, _2s, _3s, _4s, _5s, _6s, _7s, _8s, _9s,
 	_1p, _2p, _3p, _4p, _5p, _6p, _7p, _8p, _9p,
+	_1s, _2s, _3s, _4s, _5s, _6s, _7s, _8s, _9s,
 	east, south, west, north,
 	白, 发, 中
 };
@@ -42,9 +42,9 @@ enum BaseTile : unsigned char {
 inline std::string basetile_to_string_simple(BaseTile bt) {
 	using namespace std;
 	static vector<string> names{
-		"1m","2m","3m","4m","5m","6m","7m","8m","9m",	
-		"1s","2s","3s","4s","5s","6s","7s","8s","9s",	
+		"1m","2m","3m","4m","5m","6m","7m","8m","9m",
 		"1p","2p","3p","4p","5p","6p","7p","8p","9p",
+		"1s","2s","3s","4s","5s","6s","7s","8s","9s",	
 		"1z","2z","3z","4z","5z","6z","7z" 
 	};
 	return names[int(bt)];
@@ -207,10 +207,10 @@ inline std::string basetile_to_string(BaseTile tile) {
 		ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
 	}
 	else if (9 <= tile && tile <= 17) {
-		ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "s";
+		ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "p";
 	}
 	else if (18 <= tile && tile <= 26) {
-		ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "p";
+		ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "s";
 	}
 	else if (tile == east) {
 		ret = "[东";
@@ -303,6 +303,28 @@ public:
 		}
 		return ret + ']';
 	}
+
+	inline bool compare_short_name(std::string shortname) const {
+		int number = shortname[0] - '0';
+		if (shortname[0] == '0') {
+			number = 5;
+			if (!red_dora) return false;
+		}
+		int tileN = number;
+		if (shortname[1] == 's') {
+			return (tile - BaseTile::_1s + 1) == number;
+		}
+		if (shortname[1] == 'm') {
+			return (tile - BaseTile::_1m + 1) == number;
+		}
+		if (shortname[1] == 'p') {
+			return (tile - BaseTile::_1p + 1) == number;
+		}
+		if (shortname[1] == 'z') {
+			return (tile - BaseTile::east + 1) == number;
+		}
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Cannot parse the tile name.");
+	}		
 };
 
 inline bool tile_comparator(Tile* t2, Tile* t1) {
