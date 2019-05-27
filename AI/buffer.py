@@ -1,49 +1,9 @@
 import numpy as np
 import random
 
-class SimpleMahjongBuffer():
-
-    def __init__(self, size=10000):
-        self.size = size
-        self.s = np.zeros([size, 34, 4, 1], dtype=np.float32)
-        self.sp = np.zeros([size, 34, 4, 1], dtype=np.float32)
-        self.r = np.zeros([size], dtype=np.float32)
-        self.d = np.zeros([size], dtype=np.float32)
-
-        self.filled = -1  # up to this index, the buffer is filled
-        self.tail = 0  # index to which an experience to be stored next
-
-    def __len__(self):
-        return self.filled
-
-    def append(self, s, r, s_next, done):
-        self.s[self.tail] = s
-        self.r[self.tail] = r
-        self.sp[self.tail] = s_next
-        # self.mu[self.tail] = mu
-        self.d[self.tail] = done
-
-        self.filled = max(self.filled, self.tail)
-        self.tail += 1
-        if self.tail == self.size:
-            self.tail = 0
-
-    def sample(self, truncated_steps):
-        index = np.random.randint(low=truncated_steps, high=self.filled)
-
-        s = np.vstack((self.s[index - truncated_steps:index], self.sp[None, index]))
-        ret_tuple = (s,
-                     self.r[index - truncated_steps:index],
-                     self.d[index - truncated_steps:index])
-
-        return ret_tuple
-
-
-
-
-class SimpleMahjongBufferPER():
+class MahjongBufferFrost2():
     # Record Episodes
-    # Prioritized Experience Replay
+    # Prioritized Experience Replay (currently disabled)
     class SumTree:
         def __init__(self, size, scale):
             self.size = size
@@ -79,14 +39,22 @@ class SimpleMahjongBufferPER():
             return self.sample_subtree(1)
             pass
 
-    def __init__(self, size=1024, episode_length=256, priority_eps=10000,
-                 priority_scale=0.1, IS_scale=1.0, saved=None):
-        # Mahjong episode length usually <256
+    def __init__(self, size=256, episode_length=256, priority_eps=10000, priority_scale=0.0, IS_scale=1.0, saved=None,
+                 num_tile_type=34, num_each_tile=55, num_vf=29):
+        # Mahjong episode length usually < 256
+
+        self.saved = False
+
         self.size = size
+        self.episode_length = episode_length
         self.length = np.zeros([size,], dtype=np.int)
-        self.s = np.zeros([size, episode_length, 34, 4, 1], dtype=np.float16)
+
+        self.S = np.zeros([size, episode_length, num_tile_type, num_each_tile], dtype=np.float16)
+        self.s = np.zeros([size, episode_length, num_vf], dtype=np.float16)
+
         self.r = np.zeros([size, episode_length], dtype=np.float32)
         self.d = np.zeros([size, episode_length], dtype=np.float16)
+        self.mu = np.zeros([size, episode_length, 40], dtype=np.float32)
 
         self.IS_scale = IS_scale
         self.priority_scale = priority_scale
@@ -96,7 +64,7 @@ class SimpleMahjongBufferPER():
         self.tail = 0  # index to which an experience to be stored next
 
         tree_size = 2 ** int(np.ceil(np.log2(size)))
-        self.sum_tree = SimpleMahjongBufferPER.SumTree(tree_size, priority_scale)
+        self.sum_tree = MahjongBufferFrost2.SumTree(tree_size, priority_scale)
         self.sum_steps = 0
         self.min_length = 0
         self.max_length = 0
@@ -111,11 +79,24 @@ class SimpleMahjongBufferPER():
         #     self.min_length = min(self.min_length, length)
         #     self.max_length = max(self.max_length, length)
 
-    def append_episode(self, s, r, d, weight=0):
+    def append_episode(self, state, r, d, mu, weight=0):
+        """
+        Append an episode
+        :param state: features
+        :param r: reward
+        :param d: done
+        :param weight: weight of this epsiode for PER
+        :return: None
+        """
         length = len(r)
-        self.s[self.tail, :length+1] = s
+
+        for stp in range(length + 1):
+            self.s[self.tail, stp] = state[stp][1]
+            self.S[self.tail, stp] = state[stp][0]
+
         self.r[self.tail, :length] = r
         self.d[self.tail, :length] = d
+        self.mu[self.tail, :length] = mu
         self.length[self.tail] = length
 
         self.sum_tree.add(self.tail, weight + self.priority_eps)
@@ -123,18 +104,24 @@ class SimpleMahjongBufferPER():
         self.tail = (self.tail + 1) % self.size
         self.filled_size = min(self.filled_size + 1, self.size)
 
+        self.saved = False
+
+        return None
+
 
     def sample_episode(self):
         e_index, e_weight = self.sum_tree.sample()
 
         d = self.d[e_index, :self.length[e_index]]
+        S = self.S[e_index, :self.length[e_index] + 1]
         s = self.s[e_index, :self.length[e_index]+1]
         r = self.r[e_index, :self.length[e_index]]
-        # pi = self.pi[e_index]
+        mu = self.mu[e_index]
 
-        return s, r, d, self.length[e_index], e_index, e_weight
+        return S, s, r, d, mu, self.length[e_index], e_index, e_weight
 
-    # def sample_episode_batch(self, batch_size=32):
+    def sample_episode_batch(self, batch_size=32):
+        pass
     #     states_b = []
     #     actions_b = []
     #     pi_b = []
@@ -166,3 +153,33 @@ class SimpleMahjongBufferPER():
     #     weights_b = np.stack(weights, axis=0)
     #
     #     return states_b, actions_b, pi_b, r_b, done_b, length_b, mask_b, indices, weights_b
+
+    def save(self, path='./MahjongBufferFrost2.npz'):
+
+        if not self.saved:
+            parameters = np.array([self.size, self.episode_length, self.filled_size, self.tail])
+            np.savez(path, parameters=parameters, S=self.S, s=self.s, r=self.r, mu=self.mu, length=self.length, d=self.d)
+            print("Buffer saved in path: %s" % path)
+
+        self.saved = True
+
+        return None
+
+    def load(self, path='./MahjongBufferFrost2.npz'):
+        data = np.load(path)
+
+        self.size = data['parameters'][0]
+        self.episode_length = data['parameters'][1]
+        self.filled_size = data['parameters'][2]
+        self.tail = data['parameters'][3]
+
+        self.length = data['length']
+
+        self.S = data['S']
+        self.s = data['s']
+        self.r = data['r']
+        self.d = data['d']
+        self.mu = data['mu']
+
+        return None
+
