@@ -235,7 +235,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool æ
 	auto iter = max_element(AllYakusAndFu.begin(), AllYakusAndFu.end(), [](pair<vector<Yaku>, int> yaku_fu1, pair<vector<Yaku>, int> yaku_fu2) {
 		auto fan1 = calculate_fan(yaku_fu1.first);
 		auto fan2 = calculate_fan(yaku_fu2.first);
-		if (fan1 >= 13 || fan2 >= 13) return fan1 < fan2;		
+		if (fan1 >= 5 || fan2 >= 5) return fan1 < fan2;		
 		return (1ull << fan1) * yaku_fu1.second < (1ull << fan2) * yaku_fu2.second;
 	});
 
