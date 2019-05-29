@@ -21,6 +21,7 @@ class EnvMahjong2(gym.Env):
             "P1_DRAW, P2_DRAW, P3_DRAW, P4_DRAW")
         self.horas = [False, False, False, False]
         self.played_a_tile = [False, False, False, False]
+        self.tile_in_air = None
         self.final_score_changes = []
         self.game_count = 0
         self.printing = printing
@@ -81,6 +82,7 @@ class EnvMahjong2(gym.Env):
         info = {"playerNo": playerNo}
         score_before = self.t.players[playerNo].score
 
+        self.played_a_tile[playerNo] = False
         new_state = self.get_state_(playerNo)
 
         # the following should be unnecessary but OK
@@ -98,7 +100,7 @@ class EnvMahjong2(gym.Env):
         for i in range(4):
             self.scores_before[i] = self.t.players[i].score
 
-        self.played_a_tile[playerNo] = False
+
 
         return new_state, reward, done, info
 
@@ -120,6 +122,10 @@ class EnvMahjong2(gym.Env):
 
         self.t.make_selection(action)
 
+        if self.t.get_selected_action() == mp.Action.Play:
+            self.played_a_tile[playerNo] = True
+            self.tile_in_air = self.t.get_selected_action_tile()
+
         new_state = self.get_state_(playerNo)
 
         if self.Phases[self.t.get_phase()] == "GAME_OVER":
@@ -137,9 +143,6 @@ class EnvMahjong2(gym.Env):
         for i in range(4):
             self.scores_before[i] = self.t.players[i].score
 
-        if self.t.get_selected_action() == mp.Action.Play:
-            self.played_a_tile[playerNo] = True
-            self.tile_in_air = self.t.get_selected_action_tile()
 
         return new_state, reward, done, info
 
@@ -163,6 +166,7 @@ class EnvMahjong2(gym.Env):
 
         self.t.make_selection(action)
 
+        self.played_a_tile[playerNo] = False
         new_state = self.get_state_(playerNo)
 
         if self.Phases[self.t.get_phase()] == "GAME_OVER":
@@ -179,7 +183,6 @@ class EnvMahjong2(gym.Env):
         for i in range(4):
             self.scores_before[i] = self.t.players[i].score
 
-        self.played_a_tile[playerNo] = False
         return new_state, reward, done, info
 
     def get_final_score_change(self):
