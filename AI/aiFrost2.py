@@ -112,7 +112,7 @@ class AgentFrost2():
     """
     Mahjong AI agent with PER
     """
-    def __init__(self, nn: MahjongNetFrost2, memory:MahjongBufferFrost2, gamma=0.9999, greedy=1.0, lambd=0.8,
+    def __init__(self, nn: MahjongNetFrost2, memory:MahjongBufferFrost2, gamma=0.9999, greedy=1.0, lambd=0.975,
                  num_tile_type=34, num_each_tile=55, num_vf=29):
         self.nn = nn
         self.gamma = gamma  # discount factor
@@ -231,10 +231,10 @@ class AgentFrost2():
                                        weight=weight)
         # except:
         #     print("Episode Length 0! Not recorded!")
-    def learn(self, symmetric_hand=None, episode_start=1, care_lose=True, logging=True):
+    def learn(self, symmetric_hand=None, episode_start=1, care_lose=True, batch_size=32, logging=True):
 
         if self.memory.filled_size >= episode_start:
-            S, Sp, s, sp, r, d, a, mu, length, e_index, e_weight = self.memory.sample_episode_batch()
+            S, Sp, s, sp, r, d, a, mu, length, e_index, e_weight = self.memory.sample_episode_batch(batch_size=batch_size)
 
             if not care_lose:
                 r = np.maximum(r, 0)
@@ -254,7 +254,7 @@ class AgentFrost2():
 
             for i in reversed(range(r.shape[0])):  #Q(lambda)
 
-                td_error = r[i] + (1. - d[i]) * self.gamma * vp[i, 0] - v[i, 0]
+                td_error = self.gamma * r[i] + (1. - d[i]) * self.gamma * vp[i, 0] - v[i, 0]
 
                 if d[i]:
                     td_prime = 0

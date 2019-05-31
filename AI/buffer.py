@@ -1,5 +1,7 @@
 import numpy as np
 import random
+import sparse as sps
+import pickle
 
 class MahjongBufferFrost2():
     # Record Episodes
@@ -53,7 +55,7 @@ class MahjongBufferFrost2():
         self.num_vf = num_vf
         self.max_action_num = 40
 
-        self.S = np.zeros([size, episode_length, num_tile_type, num_each_tile], dtype=np.float16) # matrix features
+        self.S = sps.DOK(shape=(size, episode_length, num_tile_type, num_each_tile), dtype=np.float16) # matrix features
         self.s = np.zeros([size, episode_length, num_vf], dtype=np.float16)  # vector features
 
         self.r = np.zeros([size, episode_length], dtype=np.float32) # reward
@@ -113,7 +115,7 @@ class MahjongBufferFrost2():
         e_index, e_weight = self.sum_tree.sample()
 
         d = self.d[e_index, :self.length[e_index]]
-        S = self.S[e_index, :self.length[e_index] + 1]
+        S = self.S.todense()[e_index, :self.length[e_index] + 1]
         s = self.s[e_index, :self.length[e_index] + 1]
         r = self.r[e_index, :self.length[e_index]]
         a = self.a[e_index, :self.length[e_index]]
@@ -131,18 +133,18 @@ class MahjongBufferFrost2():
             if b == 0:
                 e_index, e_weight = self.sum_tree.sample()
                 d = (self.d[e_index, :self.length[e_index]])
-                S = (self.S[e_index, :self.length[e_index]])
+                S = (self.S.todense()[e_index, :self.length[e_index]])
                 s = (self.s[e_index, :self.length[e_index]])
-                Sp = (self.S[e_index, 1:self.length[e_index] + 1])
+                Sp = (self.S.todense()[e_index, 1:self.length[e_index] + 1])
                 sp = (self.s[e_index, 1:self.length[e_index] + 1])
                 r = (self.r[e_index, :self.length[e_index]])
                 a = (self.a[e_index, :self.length[e_index]])
                 mu = (self.mu[e_index, :self.length[e_index]])
             else:
                 e_index, e_weight = self.sum_tree.sample()
-                S = np.vstack([S, self.S[e_index, :self.length[e_index]]])
+                S = np.vstack([S.todense(), self.S[e_index, :self.length[e_index]]])
                 s = np.vstack([s, self.s[e_index, :self.length[e_index]]])
-                Sp = np.vstack([Sp, self.S[e_index, 1:self.length[e_index] + 1]])
+                Sp = np.vstack([Sp.todense(), self.S[e_index, 1:self.length[e_index] + 1]])
                 sp = np.vstack([sp, self.s[e_index, 1:self.length[e_index] + 1]])
                 r = np.hstack([r, self.r[e_index, :self.length[e_index]]])
                 d = np.hstack([d, self.d[e_index, :self.length[e_index]]])
@@ -168,16 +170,30 @@ class MahjongBufferFrost2():
     def save(self, path='./MahjongBufferFrost2.npz'):
 
         if not self.saved:
+
             parameters = np.array([self.size, self.episode_length, self.filled_size, self.tail])
-            np.savez(path, parameters=parameters, S=self.S, s=self.s, r=self.r, mu=self.mu, length=self.length, d=self.d)
+            data = {'parameters': parameters,
+                    'S': self.S,
+                    's': self.s,
+                    'r': self.r,
+                    'mu': self.mu,
+                    'length': self.length,
+                    'd': self.d}
+
+            f = open(path, 'wb')
+            pickle.dump(data, f)
+            f.close()
             print("Buffer saved in path: %s" % path)
 
         self.saved = True
 
         return None
 
-    def load(self, path='./MahjongBufferFrost2.npz'):
-        data = np.load(path)
+    def load(self, path='./MahjongBufferFrost2.pkl'):
+
+        f = open(path, 'rb')
+        data = pickle.load(f)
+        f.close()
 
         self.size = data['parameters'][0]
         self.episode_length = data['parameters'][1]
@@ -186,7 +202,7 @@ class MahjongBufferFrost2():
 
         self.length = data['length']
 
-        self.S = data['S']
+        self.S = data['S'] # ok to assign np array to DOK
         self.s = data['s']
         self.r = data['r']
         self.d = data['d']
