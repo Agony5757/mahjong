@@ -76,10 +76,11 @@ class MahjongBufferFrost2():
         self.min_length = 0
         self.max_length = 0
 
-    def append_episode(self, state, r, d, a, mu, weight=0):
+    def append_episode(self, S, s, r, d, a, mu, weight=0):
         """
         Append an episode
-        :param state: features
+        :param S: matrix features
+        :param s: vector features
         :param r: reward
         :param d: done
         :param a: action
@@ -87,11 +88,11 @@ class MahjongBufferFrost2():
         :param weight: weight of this epsiode for PER
         :return: None
         """
+
         length = len(r)
 
-        for stp in range(length + 1):
-            self.s[self.tail, stp] = state[stp][1]
-            self.S[self.tail, stp] = state[stp][0]
+        self.S[self.tail, :length] = S
+        self.s[self.tail, :length] = s
 
         self.r[self.tail, :length] = r
         self.d[self.tail, :length] = d
@@ -129,22 +130,23 @@ class MahjongBufferFrost2():
         E_index = np.zeros([batch_size,], dtype=np.int)
         E_weight = np.zeros([batch_size,], dtype=np.float32)
 
+        S_dense = self.S.todense()
         for b in range(batch_size):
             if b == 0:
                 e_index, e_weight = self.sum_tree.sample()
                 d = (self.d[e_index, :self.length[e_index]])
-                S = (self.S.todense()[e_index, :self.length[e_index]])
+                S = (S_dense[e_index, :self.length[e_index]])
                 s = (self.s[e_index, :self.length[e_index]])
-                Sp = (self.S.todense()[e_index, 1:self.length[e_index] + 1])
+                Sp = (S_dense[e_index, 1:self.length[e_index] + 1])
                 sp = (self.s[e_index, 1:self.length[e_index] + 1])
                 r = (self.r[e_index, :self.length[e_index]])
                 a = (self.a[e_index, :self.length[e_index]])
                 mu = (self.mu[e_index, :self.length[e_index]])
             else:
                 e_index, e_weight = self.sum_tree.sample()
-                S = np.vstack([S.todense(), self.S[e_index, :self.length[e_index]]])
+                S = np.vstack([S, S_dense[e_index, :self.length[e_index]]])
                 s = np.vstack([s, self.s[e_index, :self.length[e_index]]])
-                Sp = np.vstack([Sp.todense(), self.S[e_index, 1:self.length[e_index] + 1]])
+                Sp = np.vstack([Sp, S_dense[e_index, 1:self.length[e_index] + 1]])
                 sp = np.vstack([sp, self.s[e_index, 1:self.length[e_index] + 1]])
                 r = np.hstack([r, self.r[e_index, :self.length[e_index]]])
                 d = np.hstack([d, self.d[e_index, :self.length[e_index]]])

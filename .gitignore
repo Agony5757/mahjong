@@ -20,3 +20,4 @@ log/checkpoint
 MahjongRelease/
 AI/Paipu/
 *.npz
+*.pkl
