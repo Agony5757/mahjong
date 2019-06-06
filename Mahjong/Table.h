@@ -442,6 +442,29 @@ public:
 	// Get the phase of the game
 	inline int get_phase() { return (int)phase; }
 
+	// For AI Env
+	static std::array<float, 29> generate_state_vector_features_frost2(
+		int turn,
+		int yama_len,
+		bool first_round,
+		int dora_spec,
+		int player_no,
+		int oya,
+		std::array<bool, 4> riichi,
+		std::array<bool, 4> double_riichi,
+		std::array<bool, 4> ippatsu,
+		std::array<int, 4> hand,
+		std::array<bool, 4> mentsun,
+		bool agari	
+	);
+	static std::array<float, 34 * 55> generate_state_matrix_features_frost2();
+
+	std::array<float, 29> get_state_vector_features_frost2(int playerNo);
+	std::array<float, 34 * 55> get_state_matrix_features_frost2(int playerNo);
+
+	std::array<float, 29> get_next_aval_states_vector_features_frost2(int playerNo);
+	std::array<float, 34 * 55> get_state_matrix_features_frost2(int playerNo);
+
 	// Make a selection and game moves on.
 	void make_selection(int selection);
 

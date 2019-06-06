@@ -1,5 +1,4 @@
 ﻿#include "Table.h"
-#include "Table.h"
 #include "macro.h"
 #include "Rule.h"
 #include "GameResult.h"
@@ -1958,6 +1957,138 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 
 	game_log.logGameStart(n本场, n立直棒, 庄家, 场风, export_yama(), get_scores());
 	_from_beginning();
+}
+
+std::array<float, 29> Table::generate_state_vector_features_frost2(
+	int turn,
+	int yama_len, 
+	bool first_round, 
+	int dora_spec, 
+	int player_no, 
+	int oya, 
+	std::array<bool, 4> riichi, 
+	std::array<bool, 4> double_riichi, 
+	std::array<bool, 4> ippatsu, 
+	std::array<int, 4> hand, 
+	std::array<bool, 4> mentsun, 
+	bool agari)
+{
+	std::array<float, 29> vf;
+	vf[0] = turn / 4;
+	vf[1] = yama_len *1.0 / 72;
+	vf[2] = first_round ? 1 : 0;
+	vf[3] = dora_spec - 1;
+
+	for (int i = player_no; i < 4 + player_no; ++i) {
+		vf[i + 4] = (i % 4 == oya) ? 1 : 0;
+	}
+	for (int i = 0; i < 4; ++i) {
+		vf[i + 8] = riichi[(i % 4 == oya)] ? 1 : 0;
+	}
+	for (int i = 0; i < 4; ++i) {
+		vf[i + 12] = double_riichi[(i % 4 == oya)] ? 1 : 0;
+	}
+	for (int i = 0; i < 4; ++i) {
+		vf[i + 16] = ippatsu[(i % 4 == oya)] ? 1 : 0;
+	}
+	for (int i = 0; i < 4; ++i) {
+		vf[i + 20] = hand[(i % 4 == oya)] * 1.0 / 13;
+	}
+	for (int i = 0; i < 4; ++i) {
+		vf[i + 24] = mentsun[(i % 4 == oya)] ? 1 : 0;
+	}
+	vf[29] = agari ? 1 : 0;
+
+	return vf;
+}
+
+std::array<float, 34 * 55> Table::generate_state_matrix_features_frost2(
+	std::vector<Tile*> hand,
+	std::vector<BaseTile> dora,
+	int player_no,
+	std::array<Player, 4> &players,
+	std::vector<vector<Fulu>> fulus4,
+
+	)
+{
+	float mf[34][55];
+	int tile_num[34] = { 0 };
+	//auto& hand = players[playerNo].hand;
+	auto& doras = get_dora();
+
+	constexpr int river_start = 5;
+	constexpr int fulu_start = 5 + 6 * 4;
+	constexpr int hand_features = 5;
+
+	// 自家手牌
+	for (auto tile : hand) {
+		int id = int(tile->tile);
+		mf[id][tile_num[id]] = 1;
+		tile_num[id]++;
+		if (tile->red_dora) mf[id][4]++;
+		for (auto &dora : doras) {
+			if (tile->tile == dora)
+				mf[id][4]++;
+		}
+	}
+
+	// 牌河
+	for (int i = 0; i < 4; i++) {
+		int i_relative = (i - player_no + 4) % 4;
+		int tile_num[34] = { 0 };
+		for (auto tile : players[i].river.river) {
+			int id = (int)tile.tile->tile;
+			int fromhand = tile.fromhand ? 1 : 0;
+			mf[id][river_start + 6 * i_relative + tile_num[id]] = 1;
+			tile_num[id]++;
+			if (fromhand) mf[id][river_start + 6 * i_relative + 5] = 1;
+			if (tile.tile->red_dora) mf[id][river_start + 6 * i_relative + 4]++;
+			for (auto &dora : doras) {
+				if (tile.tile->tile == dora)
+					mf[id][river_start + 6 * i_relative + 4]++;
+			}
+		}
+	}
+
+	// 副露
+	for (int i = 0; i < 4; ++i) {
+		int i_relative = (i - player_no + 4) % 4;
+		int tile_num[34] = { 0 };
+		auto &fulus = fulus4[i];
+		for (int k = 0; k < fulus.size(); ++k) {
+			auto &tiles = fulus[k].tiles;
+			for (int p = 0; p < tiles.size(); ++p) {
+				auto &tile = tiles[p];
+				auto id = int(tile->tile);
+				mf[id][fulu_start + 6 * i_relative + 4]++;
+			}
+			auto take = fulus[k].take;
+			if (!tiles[0]->tile == tiles[1]->tile) {
+				auto take_id = int(tiles[take]->tile);
+				mf[take_id][fulu_start + 6 * i_relative + 5]++;
+			}
+		}
+	}
+
+	// 悬牌
+
+	return to_1d(mf);
+}
+
+std::array<float, 29> Table::get_state_vector_features_frost2(int playerNo)
+{
+	
+}
+
+static std::array<float, 34 * 55> to_1d(float mf[34][55]) {
+	std::array<float, 34 * 55> ret;
+	for (int i = 0; i < 34; ++i) {
+		for (int j = 0; j < 55; ++j)
+		{
+			ret[55 * i + j] = mf[i][j];
+		}
+	}
+	return ret;
 }
 
 void Table::make_selection(int selection)
