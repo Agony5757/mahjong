@@ -1,5 +1,7 @@
 import numpy as np
 import random
+import sparse as sps
+import pickle
 
 class MahjongBufferFrost2():
     # Record Episodes
@@ -39,8 +41,8 @@ class MahjongBufferFrost2():
             return self.sample_subtree(1)
             pass
 
-    def __init__(self, size=256, episode_length=256, priority_eps=10000, priority_scale=0.0, IS_scale=1.0, saved=None,
-                 num_tile_type=34, num_each_tile=55, num_vf=29):
+    def __init__(self, size=256, episode_length=150, priority_eps=10000, priority_scale=0.0, IS_scale=1.0, saved=None,
+                 num_tile_type=34, num_each_tile=58, num_vf=29):
         # Mahjong episode length usually < 256
 
         self.saved = False
@@ -48,13 +50,18 @@ class MahjongBufferFrost2():
         self.size = size
         self.episode_length = episode_length
         self.length = np.zeros([size,], dtype=np.int)
+        self.num_tile_type = num_tile_type
+        self.num_each_tile = num_each_tile
+        self.num_vf = num_vf
+        self.max_action_num = 40
 
-        self.S = np.zeros([size, episode_length, num_tile_type, num_each_tile], dtype=np.float16)
-        self.s = np.zeros([size, episode_length, num_vf], dtype=np.float16)
+        self.S = sps.DOK(shape=(size, episode_length, num_tile_type, num_each_tile), dtype=np.float16) # matrix features
+        self.s = np.zeros([size, episode_length, num_vf], dtype=np.float16)  # vector features
 
-        self.r = np.zeros([size, episode_length], dtype=np.float32)
-        self.d = np.zeros([size, episode_length], dtype=np.float16)
-        self.mu = np.zeros([size, episode_length, 40], dtype=np.float32)
+        self.r = np.zeros([size, episode_length], dtype=np.float32) # reward
+        self.d = np.zeros([size, episode_length], dtype=np.float16) # done
+        self.mu = np.zeros([size, episode_length, self.max_action_num], dtype=np.float32) # bahavior policy
+        self.a = np.zeros([size, episode_length], dtype=np.int)  # action
 
         self.IS_scale = IS_scale
         self.priority_scale = priority_scale
@@ -69,37 +76,34 @@ class MahjongBufferFrost2():
         self.min_length = 0
         self.max_length = 0
 
-        # self.infinity = 1e9
-
-        # # initialize priority of saved episodes to inf
-        # for i in range(self.saved_size):
-        #     self.sum_tree.add(i, self.infinity)
-        #     length = self.length[i]
-        #     self.sum_steps += length
-        #     self.min_length = min(self.min_length, length)
-        #     self.max_length = max(self.max_length, length)
-
-    def append_episode(self, state, r, d, mu, weight=0):
+    def append_episode(self, S, s, r, d, a, mu, weight=0):
         """
         Append an episode
-        :param state: features
+        :param S: matrix features
+        :param s: vector features
         :param r: reward
         :param d: done
+        :param a: action
+        :param mu: behavior policy
         :param weight: weight of this epsiode for PER
         :return: None
         """
+
         length = len(r)
 
-        for stp in range(length + 1):
-            self.s[self.tail, stp] = state[stp][1]
-            self.S[self.tail, stp] = state[stp][0]
+        self.S[self.tail, :length] = S
+        self.s[self.tail, :length] = s
 
         self.r[self.tail, :length] = r
         self.d[self.tail, :length] = d
+        self.a[self.tail, :length] = a
         self.mu[self.tail, :length] = mu
         self.length[self.tail] = length
 
         self.sum_tree.add(self.tail, weight + self.priority_eps)
+        self.sum_steps += length
+        self.min_length = min(self.min_length, length)
+        self.max_length = max(self.max_length, length)
 
         self.tail = (self.tail + 1) % self.size
         self.filled_size = min(self.filled_size + 1, self.size)
@@ -108,65 +112,90 @@ class MahjongBufferFrost2():
 
         return None
 
-
     def sample_episode(self):
         e_index, e_weight = self.sum_tree.sample()
 
         d = self.d[e_index, :self.length[e_index]]
-        S = self.S[e_index, :self.length[e_index] + 1]
-        s = self.s[e_index, :self.length[e_index]+1]
+        S = self.S.todense()[e_index, :self.length[e_index] + 1]
+        s = self.s[e_index, :self.length[e_index] + 1]
         r = self.r[e_index, :self.length[e_index]]
-        mu = self.mu[e_index]
+        a = self.a[e_index, :self.length[e_index]]
+        mu = self.mu[e_index, :self.length[e_index]]
 
-        return S, s, r, d, mu, self.length[e_index], e_index, e_weight
+        return S, s, r, d, a, mu, self.length[e_index], e_index, e_weight
 
-    def sample_episode_batch(self, batch_size=32):
-        pass
-    #     states_b = []
-    #     actions_b = []
-    #     pi_b = []
-    #     r_b = []
-    #     done_b = []
-    #     length_b = []
-    #     mask_b = []
-    #     indices = []
-    #     weights = []
-    #     for i in range(batch_size):
-    #         states, actions, pi, r, done, length, mask, e_index, e_weight = self.sample_episode()
-    #         states_b.append(states)
-    #         actions_b.append(actions)
-    #         pi_b.append(pi)
-    #         r_b.append(r)
-    #         done_b.append(done)
-    #         length_b.append(length)
-    #         mask_b.append(mask)
-    #         indices.append(e_index)
-    #         weights.append((length/e_weight/self.sum_steps) ** self.IS_scale)
-    #
-    #     max_l = max(length_b)
-    #     states_b = np.stack(states_b, axis=0)[:, :max_l+1]
-    #     actions_b = np.stack(actions_b, axis=0)[:, :max_l]
-    #     pi_b = np.stack(pi_b, axis=0)[:, :max_l]
-    #     r_b = np.stack(r_b, axis=0)[:, :max_l]
-    #     done_b = np.stack(done_b, axis=0)
-    #     mask_b = np.stack(mask_b, axis=0)
-    #     weights_b = np.stack(weights, axis=0)
-    #
-    #     return states_b, actions_b, pi_b, r_b, done_b, length_b, mask_b, indices, weights_b
+    def sample_episode_batch(self, batch_size=16):
+
+        Length = np.zeros([batch_size,], dtype=np.int)
+        E_index = np.zeros([batch_size,], dtype=np.int)
+        E_weight = np.zeros([batch_size,], dtype=np.float32)
+
+        S_dense = self.S.todense()
+        for b in range(batch_size):
+            if b == 0:
+                e_index, e_weight = self.sum_tree.sample()
+                d = (self.d[e_index, :self.length[e_index]])
+                S = (S_dense[e_index, :self.length[e_index]])
+                s = (self.s[e_index, :self.length[e_index]])
+                Sp = (S_dense[e_index, 1:self.length[e_index] + 1])
+                sp = (self.s[e_index, 1:self.length[e_index] + 1])
+                r = (self.r[e_index, :self.length[e_index]])
+                a = (self.a[e_index, :self.length[e_index]])
+                mu = (self.mu[e_index, :self.length[e_index]])
+            else:
+                e_index, e_weight = self.sum_tree.sample()
+                S = np.vstack([S, S_dense[e_index, :self.length[e_index]]])
+                s = np.vstack([s, self.s[e_index, :self.length[e_index]]])
+                Sp = np.vstack([Sp, S_dense[e_index, 1:self.length[e_index] + 1]])
+                sp = np.vstack([sp, self.s[e_index, 1:self.length[e_index] + 1]])
+                r = np.hstack([r, self.r[e_index, :self.length[e_index]]])
+                d = np.hstack([d, self.d[e_index, :self.length[e_index]]])
+                a = np.hstack([a, self.a[e_index, :self.length[e_index]]])
+                mu = np.vstack([mu, self.mu[e_index, :self.length[e_index]]])
+
+            Length[b] = self.length[e_index]
+            E_index[b] = e_index
+            E_weight[b] = e_weight
+
+        # S = np.reshape(S, [-1, self.num_tile_type, self.num_each_tile]).astype(np.float16)
+        # s = np.reshape(s, [-1, self.num_vf]).astype(np.float16)
+        # Sp = np.reshape(Sp, [-1, self.num_tile_type, self.num_each_tile]).astype(np.float16)
+        # sp = np.reshape(sp, [-1, self.num_vf]).astype(np.float16)
+        #
+        # d = np.reshape(d, [-1,]).astype(np.float16)
+        # r = np.reshape(r, [-1,]).astype(np.float32)
+        # a = np.reshape(a, [-1,]).astype(np.int)
+        # mu = np.reshape(mu, [-1, self.max_action_num]).astype(np.float32)
+
+        return S, Sp, s, sp, r, d, a, mu, Length, E_index, E_weight
 
     def save(self, path='./MahjongBufferFrost2.npz'):
 
         if not self.saved:
+
             parameters = np.array([self.size, self.episode_length, self.filled_size, self.tail])
-            np.savez(path, parameters=parameters, S=self.S, s=self.s, r=self.r, mu=self.mu, length=self.length, d=self.d)
+            data = {'parameters': parameters,
+                    'S': self.S,
+                    's': self.s,
+                    'r': self.r,
+                    'mu': self.mu,
+                    'length': self.length,
+                    'd': self.d}
+
+            f = open(path, 'wb')
+            pickle.dump(data, f)
+            f.close()
             print("Buffer saved in path: %s" % path)
 
         self.saved = True
 
         return None
 
-    def load(self, path='./MahjongBufferFrost2.npz'):
-        data = np.load(path)
+    def load(self, path='./MahjongBufferFrost2.pkl'):
+
+        f = open(path, 'rb')
+        data = pickle.load(f)
+        f.close()
 
         self.size = data['parameters'][0]
         self.episode_length = data['parameters'][1]
@@ -175,11 +204,20 @@ class MahjongBufferFrost2():
 
         self.length = data['length']
 
-        self.S = data['S']
+        self.S = data['S'] # ok to assign np array to DOK
         self.s = data['s']
         self.r = data['r']
         self.d = data['d']
         self.mu = data['mu']
+
+        # self.infinity = 1e9
+
+        for i in range(self.filled_size):
+            self.sum_tree.add(i, 0)
+            length = self.length[i]
+            self.sum_steps += length
+            self.min_length = min(self.min_length, length)
+            self.max_length = max(self.max_length, length)
 
         return None
 
