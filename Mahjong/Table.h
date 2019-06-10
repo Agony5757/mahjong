@@ -456,14 +456,28 @@ public:
 		std::array<int, 4> hand,
 		std::array<bool, 4> mentsun,
 		bool agari	
+	); 
+	std::array<float, 34 * 58> Table::generate_state_matrix_features_frost2(
+		std::vector<Tile*> hand,
+		std::vector<BaseTile> dora,
+		int player_no,
+		//std::array<Player, 4> &players,
+		std::array<River, 4> rivers4,
+		std::vector<std::vector<Fulu>> fulus4,
+		bool has_xuanpai,
+		Tile* xuanpai,
+		std::vector<Tile*> dora_spec,
+		Wind game_wind,
+		Wind self_wind
 	);
-	static std::array<float, 34 * 55> generate_state_matrix_features_frost2();
 
-	std::array<float, 29> get_state_vector_features_frost2(int playerNo);
-	std::array<float, 34 * 55> get_state_matrix_features_frost2(int playerNo);
-
-	std::array<float, 29> get_next_aval_states_vector_features_frost2(int playerNo);
-	std::array<float, 34 * 55> get_state_matrix_features_frost2(int playerNo);
+	std::vector<std::array<float, 29>> get_next_aval_states_vector_features_frost2(int playerNo);
+	std::vector<std::array<float, 29>> _get_self_action_vector_features_frost2(int playerNo);
+	std::vector<std::array<float, 29>> _get_response_action_vector_features_frost2(int call_player, int response_player);
+	
+	std::vector<std::array<float, 34 * 58>> get_next_aval_states_matrix_features_frost2(int playerNo);
+	std::vector<std::array<float, 34 * 58>> _get_self_action_matrix_features_frost2(int playerNo);
+	std::vector<std::array<float, 34 * 58>> _get_response_action_matrix_features_frost2(int call_player, int response_player);
 
 	// Make a selection and game moves on.
 	void make_selection(int selection);
