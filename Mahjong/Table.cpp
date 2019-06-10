@@ -1,5 +1,4 @@
 ﻿#include "Table.h"
-#include "Table.h"
 #include "macro.h"
 #include "Rule.h"
 #include "GameResult.h"
@@ -1958,6 +1957,543 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 
 	game_log.logGameStart(n本场, n立直棒, 庄家, 场风, export_yama(), get_scores());
 	_from_beginning();
+}
+
+#pragma warning(disable:4244)
+
+std::array<float, 29> Table::generate_state_vector_features_frost2(
+	int turn,
+	int yama_len, 
+	bool first_round, 
+	int dora_spec, 
+	int player_no, 
+	int oya, 
+	std::array<bool, 4> riichi, 
+	std::array<bool, 4> double_riichi, 
+	std::array<bool, 4> ippatsu, 
+	std::array<int, 4> hand, 
+	std::array<bool, 4> mentsun, 
+	bool agari // The player is agari.
+)
+{
+	std::array<float, 29> vf;
+
+	for (int i = player_no; i < 4 + player_no; ++i) {
+		vf[i + 0] = riichi[(i % 4)] ? 1 : 0;
+	}
+	for (int i = player_no; i < 4 + player_no; ++i) {
+		vf[i + 4] = double_riichi[(i % 4)] ? 1 : 0;
+	}
+	for (int i = player_no; i < 4 + player_no; ++i) {
+		vf[i + 8] = ippatsu[(i % 4)] ? 1 : 0;
+	}
+	for (int i = player_no; i < 4 + player_no; ++i) {
+		vf[i + 12] = ((i % 4) == oya) ? 1 : 0;
+	}
+	for (int i = player_no; i < 4 + player_no; ++i) {
+		vf[i + 16] = mentsun[(i % 4)] ? 1 : 0;
+	}
+	for (int i = player_no; i < 4 + player_no; ++i) {
+		vf[i + 20] = hand[(i % 4)] ? 1 : 0;
+	}
+
+	vf[24] = turn / 4;
+	vf[25] = yama_len * 1.0 / 72;
+	vf[26] = dora_spec - 1;
+	vf[27] = first_round ? 1 : 0;
+	vf[28] = agari ? 1 : 0;
+
+	return vf;
+}
+
+static std::array<float, 34 * 58> to_1d(float mf[34][58]) {
+	std::array<float, 34 * 58> ret;
+	for (int i = 0; i < 34; ++i) {
+		for (int j = 0; j < 55; ++j)
+		{
+			ret[55 * i + j] = mf[i][j];
+		}
+	}
+	return ret;
+}
+
+std::array<float, 34 * 58> Table::generate_state_matrix_features_frost2(
+	std::vector<Tile*> hand,
+	std::vector<BaseTile> dora,
+	int player_no,
+	//std::array<Player, 4> &players,
+	std::array<River, 4> rivers4,
+	std::vector<vector<Fulu>> fulus4,
+	bool has_xuanpai,
+	Tile* xuanpai,
+	std::vector<Tile*> dora_spec,
+	Wind game_wind,
+	Wind self_wind
+	)
+{
+	float mf[34][58] = { 0 };
+	int tile_num[34] = { 0 };
+	//auto& hand = players[playerNo].hand;
+	auto& doras = get_dora();
+
+	constexpr int river_start = 5;
+	constexpr int fulu_start = river_start + 6 * 4;
+	constexpr int xuanpai_start = fulu_start + 6 * 4;
+	constexpr int dora_spec_start = xuanpai_start + 2;
+
+	constexpr int hand_features = 5;
+
+	// 自家手牌
+	for (auto tile : hand) {
+		int id = int(tile->tile);
+		mf[id][tile_num[id]] = 1;
+		tile_num[id]++;
+		if (tile->red_dora) mf[id][4]++;
+		for (auto &dora : doras) {
+			if (tile->tile == dora)
+				mf[id][4]++;
+		}
+	}
+
+	// 牌河
+	for (int i = 0; i < 4; i++) {
+		int i_relative = (i - player_no + 4) % 4;
+		int tile_num[34] = { 0 };
+		for (auto tile : rivers4[i].river) {
+			int id = (int)tile.tile->tile;
+			int fromhand = tile.fromhand ? 1 : 0;
+			mf[id][river_start + 6 * i_relative + tile_num[id]] = 1;
+			tile_num[id]++;
+			if (fromhand) mf[id][river_start + 6 * i_relative + 5] = 1;
+			if (tile.tile->red_dora) mf[id][river_start + 6 * i_relative + 4]++;
+			for (auto &dora : doras) {
+				if (tile.tile->tile == dora)
+					mf[id][river_start + 6 * i_relative + 4]++;
+			}
+		}
+	}
+
+	// 副露
+	for (int i = 0; i < 4; ++i) {
+		int i_relative = (i - player_no + 4) % 4;
+		int tile_num[34] = { 0 };
+		auto &fulus = fulus4[i];
+		for (int k = 0; k < fulus.size(); ++k) {
+			auto &tiles = fulus[k].tiles;
+			for (int p = 0; p < tiles.size(); ++p) {
+				auto &tile = tiles[p];
+				auto id = int(tile->tile);
+				mf[id][fulu_start + 6 * i_relative + 4]++;
+			}
+			auto take = fulus[k].take;
+			if (!tiles[0]->tile == tiles[1]->tile) {
+				auto take_id = int(tiles[take]->tile);
+				mf[take_id][fulu_start + 6 * i_relative + 5]++;
+			}
+		}
+	}
+
+	// 悬牌
+	if (has_xuanpai) {
+		int id = (int)xuanpai->tile;
+		mf[id][xuanpai_start] = 1;
+		if (xuanpai->red_dora) mf[id][xuanpai_start + 1]++;
+		for (auto dora : doras) {
+			if (xuanpai->tile == dora) {
+				mf[id][xuanpai_start + 1]++;
+			}
+		}
+	}
+
+	// 宝牌指示牌 场风 自风
+	for (auto dora_spec_ : dora_spec) {
+		int id = int(dora_spec_->tile);
+		mf[id][dora_spec_start]++;
+	}
+	mf[26 + int(game_wind)][dora_spec_start + 1]++;
+	mf[26 + int(self_wind)][dora_spec_start + 2]++;
+
+	return to_1d(mf);
+}
+
+std::vector<std::array<float, 29>> Table::get_next_aval_states_vector_features_frost2(int playerNo)
+{
+	// who make selection?
+	if (who_make_selection() != playerNo)
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Not This Player Should Decide.");
+
+	if (get_phase() <= _Phase_::P4_ACTION)
+		return _get_self_action_vector_features_frost2(playerNo);
+	else
+		return _get_response_action_vector_features_frost2(this->turn, playerNo);
+}
+#pragma warning(disable:4267)
+#pragma warning(disable:4838)
+std::vector<std::array<float, 29>> Table::_get_self_action_vector_features_frost2(int playerNo)
+{
+	/*
+	Here we should obtain arguments for this generator function:
+
+	std::array<float, 29> Table::generate_state_vector_features_frost2(
+		int turn,
+		int yama_len,
+		bool first_round,
+		int dora_spec,
+		int player_no,
+		int oya,
+		std::array<bool, 4> riichi,
+		std::array<bool, 4> double_riichi,
+		std::array<bool, 4> ippatsu,
+		std::array<int, 4> hand,
+		std::array<bool, 4> mentsun,
+		bool agari // The player is agari.
+	)
+	*/
+	std::vector<std::array<float, 29>> next_states;
+	vector<SelfAction> actions = get_self_actions();
+	for (SelfAction action : actions) {
+		int turn = this->turn;
+		int yama_len = get_remain_tile();
+		bool first_round = players[playerNo].first_round;
+		int dora_spec = this->dora_spec;
+		int player_no = playerNo;
+		int oya = this->庄家;
+		std::array<bool, 4> riichi = { players[0].riichi, players[1].riichi, players[2].riichi, players[3].riichi };
+		std::array<bool, 4> double_riichi = { players[0].double_riichi, players[1].double_riichi, players[2].double_riichi, players[3].double_riichi };
+		std::array<bool, 4> ippatsu = { players[0].一发, players[1].一发, players[2].一发, players[3].一发 };
+		std::array<int, 4> hand = { players[0].hand.size(), players[1].hand.size(), players[2].hand.size(), players[3].hand.size() };
+		std::array<bool, 4> mentsun = { players[0].门清, players[1].门清, players[2].门清, players[3].门清 };
+		bool agari = false;
+		
+		switch (action.action) {
+		case Action::九种九牌:
+		case Action::自摸:
+			agari = true;
+			break;
+		case Action::暗杠:
+			first_round = false;
+			yama_len--;
+			dora_spec++;
+			hand[player_no] -= 4;
+			ippatsu[player_no] = false;
+			break;
+		case Action::立直:
+			riichi[player_no] = true;
+			if (players[player_no].first_round) {
+				double_riichi[player_no] = true;
+			}
+			first_round = false;
+			hand[player_no]--;
+			ippatsu[player_no] = true;
+			break;
+		case Action::出牌:
+			hand[player_no]--;
+			ippatsu[player_no] = false;
+			break;
+		case Action::加杠:
+			first_round = false;
+			yama_len--;
+			dora_spec++;
+			hand[player_no]--;
+			ippatsu[player_no] = false;
+			break;
+		default:
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Bad Action Option.");
+		}
+
+		next_states.push_back(generate_state_vector_features_frost2(turn, yama_len, first_round, dora_spec, player_no, oya, riichi, double_riichi, ippatsu, hand, mentsun, agari));
+	}
+	return next_states;
+}
+
+std::vector<std::array<float, 29>> Table::_get_response_action_vector_features_frost2(int call_player, int response_player)
+{
+	/*
+	Here we should obtain arguments for this generator function:
+
+	std::array<float, 29> Table::generate_state_vector_features_frost2(
+		int turn,
+		int yama_len,
+		bool first_round,
+		int dora_spec,
+		int player_no,
+		int oya,
+		std::array<bool, 4> riichi,
+		std::array<bool, 4> double_riichi,
+		std::array<bool, 4> ippatsu,
+		std::array<int, 4> hand,
+		std::array<bool, 4> mentsun,
+		bool agari // The player is agari.
+	)
+	*/
+	std::vector<std::array<float, 29>> next_states;
+	vector<SelfAction> actions = get_self_actions();
+	for (SelfAction action : actions) {
+		int turn = this->turn;
+		int yama_len = get_remain_tile();
+		bool first_round = players[response_player].first_round;
+		int dora_spec = this->dora_spec;
+		int player_no = response_player;
+		int oya = this->庄家;
+		std::array<bool, 4> riichi = { players[0].riichi, players[1].riichi, players[2].riichi, players[3].riichi };
+		std::array<bool, 4> double_riichi = { players[0].double_riichi, players[1].double_riichi, players[2].double_riichi, players[3].double_riichi };
+		std::array<bool, 4> ippatsu = { players[0].一发, players[1].一发, players[2].一发, players[3].一发 };
+		std::array<int, 4> hand = { players[0].hand.size(), players[1].hand.size(), players[2].hand.size(), players[3].hand.size() };
+		std::array<bool, 4> mentsun = { players[0].门清, players[1].门清, players[2].门清, players[3].门清 };
+		bool agari = false;
+
+		switch (action.action) {
+		case Action::pass:
+			break;
+		case Action::杠:
+			hand[response_player]--; // 实际上最后减三
+			dora_spec++;
+			// 此处穿透
+		case Action::碰:
+		case Action::吃:
+			ippatsu = { false,false,false,false }; // 破一发
+			first_round = false; // 破一巡
+			mentsun[response_player] = false;
+			hand[response_player] -= 2;
+		case Action::荣和:
+		case Action::抢暗杠:
+		case Action::抢杠:
+			agari = true;
+			break;
+		default:
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Bad Action Option.");
+		}
+
+		next_states.push_back(generate_state_vector_features_frost2(turn, yama_len, first_round, dora_spec, player_no, oya, riichi, double_riichi, ippatsu, hand, mentsun, agari));
+	}
+	return next_states;
+}
+
+std::vector<std::array<float, 34 * 58>> Table::get_next_aval_states_matrix_features_frost2(int playerNo)
+{
+	// who make selection?
+	if (who_make_selection() != playerNo)
+		throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Not This Player Should Decide.");
+
+	if (get_phase() <= _Phase_::P4_ACTION)
+		return _get_self_action_matrix_features_frost2(playerNo);
+	else
+		return _get_response_action_matrix_features_frost2(this->turn, playerNo);
+}
+
+std::vector<std::array<float, 34 * 58>> Table::_get_self_action_matrix_features_frost2(int playerNo)
+{
+	/*
+	Here we should obtain arguments for this generator function:
+
+	std::array<float, 34 * 58> Table::generate_state_matrix_features_frost2(
+		std::vector<Tile*> hand,
+		std::vector<BaseTile> dora,
+		int player_no,
+		std::array<Player, 4> &players,
+		std::vector<std::vector<Fulu>> fulus4,
+		bool has_xuanpai,
+		Tile* xuanpai,
+		std::vector<Tile*> dora_spec,
+		Wind game_wind,
+		Wind self_wind
+	)
+	*/
+	std::vector<std::array<float, 34 * 58>> next_states;
+	vector<SelfAction> actions = get_self_actions();
+	for (SelfAction action : actions) {
+		int player_no = playerNo;
+		std::vector<std::vector<Fulu>> fulus4 = { players[0].副露s, players[1].副露s, players[2].副露s, players[3].副露s };
+		auto hand = players[playerNo].hand;
+		std::array<River, 4> rivers4 = { players[0].river, players[1].river, players[2].river, players[3].river };
+		auto dora = get_dora();
+		bool has_xuanpai = false;
+		Tile* xuanpai = nullptr;
+		auto game_wind = 场风;
+		auto self_wind = players[player_no].wind;
+		vector<Tile*> dora_spec;
+		for (int i = 0; i < this->dora_spec; ++i) dora_spec.push_back(宝牌指示牌[i]);
+
+		switch (action.action) {
+		case Action::九种九牌:
+		case Action::自摸:
+			break;
+		case Action::暗杠: {
+			BaseTile tile = action.correspond_tiles[0]->tile;
+			Fulu fulu;
+			fulu.type = Fulu::暗杠;
+			fulu.take = 0;
+
+			for_each(hand.begin(), hand.end(),
+				[&fulu, tile](Tile* t)
+			{
+				if (tile == t->tile)
+					fulu.tiles.push_back(t);
+			});
+			auto iter =
+				remove_if(hand.begin(), hand.end(),
+					[tile](Tile* t) {return t->tile == tile; });
+			hand.erase(iter, hand.end());
+			fulus4[player_no].push_back(fulu);
+			}
+			break;
+		case Action::出牌: {
+			has_xuanpai = true;
+			xuanpai = action.correspond_tiles[0];
+			auto iter =
+				remove_if(hand.begin(), hand.end(), [xuanpai](Tile* t) {return xuanpai == t; });
+			hand.erase(iter, hand.end());
+			break;
+		}
+		case Action::加杠: {
+			//加杠没有悬牌
+			//has_xuanpai = true;
+			//xuanpai = action.correspond_tiles[0];
+			for (auto &fulu : fulus4[player_no]) {
+				if (fulu.type == Fulu::Pon) {
+					if (tile->tile == fulu.tiles[0]->tile)
+					{
+						fulu.type = Fulu::加杠;
+						fulu.tiles.push_back(tile);
+					}
+				}
+			}
+			auto iter =
+				remove_if(hand.begin(), hand.end(), [xuanpai](Tile* t) {return xuanpai == t; });
+			hand.erase(iter, hand.end());
+			break;
+		}
+		default:
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Bad Action Option.");
+		}
+
+		next_states.push_back(generate_state_matrix_features_frost2(hand, dora, player_no, rivers4, fulus4, has_xuanpai, xuanpai, dora_spec, game_wind, self_wind));
+	}
+	return next_states;
+}
+
+std::vector<std::array<float, 34 * 58>> Table::_get_response_action_matrix_features_frost2(int call_player, int response_player)
+{
+	/*
+	Here we should obtain arguments for this generator function:
+
+	std::array<float, 34 * 58> Table::generate_state_matrix_features_frost2(
+		std::vector<Tile*> hand,
+		std::vector<BaseTile> dora,
+		int player_no,
+		std::array<Player, 4> &players,
+		std::vector<std::vector<Fulu>> fulus4,
+		bool has_xuanpai,
+		Tile* xuanpai,
+		std::vector<Tile*> dora_spec,
+		Wind game_wind,
+		Wind self_wind
+	)
+	*/
+	std::vector<std::array<float, 34 * 58>> next_states;
+	vector<SelfAction> actions = get_self_actions();
+	for (SelfAction action : actions) {
+		int player_no = response_player;
+		std::vector<std::vector<Fulu>> fulus4 = { players[0].副露s, players[1].副露s, players[2].副露s, players[3].副露s };
+		std::array<River, 4> rivers4 = { players[0].river, players[1].river, players[2].river, players[3].river };
+		auto hand = players[response_player].hand;
+		auto dora = get_dora();
+		bool has_xuanpai = false;
+		Tile* xuanpai = nullptr;
+		auto game_wind = 场风;
+		auto self_wind = players[player_no].wind;
+		vector<Tile*> dora_spec;
+		for (int i = 0; i < this->dora_spec; ++i) dora_spec.push_back(宝牌指示牌[i]);
+
+		switch (action.action) {
+		case Action::荣和:
+		case Action::抢暗杠:
+		case Action::抢杠:
+			break;
+		case Action::pass: {
+			auto tile = selected_action.correspond_tiles[0];
+			auto iter =
+				remove_if(hand.begin(), hand.end(), [tile](Tile* t) {return tile == t; });
+			hand.erase(iter, hand.end());
+
+			rivers4[call_player].push_back({ tile, this->river_counter + 1, players[call_player].is_riichi(), true, FROM_手切摸切 });
+			break;
+		}
+		case Action::吃:
+		case Action::碰:
+		case Action::杠: {
+			auto& tiles = action.correspond_tiles;
+			auto& 副露s = players[call_player].副露s;
+			Fulu fulu;
+			if (is_刻子({ tiles[0]->tile, tiles[1]->tile, tile->tile })
+				&& tiles.size() == 2) {
+				// 碰的情况
+				// 创建对象
+				fulu.type = Fulu::Pon;
+				fulu.take = 0;
+				fulu.tiles = { tiles[0], tiles[1], tile };
+
+				// 加入
+				副露s.push_back(fulu);
+
+				// 删掉原来的牌
+				hand.erase(find(hand.begin(), hand.end(), tiles[0]));
+				hand.erase(find(hand.begin(), hand.end(), tiles[1]));
+			}
+			else if (is_顺子({ tiles[0]->tile, tiles[1]->tile, tile->tile })
+				&& tiles.size() == 2) {
+				// 吃的情况
+				// 创建对象
+				fulu.type = Fulu::Chi;
+				if (tile->tile < tiles[0]->tile) {
+					//(1)23
+					fulu.take = 0;
+					fulu.tiles = { tile, tiles[0], tiles[1] };
+				}
+				else if (tile->tile > tiles[1]->tile) {
+					//12(3)
+					fulu.take = 2;
+					fulu.tiles = { tiles[0], tiles[1], tile };
+				}
+				else {
+					//1(2)3
+					fulu.take = 1;
+					fulu.tiles = { tiles[0], tile, tiles[1] };
+				}
+				// 加入
+				副露s.push_back(fulu);
+
+				// 删掉原来的牌
+				hand.erase(find(hand.begin(), hand.end(), tiles[0]));
+				hand.erase(find(hand.begin(), hand.end(), tiles[1]));
+			}
+			else if (is_杠({ tiles[0]->tile, tiles[1]->tile, tiles[2]->tile, tile->tile })
+				&& tiles.size() == 3) {
+				// 杠的情况
+				// 创建对象
+				fulu.type = Fulu::大明杠;
+				fulu.take = 0;
+				fulu.tiles = { tiles[0], tiles[1], tiles[2], tile };
+
+				// 加入
+				副露s.push_back(fulu);
+
+				// 删掉原来的牌
+				hand.erase(find(hand.begin(), hand.end(), tiles[0]));
+				hand.erase(find(hand.begin(), hand.end(), tiles[1]));
+				hand.erase(find(hand.begin(), hand.end(), tiles[2]));
+			}
+			else 
+				STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Bad Action.");
+			rivers4[call_player].push_back({ tile, this->river_counter + 1, players[call_player].is_riichi(), false, FROM_手切摸切 });
+			break;
+		}
+		default:
+			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Bad Action Option.");
+		}
+		next_states.push_back(generate_state_matrix_features_frost2(hand, dora, player_no, rivers4, fulus4, has_xuanpai, xuanpai, dora_spec, game_wind, self_wind));
+	}
+	return next_states;
 }
 
 void Table::make_selection(int selection)
