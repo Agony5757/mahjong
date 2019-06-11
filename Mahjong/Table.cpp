@@ -1979,22 +1979,22 @@ std::array<float, 29> Table::generate_state_vector_features_frost2(
 	std::array<float, 29> vf;
 
 	for (int i = player_no; i < 4 + player_no; ++i) {
-		vf[i + 0] = riichi[(i % 4)] ? 1 : 0;
+		vf[i + 0 - player_no] = riichi[(i % 4)] ? 1 : 0;
 	}
 	for (int i = player_no; i < 4 + player_no; ++i) {
-		vf[i + 4] = double_riichi[(i % 4)] ? 1 : 0;
+		vf[i + 4 - player_no] = double_riichi[(i % 4)] ? 1 : 0;
 	}
 	for (int i = player_no; i < 4 + player_no; ++i) {
-		vf[i + 8] = ippatsu[(i % 4)] ? 1 : 0;
+		vf[i + 8 - player_no] = ippatsu[(i % 4)] ? 1 : 0;
 	}
 	for (int i = player_no; i < 4 + player_no; ++i) {
-		vf[i + 12] = ((i % 4) == oya) ? 1 : 0;
+		vf[i + 12 - player_no] = ((i % 4) == oya) ? 1 : 0;
 	}
 	for (int i = player_no; i < 4 + player_no; ++i) {
-		vf[i + 16] = mentsun[(i % 4)] ? 1 : 0;
+		vf[i + 16 - player_no] = mentsun[(i % 4)] ? 1 : 0;
 	}
 	for (int i = player_no; i < 4 + player_no; ++i) {
-		vf[i + 20] = hand[(i % 4)] ? 1 : 0;
+		vf[i + 20 - player_no] = hand[(i % 4)] ? 1 : 0;
 	}
 
 	vf[24] = turn / 4;
@@ -2009,9 +2009,9 @@ std::array<float, 29> Table::generate_state_vector_features_frost2(
 static std::array<float, 34 * 58> to_1d(float mf[34][58]) {
 	std::array<float, 34 * 58> ret;
 	for (int i = 0; i < 34; ++i) {
-		for (int j = 0; j < 55; ++j)
+		for (int j = 0; j < 58; ++j)
 		{
-			ret[55 * i + j] = mf[i][j];
+			ret[58 * i + j] = mf[i][j];
 		}
 	}
 	return ret;
@@ -2227,8 +2227,8 @@ std::vector<std::array<float, 29>> Table::_get_response_action_vector_features_f
 	)
 	*/
 	std::vector<std::array<float, 29>> next_states;
-	vector<SelfAction> actions = get_self_actions();
-	for (SelfAction action : actions) {
+	vector<ResponseAction> actions = get_response_actions();
+	for (ResponseAction action : actions) {
 		int turn = this->turn;
 		int yama_len = get_remain_tile();
 		bool first_round = players[response_player].first_round;
@@ -2391,8 +2391,8 @@ std::vector<std::array<float, 34 * 58>> Table::_get_response_action_matrix_featu
 	)
 	*/
 	std::vector<std::array<float, 34 * 58>> next_states;
-	vector<SelfAction> actions = get_self_actions();
-	for (SelfAction action : actions) {
+	vector<ResponseAction> actions = get_response_actions();
+	for (ResponseAction action : actions) {
 		int player_no = response_player;
 		std::vector<std::vector<Fulu>> fulus4 = { players[0].副露s, players[1].副露s, players[2].副露s, players[3].副露s };
 		std::array<River, 4> rivers4 = { players[0].river, players[1].river, players[2].river, players[3].river };
