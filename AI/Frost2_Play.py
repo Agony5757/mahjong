@@ -31,9 +31,9 @@ agents = [AgentFrost2(nn=MahjongNetFrost2(graphs[i], agent_no=i, num_tile_type=n
           for i in range(4)]
 
 
-episode_start = 4000
+episode_start = 5
 episode_savebuffer = 1024
-mu_size = 20
+mu_size = agents[0].memory.max_action_num
 max_steps = agents[0].memory.episode_length
 
 
@@ -43,9 +43,9 @@ max_steps = agents[0].memory.episode_length
 
 
 # # example 
-for i in range(4):
-    buffer_path =  "./buffer/Agent{}".format(i) + "-MahjongBufferFrost220190612-140356.pkl"
-    agents[i].memory.load(buffer_path)
+# for i in range(4):
+#     buffer_path =  "./buffer/Agent{}".format(i) + "-MahjongBufferFrost220190612-140356.pkl"
+#     agents[i].memory.load(buffer_path)
 
 
 # ##  以下的代码可以让Agent读取保存的网络， 如果comment掉就可以让Agent从头开始训练

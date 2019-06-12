@@ -1887,16 +1887,16 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 
 	if (metadata.find("oya") != metadata.end()) {
 		auto val = metadata["oya"];
-		if (val == "0") {
+		if (!val.compare("0")) {
 			庄家 = 0;
 		}
-		if (val == "1") {
+		if (!val.compare("1")) {
 			庄家 = 1;
 		}
-		if (val == "2") {
+		if (!val.compare("2")) {
 			庄家 = 2;
 		}
-		if (val == "3") {
+		if (!val.compare("3")) {
 			庄家 = 3;
 		}
 		else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Cannot Read Option: oya");
@@ -1907,16 +1907,16 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 
 	if (metadata.find("wind") != metadata.end()) {
 		auto val = metadata["wind"];
-		if (val == "east") {
+		if (!val.compare("east")) {
 			场风 = Wind::East;
 		}
-		if (val == "west") {
+		if (!val.compare("west")) {
 			场风 = Wind::West;
 		}
-		if (val == "south") {
+		if (!val.compare("south")) {
 			场风 = Wind::South;
 		}
-		if (val == "north") {
+		if (!val.compare("north")) {
 			场风 = Wind::North;
 		}
 		else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Cannot Read Option: wind");
@@ -1994,7 +1994,7 @@ std::array<float, 29> Table::generate_state_vector_features_frost2(
 		vf[i + 16 - player_no] = mentsun[(i % 4)] ? 1 : 0;
 	}
 	for (int i = player_no; i < 4 + player_no; ++i) {
-		vf[i + 20 - player_no] = hand[(i % 4)] ? 1 : 0;
+		vf[i + 20 - player_no] = float(hand[(i % 4)]) / 13.0;
 	}
 
 	vf[24] = turn / 4;
@@ -2083,7 +2083,13 @@ std::array<float, 34 * 58> Table::generate_state_matrix_features_frost2(
 			for (int p = 0; p < tiles.size(); ++p) {
 				auto &tile = tiles[p];
 				auto id = int(tile->tile);
-				mf[id][fulu_start + 6 * i_relative + 4]++;
+				mf[id][fulu_start + 6 * i_relative + tile_num[id]] = 1;
+				tile_num[id]++;
+				if (tile->red_dora) mf[id][fulu_start + 6 * i_relative + 4]++;
+				for (auto &dora : doras) {
+					if (tile->tile == dora)
+						mf[id][fulu_start + 6 * i_relative + 4]++;
+				}
 			}
 			auto take = fulus[k].take;
 			if (!tiles[0]->tile == tiles[1]->tile) {
@@ -2255,6 +2261,7 @@ std::vector<std::array<float, 29>> Table::_get_response_action_vector_features_f
 			first_round = false; // 破一巡
 			mentsun[response_player] = false;
 			hand[response_player] -= 2;
+			break;
 		case Action::荣和:
 		case Action::抢暗杠:
 		case Action::抢杠:
@@ -2424,7 +2431,8 @@ std::vector<std::array<float, 34 * 58>> Table::_get_response_action_matrix_featu
 		case Action::碰:
 		case Action::杠: {
 			auto& tiles = action.correspond_tiles;
-			auto& 副露s = players[call_player].副露s;
+			auto& 副露s = fulus4[response_player];
+
 			Fulu fulu;
 			if (is_刻子({ tiles[0]->tile, tiles[1]->tile, tile->tile })
 				&& tiles.size() == 2) {
@@ -2488,10 +2496,14 @@ std::vector<std::array<float, 34 * 58>> Table::_get_response_action_matrix_featu
 				STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Bad Action.");
 			rivers4[call_player].push_back({ tile, this->river_counter + 1, players[call_player].is_riichi(), false, FROM_手切摸切 });
 			break;
+
 		}
 		default:
 			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Bad Action Option.");
 		}
+
+		
+
 		next_states.push_back(generate_state_matrix_features_frost2(hand, dora, player_no, rivers4, fulus4, has_xuanpai, xuanpai, dora_spec, game_wind, self_wind));
 	}
 	return next_states;

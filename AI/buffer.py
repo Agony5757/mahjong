@@ -53,7 +53,7 @@ class MahjongBufferFrost2():
         self.num_tile_type = num_tile_type
         self.num_each_tile = num_each_tile
         self.num_vf = num_vf
-        self.max_action_num = 20
+        self.max_action_num = 40
 
         self.n = np.zeros([size, episode_length], dtype=int)  # number of available actions
 

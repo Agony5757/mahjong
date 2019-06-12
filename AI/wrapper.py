@@ -39,7 +39,15 @@ class EnvMahjong2(gym.Env):
 
     def reset(self):
         self.t = mp.Table()
+
+        oya = np.random.random_integers(0, 3)
+        winds =['east', 'south', 'west', 'north']
+        wind = winds[np.random.random_integers(0, 3)]
+        oya = '{}'.format(oya)
+
         self.t.game_init()
+        # self.t.game_init_with_metadata({"oya": oya, "wind": wind})
+
         self.game_count += 1
 
         self.horas = [False, False, False, False]
@@ -187,8 +195,6 @@ class EnvMahjong2(gym.Env):
         :return: a new, symmetric matrix
         """
         perm_msp = np.random.permutation(3)
-        perm_eswn = np.random.permutation(4)
-        perm_chh = np.random.permutation(3)
 
         matrix_features_new = np.zeros_like(matrix_features)
 
@@ -211,21 +217,25 @@ class EnvMahjong2(gym.Env):
         tmp.append(matrix_features[:, 29, :])
         tmp.append(matrix_features[:, 30, :])
 
-        matrix_features_new[:, 27, :] = tmp[perm_eswn[0]]
-        matrix_features_new[:, 28, :] = tmp[perm_eswn[1]]
-        matrix_features_new[:, 29, :] = tmp[perm_eswn[2]]
-        matrix_features_new[:, 30, :] = tmp[perm_eswn[3]]
+        k = np.random.random_integers(0, 3)
+
+        matrix_features_new[:, 27, :] = tmp[k % 4]
+        matrix_features_new[:, 28, :] = tmp[(k+1) % 4]
+        matrix_features_new[:, 29, :] = tmp[(k+2) % 4]
+        matrix_features_new[:, 30, :] = tmp[(k+3) % 4]
 
         # chh
         tmp = []
+
+        k = np.random.random_integers(0, 2)
 
         tmp.append(matrix_features[:, 31, :])
         tmp.append(matrix_features[:, 32, :])
         tmp.append(matrix_features[:, 33, :])
 
-        matrix_features_new[:, 31, :] = tmp[perm_chh[0]]
-        matrix_features_new[:, 32, :] = tmp[perm_chh[1]]
-        matrix_features_new[:, 33, :] = tmp[perm_chh[2]]
+        matrix_features_new[:, 31, :] = tmp[k % 3]
+        matrix_features_new[:, 32, :] = tmp[(k+1) % 3]
+        matrix_features_new[:, 33, :] = tmp[(k+2) % 3]
 
         return matrix_features_new
 

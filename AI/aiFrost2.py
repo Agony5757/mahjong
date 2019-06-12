@@ -229,7 +229,7 @@ class AgentFrost2():
                                        np.reshape(rewards, [-1,]),
                                        np.reshape(dones, [-1,]),
                                        np.reshape(actions, [-1]),
-                                       np.reshape(behavior_policies, [-1, 20]),
+                                       np.reshape(behavior_policies, [-1, 40]),
                                        weight=weight)
         # except:
         #     print("Episode Length 0! Not recorded!")
