@@ -217,13 +217,15 @@ class AgentFrost2():
 
         return action, policy
 
-    def remember_episode(self, states, rewards, dones, actions, behavior_policies, weight):
+    def remember_episode(self, num_aval_actions, next_matrix_features, next_vector_features, rewards, dones, actions, behavior_policies, weight):
         # try:
 
         if len(dones) == 0:
             print("Episode Length 0! Not recorded!")
         else:
-            self.memory.append_episode(states,
+            self.memory.append_episode(num_aval_actions,
+                                       next_matrix_features,
+                                       next_vector_features,
                                        np.reshape(rewards, [-1,]),
                                        np.reshape(dones, [-1,]),
                                        np.reshape(actions, [-1]),
@@ -231,51 +233,71 @@ class AgentFrost2():
                                        weight=weight)
         # except:
         #     print("Episode Length 0! Not recorded!")
-    def learn(self, symmetric_hand=None, episode_start=1, care_lose=True, batch_size=32, logging=True):
+    def learn(self, symmetric_hand=None, episode_start=1, care_lose=True, logging=True):
 
         if self.memory.filled_size >= episode_start:
-            S, Sp, s, sp, r, d, a, mu, length, e_index, e_weight = self.memory.sample_episode_batch(batch_size=batch_size)
+            n, Sp, sp, r, d, a, mu, length, e_index, e_weight = self.memory.sample_episode()
 
             if not care_lose:
                 r = np.maximum(r, 0)
 
-            this_S = S
-            next_S = Sp
+            this_Sp = np.zeros([r.shape[0], self.num_tile_type, self.num_each_tile], dtype=np.float32)
+            this_sp = np.zeros([r.shape[0], self.num_vf], dtype=np.float32)
+            target_q = np.zeros([r.shape[0], 1], dtype=np.float32)
 
-            this_s = s
-            next_s = sp
-
-            target_value = np.zeros([r.shape[0], 1], dtype=np.float32)
-
-            v = self.nn.output((this_S, this_s))
-            vp = self.nn.output((next_S, next_s))
+            episode_length = r.shape[0]
 
             td_prime = 0
 
-            for i in reversed(range(r.shape[0])):  #Q(lambda)
 
-                td_error = self.gamma * r[i] + (1. - d[i]) * self.gamma * vp[i, 0] - v[i, 0]
+            for t in reversed(range(episode_length)):  #Q(lambda)
 
-                if d[i]:
+                this_Sp[t] = Sp[t, a[t]]
+                this_sp[t] = sp[t, a[t]]
+
+                n_t = n[t]
+
+                q_all_t = self.nn.output((Sp[t, 0:n[t]], sp[t, 0:n[t]]))
+                q_t_a = q_all_t[a[t], :]
+                mu_t_a = mu[t, a[t]]
+                _, policy_t = self.select((Sp[t, 0:n_t], sp[t, 0:n_t]))
+                pi_t_a = policy_t[a[t]]
+
+                if d[t]:
+                    q_t_a_est = r[t]
+                else:
+                    q_all_tp1 = self.nn.output((Sp[t + 1, 0:n[t + 1]], sp[t + 1, 0:n[t + 1]]))
+                    _, policy_tp1 = self.select((Sp[t + 1, 0:n[t + 1]], sp[t + 1, 0:n[t + 1]]))
+                    v_tp1 = np.sum(policy_tp1 * q_all_tp1.reshape([-1, n[t + 1]]), axis=-1)
+                    q_t_a_est = r[t] + self.gamma * v_tp1
+
+                rho_t_a = pi_t_a / mu_t_a
+                c_t_a = self.lambd * np.minimum(rho_t_a, 1)
+
+                td_error_t = q_t_a_est - q_t_a
+
+                if d[t]:
                     td_prime = 0
+                else:
+                    td_prime = td_prime
 
-                target_value[i, 0] = v[i,0] + 1. * (td_error + self.lambd * td_prime)
+                target_q[t] = q_t_a_est + td_prime
 
-                td_prime += 1. * self.lambd * td_error
+                td_prime = self.gamma * c_t_a * (td_error_t + td_prime)
 
             self.global_step += 1
 
             # also train symmetric hand
             if not symmetric_hand == None:
-                all_S = np.concatenate([symmetric_hand(this_S) for _ in range(5)], axis=0).astype(np.float32)
-                all_s = np.concatenate([this_s for _ in range(5)], axis=0).astype(np.float32)
-                all_target_value = np.concatenate([target_value for _ in range(5)], axis=0).astype(np.float32)
+                all_Sp = np.concatenate([symmetric_hand(this_Sp) for _ in range(5)], axis=0).astype(np.float32)
+                all_sp = np.concatenate([this_sp for _ in range(5)], axis=0).astype(np.float32)
+                all_target_value = np.concatenate([target_q for _ in range(5)], axis=0).astype(np.float32)
             else:
-                all_S = this_S
-                all_s = this_s
-                all_target_value = target_value
+                all_Sp = this_Sp
+                all_sp = this_sp
+                all_target_value = target_q
 
-            self.nn.train((all_S, all_s), all_target_value, logging=logging, global_step=self.global_step)
+            self.nn.train((all_Sp, all_sp), all_target_value, logging=logging, global_step=self.global_step)
 
         else:
             pass
