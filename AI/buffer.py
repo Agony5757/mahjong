@@ -41,7 +41,7 @@ class MahjongBufferFrost2():
             return self.sample_subtree(1)
             pass
 
-    def __init__(self, size=256, episode_length=150, priority_eps=10000, priority_scale=0.0, IS_scale=1.0, saved=None,
+    def __init__(self, size=256, episode_length=180, priority_eps=10000, priority_scale=0.0, IS_scale=1.0, saved=None,
                  num_tile_type=34, num_each_tile=58, num_vf=29):
         # Mahjong episode length usually < 256
 
@@ -53,10 +53,12 @@ class MahjongBufferFrost2():
         self.num_tile_type = num_tile_type
         self.num_each_tile = num_each_tile
         self.num_vf = num_vf
-        self.max_action_num = 40
+        self.max_action_num = 20
 
-        self.S = sps.DOK(shape=(size, episode_length, num_tile_type, num_each_tile), dtype=np.float16) # matrix features
-        self.s = np.zeros([size, episode_length, num_vf], dtype=np.float16)  # vector features
+        self.n = np.zeros([size, episode_length], dtype=int)  # number of available actions
+
+        self.Sp = [[] for _ in range(self.size)] # next matrix features
+        self.sp = np.zeros([size, episode_length, self.max_action_num, num_vf], dtype=np.float16)  # next vector features
 
         self.r = np.zeros([size, episode_length], dtype=np.float32) # reward
         self.d = np.zeros([size, episode_length], dtype=np.float16) # done
@@ -76,11 +78,12 @@ class MahjongBufferFrost2():
         self.min_length = 0
         self.max_length = 0
 
-    def append_episode(self, S, s, r, d, a, mu, weight=0):
+    def append_episode(self, n, Sp, sp, r, d, a, mu, weight=0):
         """
         Append an episode
-        :param S: matrix features
-        :param s: vector features
+        :param n: number of available actions
+        :param Sp: available next matrix features
+        :param sp: available next ector features
         :param r: reward
         :param d: done
         :param a: action
@@ -91,8 +94,15 @@ class MahjongBufferFrost2():
 
         length = len(r)
 
-        self.S[self.tail, :length] = S
-        self.s[self.tail, :length] = s
+        Sp = Sp.reshape([Sp.shape[0], Sp.shape[1], self.num_tile_type * self.num_each_tile])
+        Sp_padded = np.zeros([self.episode_length, Sp.shape[1], self.num_tile_type * self.num_each_tile], dtype=np.float16)
+        Sp_padded[: length] = Sp
+
+        self.n[self.tail, :length] = n
+
+        self.Sp[self.tail] = sps.COO.from_numpy(Sp_padded)
+
+        self.sp[self.tail, :length] = sp
 
         self.r[self.tail, :length] = r
         self.d[self.tail, :length] = d
@@ -115,68 +125,66 @@ class MahjongBufferFrost2():
     def sample_episode(self):
         e_index, e_weight = self.sum_tree.sample()
 
+        n = self.n[e_index, :self.length[e_index]].astype(int)
         d = self.d[e_index, :self.length[e_index]]
-        S = self.S.todense()[e_index, :self.length[e_index] + 1]
-        s = self.s[e_index, :self.length[e_index] + 1]
+
+        Sp = self.Sp[e_index].todense()[:self.length[e_index]]
+
+        sp = self.sp[e_index, :self.length[e_index]]
         r = self.r[e_index, :self.length[e_index]]
         a = self.a[e_index, :self.length[e_index]]
         mu = self.mu[e_index, :self.length[e_index]]
 
-        return S, s, r, d, a, mu, self.length[e_index], e_index, e_weight
+        Sp = Sp.reshape([Sp.shape[0], Sp.shape[1], self.num_tile_type, self.num_each_tile]).astype(np.float16)
 
-    def sample_episode_batch(self, batch_size=16):
+        return n, Sp, sp, r, d, a, mu, self.length[e_index], e_index, e_weight
 
-        Length = np.zeros([batch_size,], dtype=np.int)
-        E_index = np.zeros([batch_size,], dtype=np.int)
-        E_weight = np.zeros([batch_size,], dtype=np.float32)
+    # def sample_episode_batch(self, batch_size=16):
+    #
+    #     Length = np.zeros([batch_size,], dtype=np.int)
+    #     E_index = np.zeros([batch_size,], dtype=np.int)
+    #     E_weight = np.zeros([batch_size,], dtype=np.float32)
+    #
+    #     Sp_dense = self.Sp.todense().astype(np.float16)
+    #
+    #     Sp_dense = Sp_dense.reshape([Sp_dense.shape[0], Sp_dense.shape[1], Sp_dense.shape[2], self.num_tile_type, self.num_each_tile])
+    #
+    #     for b in range(batch_size):
+    #
+    #         if b == 0:
+    #             e_index, e_weight = self.sum_tree.sample()
+    #             n = (self.n[e_index, :self.length[e_index]])
+    #             d = (self.d[e_index, :self.length[e_index]])
+    #             Sp = (Sp_dense[e_index, :self.length[e_index]])
+    #             sp = (self.sp[e_index, :self.length[e_index]])
+    #             r = (self.r[e_index, :self.length[e_index]])
+    #             a = (self.a[e_index, :self.length[e_index]])
+    #             mu = (self.mu[e_index, :self.length[e_index]])
+    #         else:
+    #             e_index, e_weight = self.sum_tree.sample()
+    #             n = np.hstack([n, self.n[e_index, :self.length[e_index]]])
+    #             Sp = np.vstack([Sp, Sp_dense[e_index, :self.length[e_index]]])
+    #             sp = np.vstack([sp, self.sp[e_index, :self.length[e_index]]])
+    #             r = np.hstack([r, self.r[e_index, :self.length[e_index]]])
+    #             d = np.hstack([d, self.d[e_index, :self.length[e_index]]])
+    #             a = np.hstack([a, self.a[e_index, :self.length[e_index]]])
+    #             mu = np.vstack([mu, self.mu[e_index, :self.length[e_index]]])
+    #
+    #         Length[b] = self.length[e_index]
+    #         E_index[b] = e_index
+    #         E_weight[b] = e_weight
+    #
+    #     return n, Sp, sp, r, d, a, mu, Length, E_index, E_weight
 
-        S_dense = self.S.todense()
-        for b in range(batch_size):
-            if b == 0:
-                e_index, e_weight = self.sum_tree.sample()
-                d = (self.d[e_index, :self.length[e_index]])
-                S = (S_dense[e_index, :self.length[e_index]])
-                s = (self.s[e_index, :self.length[e_index]])
-                Sp = (S_dense[e_index, 1:self.length[e_index] + 1])
-                sp = (self.s[e_index, 1:self.length[e_index] + 1])
-                r = (self.r[e_index, :self.length[e_index]])
-                a = (self.a[e_index, :self.length[e_index]])
-                mu = (self.mu[e_index, :self.length[e_index]])
-            else:
-                e_index, e_weight = self.sum_tree.sample()
-                S = np.vstack([S, S_dense[e_index, :self.length[e_index]]])
-                s = np.vstack([s, self.s[e_index, :self.length[e_index]]])
-                Sp = np.vstack([Sp, S_dense[e_index, 1:self.length[e_index] + 1]])
-                sp = np.vstack([sp, self.s[e_index, 1:self.length[e_index] + 1]])
-                r = np.hstack([r, self.r[e_index, :self.length[e_index]]])
-                d = np.hstack([d, self.d[e_index, :self.length[e_index]]])
-                a = np.hstack([a, self.a[e_index, :self.length[e_index]]])
-                mu = np.vstack([mu, self.mu[e_index, :self.length[e_index]]])
-
-            Length[b] = self.length[e_index]
-            E_index[b] = e_index
-            E_weight[b] = e_weight
-
-        # S = np.reshape(S, [-1, self.num_tile_type, self.num_each_tile]).astype(np.float16)
-        # s = np.reshape(s, [-1, self.num_vf]).astype(np.float16)
-        # Sp = np.reshape(Sp, [-1, self.num_tile_type, self.num_each_tile]).astype(np.float16)
-        # sp = np.reshape(sp, [-1, self.num_vf]).astype(np.float16)
-        #
-        # d = np.reshape(d, [-1,]).astype(np.float16)
-        # r = np.reshape(r, [-1,]).astype(np.float32)
-        # a = np.reshape(a, [-1,]).astype(np.int)
-        # mu = np.reshape(mu, [-1, self.max_action_num]).astype(np.float32)
-
-        return S, Sp, s, sp, r, d, a, mu, Length, E_index, E_weight
-
-    def save(self, path='./MahjongBufferFrost2.npz'):
+    def save(self, path='./MahjongBufferFrost2.pkl'):
 
         if not self.saved:
 
             parameters = np.array([self.size, self.episode_length, self.filled_size, self.tail])
             data = {'parameters': parameters,
-                    'S': self.S,
-                    's': self.s,
+                    'n': self.n,
+                    'Sp': self.Sp,
+                    'sp': self.sp,
                     'r': self.r,
                     'mu': self.mu,
                     'length': self.length,
@@ -204,8 +212,9 @@ class MahjongBufferFrost2():
 
         self.length = data['length']
 
-        self.S = data['S'] # ok to assign np array to DOK
-        self.s = data['s']
+        self.n = data['n']
+        self.Sp = data['Sp'] # ok to assign np array to DOK
+        self.sp = data['sp']
         self.r = data['r']
         self.d = data['d']
         self.mu = data['mu']

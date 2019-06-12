@@ -2337,7 +2337,8 @@ std::vector<std::array<float, 34 * 58>> Table::_get_self_action_matrix_features_
 			fulus4[player_no].push_back(fulu);
 			}
 			break;
-		case Action::出牌: {
+		case Action::出牌:
+		case Action::立直: {
 			has_xuanpai = true;
 			xuanpai = action.correspond_tiles[0];
 			auto iter =
