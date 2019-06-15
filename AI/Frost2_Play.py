@@ -31,7 +31,7 @@ agents = [AgentFrost2(nn=MahjongNetFrost2(graphs[i], agent_no=i, num_tile_type=n
           for i in range(4)]
 
 
-episode_start = 5
+episode_start = 256
 episode_savebuffer = 1024
 mu_size = agents[0].memory.max_action_num
 max_steps = agents[0].memory.episode_length
@@ -67,13 +67,13 @@ max_steps = agents[0].memory.episode_length
 
 
 
-n_games = 1000000
 
+n_games = 1000000
 
 print("Start!")
 
 for n in range(n_games):
-
+#     try:
     if (n + 1) % 10000 == 0:
         for i in range(4):
             agents[i].nn.save(model_dir="Agent{}-".format(i) + datetime_str + "-Game{}".format(
@@ -123,12 +123,12 @@ for n in range(n_games):
             good_actions = []
 
             #             if agents[who].memory.filled_size < episode_start:  # For collecting data only
-            #                 for a in range(len(aval_actions)):
-            #                     if aval_actions[a].action == mp.Action.Riichi:
-            #                         good_actions.append(a)
+            for a in range(len(aval_actions)):
+                if aval_actions[a].action == mp.Action.Riichi:
+                    good_actions.append(a)
 
-            #                     if aval_actions[a].action == mp.Action.Tsumo:
-            #                         good_actions.append(a)
+                if aval_actions[a].action == mp.Action.Tsumo:
+                    good_actions.append(a)
             #######################################
 
             next_aval_matrix_states, next_aval_vector_states = env.get_aval_next_states(who)  ## for a single player
@@ -179,15 +179,15 @@ for n in range(n_games):
                 good_actions = []
 
                 #                 if agents[i].memory.filled_size < episode_start:  # For collecting data only
-                #                     for a in range(len(aval_actions)):
-                #                         if aval_actions[a].action == mp.Action.Ron:
-                #                             good_actions.append(a)
+                for a in range(len(aval_actions)):
+                    if aval_actions[a].action == mp.Action.Ron:
+                        good_actions.append(a)
 
-                #                         if aval_actions[a].action == mp.Action.ChanKan:
-                #                             good_actions.append(a)
+                    if aval_actions[a].action == mp.Action.ChanKan:
+                        good_actions.append(a)
 
-                #                         if aval_actions[a].action == mp.Action.ChanAnKan:
-                #                             good_actions.append(a)
+                    if aval_actions[a].action == mp.Action.ChanAnKan:
+                        good_actions.append(a)
                 ##########################################################
                 if len(good_actions) > 0:
                     good_actions = np.reshape(good_actions, [-1, ])
@@ -226,14 +226,15 @@ for n in range(n_games):
                 this_states[i] = deepcopy(next_states[i])
 
         step += 1
-        if done or step == max_steps:
-            print('done = {}'.format(done))
-            print(env.get_phase_text())
-
-        # print("Game {}, step {}".format(n, step))
+        #         if done or step == max_steps:
+        #             print('done = {}'.format(done))
+        #             print(env.get_phase_text())
 
 
-        if done:
+        #         print("Game {}, step {}".format(n, step))
+
+
+        if env.t.get_phase() == 16:  # GAME_OVER
 
             final_score_change = env.get_final_score_change()
 
@@ -244,20 +245,21 @@ for n in range(n_games):
 
                 if agent_step[i] >= 1:  # if not 1st turn end
                     episode_dones[i, agent_step[i] - 1] = 1
+                    episode_rewards[i, agent_step[i] - 1] = final_score_change[i]
 
             if not np.max(final_score_change) == 0:  ## score change
                 for i in range(4):
-                    agents[i].remember_episode(episode_num_aval_actions[i, 0: agent_step[i]],
-                                               episode_next_matrix_features[i, 0: agent_step[i]],
-                                               episode_next_vector_features[i, 0: agent_step[i]],
-                                               episode_rewards[i, 0: agent_step[i]],
-                                               episode_dones[i, 0: agent_step[i]],
-                                               episode_actions[i, 0: agent_step[i]],
-                                               episode_policies[i, 0: agent_step[i]],
+                    agents[i].remember_episode(episode_num_aval_actions[i],
+                                               episode_next_matrix_features[i],
+                                               episode_next_vector_features[i],
+                                               episode_rewards[i],
+                                               episode_dones[i],
+                                               episode_actions[i],
+                                               episode_policies[i],
                                                weight=0)
                 print(' ')
                 print(env.t.get_result().result_type, end='')
-                print(": Totally {} steps".format(np.shape(episode_dones[0])[0]))
+                print(": Totally {} steps".format(step))
 
                 try:
                     with open("./Paipu/" + datetime_str + "game{}".format(n) + ".txt", 'w') as fp:
@@ -266,24 +268,27 @@ for n in range(n_games):
                     pass
 
             else:
-                if np.random.rand() < 0.99 + n / 500000:  ## no score change
+                if np.random.rand() < 0.0025 + (n / 500000) ** 2:  ## no score change
                     for i in range(4):
-                        agents[i].remember_episode(episode_num_aval_actions[i, 0: agent_step[i]],
-                                                   episode_next_matrix_features[i, 0: agent_step[i]],
-                                                   episode_next_vector_features[i, 0: agent_step[i]],
-                                                   episode_rewards[i, 0: agent_step[i]],
-                                                   episode_dones[i, 0: agent_step[i]],
-                                                   episode_actions[i, 0: agent_step[i]],
-                                                   episode_policies[i, 0: agent_step[i]],
+                        agents[i].remember_episode(episode_num_aval_actions[i],
+                                                   episode_next_matrix_features[i],
+                                                   episode_next_vector_features[i],
+                                                   episode_rewards[i],
+                                                   episode_dones[i],
+                                                   episode_actions[i],
+                                                   episode_policies[i],
                                                    weight=0)
                     print(' ')
                     print(env.t.get_result().result_type, end='')
                     print(": Totally {} steps".format(step))
 
-            for n_train in range(1):
+            for n_train in range(4):
                 for i in range(4):
                     agents[i].learn(env.symmetric_matrix_features, episode_start=episode_start,
                                     care_lose=False, logging=True)
+#     except:
+#         pass
+
 
 data = {"rons": env.final_score_changes, "p0_stat": agents[0].stat, "p1_stat": agents[1].stat,
         "p2_stat": agents[2].stat, "p3_stat": agents[3].stat, }

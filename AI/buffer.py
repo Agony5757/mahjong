@@ -92,22 +92,22 @@ class MahjongBufferFrost2():
         :return: None
         """
 
-        length = len(r)
+        length = np.where(d == 1)[0].item() + 1
 
         Sp = Sp.reshape([Sp.shape[0], Sp.shape[1], self.num_tile_type * self.num_each_tile])
         Sp_padded = np.zeros([self.episode_length, Sp.shape[1], self.num_tile_type * self.num_each_tile], dtype=np.float16)
-        Sp_padded[: length] = Sp
+        Sp_padded= Sp
 
-        self.n[self.tail, :length] = n
+        self.n[self.tail] = n
 
         self.Sp[self.tail] = sps.COO.from_numpy(Sp_padded)
 
-        self.sp[self.tail, :length] = sp
+        self.sp[self.tail] = sp
 
-        self.r[self.tail, :length] = r
-        self.d[self.tail, :length] = d
-        self.a[self.tail, :length] = a
-        self.mu[self.tail, :length] = mu
+        self.r[self.tail] = r
+        self.d[self.tail] = d
+        self.a[self.tail] = a
+        self.mu[self.tail] = mu
         self.length[self.tail] = length
 
         self.sum_tree.add(self.tail, weight + self.priority_eps)

@@ -10,7 +10,7 @@ class MahjongNetFrost2():
     Mahjong Network Frost 2
     Using CNN + FC layers, purely feed-forward network
     """
-    def __init__(self, graph, agent_no, lr=3e-4, log_dir="../log/", num_tile_type=34, num_each_tile=55, num_vf=29):
+    def __init__(self, graph, agent_no, lr=3e-4, log_dir="../log/", num_tile_type=34, num_each_tile=58, num_vf=29):
         """Model function for CNN."""
 
         self.session = tf.Session(graph=graph)
@@ -112,13 +112,14 @@ class AgentFrost2():
     """
     Mahjong AI agent with PER
     """
-    def __init__(self, nn: MahjongNetFrost2, memory:MahjongBufferFrost2, gamma=0.9999, greedy=1.0, lambd=0.975,
+    def __init__(self, nn: MahjongNetFrost2, memory:MahjongBufferFrost2, gamma=0.9999, greedy=1.0, lambd=0.975, alpha=0.99,
                  num_tile_type=34, num_each_tile=55, num_vf=29):
         self.nn = nn
         self.gamma = gamma  # discount factor
         self.greedy = greedy
         self.memory = memory
         self.lambd = lambd
+        self.alpha = alpha # for Ret-GRAPE
         self.global_step = 0
         self.num_tile_type = num_tile_type  # number of tile types
         self.num_each_tile = num_each_tile # number of features for each tile
@@ -236,54 +237,102 @@ class AgentFrost2():
     def learn(self, symmetric_hand=None, episode_start=1, care_lose=True, logging=True):
 
         if self.memory.filled_size >= episode_start:
-            n, Sp, sp, r, d, a, mu, length, e_index, e_weight = self.memory.sample_episode()
+            n_t, Sp, sp, r_t, done_t, a_t, mu_t, length, e_index, e_weight = self.memory.sample_episode()
+
+            l = r_t.shape[0]
+
+
+            this_Sp = np.zeros([l, self.num_tile_type, self.num_each_tile], dtype=np.float32)
+            this_sp = np.zeros([l, self.num_vf], dtype=np.float32)
 
             if not care_lose:
-                r = np.maximum(r, 0)
+                r_t = np.maximum(r_t, 0)
 
-            this_Sp = np.zeros([r.shape[0], self.num_tile_type, self.num_each_tile], dtype=np.float32)
-            this_sp = np.zeros([r.shape[0], self.num_vf], dtype=np.float32)
-            target_q = np.zeros([r.shape[0], 1], dtype=np.float32)
+            mu_size = mu_t.shape[1]
 
-            episode_length = r.shape[0]
+            _, policy_all = self.select((Sp.reshape([-1, self.num_tile_type, self.num_each_tile]), sp.reshape([-1, self.num_vf])))
+            pi = policy_all.reshape([l, -1])
 
-            td_prime = 0
+            q_all = self.nn.output((Sp.reshape([-1, self.num_tile_type, self.num_each_tile]), sp.reshape([-1, self.num_vf])))
+            q = q_all.reshape([l, -1])
 
+            pi_t, pi_tp1 = pi, np.concatenate((pi[1:, :], np.zeros([1, mu_size])), axis=0)
+            q_t, q_tp1 = q, np.concatenate((q[1:, :], np.zeros([1, mu_size])), axis=0)
 
-            for t in reversed(range(episode_length)):  #Q(lambda)
+            q_t_a = q_t[np.arange(l), a_t]
+            v_t, v_tp1 = np.sum(pi_t * q_t, axis=1), np.sum(pi_tp1 * q_tp1, axis=1)
+            q_t_a_est = r_t + (1. - done_t) * self.gamma * v_tp1
+            td_error = q_t_a_est - q_t_a + self.alpha * (q_t_a - v_t)
+            rho_t_a = pi_t[np.arange(l), a_t] / mu_t[np.arange(l), a_t]   # importance sampling ratios
+            c_t_a = self.lambd * np.minimum(rho_t_a, 1)
 
-                this_Sp[t] = Sp[t, a[t]]
-                this_sp[t] = sp[t, a[t]]
+            # print('td_eror')
+            # print(td_error[-5:])
 
-                n_t = n[t]
+            y_prime = 0  # y'_t
+            g_q = np.zeros([l])
+            for u in reversed(range(l)):  # l-1, l-2, l-3, ..., 0
+                # If s_tp1[u] is from an episode different from s_t[u], y_prime needs to be reset.
 
-                q_all_t = self.nn.output((Sp[t, 0:n[t]], sp[t, 0:n[t]]))
-                q_t_a = q_all_t[a[t], :]
-                mu_t_a = mu[t, a[t]]
-                _, policy_t = self.select((Sp[t, 0:n_t], sp[t, 0:n_t]))
-                pi_t_a = policy_t[a[t]]
+                this_Sp[u] = Sp[u, a_t[u]]
+                this_sp[u] = sp[u, a_t[u]]
 
-                if d[t]:
-                    q_t_a_est = r[t]
-                else:
-                    q_all_tp1 = self.nn.output((Sp[t + 1, 0:n[t + 1]], sp[t + 1, 0:n[t + 1]]))
-                    _, policy_tp1 = self.select((Sp[t + 1, 0:n[t + 1]], sp[t + 1, 0:n[t + 1]]))
-                    v_tp1 = np.sum(policy_tp1 * q_all_tp1.reshape([-1, n[t + 1]]), axis=-1)
-                    q_t_a_est = r[t] + self.gamma * v_tp1
+                y_prime = 0 if done_t[u] else y_prime  # y'_u
+                g_q[u] = q_t_a_est[u] + y_prime
 
-                rho_t_a = pi_t_a / mu_t_a
-                c_t_a = self.lambd * np.minimum(rho_t_a, 1)
+                # y'_{u-1} used in the next step
+                y_prime = self.lambd * self.gamma * np.minimum(rho_t_a[u], 1) * td_error[u] + self.gamma * c_t_a[u] * y_prime
 
-                td_error_t = q_t_a_est - q_t_a
+            target_q = g_q + self.alpha * (q_t_a - v_t)
+            target_q = target_q.reshape([l, 1])
+            # this_Sp = np.zeros([r.shape[0], self.num_tile_type, self.num_each_tile], dtype=np.float32)
+            # this_sp = np.zeros([r.shape[0], self.num_vf], dtype=np.float32)
+            # target_q = np.zeros([r.shape[0], 1], dtype=np.float32)
+            #
+            # episode_length = r.shape[0]
+            #
+            # td_prime = 0
+            #
+            # q_all = self.nn.output((Sp, sp))
+            #
+            # _, policy_all = self.select((Sp.reshape([-1, self.num_tile_type, self.num_each_tile]), sp.reshape([-1, self.num_vf])))
+            # policy_all = policy_all.reshape([episode_length, -1])
+            #
+            # for t in reversed(range(episode_length)):  #Q(lambda)
+            #
+            #     this_Sp[t] = Sp[t, a[t]]
+            #     this_sp[t] = sp[t, a[t]]
+            #
+            #     q_all_t = q_all[t, 0:n[t]]
+            #     q_t_a = q_all_t[a[t], :]
+            #
+            #     mu_t_a = mu[t, a[t]]
+            #     pi_t_a = policy_all[t, a[t]]
+            #
+            #     if d[t]:
+            #         q_t_a_est = r[t]
+            #     else:
+            #         q_all_tp1 = q_all[t+1, 0:n[t+1]]
+            #         policy_tp1 = policy_all[t+1, 0:n[t+1]]
+            #         v_tp1 = np.sum(policy_tp1.reshape([n[t+1]]) * q_all_tp1.reshape([n[t+1]]))
+            #         q_t_a_est = r[t] + self.gamma * v_tp1
+            #
+            #     rho_t_a = pi_t_a / mu_t_a
+            #     c_t_a = self.lambd * np.minimum(rho_t_a, 1)
+            #
+            #     td_error_t = q_t_a_est - q_t_a
+            #
+            #     if d[t]:
+            #         td_prime = 0
+            #     else:
+            #         td_prime = td_prime
+            #
+            #     target_q[t] = q_t_a_est + td_prime
+            #
+            #     td_prime = self.gamma * c_t_a * (td_error_t + td_prime)
 
-                if d[t]:
-                    td_prime = 0
-                else:
-                    td_prime = td_prime
-
-                target_q[t] = q_t_a_est + td_prime
-
-                td_prime = self.gamma * c_t_a * (td_error_t + td_prime)
+            # print('target_q')
+            # print(target_q[-5:,0])
 
             self.global_step += 1
 
