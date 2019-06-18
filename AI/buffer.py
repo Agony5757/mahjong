@@ -95,7 +95,7 @@ class MahjongBufferFrost2():
         length = np.where(d == 1)[0].item() + 1
 
         Sp = Sp.reshape([Sp.shape[0], Sp.shape[1], self.num_tile_type * self.num_each_tile])
-        Sp_padded = np.zeros([self.episode_length, Sp.shape[1], self.num_tile_type * self.num_each_tile], dtype=np.float16)
+        # Sp_padded = np.zeros([self.episode_length, Sp.shape[1], self.num_tile_type * self.num_each_tile], dtype=np.float16)
         Sp_padded= Sp
 
         self.n[self.tail] = n
@@ -218,6 +218,8 @@ class MahjongBufferFrost2():
         self.r = data['r']
         self.d = data['d']
         self.mu = data['mu']
+
+        self.saved = True # avoid multiple saving
 
         # self.infinity = 1e9
 
