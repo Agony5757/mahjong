@@ -21,3 +21,5 @@ MahjongRelease/
 AI/Paipu/
 *.npz
 *.pkl
+*.iml
+*.xml
