@@ -46,8 +46,8 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 		else 场役.push_back(Yaku::河底捞鱼);
 	}
 
-	/* 天地和的条件是，在第一巡，且没人鸣牌*/
-	if (player.first_round) {
+	/* 天地和的条件是，在第一巡，且没人鸣牌，且自摸*/
+	if (player.first_round && tsumo) {
 		if (table->庄家 == turn)
 			场役.push_back(Yaku::天和);
 		else

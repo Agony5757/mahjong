@@ -1890,13 +1890,13 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 		if (!val.compare("0")) {
 			庄家 = 0;
 		}
-		if (!val.compare("1")) {
+		else if (!val.compare("1")) {
 			庄家 = 1;
 		}
-		if (!val.compare("2")) {
+		else if (!val.compare("2")) {
 			庄家 = 2;
 		}
-		if (!val.compare("3")) {
+		else if (!val.compare("3")) {
 			庄家 = 3;
 		}
 		else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Cannot Read Option: oya");
@@ -1910,13 +1910,13 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 		if (!val.compare("east")) {
 			场风 = Wind::East;
 		}
-		if (!val.compare("west")) {
+		else if (!val.compare("west")) {
 			场风 = Wind::West;
 		}
-		if (!val.compare("south")) {
+		else if (!val.compare("south")) {
 			场风 = Wind::South;
 		}
-		if (!val.compare("north")) {
+		else if (!val.compare("north")) {
 			场风 = Wind::North;
 		}
 		else throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Cannot Read Option: wind");
