@@ -457,7 +457,7 @@ public:
 		std::array<bool, 4> mentsun,
 		bool agari	
 	); 
-	std::array<float, 34 * 58> Table::generate_state_matrix_features_frost2(
+	std::array<float, 34 * 58> generate_state_matrix_features_frost2(
 		std::vector<Tile*> hand,
 		std::vector<BaseTile> dora,
 		int player_no,
