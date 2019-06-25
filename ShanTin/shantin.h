@@ -29,19 +29,19 @@ struct IntTiles {
 
 int get_shantin(IntTiles tiles);
 
-int get_对子(IntTiles tiles);
-int get_对子(vector<int> tiles);
-bool is_all_单张(IntTiles &tiles);
-bool is_all_单张(vector<int> tiles);
-bool is_all_单张Z(vector<int> tiles);
-int get_七对_Shantin(IntTiles &tiles);
-int get_国士_Shantin(IntTiles &tiles);
-int get_幺九种类(vector<int> tiles);
-int get_幺九种类Z(vector<int> tiles);
-bool 幺九对子(vector<int> tiles);
+int get_瀵瑰瓙(IntTiles tiles);
+int get_瀵瑰瓙(vector<int> tiles);
+bool is_all_鍗曞紶(IntTiles &tiles);
+bool is_all_鍗曞紶(vector<int> tiles);
+bool is_all_鍗曞紶Z(vector<int> tiles);
+int get_涓冨_Shantin(IntTiles &tiles);
+int get_鍥藉＋_Shantin(IntTiles &tiles);
+int get_骞轰節绉嶇被(vector<int> tiles);
+int get_骞轰節绉嶇被Z(vector<int> tiles);
+bool 骞轰節瀵瑰瓙(vector<int> tiles);
 
-int get_普通_Shantin(IntTiles &tiles);
-int remove_面子(IntTiles& tiles);
+int get_鏅�歘Shantin(IntTiles &tiles);
+int remove_闈㈠瓙(IntTiles& tiles);
 
 
 
