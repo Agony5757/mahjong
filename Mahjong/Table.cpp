@@ -2034,7 +2034,7 @@ std::array<float, 34 * 58> Table::generate_state_matrix_features_frost2(
 	float mf[34][58] = { 0 };
 	int tile_num[34] = { 0 };
 	//auto& hand = players[playerNo].hand;
-	auto& doras = get_dora();
+	auto doras = get_dora();
 
 	constexpr int river_start = 5;
 	constexpr int fulu_start = river_start + 6 * 4;
