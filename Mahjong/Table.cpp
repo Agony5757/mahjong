@@ -2167,7 +2167,7 @@ std::vector<std::array<float, 29>> Table::_get_self_action_vector_features_frost
 		std::array<bool, 4> riichi = { players[0].riichi, players[1].riichi, players[2].riichi, players[3].riichi };
 		std::array<bool, 4> double_riichi = { players[0].double_riichi, players[1].double_riichi, players[2].double_riichi, players[3].double_riichi };
 		std::array<bool, 4> ippatsu = { players[0].一发, players[1].一发, players[2].一发, players[3].一发 };
-		std::array<int, 4> hand = { players[0].hand.size(), players[1].hand.size(), players[2].hand.size(), players[3].hand.size() };
+		std::array<int, 4> hand = { (int)players[0].hand.size(), (int)players[1].hand.size(), (int)players[2].hand.size(), (int)players[3].hand.size() };
 		std::array<bool, 4> mentsun = { players[0].门清, players[1].门清, players[2].门清, players[3].门清 };
 		bool agari = false;
 		
@@ -2244,7 +2244,7 @@ std::vector<std::array<float, 29>> Table::_get_response_action_vector_features_f
 		std::array<bool, 4> riichi = { players[0].riichi, players[1].riichi, players[2].riichi, players[3].riichi };
 		std::array<bool, 4> double_riichi = { players[0].double_riichi, players[1].double_riichi, players[2].double_riichi, players[3].double_riichi };
 		std::array<bool, 4> ippatsu = { players[0].一发, players[1].一发, players[2].一发, players[3].一发 };
-		std::array<int, 4> hand = { players[0].hand.size(), players[1].hand.size(), players[2].hand.size(), players[3].hand.size() };
+		std::array<int, 4> hand = { (int)players[0].hand.size(), (int)players[1].hand.size(), (int)players[2].hand.size(), (int)players[3].hand.size() };
 		std::array<bool, 4> mentsun = { players[0].门清, players[1].门清, players[2].门清, players[3].门清 };
 		bool agari = false;
 
@@ -2501,8 +2501,6 @@ std::vector<std::array<float, 34 * 58>> Table::_get_response_action_matrix_featu
 		default:
 			throw STD_RUNTIME_ERROR_WITH_FILE_LINE_FUNCTION("Bad Action Option.");
 		}
-
-		
 
 		next_states.push_back(generate_state_matrix_features_frost2(hand, dora, player_no, rivers4, fulus4, has_xuanpai, xuanpai, dora_spec, game_wind, self_wind));
 	}
