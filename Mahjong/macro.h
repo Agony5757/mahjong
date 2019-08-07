@@ -17,6 +17,9 @@
 
 #define TEST_EQ_VERBOSE(value, expected) if (value == expected) cout<<"PASS"<<endl; else cout<<"FAIL"<<endl;
 
+typedef std::array<float, 30> vector_feature_t;
+typedef std::array<float, 34 * 58> matrix_feature_t;
+
 constexpr bool FROM_摸切 = false;
 constexpr bool FROM_手切 = true;
 

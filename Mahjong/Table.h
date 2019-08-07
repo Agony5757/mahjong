@@ -443,7 +443,7 @@ public:
 	inline int get_phase() { return (int)phase; }
 
 	// For AI Env
-	static std::array<float, 29> generate_state_vector_features_frost2(
+	static vector_feature_t generate_state_vector_features_frost2(
 		int turn,
 		int yama_len,
 		bool first_round,
@@ -457,7 +457,7 @@ public:
 		std::array<bool, 4> mentsun,
 		bool agari	
 	); 
-	std::array<float, 34 * 58> Table::generate_state_matrix_features_frost2(
+	matrix_feature_t Table::generate_state_matrix_features_frost2(
 		std::vector<Tile*> hand,
 		std::vector<BaseTile> dora,
 		int player_no,
@@ -471,13 +471,13 @@ public:
 		Wind self_wind
 	);
 
-	std::vector<std::array<float, 29>> get_next_aval_states_vector_features_frost2(int playerNo);
-	std::vector<std::array<float, 29>> _get_self_action_vector_features_frost2(int playerNo);
-	std::vector<std::array<float, 29>> _get_response_action_vector_features_frost2(int call_player, int response_player);
+	std::vector<vector_feature_t> get_next_aval_states_vector_features_frost2(int playerNo);
+	std::vector<vector_feature_t> _get_self_action_vector_features_frost2(int playerNo);
+	std::vector<vector_feature_t> _get_response_action_vector_features_frost2(int call_player, int response_player);
 	
-	std::vector<std::array<float, 34 * 58>> get_next_aval_states_matrix_features_frost2(int playerNo);
-	std::vector<std::array<float, 34 * 58>> _get_self_action_matrix_features_frost2(int playerNo);
-	std::vector<std::array<float, 34 * 58>> _get_response_action_matrix_features_frost2(int call_player, int response_player);
+	std::vector<matrix_feature_t> get_next_aval_states_matrix_features_frost2(int playerNo);
+	std::vector<matrix_feature_t> _get_self_action_matrix_features_frost2(int playerNo);
+	std::vector<matrix_feature_t> _get_response_action_matrix_features_frost2(int call_player, int response_player);
 
 	// Make a selection and game moves on.
 	void make_selection(int selection);
