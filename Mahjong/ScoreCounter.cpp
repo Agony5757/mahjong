@@ -92,7 +92,11 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 			}
 		}
 	}
-	
+
+    if (correspond_tile->red_dora == true) {
+        Dora役.push_back(Yaku::赤宝牌);
+    }
+
 	// 接下来统计宝牌数量
 	auto doratiles = table->get_dora();
 	for (auto doratile : doratiles) {
@@ -109,6 +113,10 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 				}
 			}
 		}
+
+        if (correspond_tile->tile == doratile) {
+            Dora役.push_back(Yaku::宝牌);
+        }
 	}
 
 	// 如果是立直和牌，继续统计里宝牌
@@ -128,6 +136,10 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 					}
 				}
 			}
+
+            if (correspond_tile->tile == doratile) {
+                Dora役.push_back(Yaku::里宝牌);
+            }
 		}
 	}
 
@@ -502,7 +514,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	// 判断单骑
 	bool 单骑 = any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
 		if (s.size() == 3) return false;
-		if (s.size() == 4) return s[3] == ':';
+		if (s.size() == 4) return s[2] == ':';
 		throw runtime_error("??");
 	});
 
@@ -667,13 +679,13 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		}
 	});
 
-	if (混全带幺九 && !混老头) {
-		if (门清) yakus.push_back(Yaku::混全带幺九);
-		else yakus.push_back(Yaku::混全带幺九副露版);
-	}
-	else if (纯全带幺九 && !清老头) {
+	if (纯全带幺九 && !清老头) {
 		if (门清) yakus.push_back(Yaku::纯全带幺九);
 		else yakus.push_back(Yaku::纯全带幺九副露版);
+	}
+	else if (混全带幺九 && !混老头) {
+		if (门清) yakus.push_back(Yaku::混全带幺九);
+		else yakus.push_back(Yaku::混全带幺九副露版);
 	}
 
 	// 大三元及小三元
@@ -749,12 +761,16 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		if (s[2] == 'S') return true;
 		return false;
 	});
-	平和 &= none_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](string s) {
+	平和 &= all_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](string s) {
 		if (s.size() == 3) return true;
 		if (s[3] == '@') return false;
 		if (s[3] == '%') return false;
+		if (s[2] == ':' && s[3] == '$') return false;
+		if ((s[3] == '#' || s[3] == '^') && s[0] == '1') return false;
+		if ((s[3] == '!' || s[3] == '$') && s[0] == '7') return false;
 		return true;
 	});
+    平和 &= tile_group_string.size() == 5;
 	if (平和) yakus.push_back(Yaku::平和);
 
 	// 判断绿一色
@@ -819,8 +835,8 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	// 判断一气通贯	
 	bool 一气通贯 = false;
 	vector<string> 一气通贯S = { "1sS", "4sS", "7sS" };
-	vector<string> 一气通贯M = { "1sM", "4sM", "7sM" };
-	vector<string> 一气通贯P = { "1sP", "4sP", "7sP" };
+	vector<string> 一气通贯M = { "1mS", "4mS", "7mS" };
+	vector<string> 一气通贯P = { "1pS", "4pS", "7pS" };
 	
 	// avoid using includes: it may only apply on an ordered sequence
 	//一气通贯 |= includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
@@ -874,8 +890,8 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
 		// 边张
 		if (s.size() == 4 && s[2] == 'S') {
-			if (s[1] == '1') if (s[3] == '#' || s[3] == '^') return true;
-			if (s[1] == '7') if (s[3] == '!' || s[3] == '$') return true;
+			if (s[0] == '1') if (s[3] == '#' || s[3] == '^') return true;
+			if (s[0] == '7') if (s[3] == '!' || s[3] == '$') return true;
 		}
 		return false;
 	}))

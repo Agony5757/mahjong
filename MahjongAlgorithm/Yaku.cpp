@@ -90,7 +90,7 @@ namespace mahjong
 			}
 
 			// 2. Find Koutsu
-			if (std::count(std::begin(curTiles), std::end(curTiles), curTiles[index]) == 3)
+			if (std::count(std::begin(curTiles), std::end(curTiles), curTiles[index]) >= 3)
 			{
 				flag = true;
 				tmpTiles = curTiles;
