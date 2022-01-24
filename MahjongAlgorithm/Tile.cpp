@@ -24,37 +24,37 @@ namespace mahjong
 		switch (getTileType())
 		{
 		case mahjong::TileType::Manzu:
-			out = std::to_string(getTileNumber()) + "Íò";
+			out = std::to_string(getTileNumber()) + "ä¸‡";
 			break;
 		case mahjong::TileType::Ponzu:
-			out = std::to_string(getTileNumber()) + "Í²";
+			out = std::to_string(getTileNumber()) + "ç­’";
 			break;
 		case mahjong::TileType::Souzu:
-			out = std::to_string(getTileNumber()) + "Ë÷";
+			out = std::to_string(getTileNumber()) + "ç´¢";
 			break;
 		case mahjong::TileType::Special:
 			switch (getTileNumber())
 			{
 			case 0b00000001:
-				out = "¶«";
+				out = "ä¸œ";
 				break;
 			case 0b00000010:
-				out = "ÄÏ";
+				out = "å—";
 				break;
 			case 0b00000011:
-				out = "Î÷";
+				out = "è¥¿";
 				break;
 			case 0b00000100:
-				out = "±±";
+				out = "åŒ—";
 				break;
 			case 0b00000101:
-				out = "°×";
+				out = "ç™½";
 				break;
 			case 0b00000110:
-				out = "·¢";
+				out = "å‘";
 				break;
 			case 0b00000111:
-				out = "ÖĞ";
+				out = "ä¸­";
 				break;
 			default:
 				std::cerr << "Unknown Special Character : " << std::bitset<8>(getData()) << std::endl;

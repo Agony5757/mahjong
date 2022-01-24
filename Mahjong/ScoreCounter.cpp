@@ -1044,7 +1044,9 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct
 			continue;
 		case TileGroup::Koutsu:
 			raw_tile_group_string.push_back(basetile_to_string_simple(tilegroup.tiles[0]) + "K"); // 例如1sK
-			continue;			
+			continue;
+		default:
+			continue;
 		}
 	}
 

@@ -1953,6 +1953,8 @@ void Table::make_selection(int selection)
 	
 	// 分为两种情况，如果是ACTION阶段
 	switch (phase) {
+	case GAME_OVER:
+		return;
 	case P1_ACTION:
 	case P2_ACTION:
 	case P3_ACTION:
@@ -2042,6 +2044,8 @@ void Table::make_selection(int selection)
 			}
 			return;
 		}
+		default:
+			throw runtime_error("Error selection.");
 		}
 	}
 
