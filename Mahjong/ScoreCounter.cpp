@@ -93,7 +93,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 		}
 	}
 
-    if (correspond_tile->red_dora == true) {
+    if (correspond_tile && correspond_tile->red_dora == true) {
         Dora役.push_back(Yaku::赤宝牌);
     }
 
@@ -114,7 +114,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 			}
 		}
 
-        if (correspond_tile->tile == doratile) {
+        if (correspond_tile && correspond_tile->tile == doratile) {
             Dora役.push_back(Yaku::宝牌);
         }
 	}

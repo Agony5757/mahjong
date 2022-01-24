@@ -18,3 +18,5 @@ log/
 *.index
 log/checkpoint
 MahjongRelease/
+dist/
+pymahjong.egg-info/

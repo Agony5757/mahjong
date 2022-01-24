@@ -1880,13 +1880,13 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 		if (val == "0") {
 			庄家 = 0;
 		}
-		if (val == "1") {
+		else if (val == "1") {
 			庄家 = 1;
 		}
-		if (val == "2") {
+		else if (val == "2") {
 			庄家 = 2;
 		}
-		if (val == "3") {
+		else if (val == "3") {
 			庄家 = 3;
 		}
 		else throw runtime_error("Cannot Read Option: oya");
@@ -1900,13 +1900,13 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 		if (val == "east") {
 			场风 = Wind::East;
 		}
-		if (val == "west") {
+		else if (val == "west") {
 			场风 = Wind::West;
 		}
-		if (val == "south") {
+		else if (val == "south") {
 			场风 = Wind::South;
 		}
-		if (val == "north") {
+		else if (val == "north") {
 			场风 = Wind::North;
 		}
 		else throw runtime_error("Cannot Read Option: wind");

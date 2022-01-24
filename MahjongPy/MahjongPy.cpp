@@ -12,7 +12,7 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(MahjongPy, m)
 {
-	m.doc() = "";
+	m.doc() = "An essential Japanese riichi mahjong environment.";
 	
 	py::enum_<BaseTile>(m, "BaseTile")
 		.value("_1m", BaseTile::_1m)

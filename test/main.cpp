@@ -248,7 +248,7 @@ void test_passive_table_auto() {
 				cout << "Game: " << i << endl;
 #endif 
 			Table table;
-			table.game_init();
+			table.game_init_with_metadata({ {"oya","0"}, { "wind","east"} });
 			yama = table.export_yama();
 			while (table.get_phase() != Table::GAME_OVER) {
 				if (table.get_phase() <= Table::P4_ACTION) {
