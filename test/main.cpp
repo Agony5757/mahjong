@@ -9,8 +9,6 @@
 
 using namespace std;
 
-#pragma region(test和牌)
-
 void test和牌状态1() {
 	Table t;
 	t.init_tiles();
@@ -85,8 +83,6 @@ void testCompletedTiles2() {
 	auto completed_tiles = getCompletedTiles(convert_tiles_to_base_tiles(tiles));
 	for_all(completed_tiles, [](CompletedTiles ct) {cout << ct.to_string(); });	
 }
-
-#pragma endregion
 
 void testGameProcess() {
 	Table t(1, new RealPlayer(0), new RealPlayer(1), new RealPlayer(2), new RealPlayer(3));

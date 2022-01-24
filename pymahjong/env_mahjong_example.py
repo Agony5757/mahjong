@@ -14,7 +14,7 @@ def test():
         sp = env.reset(0, 'east')  # oya ID and game wind
         
         for tt in range(max_steps):
-            print(tt)
+            # print(tt)
             curr_pid = env.get_curr_player_id()  # Which player to play
             valid_actions = env.get_valid_actions(nhot=False)  # List[int] of valid actions
             action_mask = env.get_valid_actions(nhot=True)  # n-hot vector of valid actions
