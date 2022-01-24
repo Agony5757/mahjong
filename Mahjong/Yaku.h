@@ -2,6 +2,7 @@
 #define YAKU_H
 #include <vector>
 #include <algorithm>
+#include <string>
 enum class Yaku {	
 
 	// 特指无役

@@ -139,12 +139,11 @@ bool is国士无双和牌型(std::vector<BaseTile> tiles)
 	{ _1m, _9m, _1s, _9s, _1p, _9p, east, south, west, north, 白, 发, 中 };
 
 	for (auto add : adds) {
-		raw.push_back(add);
-		sort(tiles.begin(), tiles.end());
-		if (is_same_container(tiles, raw))
+        auto new_raw = raw;
+		new_raw.push_back(add);
+		sort(new_raw.begin(), new_raw.end());
+		if (is_same_container(tiles, new_raw))
 			return true;
-		else
-			raw.pop_back();
 	}
 	return false;
 }
@@ -251,11 +250,11 @@ bool is纯九莲和牌型(std::vector<BaseTile> tiles)
 		}
 		vector<BaseTile> 纯九莲s;
 		for (int i = 0; i < 14; ++i) {
-			纯九莲m.push_back(BaseTile(纯九莲[i] + int(_1s) - 1));
+			纯九莲s.push_back(BaseTile(纯九莲[i] + int(_1s) - 1));
 		}
 		vector<BaseTile> 纯九莲p;
 		for (int i = 0; i < 14; ++i) {
-			纯九莲m.push_back(BaseTile(纯九莲[i] + int(_1p) - 1));
+			纯九莲p.push_back(BaseTile(纯九莲[i] + int(_1p) - 1));
 		}
 		if (is_same_container(tiles, 纯九莲m)) return true;
 		if (is_same_container(tiles, 纯九莲p)) return true;
@@ -284,13 +283,13 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 
 		vector<BaseTile> 九莲s;
 		for (int i = 0; i < 14; ++i) {
-			九莲m.push_back(BaseTile(九莲[i] + int(_1s) - 1));
+			九莲s.push_back(BaseTile(九莲[i] + int(_1s) - 1));
 		}
 		sort(九莲s.begin(), 九莲s.end());
 
 		vector<BaseTile> 九莲p;
 		for (int i = 0; i < 14; ++i) {
-			九莲m.push_back(BaseTile(九莲[i] + int(_1p) - 1));
+			九莲p.push_back(BaseTile(九莲[i] + int(_1p) - 1));
 		}
 		sort(九莲p.begin(), 九莲p.end());
 
