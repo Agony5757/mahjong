@@ -35,7 +35,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name = "pymahjong",
-    version = "0.1",
+    version = "0.1.1",
     author = "Agony",
     author_email = "chenzhaoyun@iai.ustc.edu.cn",
     description= "An essential Japanese riichi mahjong environment.",
