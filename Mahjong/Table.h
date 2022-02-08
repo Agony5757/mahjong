@@ -14,74 +14,13 @@ constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
 
 // Forward Decl
-class Table;
-
-class RiverTile {
-public:
-	Tile* tile;
-
-	// 第几张牌丢下去的
-	int number;
-
-	// 是不是立直后弃牌
-	bool riichi;
-
-	// 这张牌明面上还在不在河里
-	bool remain;
-
-	// true为手切，false为摸切
-	bool fromhand;
-};
-
-class River {
-	// 记录所有的弃牌，而不是仅仅在河里的牌
-public:
-	std::vector<RiverTile> river;
-	inline std::vector<BaseTile> to_basetile() {
-		std::vector<BaseTile> basetiles;
-		for (auto &tile : river) {
-			basetiles.push_back(tile.tile->tile);
-		}
-		return basetiles;
-	}
-	inline std::string to_string() const {
-		std::stringstream ss;
-
-		for (auto tile : river) {
-			ss << tile.tile->to_string() << tile.number;
-			if (tile.fromhand)
-				ss << "h";
-			if (tile.riichi)
-				ss << "r";
-			if (!tile.remain)
-				ss << "-";
-			ss << " ";
-		}
-		return ss.str();
-	}
-
-	inline RiverTile& operator[](size_t n) {
-		return river[n];
-	}
-
-	inline size_t size() {
-		return river.size();
-	}
-
-	inline void push_back(RiverTile rt) {
-		river.push_back(rt);
-	}
-};
-
-// Forward Decl
 class Agent;
 
 class Table
 {
-private:
+public:
 	int river_counter = 0;
 	Tile tiles[N_TILES];
-public:
 	Agent* agents[4];	
 	int dora_spec; // 翻开了几张宝牌指示牌
 	std::vector<Tile*> 宝牌指示牌;
@@ -95,8 +34,9 @@ public:
 	int 庄家 = 0; // 庄家
 	int n本场 = 0;
 	int n立直棒 = 0;
+	GameLog openGameLog;
+	GameLog fullGameLog;
 
-	std::string export_yama();
 
 	inline std::vector<BaseTile> get_dora() const {
 		std::vector<BaseTile> doratiles;
@@ -114,6 +54,7 @@ public:
 		return doratiles;
 	}
 
+	// 通过这种方式判断杠了几次，相对于判断dora个数更为准确
 	inline int get_remain_kan_tile() const {
 		auto iter = find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]);
 		return int(iter - 牌山.begin() - 1);
@@ -127,9 +68,8 @@ public:
 	void init_red_dora_3();
 	void shuffle_tiles();
 	void init_yama();
-
-	// std::string export_yama();
-	// void import_yama(std::string);
+	void import_yama(std::string yama);
+	std::string export_yama();
 	void init_wind();
 	
 	void _deal(int i_player);
@@ -140,9 +80,6 @@ public:
 
 	inline void next_turn() { turn++; turn = turn % 4; }
 
-	GameLog openGameLog;
-	GameLog fullGameLog;
-
 	enum ToStringOption : int {
 		YAMA = 1 << 0,
 		PLAYER = 1 << 1,
@@ -152,39 +89,21 @@ public:
 		亲家 = 1 << 5,
 		REMAIN_TILE = 1 << 6,
 	};
+	std::string to_string(int option = YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE) const;
 
-	std::string to_string(int option =
-		YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE) const;
-
-	inline bool after_chipon(){
-		return last_action == Action::吃 ||
-			last_action == Action::碰;
-	}
-
-	inline bool after_daiminkan() {
-		return last_action == Action::杠;
-	}
-
-	inline bool after_ankan() {
-		return last_action == Action::暗杠;
-	}
-
-	inline bool after_加杠() {
-		return last_action == Action::加杠;
-	}
-
-	inline bool after_杠() {
-		return after_daiminkan() || after_加杠();
-	}
+	inline bool after_chipon() { return last_action == Action::吃 || last_action == Action::碰; }
+	inline bool after_daiminkan() {	return last_action == Action::杠; }
+	inline bool after_ankan() {	return last_action == Action::暗杠; }
+	inline bool after_加杠() { return last_action == Action::加杠; }
+	inline bool after_杠() { return after_daiminkan() || after_加杠(); }
 
 	Table() = default;
 	Table(int 庄家, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);
 	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4]);
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
-	std::vector<SelfAction> GetValidActions();
-
-	std::vector<SelfAction> GetRiichiActions();
+	std::vector<SelfAction> GetSelfActions();
+	std::vector<SelfAction> GetRiichiSelfAction();
 
 	// 根据turn打出的tile，可以做出的决定
 	std::vector<ResponseAction> GetValidResponse(int player, Tile* tile, bool);
@@ -214,9 +133,10 @@ public:
 
 	Result GameProcess(bool, std::string = "");
 
+	// ---------------------Manual Mode------------------------------
 	// The following part is for the manual instead of the automatic.
-	// Never mix using GameProcess and using the following functions. 
-public:
+	// Never mix using GameProcess and using the following functions.
+	// -------------------------------------------------------------- 
 	enum PhaseEnum {
 		P1_ACTION, P2_ACTION, P3_ACTION, P4_ACTION,
 		P1_RESPONSE, P2_RESPONSE, P3_RESPONSE, P4_RESPONSE,
@@ -224,8 +144,6 @@ public:
 		P1_抢暗杠RESPONSE, P2_抢暗杠RESPONSE, P3_抢暗杠RESPONSE, P4_抢暗杠RESPONSE,
 		GAME_OVER,
 	};
-
-private:
 	std::vector<SelfAction> self_action;
 	std::vector<ResponseAction> response_action;
 
@@ -237,14 +155,13 @@ private:
 	std::vector<ResponseAction> actions; // player actions
 	bool FROM_手切摸切;
 	Action final_action = Action::pass;
+	
 	void _from_beginning();
-public:
 
 	// Initialize the game.
 	void game_init();
 
-	void game_init_with_metadata(
-		std::unordered_map<std::string, std::string> metadata);
+	void game_init_with_metadata(std::unordered_map<std::string, std::string> metadata);
 	
 	// Get the phase of the game
 	inline int get_phase() { return (int)phase; }
@@ -252,7 +169,7 @@ public:
 	// Make a selection and game moves on.
 	void make_selection(int selection);
 
-	// Get Information. Return the table itself.
+	// Get Information. Return the table itself. (For python wrapper)
 	inline Table* get_info() { return this; }
 
 	// When a player needs response, it can refer to the selection made by the "self-action" player

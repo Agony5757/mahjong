@@ -1,8 +1,15 @@
-#include "Player.h"
+ï»¿#include "Player.h"
+#include "Table.h"
 
-Player::Player()
-	:riichi(false), score(INIT_SCORE)
+using namespace std;
+
+Player::Player() 
 { }
+
+Player::Player(int init_score)
+{
+	score = init_score;
+}
 
 std::string Player::hand_to_string() const
 {
@@ -22,47 +29,47 @@ std::string Player::river_to_string() const
 std::string Player::to_string() const
 {
 	stringstream ss;
-	ss << "µãÊı:" << score << endl;
-	ss << "×Ô·ç" << wind_to_string(wind) << endl;
-	ss << "ÊÖÅÆ:" << hand_to_string();
+	ss << "ç‚¹æ•°:" << score << endl;
+	ss << "è‡ªé£" << wind_to_string(wind) << endl;
+	ss << "æ‰‹ç‰Œ:" << hand_to_string();
 
-	if (¸±Â¶s.size() != 0)
+	if (å‰¯éœ²s.size() != 0)
 	{
-		ss << " ¸±Â¶:";
-		for (auto fulu : ¸±Â¶s)
+		ss << " å‰¯éœ²:";
+		for (auto fulu : å‰¯éœ²s)
 			ss << fulu.to_string() << " ";
 	}
 
 	ss << endl;
-	ss << "ÅÆºÓ:" << river_to_string();
+	ss << "ç‰Œæ²³:" << river_to_string();
 	ss << endl;
 
-	if (riichi)	ss << "Á¢";
-	else 		ss << "NoÁ¢";
+	if (riichi)	ss << "ç«‹";
+	else 		ss << "Noç«‹";
 
 	ss << "|";
 
-	if (ÃÅÇå)	ss << "ÃÅÇå";
-	else		ss << "¸±Â¶";
+	if (é—¨æ¸…)	ss << "é—¨æ¸…";
+	else		ss << "å‰¯éœ²";
 	ss << endl;
 
 	return ss.str();
 }
 
 
-std::vector<SelfAction> Player::get_¼Ó¸Ü()
+std::vector<SelfAction> Player::get_åŠ æ ()
 {
 	vector<SelfAction> actions;
 	//if (after_chipon == true) return actions;
 
-	for (auto fulu : ¸±Â¶s) {
+	for (auto fulu : å‰¯éœ²s) {
 		if (fulu.type == Fulu::Pon) {
 			auto match_tile =
 				find_match_tile(hand, fulu.tiles[0]->tile);
 			if (match_tile != hand.end()) {
 				SelfAction action;
 				action.correspond_tiles.push_back(*match_tile);
-				action.action = Action::¼Ó¸Ü;
+				action.action = Action::åŠ æ ;
 				actions.push_back(action);
 			}
 		}
@@ -70,16 +77,15 @@ std::vector<SelfAction> Player::get_¼Ó¸Ü()
 	return actions;
 }
 
-std::vector<SelfAction> Player::get_°µ¸Ü()
+std::vector<SelfAction> Player::get_æš—æ ()
 {
 	vector<SelfAction> actions;
-	//if (after_chipon == true) return actions;
 
 	for (auto tile : hand) {
 		auto duplicate = get_duplicate(hand, tile->tile, 4);
 		if (duplicate.size() == 4) {
 			SelfAction action;
-			action.action = Action::°µ¸Ü;
+			action.action = Action::æš—æ ;
 			action.correspond_tiles.assign(duplicate.begin(), duplicate.end());
 			actions.push_back(action);
 		}
@@ -87,27 +93,28 @@ std::vector<SelfAction> Player::get_°µ¸Ü()
 	return actions;
 }
 
-static bool isÊ³Ìæ(Player* player, BaseTile t) {
-	// ÄÃ³ö×îºóÒ»¸ö¸±Â¶
-	auto last_fulu = player->¸±Â¶s.back();
+static bool isé£Ÿæ›¿(Player* player, BaseTile t)
+ {
+	// æ‹¿å‡ºæœ€åä¸€ä¸ªå‰¯éœ²
+	auto last_fulu = player->å‰¯éœ²s.back();
 
 	if (last_fulu.type == Fulu::Pon) {
-		// ÅöµÄÇé¿ö£¬Ö»Òª²»ÊÇÄÇÒ»ÕÅ¾Í¿ÉÒÔÁË
+		// ç¢°çš„æƒ…å†µï¼Œåªè¦ä¸æ˜¯é‚£ä¸€å¼ å°±å¯ä»¥äº†
 		if (last_fulu.tiles[0]->tile == t)
 			return true;
 		else return false;
 	}
 	else if (last_fulu.type == Fulu::Chi) {
-		// ³ÔµÄÇé¿ö
+		// åƒçš„æƒ…å†µ
 		if (last_fulu.take == 1) {
-			// Ç¶ÕÅ
+			// åµŒå¼ 
 			if (last_fulu.tiles[last_fulu.take]->tile == t)
 				return true;
 			else return false;
 		}
 		if (last_fulu.take == 0) {
-			if (is_¾ÅÅÆ(last_fulu.tiles[2]->tile)) {
-				// ¿¼ÂÇ(7)89
+			if (is_ä¹ç‰Œ(last_fulu.tiles[2]->tile)) {
+				// è€ƒè™‘(7)89
 				if (last_fulu.tiles[last_fulu.take]->tile == t)
 					return true;
 				else return false;
@@ -123,8 +130,8 @@ static bool isÊ³Ìæ(Player* player, BaseTile t) {
 			}
 		}
 		if (last_fulu.take == 2) {
-			if (is_çÛÅÆ(last_fulu.tiles[0]->tile)) {
-				// ¿¼ÂÇ12(3)
+			if (is_å¹ºç‰Œ(last_fulu.tiles[0]->tile)) {
+				// è€ƒè™‘12(3)
 				if (last_fulu.tiles[last_fulu.take]->tile == t)
 					return true;
 				else return false;
@@ -142,50 +149,47 @@ static bool isÊ³Ìæ(Player* player, BaseTile t) {
 		else throw runtime_error("??");
 	}
 	else
-		throw runtime_error("×îºóÒ»ÊÖ¼È²»ÊÇ³ÔÓÖ²»ÊÇÅö£¬²»¿¼ÂÇÊ³Ìæ");
+		throw runtime_error("æœ€åä¸€æ‰‹æ—¢ä¸æ˜¯åƒåˆä¸æ˜¯ç¢°ï¼Œä¸è€ƒè™‘é£Ÿæ›¿");
 }
 
-std::vector<SelfAction> Player::get_´òÅÆ(bool after_chipon)
+std::vector<SelfAction> Player::get_æ‰“ç‰Œ(bool after_chipon)
 {
 	vector<SelfAction> actions;
 	for (auto tile : hand) {
-		// ¼ì²éÊ³ÌæÇé¿ö,²»¿É´ò³ö
+		// æ£€æŸ¥é£Ÿæ›¿æƒ…å†µ,ä¸å¯æ‰“å‡º
 		if (after_chipon)
-			if (isÊ³Ìæ(this, tile->tile))
+			if (isé£Ÿæ›¿(this, tile->tile))
 				continue;
 
-		// ÆäËûËùÓĞÅÆ¾ù¿É´ò³ö
+		// å…¶ä»–æ‰€æœ‰ç‰Œå‡å¯æ‰“å‡º
 		SelfAction action;
-		action.action = Action::³öÅÆ;
+		action.action = Action::å‡ºç‰Œ;
 		action.correspond_tiles.push_back(tile);
 		actions.push_back(action);
 	}
 	return actions;
 }
 
-std::vector<SelfAction> Player::get_×ÔÃş(Table* table)
+std::vector<SelfAction> Player::get_è‡ªæ‘¸()
 {
-	// cout << "Warning:×ÔÃş is not considered yet" << endl;
-
 	std::vector<SelfAction> actions;
-	if (isºÍÅÆ(convert_tiles_to_base_tiles(hand))) {
+	if (iså’Œç‰Œ(convert_tiles_to_base_tiles(hand))) {
 		SelfAction action;
-		action.action = Action::×ÔÃş;
+		action.action = Action::è‡ªæ‘¸;
 		actions.push_back(action);
 	}
-	// ÔÚ×À×ÓÄÇ±ß¼ÓÒÔ¹ıÂË
+	// åœ¨æ¡Œå­é‚£è¾¹åŠ ä»¥è¿‡æ»¤
 	return actions;
 }
 
-std::vector<SelfAction> Player::get_Á¢Ö±()
+std::vector<SelfAction> Player::get_ç«‹ç›´()
 {
-	// cout << "Warning:Á¢Ö± is not considered yet" << endl;
 	std::vector<SelfAction> actions;
 
-	auto riichi_tiles = is_riichi_able(hand, ÃÅÇå);
+	auto riichi_tiles = is_riichi_able(hand, é—¨æ¸…);
 	for (auto riichi_tile : riichi_tiles) {
 		SelfAction action;
-		action.action = Action::Á¢Ö±;
+		action.action = Action::ç«‹ç›´;
 		action.correspond_tiles.push_back(riichi_tile);
 		actions.push_back(action);
 	}
@@ -193,11 +197,11 @@ std::vector<SelfAction> Player::get_Á¢Ö±()
 	return actions;
 }
 
-static int ¾ÅÖÖ¾ÅÅÆcounter(std::vector<Tile*> hand) {
+static int ä¹ç§ä¹ç‰Œcounter(std::vector<Tile*> hand) {
 	int counter = 0;
-	for (int tile = BaseTile::_1m; tile <= BaseTile::ÖĞ; ++tile) {
+	for (int tile = BaseTile::_1m; tile <= BaseTile::ä¸­; ++tile) {
 		auto basetile = static_cast<BaseTile>(tile);
-		if (is_çÛ¾ÅÅÆ(basetile)) {
+		if (is_å¹ºä¹ç‰Œ(basetile)) {
 			if (find_match_tile(hand, basetile) != hand.end())
 				counter++;
 		}
@@ -205,28 +209,27 @@ static int ¾ÅÖÖ¾ÅÅÆcounter(std::vector<Tile*> hand) {
 	return counter;
 }
 
-std::vector<SelfAction> Player::get_¾ÅÖÖ¾ÅÅÆ()
+std::vector<SelfAction> Player::get_ä¹ç§ä¹ç‰Œ()
 {
 	vector<SelfAction> actions;
 	if (!first_round) return actions;
 
-	// ¿¼ÂÇµ½µÚÒ»Ñ²¿ÉÒÔÓĞÈË°µ¸Ü£¬µ«ÊÇ×Ô¼º²»ĞĞ
+	// è€ƒè™‘åˆ°ç¬¬ä¸€å·¡å¯ä»¥æœ‰äººæš—æ ï¼Œä½†æ˜¯è‡ªå·±ä¸è¡Œ
 	if (hand.size() != 14) return actions;
 
-	if (¾ÅÖÖ¾ÅÅÆcounter(hand) >= 9) {
+	if (ä¹ç§ä¹ç‰Œcounter(hand) >= 9) {
 		SelfAction action;
-		action.action = Action::¾ÅÖÖ¾ÅÅÆ;
+		action.action = Action::ä¹ç§ä¹ç‰Œ;
 		actions.push_back(action);
 	}
 	return actions;
 }
 
-static
-vector<vector<Tile*>> get_Chi_tiles(vector<Tile*> hand, Tile* tile) {
+static vector<vector<Tile*>> get_Chi_tiles(vector<Tile*> hand, Tile* tile) {
 	vector<vector<Tile*>> chi_tiles;
 	for (int i = 0; i < hand.size() - 1; ++i) {
 		for (int j = 1; (i + j) < hand.size(); ++j)
-			if (is_Ë³×Ó({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
+			if (is_é¡ºå­({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
 				chi_tiles.push_back({ hand[i] , hand[i + j] });
 
 			}
@@ -234,12 +237,11 @@ vector<vector<Tile*>> get_Chi_tiles(vector<Tile*> hand, Tile* tile) {
 	return chi_tiles;
 }
 
-static
-vector<vector<Tile*>> get_Pon_tiles(vector<Tile*> hand, Tile* tile) {
+static vector<vector<Tile*>> get_Pon_tiles(vector<Tile*> hand, Tile* tile) {
 	vector<vector<Tile*>> chi_tiles;
 	for (int i = 0; i < hand.size() - 1; ++i) {
 		for (int j = 1; (i + j) < hand.size(); ++j)
-			if (is_¿Ì×Ó({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
+			if (is_åˆ»å­({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
 				chi_tiles.push_back({ hand[i] , hand[i + j] });
 
 			}
@@ -247,8 +249,7 @@ vector<vector<Tile*>> get_Pon_tiles(vector<Tile*> hand, Tile* tile) {
 	return chi_tiles;
 }
 
-static
-vector<vector<Tile*>> get_Kan_tiles(vector<Tile*> hand, Tile* tile) {
+static vector<vector<Tile*>> get_Kan_tiles(vector<Tile*> hand, Tile* tile) {
 	vector<vector<Tile*>> chi_tiles;
 	if (hand.size() < 2) {
 		return chi_tiles;
@@ -258,7 +259,7 @@ vector<vector<Tile*>> get_Kan_tiles(vector<Tile*> hand, Tile* tile) {
 		for (int j = 1; (i + j) < hand.size() - 1; ++j)
 			for (int k = 1; (i + j + k) < hand.size(); ++k)
 				if (
-					is_¸Ü({
+					is_æ ({
 						hand[i]->tile,
 						hand[i + j]->tile,
 						hand[i + j + k]->tile,
@@ -269,16 +270,16 @@ vector<vector<Tile*>> get_Kan_tiles(vector<Tile*> hand, Tile* tile) {
 	return chi_tiles;
 }
 
-std::vector<ResponseAction> Player::get_ÈÙºÍ(Table* table, Tile* tile)
+std::vector<ResponseAction> Player::get_è£å’Œ(Table* table, Tile* tile)
 {
 	std::vector<ResponseAction> actions;
 
 	auto copy_hand = hand;
 	copy_hand.push_back(tile);
 
-	if (isºÍÅÆ(convert_tiles_to_base_tiles(copy_hand))) {
+	if (iså’Œç‰Œ(convert_tiles_to_base_tiles(copy_hand))) {
 		ResponseAction action;
-		action.action = Action::ÈÙºÍ;
+		action.action = Action::è£å’Œ;
 		actions.push_back(action);
 	}
 
@@ -291,14 +292,14 @@ std::vector<ResponseAction> Player::get_Chi(Tile* tile)
 
 	BaseTile t = tile->tile;
 
-	if (t >= BaseTile::east && t <= BaseTile::ÖĞ)
-		// ×ÖÅÆ²»ÄÜ³Ô
+	if (t >= BaseTile::east && t <= BaseTile::ä¸­)
+		// å­—ç‰Œä¸èƒ½åƒ
 		return actions;
 
 	auto chi_tiles = get_Chi_tiles(hand, tile);
 	for (auto one_chi_tiles : chi_tiles) {
 		ResponseAction action;
-		action.action = Action::³Ô;
+		action.action = Action::åƒ;
 		action.correspond_tiles.assign(one_chi_tiles.begin(), one_chi_tiles.end());
 		actions.push_back(action);
 	}
@@ -315,7 +316,7 @@ std::vector<ResponseAction> Player::get_Pon(Tile* tile)
 
 	for (auto one_chi_tiles : chi_tiles) {
 		ResponseAction action;
-		action.action = Action::Åö;
+		action.action = Action::ç¢°;
 		action.correspond_tiles.assign(one_chi_tiles.begin(), one_chi_tiles.end());
 		actions.push_back(action);
 	}
@@ -332,7 +333,7 @@ std::vector<ResponseAction> Player::get_Kan(Tile* tile)
 
 	for (auto one_chi_tiles : chi_tiles) {
 		ResponseAction action;
-		action.action = Action::¸Ü;
+		action.action = Action::æ ;
 		action.correspond_tiles.assign(one_chi_tiles.begin(), one_chi_tiles.end());
 		actions.push_back(action);
 	}
@@ -340,54 +341,50 @@ std::vector<ResponseAction> Player::get_Kan(Tile* tile)
 	return actions;
 }
 
-std::vector<ResponseAction> Player::get_ÇÀ°µ¸Ü(Tile* tile)
+std::vector<ResponseAction> Player::get_æŠ¢æš—æ (Tile* tile)
 {
 	std::vector<ResponseAction> actions;
 
 	auto copy_hand = hand;
 	copy_hand.push_back(tile);
 
-	if (is¹úÊ¿ÎŞË«ºÍÅÆĞÍ(convert_tiles_to_base_tiles(copy_hand))) {
+	if (iså›½å£«æ— åŒå’Œç‰Œå‹(convert_tiles_to_base_tiles(copy_hand))) {
 		ResponseAction action;
-		action.action = Action::ÇÀ°µ¸Ü;
+		action.action = Action::æŠ¢æš—æ ;
 		actions.push_back(action);
 	}
 
 	return actions;
 }
 
-std::vector<ResponseAction> Player::get_ÇÀ¸Ü(Tile* tile)
+std::vector<ResponseAction> Player::get_æŠ¢æ (Tile* tile)
 {
 	std::vector<ResponseAction> actions;
 
 	auto copy_hand = hand;
 	copy_hand.push_back(tile);
 
-	if (isºÍÅÆ(convert_tiles_to_base_tiles(copy_hand))) {
+	if (iså’Œç‰Œ(convert_tiles_to_base_tiles(copy_hand))) {
 		ResponseAction action;
-		action.action = Action::ÇÀ¸Ü;
+		action.action = Action::æŠ¢æ ;
 		actions.push_back(action);
 	}
 
 	return actions;
 }
 
-std::vector<SelfAction> Player::riichi_get_°µ¸Ü(Table* table)
+std::vector<SelfAction> Player::riichi_get_æš—æ ()
 {
 	vector<SelfAction> actions;
-	if (table->dora_spec == 5) {
-		// ÒÑ¾­4¸Ü£¬²»×¼ÔÙ¸Ü
-		return actions;
-	}
 
-	// ´ÓÊÖÅÆ»ñÈ¡ÌıÅÆ
-	auto original_ÌıÅÆ = getÌıÅÆ(convert_tiles_to_base_tiles(hand));
+	// ä»æ‰‹ç‰Œè·å–å¬ç‰Œ
+	auto original_å¬ç‰Œ = getå¬ç‰Œ(convert_tiles_to_base_tiles(hand));
 
 	for (auto tile : hand) {
 		auto duplicate = get_duplicate(hand, tile->tile, 4);
 		if (duplicate.size() == 4) {
 
-			// ³¢ÊÔ´ÓÊÖÅÆÉ¾³ıµôÕâËÄÕÅÅÆ£¬Ö®ºó¼ì²éÌıÅÆ
+			// å°è¯•ä»æ‰‹ç‰Œåˆ é™¤æ‰è¿™å››å¼ ç‰Œï¼Œä¹‹åæ£€æŸ¥å¬ç‰Œ
 			vector<Tile*> copyhand(hand.begin(), hand.end());
 			copyhand.erase(
 				remove_if(copyhand.begin(), copyhand.end(),
@@ -396,11 +393,11 @@ std::vector<SelfAction> Player::riichi_get_°µ¸Ü(Table* table)
 						else return false;
 					}), copyhand.end());
 
-			auto final_ÌıÅÆ = getÌıÅÆ(convert_tiles_to_base_tiles(copyhand));
+			auto final_å¬ç‰Œ = getå¬ç‰Œ(convert_tiles_to_base_tiles(copyhand));
 
-			if (is_same_container(final_ÌıÅÆ, original_ÌıÅÆ)) {
+			if (is_same_container(final_å¬ç‰Œ, original_å¬ç‰Œ)) {
 				SelfAction action;
-				action.action = Action::°µ¸Ü;
+				action.action = Action::æš—æ ;
 				action.correspond_tiles.assign(duplicate.begin(), duplicate.end());
 				actions.push_back(action);
 			}
@@ -409,12 +406,12 @@ std::vector<SelfAction> Player::riichi_get_°µ¸Ü(Table* table)
 	return actions;
 }
 
-std::vector<SelfAction> Player::riichi_get_´òÅÆ()
+std::vector<SelfAction> Player::riichi_get_æ‰“ç‰Œ()
 {
 	vector<SelfAction> actions;
 
 	SelfAction action;
-	action.action = Action::³öÅÆ;
+	action.action = Action::å‡ºç‰Œ;
 	action.correspond_tiles.push_back(hand.back());
 	actions.push_back(action);
 
@@ -424,26 +421,26 @@ std::vector<SelfAction> Player::riichi_get_´òÅÆ()
 void Player::move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile)
 {
 	Fulu fulu;
-	if (is_¿Ì×Ó({ tiles[0]->tile, tiles[1]->tile, tile->tile })
+	if (is_åˆ»å­({ tiles[0]->tile, tiles[1]->tile, tile->tile })
 		&& tiles.size() == 2) {
-		// ÅöµÄÇé¿ö
-		// ´´½¨¶ÔÏó
+		// ç¢°çš„æƒ…å†µ
+		// åˆ›å»ºå¯¹è±¡
 		fulu.type = Fulu::Pon;
 		fulu.take = 0;
 		fulu.tiles = { tiles[0], tiles[1], tile };
 
-		// ¼ÓÈë
-		¸±Â¶s.push_back(fulu);
+		// åŠ å…¥
+		å‰¯éœ²s.push_back(fulu);
 
-		// É¾µôÔ­À´µÄÅÆ
+		// åˆ æ‰åŸæ¥çš„ç‰Œ
 		hand.erase(find(hand.begin(), hand.end(), tiles[0]));
 		hand.erase(find(hand.begin(), hand.end(), tiles[1]));
 		return;
 	}
-	if (is_Ë³×Ó({ tiles[0]->tile, tiles[1]->tile, tile->tile })
+	if (is_é¡ºå­({ tiles[0]->tile, tiles[1]->tile, tile->tile })
 		&& tiles.size() == 2) {
-		// ³ÔµÄÇé¿ö
-		// ´´½¨¶ÔÏó
+		// åƒçš„æƒ…å†µ
+		// åˆ›å»ºå¯¹è±¡
 		fulu.type = Fulu::Chi;
 		if (tile->tile < tiles[0]->tile) {
 			//(1)23
@@ -460,26 +457,26 @@ void Player::move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile)
 			fulu.take = 1;
 			fulu.tiles = { tiles[0], tile, tiles[1] };
 		}
-		// ¼ÓÈë
-		¸±Â¶s.push_back(fulu);
+		// åŠ å…¥
+		å‰¯éœ²s.push_back(fulu);
 
-		// É¾µôÔ­À´µÄÅÆ
+		// åˆ æ‰åŸæ¥çš„ç‰Œ
 		hand.erase(find(hand.begin(), hand.end(), tiles[0]));
 		hand.erase(find(hand.begin(), hand.end(), tiles[1]));
 		return;
 	}
-	if (is_¸Ü({ tiles[0]->tile, tiles[1]->tile, tiles[2]->tile, tile->tile })
+	if (is_æ ({ tiles[0]->tile, tiles[1]->tile, tiles[2]->tile, tile->tile })
 		&& tiles.size() == 3) {
-		// ¸ÜµÄÇé¿ö
-		// ´´½¨¶ÔÏó
-		fulu.type = Fulu::´óÃ÷¸Ü;
+		// æ çš„æƒ…å†µ
+		// åˆ›å»ºå¯¹è±¡
+		fulu.type = Fulu::å¤§æ˜æ ;
 		fulu.take = 0;
 		fulu.tiles = { tiles[0], tiles[1], tiles[2], tile };
 
-		// ¼ÓÈë
-		¸±Â¶s.push_back(fulu);
+		// åŠ å…¥
+		å‰¯éœ²s.push_back(fulu);
 
-		// É¾µôÔ­À´µÄÅÆ
+		// åˆ æ‰åŸæ¥çš„ç‰Œ
 		hand.erase(find(hand.begin(), hand.end(), tiles[0]));
 		hand.erase(find(hand.begin(), hand.end(), tiles[1]));
 		hand.erase(find(hand.begin(), hand.end(), tiles[2]));
@@ -489,15 +486,15 @@ void Player::move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile)
 
 void Player::remove_from_hand(Tile* tile)
 {
-	auto iter =
-		remove_if(hand.begin(), hand.end(), [tile](Tile* t) {return tile == t; });
+	auto iter =	remove_if(hand.begin(), hand.end(), 
+		[tile](Tile* t) {return tile == t; });
 	hand.erase(iter, hand.end());
 }
 
-void Player::play_°µ¸Ü(BaseTile tile)
+void Player::play_æš—æ (BaseTile tile)
 {
 	Fulu fulu;
-	fulu.type = Fulu::°µ¸Ü;
+	fulu.type = Fulu::æš—æ ;
 	fulu.take = 0;
 
 	for_each(hand.begin(), hand.end(),
@@ -506,20 +503,19 @@ void Player::play_°µ¸Ü(BaseTile tile)
 			if (tile == t->tile)
 				fulu.tiles.push_back(t);
 		});
-	auto iter =
-		remove_if(hand.begin(), hand.end(),
+	auto iter = remove_if(hand.begin(), hand.end(),
 			[tile](Tile* t) {return t->tile == tile; });
 	hand.erase(iter, hand.end());
 }
 
-void Player::play_¼Ó¸Ü(Tile* tile)
+void Player::play_åŠ æ (Tile* tile)
 {
-	ÃÅÇå = false;
-	for (auto& fulu : ¸±Â¶s) {
+	é—¨æ¸… = false;
+	for (auto& fulu : å‰¯éœ²s) {
 		if (fulu.type == Fulu::Pon) {
 			if (tile->tile == fulu.tiles[0]->tile)
 			{
-				fulu.type = Fulu::¼Ó¸Ü;
+				fulu.type = Fulu::åŠ æ ;
 				fulu.tiles.push_back(tile);
 			}
 		}

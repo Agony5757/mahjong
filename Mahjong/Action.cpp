@@ -33,7 +33,8 @@ ResponseAction::ResponseAction()
 {
 }
 
-std::string ResponseAction::to_string() const {
+std::string ResponseAction::to_string() const 
+{
 	switch (action) {
 	case Action::pass:
 		return "pass";

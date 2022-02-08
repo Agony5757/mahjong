@@ -1,11 +1,12 @@
 ﻿#include "Table.h"
-#include "Table.h"
 #include "macro.h"
 #include "Rule.h"
 #include "GameResult.h"
 #include "Agent.h"
 #include "ScoreCounter.h"
 #include <random>
+#include <cstring>
+
 using namespace std;
 
 void Table::init_tiles()
@@ -53,15 +54,15 @@ string Table::export_yama() {
 	return ss.str();
 }
 
-// void Table::import_yama(std::string yama) {
-// 	constexpr int LENGTH = N_TILES * sizeof(Tile);
-// 	Base64 base64;
-// 	auto decode = base64.Decode(yama, LENGTH);
-// 	const char *s = decode.c_str();
-// 	for (int i = 0; i < N_TILES; i++) {
-// 		memcpy(tiles + i, s + i * sizeof(Tile), sizeof(Tile));
-// 	}
-// }
+void Table::import_yama(string yama) {
+	constexpr int LENGTH = N_TILES * sizeof(Tile);
+	Base64 base64;
+	auto decode = base64.Decode(yama, LENGTH);
+	const char *s = decode.c_str();
+	for (int i = 0; i < N_TILES; i++) {
+		memcpy(tiles + i, s + i * sizeof(Tile), sizeof(Tile));
+	}
+}
 
 void Table::init_wind()
 {
@@ -78,11 +79,10 @@ void Table::game_init() {
 	init_yama();
 
 	// 每人发13张牌
-	_deal(0, 13);
-	_deal(1, 13);
-	_deal(2, 13);
-	_deal(3, 13);
-	ALLSORT;
+	for (int i = 0; i < 4; ++i){
+		_deal(i, 13);
+		players[i].sort_hand();
+	}
 
 	// 初始化每人自风
 	init_wind();
@@ -91,11 +91,19 @@ void Table::game_init() {
 	_from_beginning();
 }
 
+static bool 四风连打牌(std::array<Player, 4> &players) {
+	BaseTile t0 = players[0].river[0].tile->tile;
+	BaseTile t1 = players[1].river[0].tile->tile;
+	BaseTile t2 = players[2].river[0].tile->tile;
+	BaseTile t3 = players[3].river[0].tile->tile;
+
+	return t0 == t1 && t2 == t3 && t0 == t2 && t1 >= BaseTile::east && t1 <= BaseTile::north;
+}
+
 void Table::_from_beginning()
 {
 	// 四风连打判定
-	if (
-		players[0].river.size() == 1 &&
+	if (players[0].river.size() == 1 &&
 		players[1].river.size() == 1 &&
 		players[2].river.size() == 1 &&
 		players[3].river.size() == 1 &&
@@ -103,17 +111,14 @@ void Table::_from_beginning()
 		players[1].副露s.size() == 0 &&
 		players[2].副露s.size() == 0 &&
 		players[3].副露s.size() == 0 &&
-		players[0].river[0].tile->tile == players[1].river[0].tile->tile &&
-		players[1].river[0].tile->tile == players[2].river[0].tile->tile &&
-		players[2].river[0].tile->tile == players[3].river[0].tile->tile)
+		四风连打牌(players))
 	{
 		result = 四风连打流局结算(this);
 		phase = GAME_OVER;
 		return;
 	}
 
-	if (
-		players[0].riichi &&
+	if (players[0].riichi &&
 		players[1].riichi &&
 		players[2].riichi &&
 		players[3].riichi) {
@@ -136,7 +141,8 @@ void Table::_from_beginning()
 				n_杠++;
 			}
 		}
-		if (n_杠 >= 1) {
+		// 2个或更多人杠过
+		if (n_杠 >= 2) {
 			result = 四杠流局结算(this);
 			phase = GAME_OVER;
 			return;
@@ -149,39 +155,20 @@ void Table::_from_beginning()
 		return;
 	}
 
-	// 全部自动整理手牌
+	// 全部自动整理手牌（可能不需要）
 	for (int i = 0; i < 4; ++i) {
 		if (i != turn)
 			players[i].sort_hand();
 	}
 
-	// 如果是after_minkan, 从岭上抓
-	if (after_daiminkan()) {
+	// 杠后从岭上摸牌
+	if (after_daiminkan() || after_ankan() || after_加杠()) {
 		发岭上牌(turn);
-		goto WAITING_PHASE;
 	}
-
-	// 如果是after_ankan, 从岭上抓
-	if (after_ankan()) {
-		发岭上牌(turn);
-		goto WAITING_PHASE;
+	// 吃碰后不摸牌，其他时候正常发牌
+	else if (!after_chipon()){
+		发牌(turn);
 	}
-
-	// 如果是after_chipon, 不抓
-	if (after_chipon()) {
-		goto WAITING_PHASE;
-	}
-
-	// 如果是after_chipon, 从岭上抓
-	if (after_加杠()) {
-		发岭上牌(turn);
-		goto WAITING_PHASE;
-	}
-
-	// 剩下的情况正常抓
-	发牌(turn);
-
-WAITING_PHASE:
 
 	// 此时统计每个人的牌河振听状态
 	// turn可以解除振听，即使player[turn]确实振听了，在下一次WAITING_PHASE之前，也会追加振听效果
@@ -208,9 +195,9 @@ WAITING_PHASE:
 
 	vector<SelfAction> actions;
 	if (players[turn].is_riichi())
-		self_action = GetRiichiActions();
+		self_action = GetRiichiSelfAction();
 	else
-		self_action = GetValidActions();
+		self_action = GetSelfActions();
 
 	phase = (PhaseEnum)turn;
 }
@@ -314,7 +301,9 @@ Result Table::GameProcess(bool verbose, std::string yama)
 	_deal(1, 13);
 	_deal(2, 13);
 	_deal(3, 13);
-	ALLSORT;
+	for (int i = 0; i < 4; ++i) {
+		players[i].sort_hand();
+	}
 
 	// 初始化每人自风
 	init_wind();
@@ -435,9 +424,9 @@ Result Table::GameProcess(bool verbose, std::string yama)
 
 		vector<SelfAction> actions;
 		if (players[turn].is_riichi())
-			actions = GetRiichiActions();
+			actions = GetRiichiSelfAction();
 		else
-			actions = GetValidActions();
+			actions = GetSelfActions();
 
 		int selection;
 		if (actions.size() == 1)
@@ -790,18 +779,20 @@ Table::Table(int 庄家,
 	for (int i = 0; i < 4; ++i) players[i].score = scores[i];
 }
 
-std::vector<SelfAction> Table::GetValidActions()
+std::vector<SelfAction> Table::GetSelfActions()
 {
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
-	if (!after_chipon()) {
+
+	// 吃/碰后，且已经4杠的场合，不能继续杠
+	if (!after_chipon() && get_remain_kan_tile() > 0) {
 		merge_into(actions, the_player.get_暗杠());
 		merge_into(actions, the_player.get_加杠());
 	}
 	
 	merge_into(actions, the_player.get_打牌(after_chipon()));
 	merge_into(actions, the_player.get_九种九牌());
-	merge_into(actions, the_player.get_自摸(this));
+	merge_into(actions, the_player.get_自摸());
 
 	if (players[turn].score >= 1000 &&
 		get_remain_tile() > 4)
@@ -810,17 +801,6 @@ std::vector<SelfAction> Table::GetValidActions()
 		merge_into(actions, the_player.get_立直());
 
 	// 过滤器
-
-	// 如果已经有了4个杠子，禁止接下来的杠
-	if (get_remain_kan_tile() == 0) {
-		auto iter = remove_if(actions.begin(), actions.end(),
-			[](SelfAction& sa) {
-			if (sa.action == Action::暗杠) return true;
-			if (sa.action == Action::加杠) return true;
-			return false;
-		});
-		actions.erase(iter, actions.end());
-	}
 
 	// 计算役，如果无役，则禁止自摸
 	auto result = yaku_counter(this, turn, nullptr, false, false, players[turn].wind, 场风);
@@ -836,13 +816,15 @@ std::vector<SelfAction> Table::GetValidActions()
 	return actions;
 }
 
-std::vector<SelfAction> Table::GetRiichiActions()
+std::vector<SelfAction> Table::GetRiichiSelfAction()
 {
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
-	merge_into(actions, the_player.riichi_get_暗杠(this));
+	
+	if (get_remain_kan_tile() > 0)
+		merge_into(actions, the_player.riichi_get_暗杠());
 	merge_into(actions, the_player.riichi_get_打牌());
-	merge_into(actions, the_player.get_自摸(this));
+	merge_into(actions, the_player.get_自摸());
 
 	return actions;
 }
@@ -862,7 +844,8 @@ std::vector<ResponseAction> Table::GetValidResponse(
 	merge_into(actions, the_player.get_荣和(this, tile));
 	if (!the_player.is_riichi()) {
 		merge_into(actions, the_player.get_Pon(tile));
-		merge_into(actions, the_player.get_Kan(tile));
+		if (get_remain_kan_tile() > 0)
+			merge_into(actions, the_player.get_Kan(tile));
 
 		if (is下家) {
 			merge_into(actions, the_player.get_Chi(tile));
@@ -923,16 +906,6 @@ std::vector<ResponseAction> Table::GetValidResponse(
 			return true;
 		});
 		response.erase(iter, response.end());
-	}
-
-	// 如果已经有了4个杠子，禁止接下来的杠
-	if (get_remain_kan_tile() == 0) {
-		auto iter = remove_if(response.begin(), response.end(),
-			[](ResponseAction& ra) {
-			if (ra.action == Action::杠) return true;
-			return false;
-		});
-		actions.erase(iter, actions.end());
 	}
 
 	// 如果是振听状态，则不能荣和
@@ -1077,7 +1050,9 @@ void Table::game_init_with_metadata(std::unordered_map<std::string, std::string>
 		_deal(2, 13);
 		_deal(3, 13);
 	}
-	ALLSORT;
+	for (int i = 0; i < 4; ++i){
+		players[i].sort_hand();
+	}
 
 	// 初始化每人自风
 	init_wind();

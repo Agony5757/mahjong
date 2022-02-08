@@ -1,72 +1,132 @@
-#ifndef PLAYER_H
+ï»¿#ifndef PLAYER_H
 #define PLAYER_H
 
 #include "Action.h"
 #include "Tile.h"
+#include "macro.h"
+#include "Rule.h"
+
+// Forward Decl
+class Table;
+
+class RiverTile {
+public:
+	Tile* tile;
+
+	// ç¬¬å‡ å¼ ç‰Œä¸¢ä¸‹å»çš„
+	int number;
+
+	// æ˜¯ä¸æ˜¯ç«‹ç›´åå¼ƒç‰Œ
+	bool riichi;
+
+	// è¿™å¼ ç‰Œæ˜é¢ä¸Šè¿˜åœ¨ä¸åœ¨æ²³é‡Œ
+	bool remain;
+
+	// trueä¸ºæ‰‹åˆ‡ï¼Œfalseä¸ºæ‘¸åˆ‡
+	bool fromhand;
+};
+
+class River {
+	// è®°å½•æ‰€æœ‰çš„å¼ƒç‰Œï¼Œè€Œä¸æ˜¯ä»…ä»…åœ¨æ²³é‡Œçš„ç‰Œ
+public:
+	std::vector<RiverTile> river;
+	inline std::vector<BaseTile> to_basetile() {
+		std::vector<BaseTile> basetiles;
+		for (auto &tile : river) {
+			basetiles.push_back(tile.tile->tile);
+		}
+		return basetiles;
+	}
+	inline std::string to_string() const {
+		std::stringstream ss;
+
+		for (auto tile : river) {
+			ss << tile.tile->to_string() << tile.number;
+			if (tile.fromhand)
+				ss << "h";
+			if (tile.riichi)
+				ss << "r";
+			if (!tile.remain)
+				ss << "-";
+			ss << " ";
+		}
+		return ss.str();
+	}
+
+	inline RiverTile& operator[](size_t n) {
+		return river[n];
+	}
+
+	inline size_t size() {
+		return river.size();
+	}
+
+	inline void push_back(RiverTile rt) {
+		river.push_back(rt);
+	}
+};
 
 class Player {
 public:
-	Player();
 	bool double_riichi = false;
 	bool riichi = false;
 
-	inline bool is_riichi() { return riichi || double_riichi; }
-
-	bool ÃÅÇå = true;
+	bool é—¨æ¸… = true;
 	Wind wind;
-	bool Ç×¼Ò;
-	bool ÕñÌı = false;
-	bool Á¢Ö±ÕñÌı = false;
-
-	bool isÕñÌı() { return ÕñÌı || Á¢Ö±ÕñÌı; }
-
-	int score;
+	bool äº²å®¶;
+	bool æŒ¯å¬ = false;
+	bool ç«‹ç›´æŒ¯å¬ = false;
+	int score = 25000;
 	std::vector<Tile*> hand;
 	River river;
-	std::vector<Fulu> ¸±Â¶s;
-	std::string hand_to_string() const;
-	std::string river_to_string() const;
+	std::vector<Fulu> å‰¯éœ²s;
 
-	std::string to_string() const;
-
-	bool Ò»·¢;
+	bool ä¸€å‘ = false;
 	bool first_round = true;
 
-	// SelfAction
-	std::vector<SelfAction> get_¼Ó¸Ü();
-	std::vector<SelfAction> get_°µ¸Ü();
-	std::vector<SelfAction> get_´òÅÆ(bool after_chipon);
-	std::vector<SelfAction> get_×ÔÃş(Table*);
-	std::vector<SelfAction> get_Á¢Ö±();
-	std::vector<SelfAction> get_¾ÅÖÖ¾ÅÅÆ();
+	Player();
+	Player(int init_score);
+	inline bool is_riichi() { return riichi || double_riichi; }
+	inline bool isæŒ¯å¬() { return æŒ¯å¬ || ç«‹ç›´æŒ¯å¬; }
+	std::string hand_to_string() const;
+	std::string river_to_string() const;
+	std::string to_string() const;
 
-	// Response Action
-	std::vector<ResponseAction> get_ÈÙºÍ(Table*, Tile* tile);
+	// Generate SelfAction
+	std::vector<SelfAction> get_åŠ æ (); // èƒ½å¦æ çš„è¿‡æ»¤ç»Ÿä¸€äº¤ç»™Table
+	std::vector<SelfAction> get_æš—æ (); // èƒ½å¦æ çš„è¿‡æ»¤ç»Ÿä¸€äº¤ç»™Table
+	std::vector<SelfAction> get_æ‰“ç‰Œ(bool after_chipon);
+	std::vector<SelfAction> get_è‡ªæ‘¸();
+	std::vector<SelfAction> get_ç«‹ç›´();
+	std::vector<SelfAction> get_ä¹ç§ä¹ç‰Œ();
+
+	// Generate ResponseAction
+	std::vector<ResponseAction> get_è£å’Œ(Table*, Tile* tile);
 	std::vector<ResponseAction> get_Chi(Tile* tile);
 	std::vector<ResponseAction> get_Pon(Tile* tile);
-	std::vector<ResponseAction> get_Kan(Tile* tile); // ´óÃ÷¸Ü
+	std::vector<ResponseAction> get_Kan(Tile* tile); // å¤§æ˜æ 
 
-	// Response Action (ÇÀ°µ¸Ü)
-	std::vector<ResponseAction> get_ÇÀ°µ¸Ü(Tile* tile);
+	// Generate ResponseAction (æŠ¢æš—æ )
+	std::vector<ResponseAction> get_æŠ¢æš—æ (Tile* tile);
 
-	// Response Action (ÇÀ¸Ü)
-	std::vector<ResponseAction> get_ÇÀ¸Ü(Tile* tile);
+	// Generate ResponseAction (æŠ¢æ )
+	std::vector<ResponseAction> get_æŠ¢æ (Tile* tile);
 
-	// Á¢Ö±ºó
-	std::vector<SelfAction> riichi_get_°µ¸Ü(Table* table);
-	std::vector<SelfAction> riichi_get_´òÅÆ();
+	// Generate ç«‹ç›´å SelfAction
+	std::vector<SelfAction> riichi_get_æš—æ ();
+	std::vector<SelfAction> riichi_get_æ‰“ç‰Œ();
 
 	void move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile);
 	void remove_from_hand(Tile* tile);
 
-	// ½«ËùÓĞµÄBaseTileÖµÎªtileµÄËÄ¸öÅÆÒÆ¶¯µ½¸±Â¶Çø
-	void play_°µ¸Ü(BaseTile tile);
+	// å°†æ‰€æœ‰çš„BaseTileå€¼ä¸ºtileçš„å››ä¸ªç‰Œç§»åŠ¨åˆ°å‰¯éœ²åŒº
+	void play_æš—æ (BaseTile tile);
 
-	// ÒÆ¶¯tileµ½¸±Â¶ÖĞºÍËübasetileÏàÍ¬µÄ¿Ì×ÓÖĞ
-	void play_¼Ó¸Ü(Tile* tile);
+	// ç§»åŠ¨tileåˆ°å‰¯éœ²ä¸­å’Œå®ƒbasetileç›¸åŒçš„åˆ»å­ä¸­
+	void play_åŠ æ (Tile* tile);
 
-	// ½«ÅÆÒÆ¶¯µ½ÅÆºÓ£¨Ò»¶¨Ã»ÓĞÈË³ÔÅö¸Ü£©
-	// remainÖ¸ÕâÕÅÅÆÊÇ²»ÊÇÃ÷ÃæÉÏ»¹ÔÚÅÆºÓ
+	// å°†ç‰Œç§»åŠ¨åˆ°ç‰Œæ²³ï¼ˆä¸€å®šæ²¡æœ‰äººåƒç¢°æ ï¼‰
+	// remainæŒ‡è¿™å¼ ç‰Œæ˜¯ä¸æ˜¯æ˜é¢ä¸Šè¿˜åœ¨ç‰Œæ²³
 	void move_from_hand_to_river(Tile* tile, int& number, bool remain, bool fromhand);
 
 	inline void move_from_hand_to_river_log_only(Tile* tile, int& number, bool fromhand) {

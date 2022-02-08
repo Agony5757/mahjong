@@ -1,4 +1,9 @@
-﻿#include "pybind11/pybind11.h"
+﻿#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-value"
+#endif
+
+#include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 #include "pybind11/complex.h"
 #include "pybind11/functional.h"
@@ -307,3 +312,7 @@ PYBIND11_MODULE(MahjongPy, m)
 
 	m.def("yakus_to_string", [](std::vector<Yaku> yakus) {return py::bytes(yakus_to_string(yakus)); });
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
