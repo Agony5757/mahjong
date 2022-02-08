@@ -1,5 +1,4 @@
 ﻿#include "Action.h"
-#include "Action.h"
 
 SelfAction::SelfAction()
 {
