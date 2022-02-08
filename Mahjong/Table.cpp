@@ -635,6 +635,130 @@ void Table::game_init() {
 	_from_beginning();
 }
 
+void Table::_from_beginning()
+{
+	// 四风连打判定
+	if (
+		players[0].river.size() == 1 &&
+		players[1].river.size() == 1 &&
+		players[2].river.size() == 1 &&
+		players[3].river.size() == 1 &&
+		players[0].副露s.size() == 0 &&
+		players[1].副露s.size() == 0 &&
+		players[2].副露s.size() == 0 &&
+		players[3].副露s.size() == 0 &&
+		players[0].river[0].tile->tile == players[1].river[0].tile->tile &&
+		players[1].river[0].tile->tile == players[2].river[0].tile->tile &&
+		players[2].river[0].tile->tile == players[3].river[0].tile->tile)
+	{
+		result = 四风连打流局结算(this);
+		phase = GAME_OVER;
+		return;
+	}
+
+	if (
+		players[0].riichi &&
+		players[1].riichi &&
+		players[2].riichi &&
+		players[3].riichi) {
+		result = 四立直流局结算(this);
+		phase = GAME_OVER;
+		return;
+	}
+
+	// 判定四杠散了
+	if (get_remain_kan_tile() == 0) {
+		int n_杠 = 0;
+		for (int i = 0; i < 4; ++i) {
+			if (any_of(players[i].副露s.begin(), players[i].副露s.end(),
+				[](Fulu& f) {
+					return f.type == Fulu::暗杠 ||
+						f.type == Fulu::大明杠 ||
+						f.type == Fulu::加杠;
+				})) {
+				// 统计一共有多少个人杠过
+				n_杠++;
+			}
+		}
+		if (n_杠 >= 1) {
+			result = 四杠流局结算(this);
+			phase = GAME_OVER;
+			return;
+		}
+	}
+
+	if (get_remain_tile() == 0) {
+		result = 荒牌流局结算(this);
+		phase = GAME_OVER;
+		return;
+	}
+
+	// 全部自动整理手牌
+	for (int i = 0; i < 4; ++i) {
+		if (i != turn)
+			players[i].sort_hand();
+	}
+
+	// 如果是after_minkan, 从岭上抓
+	if (after_daiminkan()) {
+		发岭上牌(turn);
+		goto WAITING_PHASE;
+	}
+
+	// 如果是after_ankan, 从岭上抓
+	if (after_ankan()) {
+		发岭上牌(turn);
+		goto WAITING_PHASE;
+	}
+
+	// 如果是after_chipon, 不抓
+	if (after_chipon()) {
+		goto WAITING_PHASE;
+	}
+
+	// 如果是after_chipon, 从岭上抓
+	if (after_加杠()) {
+		发岭上牌(turn);
+		goto WAITING_PHASE;
+	}
+
+	// 剩下的情况正常抓
+	发牌(turn);
+
+WAITING_PHASE:
+
+	// 此时统计每个人的牌河振听状态
+	// turn可以解除振听，即使player[turn]确实振听了，在下一次WAITING_PHASE之前，也会追加振听效果
+	// 其他人按照规则追加振听效果
+	for (int i = 0; i < 4; ++i) {
+		if (i == turn) {
+			players[turn].振听 = false;
+			continue;
+		}
+
+		auto& hand = players[i].hand;
+		auto tiles = get听牌(convert_tiles_to_base_tiles(hand));
+		auto river = players[i].river.to_basetile();
+
+		// 检查river和tiles是否有重合
+		for (auto& tile : tiles) {
+			if (find(river.begin(), river.end(), tile) != river.end()) {
+				// 只要找到一个
+				players[i].振听 = true;
+				continue;
+			}
+		}
+	}
+
+	vector<SelfAction> actions;
+	if (players[turn].is_riichi())
+		self_action = GetRiichiActions();
+	else
+		self_action = GetValidActions();
+
+	phase = (PhaseEnum)turn;
+}
+
 void Table::test_show_yama_with_王牌()
 {
 	cout << "牌山:";
