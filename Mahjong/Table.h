@@ -44,31 +44,20 @@ public:
 	GameLog openGameLog;
 	GameLog fullGameLog;
 
-	inline std::vector<BaseTile> get_dora() const {
-		std::vector<BaseTile> doratiles;
-		for (int i = 0; i < dora_spec; ++i) {
-			doratiles.push_back(get_dora_next(宝牌指示牌[i]->tile));
-		}
-		return doratiles;
-	}
+public:
+	Table() = default;
+	Table(int 庄家, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);
+	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4]);
 
-	inline std::vector<BaseTile> get_ura_dora() const {
-		std::vector<BaseTile> doratiles;
-		for (int i = 0; i < dora_spec; ++i) {
-			doratiles.push_back(get_dora_next(里宝牌指示牌[i]->tile));
-		}
-		return doratiles;
-	}
+	std::vector<BaseTile> get_dora() const;
+	std::vector<BaseTile> get_ura_dora() const;
 
 	// 通过这种方式判断杠了几次，相对于判断dora个数更为准确
-	inline int get_remain_kan_tile() const {
-		auto iter = find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]);
-		return int(iter - 牌山.begin() - 1);
-	}
+	inline int get_remain_kan_tile() const 
+	{ return int(std::find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]) - 牌山.begin()); }
 
-	inline int get_remain_tile() const {
-		return int(牌山.size() - 14);
-	}
+	inline int get_remain_tile() const 
+	{ return int(牌山.size() - 14);	}
 
 	void init_tiles();
 	void init_red_dora_3();
@@ -102,16 +91,7 @@ public:
 	inline bool after_ankan() {	return last_action == Action::暗杠; }
 	inline bool after_加杠() { return last_action == Action::加杠; }
 	inline bool after_杠() { return after_daiminkan() || after_加杠(); }
-	inline std::array<int, 4> get_scores() {
-		std::array<int, 4> scores;
-		for (int i = 0; i < 4; ++i)
-			scores[i] = players[i].score;
-		return scores;
-	}
-
-	Table() = default;
-	Table(int 庄家, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);
-	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4]);
+	std::array<int, 4> get_scores();
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
 	std::vector<SelfAction> GetSelfActions();
@@ -145,6 +125,7 @@ public:
 
 	Result GameProcess(bool, std::string = "");
 
+public:
 	// ---------------------Manual Mode------------------------------
 	// The following part is for the manual instead of the automatic.
 	// Never mix using GameProcess and using the following functions.

@@ -9,6 +9,24 @@
 
 using namespace std;
 
+vector<BaseTile> Table::get_dora() const
+{
+	vector<BaseTile> doratiles;
+	for (int i = 0; i < dora_spec; ++i) {
+		doratiles.push_back(get_dora_next(宝牌指示牌[i]->tile));
+	}
+	return doratiles;
+}
+
+vector<BaseTile> Table::get_ura_dora() const
+{
+	vector<BaseTile> doratiles;
+	for (int i = 0; i < dora_spec; ++i) {
+		doratiles.push_back(get_dora_next(里宝牌指示牌[i]->tile));
+	}
+	return doratiles;
+}
+
 void Table::init_tiles()
 {
 	for (int i = 0; i < N_TILES; ++i) {
@@ -27,9 +45,9 @@ void Table::init_red_dora_3()
 
 void Table::shuffle_tiles()
 {
-	std::random_device rd;
-	std::mt19937 g(rd());
-	std::shuffle(tiles, tiles + N_TILES, g);
+	random_device rd;
+	mt19937 g(rd());
+	shuffle(tiles, tiles + N_TILES, g);
 }
 
 void Table::init_yama()
@@ -91,7 +109,15 @@ void Table::game_init() {
 	_from_beginning();
 }
 
-static bool 四风连打牌(std::array<Player, 4> &players) {
+array<int, 4> Table::get_scores()
+{
+	array<int, 4> scores;
+	for (int i = 0; i < 4; ++i)
+		scores[i] = players[i].score;
+	return scores;
+}
+
+static bool 四风连打牌(array<Player, 4> &players) {
 	BaseTile t0 = players[0].river[0].tile->tile;
 	BaseTile t1 = players[1].river[0].tile->tile;
 	BaseTile t2 = players[2].river[0].tile->tile;
@@ -273,7 +299,7 @@ void Table::test_show_full_gamelog()
 	cout << fullGameLog.to_string();
 }
 
-Result Table::GameProcess(bool verbose, std::string yama)
+Result Table::GameProcess(bool verbose, string yama)
 {
 	if (yama == "") {
 		init_tiles();
@@ -501,7 +527,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 					final_action = actions[i].action;
 			}
 
-			std::vector<int> response_player;
+			vector<int> response_player;
 			for (int i = 0; i < 4; ++i) {
 				if (actions[i].action == final_action) {
 					response_player.push_back(i);
@@ -610,7 +636,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 					final_action = actions[i].action;
 			}
 
-			std::vector<int> response_player;
+			vector<int> response_player;
 			for (int i = 0; i < 4; ++i) {
 				if (actions[i].action == final_action) {
 					response_player.push_back(i);
@@ -653,7 +679,7 @@ Result Table::GameProcess(bool verbose, std::string yama)
 					final_action = actions[i].action;
 			}
 
-			std::vector<int> response_player;
+			vector<int> response_player;
 			for (int i = 0; i < 4; ++i) {
 				if (actions[i].action == final_action) {
 					response_player.push_back(i);
@@ -710,7 +736,7 @@ void Table::发岭上牌(int i_player)
 	//fullGameLog.log摸牌(i_player, player[i_player].hand.back());
 }
 
-std::string Table::to_string(int option) const
+string Table::to_string(int option) const
 {
 	stringstream ss;
 	if (option & ToStringOption::YAMA) {
@@ -779,7 +805,7 @@ Table::Table(int 庄家,
 	for (int i = 0; i < 4; ++i) players[i].score = scores[i];
 }
 
-std::vector<SelfAction> Table::GetSelfActions()
+vector<SelfAction> Table::GetSelfActions()
 {
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
@@ -816,7 +842,7 @@ std::vector<SelfAction> Table::GetSelfActions()
 	return actions;
 }
 
-std::vector<SelfAction> Table::GetRiichiSelfAction()
+vector<SelfAction> Table::GetRiichiSelfAction()
 {
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
@@ -829,10 +855,10 @@ std::vector<SelfAction> Table::GetRiichiSelfAction()
 	return actions;
 }
 
-std::vector<ResponseAction> Table::GetValidResponse(
+vector<ResponseAction> Table::GetValidResponse(
 	int i, Tile* tile, bool is下家)
 {
-	std::vector<ResponseAction> actions;
+	vector<ResponseAction> actions;
 	
 	// first: pass action
 	ResponseAction action_pass;
@@ -935,9 +961,9 @@ std::vector<ResponseAction> Table::GetValidResponse(
 	return actions;
 }
 
-std::vector<ResponseAction> Table::Get抢暗杠(int i, Tile * tile)
+vector<ResponseAction> Table::Get抢暗杠(int i, Tile * tile)
 {
-	std::vector<ResponseAction> actions;
+	vector<ResponseAction> actions;
 
 	// first: pass action
 	ResponseAction action_pass;
@@ -950,9 +976,9 @@ std::vector<ResponseAction> Table::Get抢暗杠(int i, Tile * tile)
 	return actions;
 }
 
-std::vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
+vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
 {
-	std::vector<ResponseAction> actions;
+	vector<ResponseAction> actions;
 
 	// first: pass action
 	ResponseAction action_pass;
@@ -965,7 +991,7 @@ std::vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
 	return actions;
 }
 
-void Table::game_init_with_metadata(std::unordered_map<std::string, std::string> metadata)
+void Table::game_init_with_metadata(unordered_map<string, string> metadata)
 {
 	// yama : "1z1z1z..."
 	using namespace std;
@@ -1207,7 +1233,7 @@ void Table::make_selection(int selection)
 			final_action = response_action[selection].action;
 
 		// 选择优先级，并且进行response结算
-		std::vector<int> response_player;
+		vector<int> response_player;
 		for (int i = 0; i < 4; ++i) {
 			if (actions[i].action == final_action) {
 				response_player.push_back(i);
@@ -1334,7 +1360,7 @@ void Table::make_selection(int selection)
 		actions.push_back(response_action[selection]);
 
 		// 选择优先级，并且进行response结算
-		std::vector<int> response_player;
+		vector<int> response_player;
 		for (int i = 0; i < 4; ++i) {
 			if (actions[i].action == Action::抢杠) {
 				response_player.push_back(i);
@@ -1396,7 +1422,7 @@ void Table::make_selection(int selection)
 		actions.push_back(response_action[selection]);
 
 		// 选择优先级，并且进行response结算
-		std::vector<int> response_player;
+		vector<int> response_player;
 		for (int i = 0; i < 4; ++i) {
 			if (actions[i].action == Action::抢暗杠) {
 				response_player.push_back(i);

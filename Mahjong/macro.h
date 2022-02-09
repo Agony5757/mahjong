@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <type_traits>
 #include <string>
+#include <array>
 #include "MahjongAlgorithm/Yaku.h"
 #include "Tile.h"
 

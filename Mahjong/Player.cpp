@@ -11,7 +11,7 @@ Player::Player(int init_score)
 	score = init_score;
 }
 
-std::string Player::hand_to_string() const
+string Player::hand_to_string() const
 {
 	stringstream ss;
 
@@ -21,12 +21,12 @@ std::string Player::hand_to_string() const
 	return ss.str();
 }
 
-std::string Player::river_to_string() const
+string Player::river_to_string() const
 {
 	return river.to_string();
 }
 
-std::string Player::to_string() const
+string Player::to_string() const
 {
 	stringstream ss;
 	ss << "点数:" << score << endl;
@@ -57,7 +57,7 @@ std::string Player::to_string() const
 }
 
 
-std::vector<SelfAction> Player::get_加杠()
+vector<SelfAction> Player::get_加杠()
 {
 	vector<SelfAction> actions;
 	//if (after_chipon == true) return actions;
@@ -77,7 +77,7 @@ std::vector<SelfAction> Player::get_加杠()
 	return actions;
 }
 
-std::vector<SelfAction> Player::get_暗杠()
+vector<SelfAction> Player::get_暗杠()
 {
 	vector<SelfAction> actions;
 
@@ -152,7 +152,7 @@ static bool is食替(Player* player, BaseTile t)
 		throw runtime_error("最后一手既不是吃又不是碰，不考虑食替");
 }
 
-std::vector<SelfAction> Player::get_打牌(bool after_chipon)
+vector<SelfAction> Player::get_打牌(bool after_chipon)
 {
 	vector<SelfAction> actions;
 	for (auto tile : hand) {
@@ -170,9 +170,9 @@ std::vector<SelfAction> Player::get_打牌(bool after_chipon)
 	return actions;
 }
 
-std::vector<SelfAction> Player::get_自摸()
+vector<SelfAction> Player::get_自摸()
 {
-	std::vector<SelfAction> actions;
+	vector<SelfAction> actions;
 	if (is和牌(convert_tiles_to_base_tiles(hand))) {
 		SelfAction action;
 		action.action = Action::自摸;
@@ -182,9 +182,9 @@ std::vector<SelfAction> Player::get_自摸()
 	return actions;
 }
 
-std::vector<SelfAction> Player::get_立直()
+vector<SelfAction> Player::get_立直()
 {
-	std::vector<SelfAction> actions;
+	vector<SelfAction> actions;
 
 	auto riichi_tiles = is_riichi_able(hand, 门清);
 	for (auto riichi_tile : riichi_tiles) {
@@ -197,7 +197,7 @@ std::vector<SelfAction> Player::get_立直()
 	return actions;
 }
 
-static int 九种九牌counter(std::vector<Tile*> hand) {
+static int 九种九牌counter(vector<Tile*> hand) {
 	int counter = 0;
 	for (int tile = BaseTile::_1m; tile <= BaseTile::中; ++tile) {
 		auto basetile = static_cast<BaseTile>(tile);
@@ -209,7 +209,7 @@ static int 九种九牌counter(std::vector<Tile*> hand) {
 	return counter;
 }
 
-std::vector<SelfAction> Player::get_九种九牌()
+vector<SelfAction> Player::get_九种九牌()
 {
 	vector<SelfAction> actions;
 	if (!first_round) return actions;
@@ -270,9 +270,9 @@ static vector<vector<Tile*>> get_Kan_tiles(vector<Tile*> hand, Tile* tile) {
 	return chi_tiles;
 }
 
-std::vector<ResponseAction> Player::get_荣和(Table* table, Tile* tile)
+vector<ResponseAction> Player::get_荣和(Table* table, Tile* tile)
 {
-	std::vector<ResponseAction> actions;
+	vector<ResponseAction> actions;
 
 	auto copy_hand = hand;
 	copy_hand.push_back(tile);
@@ -286,7 +286,7 @@ std::vector<ResponseAction> Player::get_荣和(Table* table, Tile* tile)
 	return actions;
 }
 
-std::vector<ResponseAction> Player::get_Chi(Tile* tile)
+vector<ResponseAction> Player::get_Chi(Tile* tile)
 {
 	vector<ResponseAction> actions;
 
@@ -307,7 +307,7 @@ std::vector<ResponseAction> Player::get_Chi(Tile* tile)
 	return actions;
 }
 
-std::vector<ResponseAction> Player::get_Pon(Tile* tile)
+vector<ResponseAction> Player::get_Pon(Tile* tile)
 {
 	vector<ResponseAction> actions;
 
@@ -324,7 +324,7 @@ std::vector<ResponseAction> Player::get_Pon(Tile* tile)
 	return actions;
 }
 
-std::vector<ResponseAction> Player::get_Kan(Tile* tile)
+vector<ResponseAction> Player::get_Kan(Tile* tile)
 {
 	vector<ResponseAction> actions;
 
@@ -341,9 +341,9 @@ std::vector<ResponseAction> Player::get_Kan(Tile* tile)
 	return actions;
 }
 
-std::vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
+vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
 {
-	std::vector<ResponseAction> actions;
+	vector<ResponseAction> actions;
 
 	auto copy_hand = hand;
 	copy_hand.push_back(tile);
@@ -357,9 +357,9 @@ std::vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
 	return actions;
 }
 
-std::vector<ResponseAction> Player::get_抢杠(Tile* tile)
+vector<ResponseAction> Player::get_抢杠(Tile* tile)
 {
-	std::vector<ResponseAction> actions;
+	vector<ResponseAction> actions;
 
 	auto copy_hand = hand;
 	copy_hand.push_back(tile);
@@ -373,7 +373,7 @@ std::vector<ResponseAction> Player::get_抢杠(Tile* tile)
 	return actions;
 }
 
-std::vector<SelfAction> Player::riichi_get_暗杠()
+vector<SelfAction> Player::riichi_get_暗杠()
 {
 	vector<SelfAction> actions;
 
@@ -406,7 +406,7 @@ std::vector<SelfAction> Player::riichi_get_暗杠()
 	return actions;
 }
 
-std::vector<SelfAction> Player::riichi_get_打牌()
+vector<SelfAction> Player::riichi_get_打牌()
 {
 	vector<SelfAction> actions;
 
@@ -418,7 +418,7 @@ std::vector<SelfAction> Player::riichi_get_打牌()
 	return actions;
 }
 
-void Player::move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile)
+void Player::move_from_hand_to_fulu(vector<Tile*> tiles, Tile* tile)
 {
 	Fulu fulu;
 	if (is_刻子({ tiles[0]->tile, tiles[1]->tile, tile->tile })
@@ -532,7 +532,7 @@ void Player::move_from_hand_to_river(Tile* tile, int& number, bool remain, bool 
 
 void Player::sort_hand()
 {
-	std::sort(hand.begin(), hand.end(), tile_comparator);
+	sort(hand.begin(), hand.end(), tile_comparator);
 }
 
 void Player::test_show_hand()
