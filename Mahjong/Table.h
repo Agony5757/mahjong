@@ -25,8 +25,15 @@ public:
 	int dora_spec; // 翻开了几张宝牌指示牌
 	std::vector<Tile*> 宝牌指示牌;
 	std::vector<Tile*> 里宝牌指示牌;
-	std::vector<Tile*> 牌山;
-	// Player players[4];
+	
+	// 牌山的起始是岭上牌(0,1,2,3)
+	// 然后标记宝牌和ura的位置(4,6,8,10,12), (5,7,9,11,13)
+	// 初始情况dora_spec = 1，每次翻宝牌只需要dora_spec++
+	// 杠的时候所有牌在vector牌山中位置变化的
+	// 并不会影响到宝牌/ura的位置，因为它们一开始就被标记过了
+	// 当牌山.size() <= 14的时候结束游戏
+	std::vector<Tile*> 牌山; 
+	
 	std::array<Player, 4> players;
 	int turn;
 	Action last_action = Action::出牌;
@@ -36,7 +43,6 @@ public:
 	int n立直棒 = 0;
 	GameLog openGameLog;
 	GameLog fullGameLog;
-
 
 	inline std::vector<BaseTile> get_dora() const {
 		std::vector<BaseTile> doratiles;
