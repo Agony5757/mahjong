@@ -54,23 +54,16 @@ public:
 
 	int start立直棒;
 	int end立直棒;
-
 	int 庄家;
 
 	Wind 场风;
-
 	Result result;
-
 	std::vector<BaseGameLog> logs;
 
-	std::string to_string();
-
 	void _log(BaseGameLog log);
-
 	void logGameStart(int start本场, int start立直棒, int oya, Wind 场风,
 		std::string yama,
 		std::array<int, 4>);
-
 	void log摸牌(int player, Tile*);
 	void log摸切(int player, Tile*);
 	void log手切(int player, Tile*);
@@ -99,8 +92,8 @@ public:
 	void log暗杠(int player, std::vector<Tile*> tiles);
 	void log立直通过(Table* table);
 	void log九种九牌(int player);
-
 	void logGameOver(Result result);
+	std::string to_string();
 };
 
 #endif
