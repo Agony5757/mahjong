@@ -102,6 +102,12 @@ public:
 	inline bool after_ankan() {	return last_action == Action::暗杠; }
 	inline bool after_加杠() { return last_action == Action::加杠; }
 	inline bool after_杠() { return after_daiminkan() || after_加杠(); }
+	inline std::array<int, 4> get_scores() {
+		std::array<int, 4> scores;
+		for (int i = 0; i < 4; ++i)
+			scores[i] = players[i].score;
+		return scores;
+	}
 
 	Table() = default;
 	Table(int 庄家, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);

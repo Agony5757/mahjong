@@ -337,5 +337,11 @@ inline Wind next_wind(Wind 风) {
 	return (Wind)(int(风) + 1);
 }
 
+inline std::string score_to_string(std::array<int, 4> scores) {
+	using namespace std;
+	stringstream ss;
+	ss << scores[0] << "|" << scores[1] << "|" << scores[2] << "|" << scores[3];
+	return ss.str();
+}
 
 #endif
