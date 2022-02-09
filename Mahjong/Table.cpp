@@ -98,7 +98,7 @@ void Table::game_init() {
 
 	// 每人发13张牌
 	for (int i = 0; i < 4; ++i){
-		_deal(i, 13);
+		deal_tile(i, 13);
 		players[i].sort_hand();
 	}
 
@@ -140,6 +140,7 @@ void Table::_from_beginning()
 		四风连打牌(players))
 	{
 		result = 四风连打流局结算(this);
+		fullGameLog.logGameOver(result);
 		phase = GAME_OVER;
 		return;
 	}
@@ -287,12 +288,6 @@ void Table::test_show_all_player_info()
 		test_show_player_info(i);
 }
 
-void Table::test_show_open_gamelog()
-{
-	cout << "Open GameLog:" << endl;
-	cout << openGameLog.to_string();
-}
-
 void Table::test_show_full_gamelog()
 {
 	cout << "Full GameLog:" << endl;
@@ -323,10 +318,10 @@ Result Table::GameProcess(bool verbose, string yama)
 	}
 
 	// 每人发13张牌
-	_deal(0, 13);
-	_deal(1, 13);
-	_deal(2, 13);
-	_deal(3, 13);
+	deal_tile(0, 13);
+	deal_tile(1, 13);
+	deal_tile(2, 13);
+	deal_tile(3, 13);
 	for (int i = 0; i < 4; ++i) {
 		players[i].sort_hand();
 	}
@@ -709,31 +704,29 @@ Result Table::GameProcess(bool verbose, string yama)
 	}
 }
 
-void Table::_deal(int i_player)
+void Table::deal_tile(int i_player)
 {		
 	players[i_player].hand.push_back(牌山.back());
 	牌山.pop_back();
 }
 
-void Table::_deal(int i_player, int n_tiles)
+void Table::deal_tile(int i_player, int n_tiles)
 {
 	for (int i = 0; i < n_tiles; ++i) {
-		_deal(i_player);
+		deal_tile(i_player);
 	}
 }
 
 void Table::发牌(int i_player)
 {
-	_deal(i_player);
-	//openGameLog.log摸牌(i_player, nullptr);
-	//fullGameLog.log摸牌(i_player, player[i_player].hand.back());
+	deal_tile(i_player);
+	fullGameLog.log摸牌(i_player, players[i_player].hand.back());
 }
 
 void Table::发岭上牌(int i_player)
 {
-	_deal(i_player);
-	//openGameLog.log摸牌(i_player, nullptr);
-	//fullGameLog.log摸牌(i_player, player[i_player].hand.back());
+	deal_tile(i_player);
+	fullGameLog.log摸牌(i_player, players[i_player].hand.back());
 }
 
 string Table::to_string(int option) const
@@ -1059,22 +1052,22 @@ void Table::game_init_with_metadata(unordered_map<string, string> metadata)
 		auto val = metadata["deal"];
 		if (val == "from_oya") {
 			for (int i = 庄家; i < 庄家 + 4; ++i) {
-				_deal(i % 4, 13);
+				deal_tile(i % 4, 13);
 			}
 		}
 		if (val == "from_0") {
-			_deal(0, 13);
-			_deal(1, 13);
-			_deal(2, 13);
-			_deal(3, 13);
+			deal_tile(0, 13);
+			deal_tile(1, 13);
+			deal_tile(2, 13);
+			deal_tile(3, 13);
 		}
 		else throw runtime_error("Cannot Read Option: deal");
 	}
 	else {
-		_deal(0, 13);
-		_deal(1, 13);
-		_deal(2, 13);
-		_deal(3, 13);
+		deal_tile(0, 13);
+		deal_tile(1, 13);
+		deal_tile(2, 13);
+		deal_tile(3, 13);
 	}
 	for (int i = 0; i < 4; ++i){
 		players[i].sort_hand();
@@ -1107,6 +1100,8 @@ void Table::make_selection(int selection)
 		switch (selected_action.action) {
 		case Action::九种九牌:
 			result = 九种九牌流局结算(this);
+			fullGameLog.log九种九牌(turn, result);
+
 			phase = GAME_OVER;
 			return;
 		case Action::自摸:

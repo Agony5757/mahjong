@@ -5,17 +5,17 @@
 using namespace std;
 
 BaseGameLog::BaseGameLog(int p1, int p2, LogAction action, Tile* tile,
-	std::vector<Tile*> fulu)
+	vector<Tile*> fulu)
 	:player(p1), player2(p2), action(action), 牌(tile), 副露(fulu)
 {
 }
 
-BaseGameLog::BaseGameLog(std::array<int, 4> scores)
+BaseGameLog::BaseGameLog(array<int, 4> scores)
 {
 	score = scores;
 }
 
-std::string BaseGameLog::to_string()
+string BaseGameLog::to_string()
 {
 	stringstream ss;
 	ss << "p" << player;
@@ -51,11 +51,11 @@ std::string BaseGameLog::to_string()
 		ss << "立直通过:" << score_to_string(score);
 		return ss.str();
 	default:
-		throw std::runtime_error("Invalid LogAction. Action: " + std::to_string(int(action)));
+		throw runtime_error("Invalid LogAction. Action: " + std::to_string(int(action)));
 	}
 }
 
-std::string GameLog::to_string()
+string GameLog::to_string()
 {
 	stringstream ss;
 	ss << "庄家: Player " << 庄家 << endl
@@ -77,7 +77,7 @@ void GameLog::_log(BaseGameLog log) {
 
 void GameLog::logGameStart(
 	int _start本场, int _start立直棒, int _oya, Wind _场风, string _yama,
-	std::array<int, 4> scores)
+	array<int, 4> scores)
 {
 	start本场 = _start本场;
 	start立直棒 = _start立直棒;
@@ -113,7 +113,7 @@ void GameLog::log手切立直(int player, Tile* tile)
 }
 
 void GameLog::log_response_鸣牌(int player_call, int player_turn,
-	Tile* tile, std::vector<Tile*> tiles, Action action)
+	Tile* tile, vector<Tile*> tiles, Action action)
 {
 	LogAction la;
 	switch (action)
@@ -128,7 +128,7 @@ void GameLog::log_response_鸣牌(int player_call, int player_turn,
 		la = LogAction::杠;
 		break;
 	default:
-		throw std::runtime_error("Invalid Action when logging. Action:" +
+		throw runtime_error("Invalid Action when logging. Action:" +
 			std::to_string(int(action)));
 	}
 	_log({ player_call, player_turn, la, tile, tiles });
@@ -152,9 +152,10 @@ void GameLog::log立直通过(Table* table)
 	logs.push_back(gamelog);
 }
 
-void GameLog::log九种九牌(int player)
+void GameLog::log九种九牌(int player, Result result)
 {
 	_log({ player,-1, LogAction::九种九牌, nullptr, {} });
+	logGameOver(result);
 }
 
 void GameLog::logGameOver(Result _result)

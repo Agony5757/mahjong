@@ -8,7 +8,6 @@
 #include "macro.h"
 #include "Player.h"
 #include <array>
-#include <mutex>
 
 constexpr auto N_TILES = (34*4);
 constexpr auto INIT_SCORE = 25000;
@@ -41,7 +40,6 @@ public:
 	int 庄家 = 0; // 庄家
 	int n本场 = 0;
 	int n立直棒 = 0;
-	GameLog openGameLog;
 	GameLog fullGameLog;
 
 public:
@@ -67,8 +65,8 @@ public:
 	std::string export_yama();
 	void init_wind();
 	
-	void _deal(int i_player);
-	void _deal(int i_player, int n_tiles);
+	void deal_tile(int i_player);
+	void deal_tile(int i_player, int n_tiles);
 
 	void 发牌(int i_player);
 	void 发岭上牌(int i_player);
@@ -117,9 +115,7 @@ public:
 
 	inline void test_show_all() {
 		test_show_yama_with_王牌();
-		test_show_all_player_info();
-		//test_show_open_gamelog();
-		//test_show_full_gamelog();
+		test_show_all_player_info();		
 		std::cout << "轮到Player" << turn << std::endl;
 	}
 
