@@ -27,18 +27,19 @@ enum class Action : uint8_t {
 };
 
 struct SelfAction {
-	SelfAction();
+	SelfAction() = default;
+	SelfAction(Action, std::vector<Tile*>);
 	Action action;
 	std::vector<Tile*> correspond_tiles;
-	SelfAction(Action, std::vector<Tile*>);
 	std::string to_string() const;
 };
 
 struct ResponseAction {
-	ResponseAction();
+	ResponseAction() = default;
+	ResponseAction(Action, std::vector<Tile*>);
 	Action action;
-	std::string to_string() const;
 	std::vector<Tile*> correspond_tiles;
+	std::string to_string() const;
 };
 
 #endif

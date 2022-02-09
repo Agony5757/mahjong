@@ -1,17 +1,12 @@
 ﻿#include "Action.h"
 
-SelfAction::SelfAction()
-{
-}
-
 SelfAction::SelfAction(Action action, std::vector<Tile*> tiles)
 	:action(action), correspond_tiles(tiles)
-{
-}
+{ }
 
 std::string SelfAction::to_string() const
 {
-	switch (action) {	
+	switch (action) {
 	case Action::暗杠:
 		return "暗杠" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string() + correspond_tiles[2]->to_string();
 	case Action::加杠:
@@ -19,7 +14,7 @@ std::string SelfAction::to_string() const
 	case Action::出牌:
 		return "出牌" + correspond_tiles[0]->to_string();
 	case Action::立直:
-		return "立直"; 
+		return "立直";
 	case Action::自摸:
 		return "自摸";
 	case Action::九种九牌:
@@ -29,9 +24,10 @@ std::string SelfAction::to_string() const
 	}
 }
 
-ResponseAction::ResponseAction()
-{
-}
+ResponseAction::ResponseAction(Action action, std::vector<Tile*> tiles)
+	:action(action), correspond_tiles(tiles)
+{ }
+
 
 std::string ResponseAction::to_string() const 
 {
@@ -47,6 +43,6 @@ std::string ResponseAction::to_string() const
 	case Action::荣和:
 		return "荣和"; 
 	default:
-			throw std::runtime_error("Invalid Action");
+		throw std::runtime_error("Invalid Action");
 	}
 }
