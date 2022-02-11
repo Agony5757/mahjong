@@ -30,24 +30,23 @@ vector<BaseTile> Table::get_ura_dora() const
 void Table::init_tiles()
 {
 	for (int i = 0; i < N_TILES; ++i) {
-		tiles[i].tile = static_cast<BaseTile>(i % 34);
-		//tiles[i].belongs = Belong::yama;
+		tiles[i].tile = static_cast<BaseTile>(i / 4);
 		tiles[i].red_dora = false;
+		tiles[i].id = i;
 	}
 }
 
 void Table::init_red_dora_3()
 {
-	tiles[4].red_dora = true;
-	tiles[13].red_dora = true;
-	tiles[22].red_dora = true;
+	tiles[4 * 4].red_dora = true; // 0m 5m 5m 5m
+	tiles[4 * 4 + 9 * 4].red_dora = true; // 0p 5p 5p 5p
+	tiles[4 * 4 + 9 * 4 + 9 * 4].red_dora = true; // 0s 5s 5s 5s
 }
 
 void Table::shuffle_tiles()
 {
-	random_device rd;
-	mt19937 g(rd());
-	shuffle(tiles, tiles + N_TILES, g);
+	static std::default_random_engine rd(time(nullptr));
+	std::shuffle(tiles, tiles + N_TILES, rd);
 }
 
 void Table::init_yama()
@@ -98,7 +97,7 @@ void Table::game_init() {
 
 	// 每人发13张牌
 	for (int i = 0; i < 4; ++i){
-		deal_tile(i, 13);
+		deal_tile((i + 庄家) % 4, 13); // 从庄
 		players[i].sort_hand();
 	}
 
@@ -123,7 +122,7 @@ static bool 四风连打牌(array<Player, 4> &players) {
 	BaseTile t2 = players[2].river[0].tile->tile;
 	BaseTile t3 = players[3].river[0].tile->tile;
 
-	return t0 == t1 && t2 == t3 && t0 == t2 && t1 >= BaseTile::east && t1 <= BaseTile::north;
+	return t0 == t1 && t2 == t3 && t0 == t2 && t1 >= BaseTile::_1z && t1 <= BaseTile::_4z;
 }
 
 void Table::_from_beginning()
@@ -777,7 +776,7 @@ string Table::to_string(int option) const
 	return ss.str();
 }
 
-Table::Table(int 庄家, Agent * p1, Agent * p2, Agent * p3, Agent * p4)
+Table::Table(int 庄家, Agent * p1, Agent *p2, Agent *p3, Agent *p4)
 	: dora_spec(1), 庄家(庄家)
 {
 	agents[0] = p1;

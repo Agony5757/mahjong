@@ -19,22 +19,22 @@ static Result 中途流局结算(Table *table) {
 	return result;
 }
 
-Result 九种九牌流局结算(Table * table)
+Result 九种九牌流局结算(Table *table)
 {
 	return 中途流局结算(table);
 }
 
-Result 四风连打流局结算(Table * table)
+Result 四风连打流局结算(Table *table)
 {
 	return 中途流局结算(table);
 }
 
-Result 四立直流局结算(Table * table)
+Result 四立直流局结算(Table *table)
 {
 	return 中途流局结算(table);
 }
 
-Result 四杠流局结算(Table * table)
+Result 四杠流局结算(Table *table)
 {
 	return 中途流局结算(table);
 }

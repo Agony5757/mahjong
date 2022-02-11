@@ -18,28 +18,19 @@ enum Wind {
 	East = 1, South, West, North
 };
 
-enum class Belong : unsigned char {
-	p1手, p1河,
-	p2手, p2河,
-	p3手, p3河,
-	p4手, p4河,
-	yama,
-};
-
 enum BaseTile : unsigned char {
 	_1m, _2m, _3m, _4m, _5m, _6m, _7m, _8m, _9m,
-	_1s, _2s, _3s, _4s, _5s, _6s, _7s, _8s, _9s,
 	_1p, _2p, _3p, _4p, _5p, _6p, _7p, _8p, _9p,
-	east, south, west, north,
-	白, 发, 中
+	_1s, _2s, _3s, _4s, _5s, _6s, _7s, _8s, _9s,
+	_1z, _2z, _3z, _4z,	_5z, _6z, _7z
 };
 
 inline std::string basetile_to_string_simple(BaseTile bt) {
 	using namespace std;
 	static vector<string> names{
-		"1m","2m","3m","4m","5m","6m","7m","8m","9m",	
-		"1s","2s","3s","4s","5s","6s","7s","8s","9s",	
+		"1m","2m","3m","4m","5m","6m","7m","8m","9m",
 		"1p","2p","3p","4p","5p","6p","7p","8p","9p",
+		"1s","2s","3s","4s","5s","6s","7s","8s","9s",	
 		"1z","2z","3z","4z","5z","6z","7z" 
 	};
 	return names[int(bt)];
@@ -54,37 +45,39 @@ inline BaseTile char2_to_basetile(char number, char color, bool& red_dora) {
 	}
 	if (color == 'm') {
 		return BaseTile(_1m + num - 1);
-	}	
+	}
+	if (color == 'p') {
+		return BaseTile(_1p + num - 1);
+	}
 	if (color == 's') {
 		return BaseTile(_1s + num - 1);
 	}	
-	if (color == 'p') {
-		return BaseTile(_1p + num - 1);
-	}	
 	if (color == 'z') {
-		return BaseTile(east + num - 1);
+		return BaseTile(_1z + num - 1);
 	}
 	throw std::runtime_error("Unknown Tile String");
 }
 
 inline BaseTile get_dora_next(BaseTile tile) {
-	if (tile == _9m) return _1m;
-	else if (tile == _9s) return _1s;
-	else if (tile == _9p) return _1p;
-	else if (tile == north) return east;
-	else if (tile == 中) return 白;
-	else return static_cast<BaseTile>((int)tile + 1);
+	switch (tile) {
+	case _9m: return _1m;
+	case _9s: return _1s;
+	case _9p: return _1p;
+	case _4z: return _1z;
+	case _7z: return _5z;
+	default:  return static_cast<BaseTile>((int)tile + 1);
+	}
 }
 
 inline bool is_幺牌(BaseTile t) {
-	if (t == _1m || t == _1s || t == _1p) {
+	if (t == _1m || t == _1p || t == _1s ) {
 		return true;
 	}
 	else return false;
 }
 
 inline bool is_九牌(BaseTile t) {
-	if (t == _9m || t == _9s || t == _9p) {
+	if (t == _9m || t == _9p || t == _9s ) {
 		return true;
 	}
 	else return false;
@@ -98,7 +91,7 @@ inline bool is_老头牌(BaseTile t) {
 }
 
 inline bool is_字牌(BaseTile t) {
-	if (t >= BaseTile::east && t<= BaseTile::中) {
+	if (t >= BaseTile::_1z && t<= BaseTile::_7z) {
 		return true;
 	}
 	else return false;
@@ -118,12 +111,12 @@ inline bool is_顺子(std::vector<BaseTile> tiles) {
 	if (tiles[1] - tiles[0] != 1) return false;
 	if (tiles[2] - tiles[1] != 1) return false;
 	// 必须成顺子
-
-	if (tiles[2] == _1s) return false;
-	if (tiles[2] == _2s) return false;
+	
 	if (tiles[2] == _1p) return false;
 	if (tiles[2] == _2p) return false;
-	if (tiles[2] >= east) return false;
+	if (tiles[2] == _1s) return false;
+	if (tiles[2] == _2s) return false;
+	if (tiles[2] >= _1z) return false;
 
 	return true;
 }
@@ -149,45 +142,45 @@ inline bool is_杠(std::vector<BaseTile> tiles) {
 	return true;
 }
 
-inline bool is_场风(BaseTile tile, Wind 场风) {
+inline bool is_场自风(BaseTile tile, Wind 场风) {
 	switch (场风) {
 	case Wind::East:
-		return tile == BaseTile::east;
-	case Wind::West:
-		return tile == BaseTile::west;
+		return tile == BaseTile::_1z;
 	case Wind::South:
-		return tile == BaseTile::south;
+		return tile == BaseTile::_2z;
+	case Wind::West:
+		return tile == BaseTile::_3z;
 	case Wind::North:
-		return tile == BaseTile::north;
+		return tile == BaseTile::_4z;
 	default:
 		throw std::runtime_error("Unknown wind.");
 	}
 }
 
-inline bool is_自风(BaseTile tile, Wind 自风) {
-	switch (自风) {
-	case Wind::East:
-		return tile == BaseTile::east;
-	case Wind::West:
-		return tile == BaseTile::west;
-	case Wind::South:
-		return tile == BaseTile::south;
-	case Wind::North:
-		return tile == BaseTile::north;
-	default:
-		throw std::runtime_error("Unknown wind.");
-	}
-}
+//inline bool is_自风(BaseTile tile, Wind 自风) {
+//	switch (自风) {
+//	case Wind::East:
+//		return tile == BaseTile::_1z;
+//	case Wind::West:
+//		return tile == BaseTile::_3z;
+//	case Wind::South:
+//		return tile == BaseTile::_2z;
+//	case Wind::North:
+//		return tile == BaseTile::_4z;
+//	default:
+//		throw std::runtime_error("Unknown wind.");
+//	}
+//}
 
 inline bool is_三元牌(BaseTile tile) {
-	return (tile == BaseTile::中 || tile == BaseTile::发 || tile == BaseTile::白);
+	return (tile == BaseTile::_7z || tile == BaseTile::_6z || tile == BaseTile::_5z);
 }
 	
 inline bool is_役牌(BaseTile tile, Wind 场风, Wind 自风) {
-	if (is_场风(tile, 场风)) {
+	if (is_场自风(tile, 场风)) {
 		return true;
 	}
-	if (is_自风(tile, 自风)) {
+	if (is_场自风(tile, 自风)) {
 		return true;
 	}
 	if (is_三元牌(tile)) {
@@ -202,30 +195,30 @@ inline std::string basetile_to_string(BaseTile tile) {
 		ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
 	}
 	else if (9 <= tile && tile <= 17) {
-		ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "s";
+		ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "p";
 	}
 	else if (18 <= tile && tile <= 26) {
-		ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "p";
+		ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "s";
 	}
-	else if (tile == east) {
+	else if (tile == _1z) {
 		ret = "[东";
 	}
-	else if (tile == south) {
+	else if (tile == _2z) {
 		ret = "[南";
 	}
-	else if (tile == west) {
+	else if (tile == _3z) {
 		ret = "[西";
 	}
-	else if (tile == north) {
+	else if (tile == _4z) {
 		ret = "[北";
 	}
-	else if (tile == 白) {
+	else if (tile == _5z) {
 		ret = "[白";
 	}
-	else if (tile == 发) {
+	else if (tile == _6z) {
 		ret = "[发";
 	}
-	else if (tile == 中) {
+	else if (tile == _7z) {
 		ret = "[中";
 	}
 	else throw std::runtime_error("unknown tile");
@@ -236,6 +229,7 @@ class Tile {
 public:
 	BaseTile tile;
 	bool red_dora;
+	int id;
 
 	inline std::string to_simple_string() const {
 		std::stringstream ss;
@@ -247,10 +241,10 @@ public:
 			ss << number << "m";
 			return ss.str();
 		case 1:
-			ss << number << "s";
+			ss << number << "p";
 			return ss.str();
 		case 2:
-			ss << number << "p";
+			ss << number << "s";
 			return ss.str();
 		case 3:
 			ss << number << "z";
@@ -265,30 +259,30 @@ public:
 			ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
 		}
 		else if (9 <= tile && tile <= 17) {
-			ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "s";
+			ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "p";
 		}
 		else if (18 <= tile && tile <= 26) {
-			ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "p";
+			ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "s";
 		}
-		else if (tile == east) {
+		else if (tile == _1z) {
 			ret = "[东";
 		}
-		else if (tile == south) {
+		else if (tile == _2z) {
 			ret = "[南";
 		}
-		else if (tile == west) {
+		else if (tile == _3z) {
 			ret = "[西";
 		}
-		else if (tile == north) {
+		else if (tile == _4z) {
 			ret = "[北";
 		}
-		else if (tile == 白) {
+		else if (tile == _5z) {
 			ret = "[白";
 		}
-		else if (tile == 发) {
+		else if (tile == _6z) {
 			ret = "[发";
 		}
-		else if (tile == 中) {
+		else if (tile == _7z) {
 			ret = "[中";
 		}
 		else throw std::runtime_error("unknown tile");

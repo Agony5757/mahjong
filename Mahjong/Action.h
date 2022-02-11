@@ -29,7 +29,7 @@ enum class Action : uint8_t {
 struct SelfAction {
 	SelfAction() = default;
 	SelfAction(Action, std::vector<Tile*>);
-	Action action;
+	Action action = Action::pass;
 	std::vector<Tile*> correspond_tiles;
 	std::string to_string() const;
 };
@@ -37,7 +37,7 @@ struct SelfAction {
 struct ResponseAction {
 	ResponseAction() = default;
 	ResponseAction(Action, std::vector<Tile*>);
-	Action action;
+	Action action = Action::pass;
 	std::vector<Tile*> correspond_tiles;
 	std::string to_string() const;
 };

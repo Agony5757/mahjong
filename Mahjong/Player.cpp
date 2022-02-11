@@ -199,7 +199,7 @@ vector<SelfAction> Player::get_立直()
 
 static int 九种九牌counter(vector<Tile*> hand) {
 	int counter = 0;
-	for (int tile = BaseTile::_1m; tile <= BaseTile::中; ++tile) {
+	for (int tile = BaseTile::_1m; tile <= BaseTile::_7z; ++tile) {
 		auto basetile = static_cast<BaseTile>(tile);
 		if (is_幺九牌(basetile)) {
 			if (find_match_tile(hand, basetile) != hand.end())
@@ -292,7 +292,7 @@ vector<ResponseAction> Player::get_Chi(Tile* tile)
 
 	BaseTile t = tile->tile;
 
-	if (t >= BaseTile::east && t <= BaseTile::中)
+	if (t >= BaseTile::_1z && t <= BaseTile::_7z)
 		// 字牌不能吃
 		return actions;
 

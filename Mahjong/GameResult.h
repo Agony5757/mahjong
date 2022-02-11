@@ -7,16 +7,17 @@
 #include "ScoreCounter.h"
 #include <array>
 
-enum ResultType {
+enum class ResultType {
 	荣和终局,
 	自摸终局,
 	荒牌流局,
 	流局满贯,
 	中途流局,
+	Error
 };
 
 struct Result {
-	ResultType result_type;
+	ResultType result_type = ResultType::Error;
 	std::unordered_map<int, CounterResult> results;
 
 	std::array<int, 4> score;

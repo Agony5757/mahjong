@@ -50,7 +50,7 @@ void test和牌状态4() {
 	t.init_tiles();
 	t.init_yama();
 	auto &yama = t.牌山;
-	vector<BaseTile> tiles = { _1m, _1m, east, south, west };
+	vector<BaseTile> tiles = { _1m, _1m, _1z, _2z, _3z };
 
 	TEST_EQ_VERBOSE(true, isCommon和牌型(tiles));
 }

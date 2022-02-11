@@ -70,7 +70,7 @@ bool isCommon和牌型(std::vector<BaseTile> basetiles) {
 std::vector<BaseTile> isCommon听牌型(std::vector<BaseTile> tiles)
 {
 	vector<BaseTile> 听牌;
-	for (int i = BaseTile::_1m; i <= BaseTile::中; ++i) {
+	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		tiles.push_back(static_cast<BaseTile>(i));
 		if (isCommon和牌型(tiles)) {
 			听牌.push_back(static_cast<BaseTile>(i));
@@ -116,7 +116,7 @@ bool is七对和牌型(std::vector<BaseTile> tiles)
 std::vector<BaseTile> is七对听牌型(std::vector<BaseTile> tiles)
 {
 	vector<BaseTile> 听牌;
-	for (int i = BaseTile::_1m; i <= BaseTile::中; ++i) {
+	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		tiles.push_back(static_cast<BaseTile>(i));
 		if (is七对和牌型(tiles)) {
 			听牌.push_back(static_cast<BaseTile>(i));
@@ -133,10 +133,10 @@ bool is国士无双和牌型(std::vector<BaseTile> tiles)
 	sort(tiles.begin(), tiles.end());
 
 	vector<BaseTile> raw
-	{ _1m, _9m, _1s, _9s, _1p, _9p, east, south, west, north, 白, 发, 中 };
+	{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
 
 	vector<BaseTile> adds
-	{ _1m, _9m, _1s, _9s, _1p, _9p, east, south, west, north, 白, 发, 中 };
+	{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
 
 	for (auto add : adds) {
         auto new_raw = raw;
@@ -151,7 +151,7 @@ bool is国士无双和牌型(std::vector<BaseTile> tiles)
 std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles)
 {
 	vector<BaseTile> 听牌;
-	for (int i = BaseTile::_1m; i <= BaseTile::中; ++i) {
+	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		tiles.push_back(static_cast<BaseTile>(i));
 		if (is国士无双和牌型(tiles)) {
 			听牌.push_back(static_cast<BaseTile>(i));
@@ -166,7 +166,7 @@ std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles)
 std::vector<BaseTile> get听牌(std::vector<BaseTile> tiles)
 {
 	vector<BaseTile> 听牌;
-	for (int i = BaseTile::_1m; i <= BaseTile::中; ++i) {
+	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		tiles.push_back(static_cast<BaseTile>(i));
 		if (is国士无双和牌型(tiles)) {
 			听牌.push_back(static_cast<BaseTile>(i));
@@ -248,13 +248,13 @@ bool is纯九莲和牌型(std::vector<BaseTile> tiles)
 		for (int i = 0; i < 14; ++i) {
 			纯九莲m.push_back(BaseTile(纯九莲[i] + int(_1m) - 1));
 		}
-		vector<BaseTile> 纯九莲s;
-		for (int i = 0; i < 14; ++i) {
-			纯九莲s.push_back(BaseTile(纯九莲[i] + int(_1s) - 1));
-		}
 		vector<BaseTile> 纯九莲p;
 		for (int i = 0; i < 14; ++i) {
 			纯九莲p.push_back(BaseTile(纯九莲[i] + int(_1p) - 1));
+		}
+		vector<BaseTile> 纯九莲s;
+		for (int i = 0; i < 14; ++i) {
+			纯九莲s.push_back(BaseTile(纯九莲[i] + int(_1s) - 1));
 		}
 		if (is_same_container(tiles, 纯九莲m)) return true;
 		if (is_same_container(tiles, 纯九莲p)) return true;

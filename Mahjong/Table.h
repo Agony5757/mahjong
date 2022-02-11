@@ -20,8 +20,8 @@ class Table
 public:
 	int river_counter = 0;
 	Tile tiles[N_TILES];
-	Agent* agents[4];	
-	int dora_spec; // 翻开了几张宝牌指示牌
+	Agent* agents[4] = { nullptr };
+	int dora_spec = 1; // 翻开了几张宝牌指示牌
 	std::vector<Tile*> 宝牌指示牌;
 	std::vector<Tile*> 里宝牌指示牌;
 	
@@ -34,7 +34,7 @@ public:
 	std::vector<Tile*> 牌山; 
 	
 	std::array<Player, 4> players;
-	int turn;
+	int turn = 0;
 	Action last_action = Action::出牌;
 	Wind 场风 = Wind::East;
 	int 庄家 = 0; // 庄家
@@ -137,12 +137,12 @@ public:
 	std::vector<ResponseAction> response_action;
 
 	Result result;
-	PhaseEnum phase;
-	int selection;
+	PhaseEnum phase = GAME_OVER; // initialized to GAME_OVER to avoid illegal gameplay.
+	int selection = -1;	// initialized to -1 to avoid illegal gameplay.
 	SelfAction selected_action;
-	Tile* tile;
+	Tile* tile = nullptr;
 	std::vector<ResponseAction> actions; // player actions
-	bool FROM_手切摸切;
+	bool FROM_手切摸切 = false; // global variable for river log
 	Action final_action = Action::pass;
 	
 	void _from_beginning();

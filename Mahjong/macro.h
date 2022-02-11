@@ -135,6 +135,7 @@ inline std::vector<BaseTile> convert_extern_tiles_to_basetiles(std::vector<mahjo
 	return newtiles;
 }
 
+/* Check if two containers have the same size and same corresponding value. */
 template<typename T>
 bool is_same_container(T a, T b) {
 	if (a.size() != b.size()) {
@@ -171,15 +172,11 @@ find_match_tile(std::vector<Tile*>& tiles, Tile* t) {
 	return tiles.end();
 }
 
-// 找手牌中是不是有t的重复4张牌
-inline std::vector<Tile*> get_duplicate(
-	std::vector<Tile*> tiles,
-	BaseTile t,
-	int n) {
-
-	assert(n == 4);
+// 找手牌中是不是有t的重复n张牌
+inline std::vector<Tile*> get_duplicate(std::vector<Tile*> tiles, BaseTile t, unsigned int n) {
 
 	std::vector<Tile*> duplicate_tiles;
+	if (n > 4) { return duplicate_tiles; }
 
 	int duplicates = 0;
 	for (auto tile : tiles) {

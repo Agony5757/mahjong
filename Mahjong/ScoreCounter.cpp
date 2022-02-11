@@ -160,7 +160,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 			auto tiles = player.hand;
 			if (correspond_tile == nullptr) tiles.pop_back();
 			vector<BaseTile> raw
-			{ _1m, _9m, _1s, _9s, _1p, _9p, east, south, west, north, 白, 发, 中 };
+			{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
 
 			sort(tiles.begin(), tiles.end());
 			if (is_same_container(raw, convert_tiles_to_base_tiles(tiles)))
