@@ -1,24 +1,30 @@
 ﻿# 日本麻将
 
-## Project Status
-
-雀魂规则：完成
-
-天凤规则：未完成
-
-测试：未彻底进行
-
 ## 综述
 
-本项目包含一个用C++实现的日本麻将游戏。并且提供接口，以便：
-	
+本项目包含一个用C++实现的日本麻将游戏，部分基于雀魂计分规则。
+
+提供C++与Python接口，以便：	
 	实现不同种类的AI Agent
-	人类游玩
+	人类游玩（并不
+
+## Performance
+
+测试方法：
+	基于main.cpp中test_passive_table_auto，运行5000次，取运行时间平均值
+	其中每个动作都是由std::uniform_distribution进行随机选择
+	
+关于内存：
+	本项目中主要使用stl容器，没有使用到任何new/delete运算符，因此不会发生内存泄露问题。
+
+C++环境下：
+	- 运行内存 约800KB
+	- 单局时间 约131ms（658.594s with 5000 plays, avg. 131.7ms per play)
 
 ## Example
 
 	import numpy as np
-	import MahjongPy as mp
+	import pymahjong as mp
 
 	for n in range(1000):
 		t = mp.Table()

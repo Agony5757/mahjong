@@ -85,14 +85,16 @@ void testCompletedTiles2() {
 }
 
 void testGameProcess() {
-	Table t(1, new RealPlayer(0), new RealPlayer(1), new RealPlayer(2), new RealPlayer(3));
+	RealPlayer p0(0), p1(1), p2(2), p3(3);
+	Table t(1, &p0, &p1, &p2, &p3);
 	auto s = t.GameProcess(true);
 	cout << s.to_string();
 	getchar();
 }
 
 void testGameProcess2() {
-	Table t(1, new RealPlayer(0), new RealPlayer(1), new RealPlayer(2), new RealPlayer(3));
+	RealPlayer p0(0), p1(1), p2(2), p3(3);
+	Table t(1, &p0, &p1, &p2, &p3);
 	Result s = t.GameProcess(true, "EwAVAA8AGAAJACEAHQAgABQABwAdABsAFwABABMACAADAAwABAACABIADQACABIAIQAAAAkAEAAfAAUAFgEfACAAAQAEAAsAGwABAAoADwAhAAMAEQALAAcAHAAKAAoAAAATAB4AGAAFAAAABgAXAAQBBgAQAAEABQAaACEAAgAVABUABwAUAA4ADwAQAAwAGQAgAAcABQAMAA0ADwAGABoAAwANAAoAEAAIABQAEgAbAAwAFgAJAAMAFwAWABEABAASABUAGAAaAAYAHAAYAA4AAAAZAB4ACQAeABEACAALAB8AHwACAA4AEwAZAA4ACAAdACAAFwAaAAsAGQAcABYAFAAbAB0ADQEeABEAHAA=");
 	
 }
@@ -108,10 +110,8 @@ void testGameProcess3(string filename, int games = 1000) {
 		}
 		stringstream ss;
 		ss << "Game " << ++game << endl;
-		Table t(1, new RandomPlayer(0, ss),
-			new RandomPlayer(1, ss),
-			new RandomPlayer(2, ss),
-			new RandomPlayer(3, ss));
+		RandomPlayer p1(0, ss), p2(0, ss), p3(0, ss), p4(0, ss);
+		Table t(1, &p1, &p2, &p3, &p4);
 		try {
 			auto s = t.GameProcess(false);
 			
@@ -139,10 +139,8 @@ void testGameProcess4(string filename) {
 		}
 		stringstream ss;
 		ss << "Game " << ++game << endl;
-		Table t(1, new RandomPlayer(0, ss),
-			new RandomPlayer(1, ss),
-			new RandomPlayer(2, ss),
-			new RandomPlayer(3, ss));
+		RandomPlayer p1(0, ss), p2(0, ss), p3(0, ss), p4(0, ss);
+		Table t(1, &p1, &p2, &p3, &p4);
 		try {
 			auto s = t.GameProcess(false);
 
@@ -168,19 +166,16 @@ void testGameProcess4(string filename) {
 void testGamePlay1(string filename, int shots = 10) {
 	ofstream out(filename, ios::out);
 	out.close();
-	stringstream ss;
-	array<Agent*, 4> agents;
-	for (int i = 0; i < 4; ++i)
-	{
-		agents[i] = new RandomPlayer(i, ss);
-	}
+	stringstream ss; 
+	RandomPlayer p1(0, ss), p2(0, ss), p3(0, ss), p4(0, ss);
+	array<Agent*, 4> agents = {&p1, &p2, &p3, &p4};
 	for (int i = 0; i < shots; ++i)
 	{
 		auto scores = 东风局(agents, ss);
 		ofstream out(filename, ios::app);
 		out << ss.str();
 		out.close();
-	}
+	}	
 }
 
 void resume_from_seed_and_yama(long long seed, string yama) {
@@ -223,59 +218,30 @@ void resume_from_seed_and_yama(long long seed, string yama) {
 	}
 }
 
-void test_passive_table_auto() {
+void test_passive_table_auto(size_t max_plays) {
 	size_t i = 0;
 	long long seed;
 	string yama;
-	while (1) {
+	auto timenow = std::chrono::system_clock::now();
+	for (size_t i = 0; i < max_plays; ++i) {
 		try {
 			seed = std::chrono::system_clock::now().time_since_epoch().count();
 			std::default_random_engine generator(seed);
-			i++;
-#if defined(_MSC_VER)
-#ifndef _DEBUG
-			if (i % 10 == 0)
-				cout << "Game: " << i << endl;
-#else
-			cout << "Game: " << i << endl;
-#endif
-#else
-			if (i % 10 == 0)
-				cout << "Game: " << i << endl;
-#endif 
 			Table table;
-			table.game_init_with_metadata({ {"oya","0"}, { "wind","east"} });
-			yama = table.export_yama();
+			table.game_init();
+			// table.game_init_with_metadata({ {"oya","0"}, { "wind","east"} });
+			// yama = table.export_yama();
 			while (table.get_phase() != Table::GAME_OVER) {
 				if (table.get_phase() <= Table::P4_ACTION) {
 					std::uniform_int_distribution<size_t> distribution(0, table.get_self_actions().size() - 1);
-					size_t dice_roll = distribution(generator);  // generates number in the range 1..6 
-
-					for (int i = 0; i < table.get_self_actions().size(); ++i) {
-						if (table.get_self_actions()[i].action == Action::自摸) {
-							dice_roll = i; break;
-						}
-						if (table.get_self_actions()[i].action == Action::立直) {
-							dice_roll = i; break;
-						}
-						if (table.get_self_actions()[i].action == Action::九种九牌) {
-							dice_roll = i; break;
-						}
-					}
+					size_t dice_roll = distribution(generator);
 					table.make_selection((int)dice_roll);
 				}
 				else {
 					size_t dice_roll = 0;
 					if (table.get_response_actions().size() > 1) {
 						std::uniform_int_distribution<size_t> distribution(0, table.get_response_actions().size() - 1);
-						dice_roll = distribution(generator);  // generates number in the range 1..6
-
-						for (int i = 0; i < table.get_response_actions().size(); ++i) {
-							if (table.get_response_actions()[i].action == Action::荣和) {
-								dice_roll = i;
-								break;
-							}
-						}
+						dice_roll = distribution(generator);
 					}
 					table.make_selection((int)dice_roll);
 				}
@@ -288,6 +254,12 @@ void test_passive_table_auto() {
 			getchar();
 		}
 	}
+	auto duration = std::chrono::system_clock::now() - timenow;
+	double duration_time  = chrono::duration_cast<chrono::milliseconds>(duration).count() * 1.0 ;
+	
+	cout << "Test play time: " << max_plays << endl;
+	cout << "Duration: " << duration_time / 1000 << " s" << endl;
+	cout << "Time per play (avg.): " << duration_time / max_plays << " ms" << endl;
 }
 
 void test_passive_table() {
@@ -353,12 +325,12 @@ int main() {
 	//test和牌状态4();
 	//testGameProcess3("GameLog.txt");
 	//testGamePlay1("GamePlay.txt");
-	
-	// test_passive_table_auto();
+	size_t max_plays = 5000;
+	test_passive_table_auto(max_plays);
 
-	//resume_from_seed_and_yama();
+	// resume_from_seed_and_yama();
 
-	testCompletedTiles2();
-	//testCompletedTiles1();
+	// testCompletedTiles2();
+	// testCompletedTiles1();
 	return 0;
 }
