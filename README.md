@@ -10,16 +10,17 @@
 
 ## Performance
 
+C++环境下：
+- 运行内存 约800KB
+- 单局时间 约131ms（658.594s with 5000 plays, avg. 131.7ms per play)
+
 测试方法：
-	基于main.cpp中test_passive_table_auto，运行5000次，取运行时间平均值
-	其中每个动作都是由std::uniform_distribution进行随机选择
+- 基于main.cpp中test_passive_table_auto，运行5000次，取运行时间平均值
+- 其中每个动作都是由std::uniform_distribution进行随机选择
 	
 关于内存：
-	本项目中主要使用stl容器，没有使用到任何new/delete运算符，因此不会发生内存泄露问题。
+- 本项目中主要使用stl容器，没有使用到任何new/delete运算符，因此不会发生内存泄露问题。
 
-C++环境下：
-	- 运行内存 约800KB
-	- 单局时间 约131ms（658.594s with 5000 plays, avg. 131.7ms per play)
 
 ## Example
 
