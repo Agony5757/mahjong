@@ -26,6 +26,8 @@ vector<CompletedTiles> 基本和牌型::getAllCompletedTiles(const vector<BaseTi
 	vector<CompletedTiles> ret, all_completed_tiles;
 	vector<BaseTile> tmpTiles;
 	int index = 0;
+	bool flag = false; // 只有能成牌的才是true
+	// 对、刻、顺都不能成，提前进入死路，flag=false，直接return {}
 
 	for (int index = 0; index < curTiles.size(); ++index)
 	{
@@ -41,6 +43,7 @@ vector<CompletedTiles> 基本和牌型::getAllCompletedTiles(const vector<BaseTi
 		{
 			if (count(curTiles.begin(), curTiles.end(), this_tile) >= 2)
 			{
+				flag = true;
 				tmpTiles = curTiles; // 复制一份当前手牌
 				TileGroup tmp_group;
 
@@ -63,6 +66,7 @@ vector<CompletedTiles> 基本和牌型::getAllCompletedTiles(const vector<BaseTi
 		// 2. Find Koutsu
 		if (count(curTiles.begin(), curTiles.end(), this_tile) >= 3)
 		{
+			flag = true;
 			tmpTiles = curTiles; // 复制一份当前手牌
 			TileGroup tmp_group;
 
@@ -83,8 +87,8 @@ vector<CompletedTiles> 基本和牌型::getAllCompletedTiles(const vector<BaseTi
 		if (!is_in({_8m, _9m, _8p, _9p, _8s, _9s, _1z, _2z, _3z, _4z, _5z, _6z, _7z }, this_tile)			
 			&& is_in(curTiles, BaseTile(curTiles[index] + 1))
 			&& is_in(curTiles, BaseTile(curTiles[index] + 2)))
-
 		{
+			flag = true;
 			tmpTiles = curTiles; // 复制一份当前手牌
 			TileGroup tmp_group;
 			tmp_group.type = TileGroup::Type::Shuntsu;
@@ -101,11 +105,70 @@ vector<CompletedTiles> 基本和牌型::getAllCompletedTiles(const vector<BaseTi
 			// 恢复状态
 			completed_tiles.body.pop_back();
 		}
+
+		if (!flag) { return {}; }
 	}
 
 	return ret;
 }
 
+static bool check_color_count(vector<BaseTile> curTiles) {
+
+	// mps个数，以及每种z的个数
+	// n%3==2说明存在雀头，但是类型不能超过2种
+	// n%4==1说明存在单张，直接pass
+	vector<size_t> m_p_s_z1_to_z7(1 + 1 + 1 + 7, 0);
+	int idx = 0;
+	int type = 0;
+	for (; curTiles[idx] <= _9m && idx < curTiles.size(); ++idx) {
+		m_p_s_z1_to_z7[type]++;
+	}
+	type++;
+	for (; curTiles[idx] <= _9p && idx < curTiles.size(); ++idx) {
+		m_p_s_z1_to_z7[type]++;
+	}
+	type++;
+	for (; curTiles[idx] <= _9s && idx < curTiles.size(); ++idx) {
+		m_p_s_z1_to_z7[type]++;
+	}
+	type++;
+	for (; curTiles[idx] == _1z && idx < curTiles.size(); ++idx) {
+		m_p_s_z1_to_z7[type]++;
+	}
+	type++;
+	for (; curTiles[idx] == _2z && idx < curTiles.size(); ++idx) {
+		m_p_s_z1_to_z7[type]++;
+	}
+	type++;
+	for (; curTiles[idx] == _3z && idx < curTiles.size(); ++idx) {
+		m_p_s_z1_to_z7[type]++;
+	}
+	type++;
+	for (; curTiles[idx] == _4z && idx < curTiles.size(); ++idx) {
+		m_p_s_z1_to_z7[type]++;
+	}
+	type++;
+	for (; curTiles[idx] == _5z && idx < curTiles.size(); ++idx) {
+		m_p_s_z1_to_z7[type]++;
+	}
+	type++;
+	for (; curTiles[idx] == _6z && idx < curTiles.size(); ++idx) {
+		m_p_s_z1_to_z7[type]++;
+	}
+	type++;
+	for (; curTiles[idx] == _7z && idx < curTiles.size(); ++idx) {
+		m_p_s_z1_to_z7[type]++;
+	}
+
+	bool has_head = false;
+	for (size_t i = 0; i < m_p_s_z1_to_z7.size(); ++i) {
+		if (m_p_s_z1_to_z7[i] % 3 == 1) { return false; }
+		if (m_p_s_z1_to_z7[i] % 3 == 2) {
+			if (has_head) { return false; }
+			else { has_head = true; }
+		}
+	}
+}
 
 bool 基本和牌型::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
 {
@@ -114,6 +177,7 @@ bool 基本和牌型::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
 	}
 	vector<BaseTile> tmpTiles;
 	int index = 0;
+	if (!check_color_count(curTiles)) { return false; }
 
 	for (int index = 0; index < curTiles.size(); ++index)
 	{
@@ -189,6 +253,7 @@ bool 基本和牌型::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
 			// 恢复状态
 			completed_tiles.body.pop_back();
 		}
+		return false;
 	}
 
 	return false;
@@ -257,17 +322,19 @@ bool has_completed_tiles(std::vector<BaseTile> tiles)
 //	return internal_completed_tiles;
 //}
 
-bool isCommon和牌型(std::vector<BaseTile> basetiles) {
+bool isCommon和牌型(std::vector<BaseTile> tiles) {
 
 	FunctionProfiler;
-	if (basetiles.size() % 3 != 2) return false;
+	sort(tiles.begin(), tiles.end());
+	if (tiles.size() % 3 != 2) return false;
 	
 	// auto basetiles = convert_tiles_to_base_tiles(tiles);
-	return has_completed_tiles(basetiles);
+	return has_completed_tiles(tiles);
 }
 
 std::vector<BaseTile> isCommon听牌型(std::vector<BaseTile> tiles)
 {
+	sort(tiles.begin(), tiles.end());
 	vector<BaseTile> 听牌;
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		tiles.push_back(static_cast<BaseTile>(i));

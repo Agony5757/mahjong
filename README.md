@@ -12,7 +12,7 @@
 
 C++环境下：
 - 运行内存 约800KB
-- 单局时间 约131ms（658.594s with 5000 plays, avg. 131.7ms per play)
+- 单局时间 约10ms（10.1s with 1000 plays)
 
 测试方法：
 - 基于main.cpp中test_passive_table_auto，运行5000次，取运行时间平均值

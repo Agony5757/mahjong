@@ -326,7 +326,8 @@ int main() {
 	//test和牌状态4();
 	//testGameProcess3("GameLog.txt");
 	//testGamePlay1("GamePlay.txt");
-	size_t max_plays = 20;
+
+	size_t max_plays = 1000;
 	test_passive_table_auto(max_plays);
 
 	profiler::print_profiles();
