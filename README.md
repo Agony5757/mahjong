@@ -15,7 +15,7 @@ C++环境下：
 - 单局时间 约10ms（10.1s with 1000 plays)
 
 测试方法：
-- 基于main.cpp中test_passive_table_auto，运行5000次，取运行时间平均值
+- 基于main.cpp中test_passive_table_auto，运行1000次，取运行时间平均值
 - 其中每个动作都是由std::uniform_distribution进行随机选择
 	
 关于内存：
