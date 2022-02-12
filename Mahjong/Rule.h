@@ -120,6 +120,7 @@ public:
 	//std::vector<CompletedTiles> testGetYaku(const Player& p, const Tile& agariTile, bool isTsumo);
 
 	std::vector<CompletedTiles> getAllCompletedTiles(const std::vector<BaseTile>& curTiles);
+	bool hasOneCompletedTiles(const std::vector<BaseTile>& curTiles);
 
 private:
 	基本和牌型() = default;
@@ -134,7 +135,7 @@ private:
 // 这是去掉副露，留下手牌的判断
 
 std::vector<CompletedTiles> get_completed_tiles(std::vector<BaseTile> tiles);
-
+bool has_completed_tiles(std::vector<BaseTile> tiles);
 //TileGroup convert_extern_tilegroup_to_internal(mahjong_algorithm::TileGroup tilegroup);
 //
 //CompletedTiles convert_extern_completed_tiles_to_internal(
@@ -160,7 +161,8 @@ bool is国士无双和牌型(std::vector<BaseTile> tiles);
 std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles);
 
 // 不考虑无役的听牌情况
-std::vector<BaseTile> get听牌(std::vector<BaseTile> tiles);
+std::vector<BaseTile> get听牌(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
+bool is听牌(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
 bool is和牌(std::vector<BaseTile> tiles);
 
 std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清);

@@ -80,6 +80,7 @@ public:
 	std::vector<Tile*> hand;
 	River river;
 	std::vector<Fulu> 副露s;
+	std::vector<BaseTile> 听牌;
 
 	bool 一发 = false;
 	bool first_round = true;
@@ -92,11 +93,15 @@ public:
 	std::string river_to_string() const;
 	std::string to_string() const;
 
+	void update_听牌();
+	void update_舍牌振听();
+	void remove_听牌(BaseTile t);
+
 	// Generate SelfAction
 	std::vector<SelfAction> get_加杠(); // 能否杠的过滤统一交给Table
 	std::vector<SelfAction> get_暗杠(); // 能否杠的过滤统一交给Table
 	std::vector<SelfAction> get_打牌(bool after_chipon);
-	std::vector<SelfAction> get_自摸();
+	std::vector<SelfAction> get_自摸(Table* table);
 	std::vector<SelfAction> get_立直();
 	std::vector<SelfAction> get_九种九牌();
 

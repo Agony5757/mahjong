@@ -219,6 +219,7 @@ void resume_from_seed_and_yama(long long seed, string yama) {
 }
 
 void test_passive_table_auto(size_t max_plays) {
+	FunctionProfiler;
 	size_t i = 0;
 	long long seed;
 	string yama;
@@ -325,8 +326,10 @@ int main() {
 	//test和牌状态4();
 	//testGameProcess3("GameLog.txt");
 	//testGamePlay1("GamePlay.txt");
-	size_t max_plays = 5000;
+	size_t max_plays = 20;
 	test_passive_table_auto(max_plays);
+
+	profiler::print_profiles();
 
 	// resume_from_seed_and_yama();
 

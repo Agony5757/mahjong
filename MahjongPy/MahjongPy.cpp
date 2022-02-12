@@ -3,12 +3,12 @@
 #pragma GCC diagnostic ignored "-Wunused-value"
 #endif
 
-#include "pybind11/pybind11.h"
-#include "pybind11/stl.h"
-#include "pybind11/complex.h"
-#include "pybind11/functional.h"
-#include "pybind11/operators.h"
-#include "Mahjong/Table.h"
+#include "pybind11.h"
+#include "stl.h"
+#include "complex.h"
+#include "functional.h"
+#include "operators.h"
+#include "Table.h"
 #include "ScoreCounter.h"
 
 using namespace std;

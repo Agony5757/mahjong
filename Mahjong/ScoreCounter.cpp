@@ -1,4 +1,5 @@
 ﻿#include "ScoreCounter.h"
+#include "Player.h"
 #include "Table.h"
 #include "Rule.h"
 #include "macro.h"
@@ -13,7 +14,7 @@ static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedT
 
 int calculate_fan(vector<Yaku> yakus);
 
-CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风)
+CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风)
 {
 	// 首先 假设进入到这个counter阶段的，至少满足了和牌条件的牌型
 	// 以及，是否有某种役是不确定的
@@ -27,7 +28,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	vector<Yaku> 场役;
 	vector<Yaku> Dora役;
 
-	auto &player = table->players[turn];
+	// auto &player = table->players[turn];
 
 	/* riichi 和 double riichi 不重复计算 */
 	if (player.double_riichi)
@@ -48,7 +49,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 
 	/* 天地和的条件是，在第一巡，且没人鸣牌*/
 	if (player.first_round) {
-		if (table->庄家 == turn)
+		if (table->庄家 == table->turn)
 			场役.push_back(Yaku::天和);
 		else
 			场役.push_back(Yaku::地和);
@@ -263,7 +264,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 		final_result.fan = calculate_fan(final_result.yakus);
 		final_result.fu = iter->second;
 		bool 亲家 = false;
-		if (table->庄家 == turn) 亲家 = true;
+		if (table->庄家 == table->turn) 亲家 = true;
 
 		final_result.calculate_score(亲家, tsumo);
 	}

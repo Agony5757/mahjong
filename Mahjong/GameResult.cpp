@@ -203,23 +203,14 @@ Result 自摸结算(Table * table)
 {
 	Result result;
 	result.result_type = ResultType::自摸终局;
-	int winner;
-	// 先通过table的状态看看谁要和牌
-	for (int i = 0; i < 4; ++i) {
-		if (table->players[i].hand.size() % 3 == 2) {
-			// 放心，肯定有且仅有一个手牌=3n+2的玩家，肯定是他
-			// 宣告胜利
-			winner = i;
-			break;
-		}
-	}
+	int winner = table->turn;
 	// 一人赢
 	result.winner.push_back(winner);
 
 	// 三人输
 	for (int i = 0; i < 4; ++i) if (i != winner) result.loser.push_back(i);
 
-	auto yakus = yaku_counter(table, table->turn, nullptr, false, false, table->players[winner].wind, table->场风);
+	auto yakus = yaku_counter(table, table->players[winner], nullptr, false, false, table->players[winner].wind, table->场风);
 	bool is亲 = false;
 	if (table->turn == table->庄家)
 		is亲 = true;
@@ -278,7 +269,7 @@ Result 自摸结算(Table * table)
 	return result;
 }
 
-Result 荣和结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
+Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_player)
 {
 	Result result;
 	result.result_type = ResultType::荣和终局;
@@ -291,7 +282,7 @@ Result 荣和结算(Table * table, Tile* agari_tile, std::vector<int> response_p
 	}
 
 	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, winner, agari_tile, false, false, table->players[winner].wind, table->场风);
+		auto yaku = yaku_counter(table, table->players[winner], agari_tile, false, false, table->players[winner].wind, table->场风);
 		yaku.calculate_score(winner == table->庄家, false);
 
 		result.results.insert({ winner, yaku });

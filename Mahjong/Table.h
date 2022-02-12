@@ -71,7 +71,7 @@ public:
 	void 发牌(int i_player);
 	void 发岭上牌(int i_player);
 
-	inline void next_turn() { turn++; turn = turn % 4; }
+	void next_turn(int nextturn);
 
 	enum ToStringOption : int {
 		YAMA = 1 << 0,
@@ -93,10 +93,10 @@ public:
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
 	std::vector<SelfAction> GetSelfActions();
-	std::vector<SelfAction> GetRiichiSelfAction();
+	std::vector<SelfAction> GetRiichiSelfActions();
 
 	// 根据turn打出的tile，可以做出的决定
-	std::vector<ResponseAction> GetValidResponse(int player, Tile* tile, bool);
+	std::vector<ResponseAction> GetResponseActions(int player, Tile* tile, bool);
 
 	// 根据turn打出的tile，可以做出的抢杠决定
 	std::vector<ResponseAction> Get抢暗杠(int player, Tile* tile);

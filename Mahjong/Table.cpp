@@ -125,8 +125,35 @@ static bool 四风连打牌(array<Player, 4> &players) {
 	return t0 == t1 && t2 == t3 && t0 == t2 && t1 >= BaseTile::_1z && t1 <= BaseTile::_4z;
 }
 
+void Table::next_turn(int nextturn)
+{
+	Player& player = players[turn];
+	// 在切换之前，更新玩家的听牌列表，以及更新他的振听情况
+	if (last_action == Action::立直 || last_action == Action::出牌) {
+		// 立直时需要判断打出去的这张牌和听牌列表是否符合
+		if (player.river.river.back().fromhand) {
+			// 手切立直需要更新听牌列表
+			player.update_听牌();
+		}
+		player.update_舍牌振听();
+	}
+	if (last_action == Action::暗杠) {
+		player.update_听牌();
+	}
+	if (last_action == Action::加杠) {
+		player.remove_听牌(selected_action.correspond_tiles[0]->tile);
+	}
+
+	// 更新完毕，正式切换turn
+	turn = nextturn;
+	phase = PhaseEnum(turn);
+}
+
 void Table::_from_beginning()
 {
+#ifdef Profiling
+	FunctionProfiler;
+#endif
 	// 四风连打判定
 	if (players[0].river.size() == 1 &&
 		players[1].river.size() == 1 &&
@@ -199,31 +226,37 @@ void Table::_from_beginning()
 	// 此时统计每个人的牌河振听状态
 	// turn可以解除振听，即使player[turn]确实振听了，在下一次WAITING_PHASE之前，也会追加振听效果
 	// 其他人按照规则追加振听效果
-	for (int i = 0; i < 4; ++i) {
-		if (i == turn) {
-			players[turn].振听 = false;
-			continue;
-		}
+	//for (int i = 0; i < 4; ++i) {
+	//	volatile profiler _("振听判断");
+	//	if (i == turn) {
+	//		players[turn].振听 = false;
+	//		continue;
+	//	}
 
-		auto& hand = players[i].hand;
-		auto tiles = get听牌(convert_tiles_to_base_tiles(hand));
-		auto river = players[i].river.to_basetile();
+	//	auto& hand = players[i].hand;
+	//	auto tiles = get听牌(convert_tiles_to_base_tiles(hand));
+	//	auto river = players[i].river.to_basetile();
 
-		// 检查river和tiles是否有重合
-		for (auto& tile : tiles) {
-			if (find(river.begin(), river.end(), tile) != river.end()) {
-				// 只要找到一个
-				players[i].振听 = true;
-				continue;
-			}
-		}
-	}
+	//	// 检查river和tiles是否有重合
+	//	for (auto& tile : tiles) {
+	//		if (find(river.begin(), river.end(), tile) != river.end()) {
+	//			// 只要找到一个
+	//			players[i].振听 = true;
+	//			continue;
+	//		}
+	//	}
+	//}
 
 	vector<SelfAction> actions;
 	if (players[turn].is_riichi())
-		self_action = GetRiichiSelfAction();
+	{
+		self_action = GetRiichiSelfActions();
+	}
 	else
+	{
+		volatile profiler _("SelfActions");
 		self_action = GetSelfActions();
+	}
 
 	phase = (PhaseEnum)turn;
 }
@@ -444,7 +477,7 @@ Result Table::GameProcess(bool verbose, string yama)
 
 		vector<SelfAction> actions;
 		if (players[turn].is_riichi())
-			actions = GetRiichiSelfAction();
+			actions = GetRiichiSelfActions();
 		else
 			actions = GetSelfActions();
 
@@ -492,7 +525,7 @@ Result Table::GameProcess(bool verbose, string yama)
 				bool is下家 = false;
 				if (i == (turn + 1) % 4)
 					is下家 = true;
-				auto response = GetValidResponse(i, tile, is下家);
+				auto response = GetResponseActions(i, tile, is下家);
 
 				if (response.size() != 1) {
 					int selected_response =
@@ -559,7 +592,7 @@ Result Table::GameProcess(bool verbose, string yama)
 				players[turn].first_round = false;
 
 				last_action = Action::出牌;
-				next_turn();
+				next_turn((turn + 1) % 4);
 				continue;
 			case Action::吃:
 			case Action::碰:
@@ -799,6 +832,7 @@ Table::Table(int 庄家,
 
 vector<SelfAction> Table::GetSelfActions()
 {
+	FunctionProfiler;
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
 
@@ -807,34 +841,19 @@ vector<SelfAction> Table::GetSelfActions()
 		merge_into(actions, the_player.get_暗杠());
 		merge_into(actions, the_player.get_加杠());
 	}
-	
 	merge_into(actions, the_player.get_打牌(after_chipon()));
 	merge_into(actions, the_player.get_九种九牌());
-	merge_into(actions, the_player.get_自摸());
+	merge_into(actions, the_player.get_自摸(this));
 
-	if (players[turn].score >= 1000 &&
-		get_remain_tile() > 4)
+	if (players[turn].score >= 1000 && get_remain_tile() > 4)
 		// 有1000点才能立直，否则不行
 		// 牌河有4张以下牌，则不能立直
 		merge_into(actions, the_player.get_立直());
 
-	// 过滤器
-
-	// 计算役，如果无役，则禁止自摸
-	auto result = yaku_counter(this, turn, nullptr, false, false, players[turn].wind, 场风);
-	if (!can_agari(result.yakus)) {
-		auto iter = remove_if(actions.begin(), actions.end(),
-			[](SelfAction& sa) {
-			if (sa.action == Action::自摸) return true;
-			return false;
-		});
-		actions.erase(iter,actions.end());
-	}
-
 	return actions;
 }
 
-vector<SelfAction> Table::GetRiichiSelfAction()
+vector<SelfAction> Table::GetRiichiSelfActions()
 {
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
@@ -842,14 +861,15 @@ vector<SelfAction> Table::GetRiichiSelfAction()
 	if (get_remain_kan_tile() > 0)
 		merge_into(actions, the_player.riichi_get_暗杠());
 	merge_into(actions, the_player.riichi_get_打牌());
-	merge_into(actions, the_player.get_自摸());
+	merge_into(actions, the_player.get_自摸(this));
 
 	return actions;
 }
 
-vector<ResponseAction> Table::GetValidResponse(
+vector<ResponseAction> Table::GetResponseActions(
 	int i, Tile* tile, bool is下家)
 {
+	FunctionProfiler;
 	vector<ResponseAction> actions;
 	
 	// first: pass action
@@ -860,7 +880,10 @@ vector<ResponseAction> Table::GetValidResponse(
 	auto &the_player = players[i];
 
 	merge_into(actions, the_player.get_荣和(this, tile));
-	if (!the_player.is_riichi()) {
+
+	// 立直则不能鸣牌
+	// 海底牌也不能鸣牌
+	if (!the_player.is_riichi() && get_remain_tile() != 0) {
 		merge_into(actions, the_player.get_Pon(tile));
 		if (get_remain_kan_tile() > 0)
 			merge_into(actions, the_player.get_Kan(tile));
@@ -868,86 +891,6 @@ vector<ResponseAction> Table::GetValidResponse(
 		if (is下家) {
 			merge_into(actions, the_player.get_Chi(tile));
 		}
-	}
-
-	// 过滤器
-	auto &response = actions;
-
-	// 如果吃了之后，手上只有食替牌，那么就移除这个吃
-	{
-		auto iter = remove_if(response.begin(), response.end(),
-			[&the_player](ResponseAction &ra) {
-			if (ra.action != Action::吃) return false;
-			auto tiles = ra.correspond_tiles;
-			// 计算食替牌
-			vector<BaseTile> 食替牌;
-
-			if (tiles[1]->tile > tiles[0]->tile) {
-				if (tiles[0]->tile != _1m && tiles[0]->tile != _1s && tiles[0]->tile != _1p) {
-					食替牌.push_back(BaseTile(tiles[0]->tile - 1));
-				}
-				if (tiles[1]->tile != _9m && tiles[1]->tile != _9s && tiles[1]->tile != _9p) {
-					食替牌.push_back(BaseTile(tiles[1]->tile + 1));
-				}
-			}
-			else if (tiles[1]->tile < tiles[0]->tile) {
-				if (tiles[1]->tile != _1m && tiles[1]->tile != _1s && tiles[1]->tile != _1p) {
-					食替牌.push_back(BaseTile(tiles[1]->tile - 1));
-				}
-				if (tiles[0]->tile != _9m && tiles[0]->tile != _9s && tiles[0]->tile != _9p) {
-					食替牌.push_back(BaseTile(tiles[0]->tile + 1));
-				}
-			}
-			else throw runtime_error("Error in response action: chi.");
-
-			// 去掉这些吃牌
-			auto copyhand = the_player.hand;
-			copyhand.erase(remove_if(copyhand.begin(), copyhand.end(), [&tiles](Tile* tile) {
-				return is_in(tiles, tile);
-			}));
-
-			// 全部是食替牌
-			return all_of(copyhand.begin(), copyhand.end(), [&食替牌](Tile* tile) {
-				return is_in(食替牌, tile->tile);
-			});
-		});
-		response.erase(iter, response.end());
-	}
-
-	// 如果是海底状态，删除掉除了荣和和pass之外的所有情况
-	if (get_remain_tile() == 0) {
-		auto iter =
-			remove_if(response.begin(), response.end(),
-				[](ResponseAction& ra) {
-			if (ra.action == Action::pass) return false;
-			if (ra.action == Action::荣和) return false;
-			return true;
-		});
-		response.erase(iter, response.end());
-	}
-
-	// 如果是振听状态，则不能荣和
-	if (the_player.is振听() == true) {
-		auto iter = remove_if(response.begin(), response.end(),
-			[](ResponseAction& ra) {
-			if (ra.action == Action::荣和) return true;
-			return false;
-		});
-		actions.erase(iter, actions.end());
-		// 玩家继续处于振听状态
-	}
-
-	// 如果无役，则不能荣和
-	if (!can_agari(yaku_counter(this, i, tile, false, false, players[i].wind, 场风).yakus)) {
-		auto iter = remove_if(response.begin(), response.end(),
-			[](ResponseAction& ra) {
-			if (ra.action == Action::荣和) return true;
-			return false;
-		});
-		actions.erase(iter, actions.end());
-
-		// 不仅如此，还要追加振听状态
-		the_player.振听 = true;
 	}
 
 	return actions;
@@ -1080,6 +1023,9 @@ void Table::game_init_with_metadata(unordered_map<string, string> metadata)
 
 void Table::make_selection(int selection)
 {
+#ifdef Profiling
+	FunctionProfiler;
+#endif
 	// 这个地方控制了游戏流转
 	
 	// 分为两种情况，如果是ACTION阶段
@@ -1136,7 +1082,7 @@ void Table::make_selection(int selection)
 				bool is下家 = false;
 				if (0 == (turn + 1) % 4)
 					is下家 = true;
-				response_action = GetValidResponse(0, tile, is下家);
+				response_action = GetResponseActions(0, tile, is下家);
 			}			
 			return;
 		}
@@ -1144,7 +1090,7 @@ void Table::make_selection(int selection)
 		{	
 			tile = selected_action.correspond_tiles[0];
 
-			// 暗杠的情况，第一巡也消除了
+			// 第一巡消除
 			players[turn].first_round = false;
 			// 等待回复
 			phase = P1_抢暗杠RESPONSE;
@@ -1163,7 +1109,7 @@ void Table::make_selection(int selection)
 		{
 			tile = selected_action.correspond_tiles[0];
 
-			// 暗杠的情况，第一巡也消除了
+			// 第一巡消除
 			players[turn].first_round = false;
 			// 等待回复
 			phase = P1_抢杠RESPONSE;
@@ -1190,7 +1136,7 @@ void Table::make_selection(int selection)
 		// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase
 
 		if (response_action.size() == 0) {
-				throw runtime_error("Empty Selection Lists.");	
+			throw runtime_error("Empty Selection Lists.");	
 		}
 
 		actions.push_back(response_action[selection]);
@@ -1210,7 +1156,7 @@ void Table::make_selection(int selection)
 			bool is下家 = false;
 			if (i == (turn + 1) % 4)
 				is下家 = true;
-			response_action = GetValidResponse(i, tile, is下家);
+			response_action = GetResponseActions(i, tile, is下家);
 		}
 		return;
 	}
@@ -1242,8 +1188,8 @@ void Table::make_selection(int selection)
 		switch (final_action) {
 		case Action::pass:
 
-			// 立直成功
 			if (selected_action.action == Action::立直) {
+				// 立直成功
 				if (players[turn].first_round) {
 					players[turn].double_riichi = true;
 				}
@@ -1264,9 +1210,8 @@ void Table::make_selection(int selection)
 			players[turn].first_round = false;
 
 			last_action = Action::出牌;
-			next_turn();
+			next_turn((turn + 1) % 4);
 
-			phase = (PhaseEnum)turn;
 			break;
 		case Action::吃:
 		case Action::碰:
@@ -1289,7 +1234,7 @@ void Table::make_selection(int selection)
 			players[response].门清 = false;
 			players[response].move_from_hand_to_fulu(
 				actions[response].correspond_tiles, tile);
-			turn = response;
+
 
 			// 这是鸣牌，消除所有人第一巡和一发
 			for (int i = 0; i < 4; ++i) {
@@ -1300,7 +1245,8 @@ void Table::make_selection(int selection)
 			// 明杠，打出牌之后且其他人吃碰
 			if (after_杠()) { dora_spec++; }
 			last_action = final_action;
-			phase = (PhaseEnum)turn;
+			// 切换turn
+			next_turn(response);
 			break;
 
 		case Action::荣和:

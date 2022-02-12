@@ -2,10 +2,11 @@
 #define SCORE_COUNTER_H
 
 #include <tuple>
-#include "Yaku.h"
 #include <vector>
-#include "Tile.h"
 #include <sstream>
+#include "Yaku.h"
+#include "Tile.h"
+#include "Player.h"
 
 struct CounterResult {
 	std::vector<Yaku> yakus;
@@ -25,6 +26,6 @@ class Tile;
 
 // turn 判定役的玩家
 // correspond_tile (自摸为nullptr，荣和为荣和牌）
-CounterResult yaku_counter(Table *table, int turn, Tile* correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风);
+CounterResult yaku_counter(Table *table, Player &player, Tile* correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风);
 
 #endif

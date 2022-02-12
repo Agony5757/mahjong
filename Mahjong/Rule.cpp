@@ -105,6 +105,95 @@ vector<CompletedTiles> 基本和牌型::getAllCompletedTiles(const vector<BaseTi
 
 	return ret;
 }
+
+
+bool 基本和牌型::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
+{
+	if (curTiles.size() == 0) {
+		return true;
+	}
+	vector<BaseTile> tmpTiles;
+	int index = 0;
+
+	for (int index = 0; index < curTiles.size(); ++index)
+	{
+		if (index > 0 && curTiles[index] == curTiles[index - 1])
+		{ // Skip same tiles
+			index++;
+			continue;
+		}
+
+		BaseTile this_tile = curTiles[index];
+		// 1. Find Toitsu (Head)
+		if (!has_head)
+		{
+			if (count(curTiles.begin(), curTiles.end(), this_tile) >= 2)
+			{
+				tmpTiles = curTiles; // 复制一份当前手牌
+				TileGroup tmp_group;
+
+				// 设置全局状态的head已经并移除对子
+				tmp_group.type = TileGroup::Type::Toitsu;
+				tmp_group.set_tiles({ this_tile, this_tile });
+				erase_n(tmpTiles, this_tile, 2);
+				has_head = true;
+				completed_tiles.head = tmp_group;
+
+				// 根据当前状态递归
+				bool ret = hasOneCompletedTiles(tmpTiles);
+				if (ret) { return true; }
+
+				// 恢复系统状态
+				has_head = false;
+			}
+		}
+
+		// 2. Find Koutsu
+		if (count(curTiles.begin(), curTiles.end(), this_tile) >= 3)
+		{
+			tmpTiles = curTiles; // 复制一份当前手牌
+			TileGroup tmp_group;
+
+			// 设置全局状态的head已经并移除刻子
+			tmp_group.type = TileGroup::Type::Toitsu;
+			tmp_group.set_tiles({ this_tile , this_tile , this_tile });
+			erase_n(tmpTiles, this_tile, 3);
+			// 设置临时状态
+			completed_tiles.body.push_back(tmp_group);
+			// 根据当前状态递归
+			bool ret = hasOneCompletedTiles(tmpTiles);
+			if (ret) { return true; }
+			// 恢复状态
+			completed_tiles.body.pop_back();
+		}
+
+		// 3. Find Shuntsu
+		if (!is_in({ _8m, _9m, _8p, _9p, _8s, _9s, _1z, _2z, _3z, _4z, _5z, _6z, _7z }, this_tile)
+			&& is_in(curTiles, BaseTile(curTiles[index] + 1))
+			&& is_in(curTiles, BaseTile(curTiles[index] + 2)))
+
+		{
+			tmpTiles = curTiles; // 复制一份当前手牌
+			TileGroup tmp_group;
+			tmp_group.type = TileGroup::Type::Shuntsu;
+			tmp_group.set_tiles({ curTiles[index], BaseTile(curTiles[index] + 1), BaseTile(curTiles[index] + 2) });
+			erase_n(tmpTiles, curTiles[index], 1);
+			erase_n(tmpTiles, BaseTile(curTiles[index] + 1), 1);
+			erase_n(tmpTiles, BaseTile(curTiles[index] + 2), 1);
+
+			// 设置临时状态
+			completed_tiles.body.push_back(tmp_group);
+			// 根据当前状态递归
+			bool ret = hasOneCompletedTiles(tmpTiles);
+			if (ret) { return true; }
+			// 恢复状态
+			completed_tiles.body.pop_back();
+		}
+	}
+
+	return false;
+}
+
 std::vector<CompletedTiles> get_completed_tiles(std::vector<BaseTile> tiles)
 {
 	if (tiles.size() % 3 != 2) throw runtime_error("Not Enough Tiles");	
@@ -117,12 +206,14 @@ std::vector<CompletedTiles> get_completed_tiles(std::vector<BaseTile> tiles)
 	sort(completed_tiles.begin(), completed_tiles.end());
 	completed_tiles.erase(unique(completed_tiles.begin(), completed_tiles.end()), completed_tiles.end());
 	return completed_tiles;
-	// auto extern_tiles = convert_basetiles_to_extern_tiles(tiles);
-	// auto agari_tile = extern_tiles.back();
-	// extern_tiles.pop_back();
-	/*auto s = instance;
-	return s;*/
-	// return convert_extern_completed_tiles_to_internal(s);
+}
+
+bool has_completed_tiles(std::vector<BaseTile> tiles)
+{
+	if (tiles.size() % 3 != 2) throw runtime_error("Not Enough Tiles");
+	auto& inst = 基本和牌型::GetInstance();
+	inst.reset();
+	return inst.hasOneCompletedTiles(tiles);
 }
 //
 //TileGroup convert_extern_tilegroup_to_internal(mahjong_algorithm::TileGroup tilegroup)
@@ -168,14 +259,11 @@ std::vector<CompletedTiles> get_completed_tiles(std::vector<BaseTile> tiles)
 
 bool isCommon和牌型(std::vector<BaseTile> basetiles) {
 
+	FunctionProfiler;
 	if (basetiles.size() % 3 != 2) return false;
 	
 	// auto basetiles = convert_tiles_to_base_tiles(tiles);
-	auto s = get_completed_tiles(basetiles);	
-	if (s.size() != 0)
-		return true;
-	else
-		return false;
+	return has_completed_tiles(basetiles);
 }
 
 std::vector<BaseTile> isCommon听牌型(std::vector<BaseTile> tiles)
@@ -193,6 +281,7 @@ std::vector<BaseTile> isCommon听牌型(std::vector<BaseTile> tiles)
 
 bool is七对和牌型(std::vector<BaseTile> tiles)
 {
+	FunctionProfiler;
 	if (tiles.size() != 14) return false;
 	sort(tiles.begin(), tiles.end());
 	if (tiles[0] == tiles[1]
@@ -237,17 +326,23 @@ std::vector<BaseTile> is七对听牌型(std::vector<BaseTile> tiles)
 	return 听牌;
 }
 
-
 bool is国士无双和牌型(std::vector<BaseTile> tiles)
 {
-	if (tiles.size() != 14) return false;
-	sort(tiles.begin(), tiles.end());
-
+	FunctionProfiler;
 	vector<BaseTile> raw
 	{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
 
 	vector<BaseTile> adds
 	{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
+
+	if (tiles.size() != 14) return false;
+
+	// 任何一张牌不是幺九牌，直接返回（大概率减少运行时间）
+	if (any_of(tiles.begin(), tiles.end(),
+		[](BaseTile bt) { return !is_幺九牌(bt); })) {
+		return false;
+	}
+	sort(tiles.begin(), tiles.end());
 
 	for (auto add : adds) {
         auto new_raw = raw;
@@ -261,9 +356,15 @@ bool is国士无双和牌型(std::vector<BaseTile> tiles)
 
 std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles)
 {
+	// 任何一张牌不是幺九牌，直接返回（大概率减少运行时间）
+	if (any_of(tiles.begin(), tiles.end(),
+		[](BaseTile bt) { return !is_幺九牌(bt); })) {
+		return {};
+	}
 	vector<BaseTile> 听牌;
-	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
-		tiles.push_back(static_cast<BaseTile>(i));
+	vector<BaseTile> adds{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
+	for (auto i : adds) {
+		tiles.push_back(i);
 		if (is国士无双和牌型(tiles)) {
 			听牌.push_back(static_cast<BaseTile>(i));
 		}
@@ -272,14 +373,18 @@ std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles)
 	return 听牌;
 }
 
-
-
-std::vector<BaseTile> get听牌(std::vector<BaseTile> tiles)
+vector<BaseTile> get听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
 {
+	FunctionProfiler;
 	vector<BaseTile> 听牌;
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
+		if (except_tiles.size() > 0) {
+			if (is_in(except_tiles, static_cast<BaseTile>(i))) {
+				continue;
+			}
+		}
 		tiles.push_back(static_cast<BaseTile>(i));
-		if (is国士无双和牌型(tiles)) {
+		if (is_幺九牌(static_cast<BaseTile>(i)) && is国士无双和牌型(tiles)) {
 			听牌.push_back(static_cast<BaseTile>(i));
 			continue;
 		}
@@ -294,6 +399,30 @@ std::vector<BaseTile> get听牌(std::vector<BaseTile> tiles)
 		tiles.pop_back();
 	}
 	return 听牌;
+}
+
+bool is听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
+{
+	FunctionProfiler;
+	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
+		if (except_tiles.size() > 0) {
+			if (is_in(except_tiles, static_cast<BaseTile>(i))) {
+				continue;
+			}
+		}
+		tiles.push_back(static_cast<BaseTile>(i));
+		if (is_幺九牌(static_cast<BaseTile>(i)) && is国士无双和牌型(tiles)) {
+			return true;
+		}
+		if (is七对和牌型(tiles)) {
+			return true;
+		}
+		if (isCommon和牌型(tiles)) {
+			return true;
+		}
+		tiles.pop_back();
+	}
+	return false;
 }
 
 bool is和牌(std::vector<BaseTile> tiles)

@@ -56,6 +56,32 @@ string Player::to_string() const
 	return ss.str();
 }
 
+void Player::update_听牌()
+{
+	vector<BaseTile> bt = convert_tiles_to_base_tiles(hand);
+	听牌 = get听牌(bt);
+}
+
+void Player::update_舍牌振听()
+{
+	if (立直振听) return;
+	for (auto rivertile : river.river) {
+		if (any_of(听牌.begin(), 听牌.end(),
+			[&rivertile](BaseTile t) {return t == rivertile.tile->tile; })) 
+		{
+			if (is_riichi()) { 立直振听 = true; }
+			else { 振听 = true; }
+		}
+	}
+}
+
+void Player::remove_听牌(BaseTile t)
+{
+	// TODO: 不能听5张
+	// 暂时没有加入这个规则，假设认为可以听第5张
+	// 调用get听牌的地方全部都要修改
+	// Player::get_except_tiles()
+}
 
 vector<SelfAction> Player::get_加杠()
 {
@@ -154,12 +180,12 @@ static bool is食替(Player* player, BaseTile t)
 
 vector<SelfAction> Player::get_打牌(bool after_chipon)
 {
+	FunctionProfiler;
 	vector<SelfAction> actions;
 	for (auto tile : hand) {
 		// 检查食替情况,不可打出
-		if (after_chipon)
-			if (is食替(this, tile->tile))
-				continue;
+		if (after_chipon && is食替(this, tile->tile))
+			continue;
 
 		// 其他所有牌均可打出
 		SelfAction action;
@@ -170,15 +196,20 @@ vector<SelfAction> Player::get_打牌(bool after_chipon)
 	return actions;
 }
 
-vector<SelfAction> Player::get_自摸()
+vector<SelfAction> Player::get_自摸(Table* table)
 {
 	vector<SelfAction> actions;
-	if (is和牌(convert_tiles_to_base_tiles(hand))) {
-		SelfAction action;
-		action.action = Action::自摸;
-		actions.push_back(action);
+
+	// 听牌列表里的牌可以被自摸
+	if (is_in(听牌, hand.back()->tile)) {
+		auto result = yaku_counter(table, *this, nullptr, false, false, wind, table->场风);
+		if (can_agari(result.yakus)) {
+			SelfAction action;
+			action.action = Action::自摸;
+			actions.push_back(action);
+		}
 	}
-	// 在桌子那边加以过滤
+
 	return actions;
 }
 
@@ -231,7 +262,6 @@ static vector<vector<Tile*>> get_Chi_tiles(vector<Tile*> hand, Tile* tile) {
 		for (int j = 1; (i + j) < hand.size(); ++j)
 			if (is_顺子({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
 				chi_tiles.push_back({ hand[i] , hand[i + j] });
-
 			}
 	}
 	return chi_tiles;
@@ -274,13 +304,18 @@ vector<ResponseAction> Player::get_荣和(Table* table, Tile* tile)
 {
 	vector<ResponseAction> actions;
 
-	auto copy_hand = hand;
-	copy_hand.push_back(tile);
+	if (is振听() == true) {
+		// 振听直接无
+		return {};
+	}
 
-	if (is和牌(convert_tiles_to_base_tiles(copy_hand))) {
-		ResponseAction action;
-		action.action = Action::荣和;
-		actions.push_back(action);
+	// 听牌列表里的才能荣
+	if (is_in(听牌, tile->tile)) {
+		if (can_agari(yaku_counter(table, *this, tile, false, false, wind, table->场风).yakus)) {
+			ResponseAction action;
+			action.action = Action::荣和;
+			actions.push_back(action);
+		}
 	}
 
 	return actions;
@@ -297,10 +332,45 @@ vector<ResponseAction> Player::get_Chi(Tile* tile)
 		return actions;
 
 	auto chi_tiles = get_Chi_tiles(hand, tile);
+	
 	for (auto one_chi_tiles : chi_tiles) {
+		// 食替特殊情况
+		BaseTile t1 = one_chi_tiles[0]->tile;
+		BaseTile t2 = one_chi_tiles[1]->tile;
+
+		if (t2 - t1 == 2) {
+			// 坎张
+			BaseTile ban_tile = BaseTile(t1 + 1);
+			auto copyhand = convert_tiles_to_base_tiles(hand);
+			erase_n(copyhand, t1, 1);
+			erase_n(copyhand, t2, 1);
+			if (all_of(copyhand.begin(), copyhand.end(), 
+				[ban_tile](BaseTile t) {return t == ban_tile; })) {
+				continue;
+			}
+		}
+		else if (t2 - t1 == 1) {
+			// 顺子
+			vector<BaseTile> ban_tiles;
+			if (t1 != _1m && t1 != _1p && t1 != _1s) {
+				ban_tiles.push_back(BaseTile(t1 - 1));
+			}
+			if (t2 != _9m && t2 != _9p && t2 != _9s) {
+				ban_tiles.push_back(BaseTile(t2 + 1));
+			}
+			auto copyhand = convert_tiles_to_base_tiles(hand);
+			erase_n(copyhand, t1, 1);
+			erase_n(copyhand, t2, 1);
+			
+			if (all_of(copyhand.begin(), copyhand.end(),
+				[ban_tiles](BaseTile t) {return is_in(ban_tiles, t); })) {
+				continue;
+			}
+		}
+		// 不属于食替特殊情况才可以吃
 		ResponseAction action;
 		action.action = Action::吃;
-		action.correspond_tiles.assign(one_chi_tiles.begin(), one_chi_tiles.end());
+		action.correspond_tiles = one_chi_tiles;
 		actions.push_back(action);
 	}
 
@@ -344,11 +414,9 @@ vector<ResponseAction> Player::get_Kan(Tile* tile)
 vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
 {
 	vector<ResponseAction> actions;
+	if (!is_幺九牌(tile->tile)) { return {}; }
 
-	auto copy_hand = hand;
-	copy_hand.push_back(tile);
-
-	if (is国士无双和牌型(convert_tiles_to_base_tiles(copy_hand))) {
+	if (is_in(听牌, tile->tile)) {
 		ResponseAction action;
 		action.action = Action::抢暗杠;
 		actions.push_back(action);
@@ -361,10 +429,7 @@ vector<ResponseAction> Player::get_抢杠(Tile* tile)
 {
 	vector<ResponseAction> actions;
 
-	auto copy_hand = hand;
-	copy_hand.push_back(tile);
-
-	if (is和牌(convert_tiles_to_base_tiles(copy_hand))) {
+	if (is_in(听牌, tile->tile)) {
 		ResponseAction action;
 		action.action = Action::抢杠;
 		actions.push_back(action);
