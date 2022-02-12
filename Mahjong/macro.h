@@ -6,7 +6,6 @@
 #include <type_traits>
 #include <string>
 #include <array>
-#include "MahjongAlgorithm/Yaku.h"
 #include "Tile.h"
 
 #define VERBOSE if (verbose)
@@ -27,10 +26,10 @@ bool is_in(std::vector<T> vec, const T &elem){
 }
 
 template<typename T>
-std::vector<T> erase_many(std::vector<T> vec, std::vector<T> to_erase) {
-	std::remove_if(vec.begin(), vec.end(), 
-		[&to_erase](T& elem) {is_in(to_erase, elem); });
-	return vec;
+void erase_n(std::vector<T>& vec, const T& to_erase, size_t count) {
+	for (size_t i = 0; i < count; ++i) {		
+		vec.erase(find(vec.begin(), vec.end(), to_erase));
+	}
 }
 
 template<class _InIt,
@@ -46,94 +45,94 @@ inline std::vector<BaseTile> convert_tiles_to_base_tiles(std::vector<Tile*> tile
 	return bts;
 }
 
-inline std::vector<mahjong::Tile> convert_basetiles_to_extern_tiles(std::vector<BaseTile> tiles) {
-	std::vector<mahjong::Tile> newtiles;
-	for (auto t : tiles) {
-		int type = (int)t / 9;
-		int data = (t % 9 + 1);
-		mahjong::TileType mt;
-		switch (type) {
-		case 0:
-			mt = mahjong::TileType::Manzu;
-			newtiles.push_back(mahjong::Tile(mt, data, false));
-			continue;
-		case 1:
-			mt = mahjong::TileType::Souzu;
-			newtiles.push_back(mahjong::Tile(mt, data, false));
-			continue;
-		case 2:
-			mt = mahjong::TileType::Ponzu;
-			newtiles.push_back(mahjong::Tile(mt, data, false));
-			continue;
-		case 3:
-			mt = mahjong::TileType::Special;
-			newtiles.push_back(mahjong::Tile(mt, data, false));
-			continue;
-		default:
-			throw std::runtime_error("??");
-		}
-	}
-	return newtiles;
-}
-
-inline std::vector<mahjong::Tile> convert_tiles_to_extern_tiles(std::vector<Tile*> tiles) {
-	std::vector<mahjong::Tile> newtiles;
-	for (auto tile : tiles) {
-		BaseTile t = tile->tile;
-		int type = (int)t / 9;
-		int data = (t % 9 + 1);
-		mahjong::TileType mt;
-		switch (type) {
-		case 0: 
-			mt = mahjong::TileType::Manzu;
-			newtiles.push_back(mahjong::Tile(mt, data, false));
-			continue;
-		case 1:
-			mt = mahjong::TileType::Souzu;
-			newtiles.push_back(mahjong::Tile(mt, data, false));
-			continue;
-		case 2:
-			mt = mahjong::TileType::Ponzu;
-			newtiles.push_back(mahjong::Tile(mt, data, false));
-			continue;
-		case 3:
-			mt = mahjong::TileType::Special;
-			newtiles.push_back(mahjong::Tile(mt, data, false));
-			continue;
-		default:
-			throw std::runtime_error("??");
-		}
-	}
-	return newtiles;
-}
-
-inline BaseTile convert_extern_tile_to_basetile(mahjong::Tile tile) {
-	int type;
-	int number = tile.getTileNumber();
-	switch (tile.getTileType()) {
-	case mahjong::TileType::Manzu:
-		type = 0; break;
-	case mahjong::TileType::Souzu:
-		type = 1; break;
-	case mahjong::TileType::Ponzu:
-		type = 2; break;
-	case mahjong::TileType::Special:
-		type = 3; break;
-	default:
-		throw std::runtime_error("??");
-	}
-	auto basetile_number = type * 9 + number - 1;
-	BaseTile t = static_cast<BaseTile>(basetile_number);
-	return t;
-}
-
-inline std::vector<BaseTile> convert_extern_tiles_to_basetiles(std::vector<mahjong::Tile> tiles) {
-	std::vector<BaseTile> newtiles;
-	for (auto tile : tiles) {
-		newtiles.push_back(convert_extern_tile_to_basetile(tile));
-	}
-	return newtiles;
-}
+//inline std::vector<mahjong_algorithm::Tile> convert_basetiles_to_extern_tiles(std::vector<BaseTile> tiles) {
+//	std::vector<mahjong_algorithm::Tile> newtiles;
+//	for (auto t : tiles) {
+//		int type = (int)t / 9;
+//		int data = (t % 9 + 1);
+//		mahjong_algorithm::TileType mt;
+//		switch (type) {
+//		case 0:
+//			mt = mahjong_algorithm::TileType::Manzu;
+//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
+//			continue;
+//		case 1:
+//			mt = mahjong_algorithm::TileType::Souzu;
+//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
+//			continue;
+//		case 2:
+//			mt = mahjong_algorithm::TileType::Ponzu;
+//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
+//			continue;
+//		case 3:
+//			mt = mahjong_algorithm::TileType::Special;
+//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
+//			continue;
+//		default:
+//			throw std::runtime_error("??");
+//		}
+//	}
+//	return newtiles;
+//}
+//
+//inline std::vector<mahjong_algorithm::Tile> convert_tiles_to_extern_tiles(std::vector<Tile*> tiles) {
+//	std::vector<mahjong_algorithm::Tile> newtiles;
+//	for (auto tile : tiles) {
+//		BaseTile t = tile->tile;
+//		int type = (int)t / 9;
+//		int data = (t % 9 + 1);
+//		mahjong_algorithm::TileType mt;
+//		switch (type) {
+//		case 0: 
+//			mt = mahjong_algorithm::TileType::Manzu;
+//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
+//			continue;
+//		case 1:
+//			mt = mahjong_algorithm::TileType::Souzu;
+//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
+//			continue;
+//		case 2:
+//			mt = mahjong_algorithm::TileType::Ponzu;
+//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
+//			continue;
+//		case 3:
+//			mt = mahjong_algorithm::TileType::Special;
+//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
+//			continue;
+//		default:
+//			throw std::runtime_error("??");
+//		}
+//	}
+//	return newtiles;
+//}
+//
+//inline BaseTile convert_extern_tile_to_basetile(mahjong_algorithm::Tile tile) {
+//	int type;
+//	int number = tile.getTileNumber();
+//	switch (tile.getTileType()) {
+//	case mahjong_algorithm::TileType::Manzu:
+//		type = 0; break;
+//	case mahjong_algorithm::TileType::Souzu:
+//		type = 1; break;
+//	case mahjong_algorithm::TileType::Ponzu:
+//		type = 2; break;
+//	case mahjong_algorithm::TileType::Special:
+//		type = 3; break;
+//	default:
+//		throw std::runtime_error("??");
+//	}
+//	auto basetile_number = type * 9 + number - 1;
+//	BaseTile t = static_cast<BaseTile>(basetile_number);
+//	return t;
+//}
+//
+//inline std::vector<BaseTile> convert_extern_tiles_to_basetiles(std::vector<mahjong_algorithm::Tile> tiles) {
+//	std::vector<BaseTile> newtiles;
+//	for (auto tile : tiles) {
+//		newtiles.push_back(convert_extern_tile_to_basetile(tile));
+//	}
+//	return newtiles;
+//}
 
 /* Check if two containers have the same size and same corresponding value. */
 template<typename T>

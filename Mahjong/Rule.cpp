@@ -3,64 +3,175 @@
 #include "Table.h"
 using namespace std;
 
-std::vector<CompletedTiles> getCompletedTiles(std::vector<BaseTile> tiles)
+基本和牌型& 基本和牌型::GetInstance()
+{
+	static 基本和牌型 inst;
+	return inst;
+}
+
+void 基本和牌型::reset()
+{
+	// m_completedTiles.head.reset();
+	/*for (auto it : m_completedTiles.body)
+		it.reset();*/
+	completed_tiles.body.clear();
+	has_head = false;
+}
+
+vector<CompletedTiles> 基本和牌型::getAllCompletedTiles(const vector<BaseTile>& curTiles)
+{
+	if (curTiles.size() == 0) {
+		return { completed_tiles };
+	}
+	vector<CompletedTiles> ret, all_completed_tiles;
+	vector<BaseTile> tmpTiles;
+	int index = 0;
+
+	for (int index = 0; index < curTiles.size(); ++index)
+	{
+		if (index > 0 && curTiles[index] == curTiles[index - 1])
+		{ // Skip same tiles
+			index++;
+			continue;
+		}
+
+		BaseTile this_tile = curTiles[index];
+		// 1. Find Toitsu (Head)
+		if (!has_head)
+		{
+			if (count(curTiles.begin(), curTiles.end(), this_tile) >= 2)
+			{
+				tmpTiles = curTiles; // 复制一份当前手牌
+				TileGroup tmp_group;
+
+				// 设置全局状态的head已经并移除对子
+				tmp_group.type = TileGroup::Type::Toitsu;
+				tmp_group.set_tiles({ this_tile, this_tile });
+				erase_n(tmpTiles, this_tile, 2);
+				has_head = true;
+				completed_tiles.head = tmp_group;
+
+				// 根据当前状态递归
+				all_completed_tiles = getAllCompletedTiles(tmpTiles);
+				ret.insert(ret.end(), all_completed_tiles.begin(), all_completed_tiles.end());
+
+				// 恢复系统状态
+				has_head = false;
+			}
+		}
+
+		// 2. Find Koutsu
+		if (count(curTiles.begin(), curTiles.end(), this_tile) >= 3)
+		{
+			tmpTiles = curTiles; // 复制一份当前手牌
+			TileGroup tmp_group;
+
+			// 设置全局状态的head已经并移除刻子
+			tmp_group.type = TileGroup::Type::Toitsu;
+			tmp_group.set_tiles({ this_tile , this_tile , this_tile });
+			erase_n(tmpTiles, this_tile, 3);
+			// 设置临时状态
+			completed_tiles.body.push_back(tmp_group);
+			// 根据当前状态递归
+			all_completed_tiles = getAllCompletedTiles(tmpTiles);
+			ret.insert(ret.end(), all_completed_tiles.begin(), all_completed_tiles.end());
+			// 恢复状态
+			completed_tiles.body.pop_back();
+		}
+
+		// 3. Find Shuntsu
+		if (!is_in({_8m, _9m, _8p, _9p, _8s, _9s, _1z, _2z, _3z, _4z, _5z, _6z, _7z }, this_tile)			
+			&& is_in(curTiles, BaseTile(curTiles[index] + 1))
+			&& is_in(curTiles, BaseTile(curTiles[index] + 2)))
+
+		{
+			tmpTiles = curTiles; // 复制一份当前手牌
+			TileGroup tmp_group;
+			tmp_group.type = TileGroup::Type::Shuntsu;
+			tmp_group.set_tiles({ curTiles[index], BaseTile(curTiles[index] + 1), BaseTile(curTiles[index] + 2) });
+			erase_n(tmpTiles, curTiles[index], 1);
+			erase_n(tmpTiles, BaseTile(curTiles[index] + 1), 1);
+			erase_n(tmpTiles, BaseTile(curTiles[index] + 2), 1);
+
+			// 设置临时状态
+			completed_tiles.body.push_back(tmp_group);
+			// 根据当前状态递归
+			all_completed_tiles = getAllCompletedTiles(tmpTiles);
+			ret.insert(ret.end(), all_completed_tiles.begin(), all_completed_tiles.end());
+			// 恢复状态
+			completed_tiles.body.pop_back();
+		}
+	}
+
+	return ret;
+}
+std::vector<CompletedTiles> get_completed_tiles(std::vector<BaseTile> tiles)
 {
 	if (tiles.size() % 3 != 2) throw runtime_error("Not Enough Tiles");	
-	auto instance = mahjong::Yaku::GetInstance();
-	auto extern_tiles = convert_basetiles_to_extern_tiles(tiles);
-	auto agari_tile = extern_tiles.back();
-	extern_tiles.pop_back();
-	auto s = instance->getAllCompletedTiles(extern_tiles, agari_tile, true);
-	return convert_extern_completed_tiles_to_internal(s);
-}
-
-TileGroup convert_extern_tilegroup_to_internal(mahjong::TileGroup tilegroup)
-{
-	TileGroup tg;
-	tg.tiles = convert_extern_tiles_to_basetiles(tilegroup.getTilesList());
-	switch (tilegroup.getTileGroupType()) {
-	case mahjong::TileGroupType::Toitsu:
-		tg.type = TileGroup::Type::Toitsu;
-		return tg;
-	case mahjong::TileGroupType::Shuntsu:
-		tg.type = TileGroup::Type::Shuntsu;
-		return tg;
-	case mahjong::TileGroupType::Ankou:
-		tg.type = TileGroup::Type::Koutsu;
-		return tg;
-	default:
-		throw runtime_error("Unhandled TileGroupType");		
+	auto& inst = 基本和牌型::GetInstance();
+	inst.reset();
+	auto completed_tiles = inst.getAllCompletedTiles(tiles);
+	for (auto& completed : completed_tiles) {
+		completed.sort_body();
 	}
+	sort(completed_tiles.begin(), completed_tiles.end());
+	completed_tiles.erase(unique(completed_tiles.begin(), completed_tiles.end()), completed_tiles.end());
+	return completed_tiles;
+	// auto extern_tiles = convert_basetiles_to_extern_tiles(tiles);
+	// auto agari_tile = extern_tiles.back();
+	// extern_tiles.pop_back();
+	/*auto s = instance;
+	return s;*/
+	// return convert_extern_completed_tiles_to_internal(s);
 }
-
-CompletedTiles convert_extern_completed_tiles_to_internal(mahjong::CompletedTiles completed_tiles)
-{
-	CompletedTiles ct;
-	ct.head = convert_extern_tilegroup_to_internal(completed_tiles.head);
-	for (auto body : completed_tiles.body) {
-		ct.body.push_back(convert_extern_tilegroup_to_internal(body));
-	}
-	return ct;
-}
-
-std::vector<CompletedTiles> convert_extern_completed_tiles_to_internal(
-	std::vector<mahjong::CompletedTiles> completed_tiles)
-{
-	std::vector<CompletedTiles> internal_completed_tiles;
-	for_each(completed_tiles.begin(), completed_tiles.end(),
-		[&internal_completed_tiles](mahjong::CompletedTiles& ct) 
-		{internal_completed_tiles.push_back(
-		convert_extern_completed_tiles_to_internal(ct)); }
-	);
-	return internal_completed_tiles;
-}
+//
+//TileGroup convert_extern_tilegroup_to_internal(mahjong_algorithm::TileGroup tilegroup)
+//{
+//	TileGroup tg;
+//	tg.tiles = convert_extern_tiles_to_basetiles(tilegroup.getTilesList());
+//	switch (tilegroup.getTileGroupType()) {
+//	case mahjong_algorithm::TileGroupType::Toitsu:
+//		tg.type = TileGroup::Type::Toitsu;
+//		return tg;
+//	case mahjong_algorithm::TileGroupType::Shuntsu:
+//		tg.type = TileGroup::Type::Shuntsu;
+//		return tg;
+//	case mahjong_algorithm::TileGroupType::Ankou:
+//		tg.type = TileGroup::Type::Koutsu;
+//		return tg;
+//	default:
+//		throw runtime_error("Unhandled TileGroupType");		
+//	}
+//}
+//
+//CompletedTiles convert_extern_completed_tiles_to_internal(mahjong_algorithm::CompletedTiles completed_tiles)
+//{
+//	CompletedTiles ct;
+//	ct.head = convert_extern_tilegroup_to_internal(completed_tiles.head);
+//	for (auto body : completed_tiles.body) {
+//		ct.body.push_back(convert_extern_tilegroup_to_internal(body));
+//	}
+//	return ct;
+//}
+//
+//std::vector<CompletedTiles> convert_extern_completed_tiles_to_internal(
+//	std::vector<mahjong_algorithm::CompletedTiles> completed_tiles)
+//{
+//	std::vector<CompletedTiles> internal_completed_tiles;
+//	for_each(completed_tiles.begin(), completed_tiles.end(),
+//		[&internal_completed_tiles](mahjong_algorithm::CompletedTiles& ct) 
+//		{internal_completed_tiles.push_back(
+//		convert_extern_completed_tiles_to_internal(ct)); }
+//	);
+//	return internal_completed_tiles;
+//}
 
 bool isCommon和牌型(std::vector<BaseTile> basetiles) {
 
 	if (basetiles.size() % 3 != 2) return false;
 	
 	// auto basetiles = convert_tiles_to_base_tiles(tiles);
-	auto s = getCompletedTiles(basetiles);	
+	auto s = get_completed_tiles(basetiles);	
 	if (s.size() != 0)
 		return true;
 	else
@@ -217,7 +328,7 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清)
 	return play_tiles;
 }
 
-bool can_ron(std::vector<Tile*> hands, Tile * get_tile)
+bool can_ron(std::vector<Tile*> hands, Tile *get_tile)
 {
 	hands.push_back(get_tile);
 	if (is和牌(convert_tiles_to_base_tiles(hands)))

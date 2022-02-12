@@ -32,17 +32,25 @@ struct TileGroup {
 		}
 		return nullptr;
 	}
+	inline void sort_tiles() {
+		sort(tiles.begin(), tiles.end());
+	}
+	inline void set_tiles(std::vector<BaseTile> ts) {
+		tiles = ts;		
+		sort_tiles();
+	}
 };
 
-inline bool operator<(const TileGroup & g1, const TileGroup & g2)
+
+inline bool operator<(const TileGroup &g1, const TileGroup &g2)
 {
-	if (g1.type < g2.type) {
-		return true;
-	}
-	return false;
+	if (g1.type < g2.type) { return true; }
+	if (g1.type > g2.type) { return false; }
+	
+	return g1.tiles[0] < g2.tiles[0];
 }
 
-inline bool operator==(const TileGroup& g1, const TileGroup& g2) {
+inline bool operator==(const TileGroup &g1, const TileGroup &g2) {
 	if (g1.tiles.size() != g2.tiles.size()) {
 		return false;
 	}
@@ -52,7 +60,7 @@ inline bool operator==(const TileGroup& g1, const TileGroup& g2) {
 	return true;
 }
 
-inline bool operator!=(const TileGroup& g1, const TileGroup& g2) {
+inline bool operator!=(const TileGroup &g1, const TileGroup &g2) {
 	if (g1 == g2) return false;
 	return true;
 }
@@ -69,6 +77,7 @@ struct CompletedTiles {
 		return ss.str();
 	}
 	inline void sort_body() {
+		for (auto& g : body) { g.sort_tiles(); }
 		std::sort(body.begin(), body.end());
 	}
 };
@@ -102,18 +111,37 @@ inline bool operator!=(const CompletedTiles& c1, const CompletedTiles& c2) {
 	return false;
 }
 
+class 基本和牌型
+{
+public:
+	static 基本和牌型& GetInstance();
+	void reset();
+
+	//std::vector<CompletedTiles> testGetYaku(const Player& p, const Tile& agariTile, bool isTsumo);
+
+	std::vector<CompletedTiles> getAllCompletedTiles(const std::vector<BaseTile>& curTiles);
+
+private:
+	基本和牌型() = default;
+	基本和牌型(const 基本和牌型& other) = delete;
+	~基本和牌型() = default;
+
+	CompletedTiles completed_tiles;
+	bool has_head = false;
+};
+
 // 和牌型包括了无役的情况，这是必要不充分条件，并且不需要满足有14张的条件
 // 这是去掉副露，留下手牌的判断
 
-std::vector<CompletedTiles> getCompletedTiles(std::vector<BaseTile> tiles);
+std::vector<CompletedTiles> get_completed_tiles(std::vector<BaseTile> tiles);
 
-TileGroup convert_extern_tilegroup_to_internal(mahjong::TileGroup tilegroup);
-
-CompletedTiles convert_extern_completed_tiles_to_internal(
-	mahjong::CompletedTiles completed_tiles);
-
-std::vector<CompletedTiles> convert_extern_completed_tiles_to_internal(
-	std::vector<mahjong::CompletedTiles> completed_tiles);
+//TileGroup convert_extern_tilegroup_to_internal(mahjong_algorithm::TileGroup tilegroup);
+//
+//CompletedTiles convert_extern_completed_tiles_to_internal(
+//	mahjong_algorithm::CompletedTiles completed_tiles);
+//
+//std::vector<CompletedTiles> convert_extern_completed_tiles_to_internal(
+//	std::vector<mahjong_algorithm::CompletedTiles> completed_tiles);
 
 /* 判断和牌状态 */
 

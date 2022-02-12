@@ -189,7 +189,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 	}
 
 	// 接下来对牌进行拆解
-	auto complete_tiles_list = getCompletedTiles(convert_tiles_to_base_tiles(tiles));
+	auto complete_tiles_list = get_completed_tiles(convert_tiles_to_base_tiles(tiles));
 
 #ifdef MAJ_DEBUG
 	bool MAJ_DEBUG_SIG = false;
@@ -223,8 +223,7 @@ CounterResult yaku_counter(Table *table, int turn, Tile *correspond_tile, bool �
 		for (int i = 0; i < 14; i+=2) {
 			TileGroup tg;
 			tg.type = TileGroup::Toitsu;
-			tg.tiles.push_back(tiles[i]->tile);
-			tg.tiles.push_back(tiles[i]->tile);
+			tg.set_tiles({ tiles[i]->tile, tiles[i]->tile });
 			ct.body.push_back(tg);
 		}
 		complete_tiles_list.push_back(ct);

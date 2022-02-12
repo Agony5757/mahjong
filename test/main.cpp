@@ -3,6 +3,7 @@
 #include "macro.h"
 #include "Agent.h"
 #include <fstream>
+#include <chrono>
 #include "GamePlay.h"
 #include <random>
 #include <iostream>
@@ -66,7 +67,7 @@ void testCompletedTiles1() {
 	for (int i = 0; i < 9; ++i) {
 		tiles.push_back(yama[i]);
 		// SORT_TILES(tiles);
-		auto completed_tiles = getCompletedTiles(convert_tiles_to_base_tiles(tiles));
+		auto completed_tiles = get_completed_tiles(convert_tiles_to_base_tiles(tiles));
 		for_all(completed_tiles, [](CompletedTiles ct) {cout << ct.to_string(); });
 		tiles.pop_back();
 	}
@@ -77,10 +78,9 @@ void testCompletedTiles2() {
 	t.init_tiles();
 	t.init_yama();
 	auto &yama = t.牌山;
-	vector<Tile*> tiles = { yama[0], yama[0], yama[0], yama[1], yama[1], yama[1], yama[2],
-							yama[2], yama[2], yama[6], yama[6]};
+	vector<BaseTile> tiles = { _1m, _1m, _1m, _2m, _2m, _2m, _3m, _3m, _3m, _4m, _4m};
 
-	auto completed_tiles = getCompletedTiles(convert_tiles_to_base_tiles(tiles));
+	auto completed_tiles = get_completed_tiles(tiles);
 	for_all(completed_tiles, [](CompletedTiles ct) {cout << ct.to_string(); });	
 }
 
@@ -354,11 +354,11 @@ int main() {
 	//testGameProcess3("GameLog.txt");
 	//testGamePlay1("GamePlay.txt");
 	
-	test_passive_table_auto();
+	// test_passive_table_auto();
 
 	//resume_from_seed_and_yama();
 
-	//testCompletedTiles2();
+	testCompletedTiles2();
 	//testCompletedTiles1();
 	return 0;
 }
