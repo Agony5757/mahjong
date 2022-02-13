@@ -3,11 +3,11 @@
 #pragma GCC diagnostic ignored "-Wunused-value"
 #endif
 
-#include "pybind11.h"
-#include "stl.h"
-#include "complex.h"
-#include "functional.h"
-#include "operators.h"
+#include "pybind11/pybind11.h"
+#include "pybind11/stl.h"
+#include "pybind11/complex.h"
+#include "pybind11/functional.h"
+#include "pybind11/operators.h"
 #include "Table.h"
 #include "ScoreCounter.h"
 
@@ -51,12 +51,19 @@ PYBIND11_MODULE(MahjongPy, m)
 		.value("_9p", BaseTile::_9p)
 
 		.value("east", BaseTile::_1z)
+		.value("_1z", BaseTile::_1z)
 		.value("south", BaseTile::_2z)
+		.value("_2z", BaseTile::_2z)
 		.value("west", BaseTile::_3z)
+		.value("_3z", BaseTile::_3z)
 		.value("north", BaseTile::_4z)
+		.value("_4z", BaseTile::_4z)
 		.value("haku", BaseTile::_5z)
+		.value("_5z", BaseTile::_5z)
 		.value("hatsu", BaseTile::_6z)
+		.value("_6z", BaseTile::_6z)
 		.value("chu", BaseTile::_7z)
+		.value("_7z", BaseTile::_7z)
 		;
 
 	py::class_<Fulu>(m, "Fulu")

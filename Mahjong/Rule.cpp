@@ -113,50 +113,51 @@ vector<CompletedTiles> 基本和牌型::getAllCompletedTiles(const vector<BaseTi
 }
 
 static bool check_color_count(vector<BaseTile> curTiles) {
-
+	// 利用mps个数对胡牌型进行初筛
 	// mps个数，以及每种z的个数
 	// n%3==2说明存在雀头，但是类型不能超过2种
 	// n%4==1说明存在单张，直接pass
+	
 	vector<size_t> m_p_s_z1_to_z7(1 + 1 + 1 + 7, 0);
 	int idx = 0;
 	int type = 0;
-	for (; curTiles[idx] <= _9m && idx < curTiles.size(); ++idx) {
+	for (; idx < curTiles.size() && curTiles[idx] <= _9m; ++idx) {
 		m_p_s_z1_to_z7[type]++;
 	}
 	type++;
-	for (; curTiles[idx] <= _9p && idx < curTiles.size(); ++idx) {
+	for (; idx < curTiles.size() && curTiles[idx] <= _9p; ++idx) {
 		m_p_s_z1_to_z7[type]++;
 	}
 	type++;
-	for (; curTiles[idx] <= _9s && idx < curTiles.size(); ++idx) {
+	for (; idx < curTiles.size() && curTiles[idx] <= _9s; ++idx) {
 		m_p_s_z1_to_z7[type]++;
 	}
 	type++;
-	for (; curTiles[idx] == _1z && idx < curTiles.size(); ++idx) {
+	for (; idx < curTiles.size() && curTiles[idx] == _1z; ++idx) {
 		m_p_s_z1_to_z7[type]++;
 	}
 	type++;
-	for (; curTiles[idx] == _2z && idx < curTiles.size(); ++idx) {
+	for (; idx < curTiles.size() && curTiles[idx] == _2z; ++idx) {
 		m_p_s_z1_to_z7[type]++;
 	}
 	type++;
-	for (; curTiles[idx] == _3z && idx < curTiles.size(); ++idx) {
+	for (; idx < curTiles.size() && curTiles[idx] == _3z; ++idx) {
 		m_p_s_z1_to_z7[type]++;
 	}
 	type++;
-	for (; curTiles[idx] == _4z && idx < curTiles.size(); ++idx) {
+	for (; idx < curTiles.size() && curTiles[idx] == _4z; ++idx) {
 		m_p_s_z1_to_z7[type]++;
 	}
 	type++;
-	for (; curTiles[idx] == _5z && idx < curTiles.size(); ++idx) {
+	for (; idx < curTiles.size() && curTiles[idx] == _5z; ++idx) {
 		m_p_s_z1_to_z7[type]++;
 	}
 	type++;
-	for (; curTiles[idx] == _6z && idx < curTiles.size(); ++idx) {
+	for (; idx < curTiles.size() && curTiles[idx] == _6z; ++idx) {
 		m_p_s_z1_to_z7[type]++;
 	}
 	type++;
-	for (; curTiles[idx] == _7z && idx < curTiles.size(); ++idx) {
+	for (; idx < curTiles.size() && curTiles[idx] == _7z; ++idx) {
 		m_p_s_z1_to_z7[type]++;
 	}
 
@@ -168,6 +169,7 @@ static bool check_color_count(vector<BaseTile> curTiles) {
 			else { has_head = true; }
 		}
 	}
+	return true;
 }
 
 bool 基本和牌型::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
@@ -542,39 +544,24 @@ bool can_tsumo(std::vector<Tile*> hands)
 bool is纯九莲和牌型(std::vector<BaseTile> tiles)
 {
 	if (tiles.size() != 14) return false;
-	vector<int> 纯九莲和牌型raw = { 1,1,1,2,3,4,5,6,7,8,9,9,9 };
-	vector<int> 纯九莲和牌型[9];
-	for (int i = 1; i <= 9; ++i) {
-		纯九莲和牌型[i - 1].assign(纯九莲和牌型raw.begin(), 纯九莲和牌型raw.end());
-		纯九莲和牌型[i - 1].push_back(i);
-	}
+	int mpsz = tiles[0] / 9;
+	vector<int> 纯九莲 = { 1,1,1,2,3,4,5,6,7,8,9,9,9 };
 
-	for (auto 纯九莲 : 纯九莲和牌型)
-	{
-		vector<BaseTile> 纯九莲m;
-		for (int i = 0; i < 14; ++i) {
-			纯九莲m.push_back(BaseTile(纯九莲[i] + int(_1m) - 1));
+	for (int i = 0; i < 13; ++i) {
+		if (tiles[i] != BaseTile(纯九莲[i] + 9 * mpsz - 1)) {
+			// 确定有序的前提下，逐张对比
+			return false;
 		}
-		vector<BaseTile> 纯九莲p;
-		for (int i = 0; i < 14; ++i) {
-			纯九莲p.push_back(BaseTile(纯九莲[i] + int(_1p) - 1));
-		}
-		vector<BaseTile> 纯九莲s;
-		for (int i = 0; i < 14; ++i) {
-			纯九莲s.push_back(BaseTile(纯九莲[i] + int(_1s) - 1));
-		}
-		if (is_same_container(tiles, 纯九莲m)) return true;
-		if (is_same_container(tiles, 纯九莲p)) return true;
-		if (is_same_container(tiles, 纯九莲s)) return true;
 	}
-
-	return false;
+	// 通过所有判断
+	return true;
 }
 
 bool is九莲和牌型(std::vector<BaseTile> tiles)
 {
 	sort(tiles.begin(), tiles.end());
 	if (tiles.size() != 14) return false;
+
 	vector<int> 九莲和牌型raw = { 1,1,1,2,3,4,5,6,7,8,9,9,9 };
 	vector<int> 九莲和牌型[9];
 	for (int i = 1; i <= 9; ++i) {
