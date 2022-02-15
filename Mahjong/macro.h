@@ -19,9 +19,9 @@
 constexpr bool FROM_摸切 = false;
 constexpr bool FROM_手切 = true;
 
-template<typename T>
-bool is_in(std::vector<T> vec, const T &elem){
-	if (find(vec.begin(), vec.end(), elem) != vec.end()) {
+template<typename ContainerType, typename ElemType>
+bool is_in(const ContainerType &container, const ElemType &elem){
+	if (std::find(std::begin(container), std::end(container), elem) != std::end(container)) {
 		return true;
 	}
 	else return false;

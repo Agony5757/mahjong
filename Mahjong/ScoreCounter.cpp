@@ -489,8 +489,11 @@ static inline bool 纯老头(string s) {
 
 static inline bool 纯绿牌(string s) {
 	string first3(s.begin(), s.begin() + 3);
-	return is_in({ "2sK", "3sK", "4sK", "2sS", "6sK", "8sK", "6zK", 
-		"2s:", "3s:", "4s:", "6s:", "8s:","6z:" }, first3);
+
+	const char* green_types[] = {"2sK", "3sK", "4sK", "2sS", "6sK", "8sK", "6zK",
+		"2s:", "3s:", "4s:", "6s:", "8s:", "6z:" };
+
+	return is_in(green_types, first3);
 }
 
 static inline bool 幺九刻子(string s) {
@@ -511,13 +514,12 @@ static inline int is役牌对子(string s, Wind 自风, Wind 场风) {
 	return cases;
 }
 
-static inline vector<string> remove_4(vector<string> strs) {
-	vector<string> ret;
-	for (auto str : strs) {
-		if (str.size() == 4) str.pop_back();
-		ret.push_back(str);
+static inline vector<string> remove_4(const vector<string> &strs) {
+	vector<string> retstr(strs);
+	for (auto &ret : retstr) {
+		if (ret.size() == 4) ret.pop_back();
 	}
-	return ret;
+	return retstr;
 }
 
 // 内部函数
@@ -526,6 +528,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	vector<string> tile_group_string, Wind 自风, Wind 场风) {
 
 	vector<Yaku> yakus;
+	yakus.reserve(16); // 随便分配一些空间以免后期重新分配
 	int fu = 20;
 
 #ifdef MAJ_DEBUG
@@ -538,14 +541,14 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 #endif
 
 	// 判断单骑
-	bool 单骑 = any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool 单骑 = any_of(tile_group_string.begin(), tile_group_string.end(), [](const string &s) {
 		if (s.size() == 3) return false;
 		if (s.size() == 4) return s[2] == ':';
 		throw runtime_error("??");
 	});
 
 	// 判断门清
-	bool 门清 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool 门清 = all_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		if (s.size() == 3) return true;
 		if (s.size() == 4) return s[3] != '-';
 		throw runtime_error("??");
@@ -557,7 +560,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	}
 
 	// 判断有没有顺子
-	bool has顺子 = any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool has顺子 = any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		if (s[2] == 'S') return true;
 		else return false;
 	});
@@ -566,7 +569,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	}
 
 	// 判断是不是断幺九
-	bool 断幺九 = none_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool 断幺九 = none_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		if (s[1] == 'z') return true;
 		return 带老头(s);
 	});
@@ -574,7 +577,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	if (断幺九) yakus.push_back(Yaku::断幺九);
 
 	// 统计Z一色
-	bool 字一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool 字一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		if (s[1] == 'z') return true;
 		return false;
 	});
@@ -582,31 +585,31 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	if (字一色) yakus.push_back(Yaku::字一色);
 
 	// 统计P清一色
-	bool P清一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool P清一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		if (s[1] == 'p') return true;
 		return false;
 	});
-	bool P混一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool P混一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		if (s[1] == 'p' || s[1] == 'z') return true;
 		return false;
 	});
 
 	// 统计m清一色
-	bool M清一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool M清一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		if (s[1] == 'm') return true;
 		return false;
 	});
-	bool M混一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool M混一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		if (s[1] == 'm' || s[1] == 'z') return true;
 		return false;
 	});
 
 	// 统计S清一色
-	bool S清一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool S清一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		if (s[1] == 's') return true;
 		return false;
 	});
-	bool S混一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool S混一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		if (s[1] == 's' || s[1] == 'z') return true;
 		return false;
 	});
@@ -627,7 +630,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	// 统计所有的字牌刻子和对子
 	bool 字牌刻子[7] = { false };
 	bool 字牌对子[7] = { false };
-	for_each(tile_group_string.begin(), tile_group_string.end(), [&字牌刻子, &字牌对子](string s) {
+	for_each(tile_group_string.begin(), tile_group_string.end(), [&字牌刻子, &字牌对子](const string& s) {
 		if (s[1] == 'z') {
 			if (s[2] == 'K') {
 				字牌刻子[s[0] - '1'] = true;
@@ -640,7 +643,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 
 	// 统计暗刻数
 	int num_暗刻 = 0;
-	for_each(tile_group_string.begin(), tile_group_string.end(), [&num_暗刻](string s) {
+	for_each(tile_group_string.begin(), tile_group_string.end(), [&num_暗刻](const string& s) {
 		if (s[2] == 'K' && s.size() == 3) {
 			num_暗刻++;
 		}
@@ -658,7 +661,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 
 	// 统计杠子数
 	int num_杠子 = 0;
-	for_each(tile_group_string.begin(), tile_group_string.end(), [&num_杠子](string s) {
+	for_each(tile_group_string.begin(), tile_group_string.end(), [&num_杠子](const string& s) {
 		if (s[2] == '|') {
 			num_杠子++;
 		}
@@ -673,7 +676,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	// 判断清老头混老头
 	bool 清老头 = true;
 	bool 混老头 = true;
-	for_each(tile_group_string.begin(), tile_group_string.end(), [&清老头, &混老头](string s) {
+	for_each(tile_group_string.begin(), tile_group_string.end(), [&清老头, &混老头](const string& s) {
 		if (s[1] == 'z') {
 			清老头 = false;
 			return;
@@ -694,7 +697,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	// 统计幺九状态
 	bool 纯全带幺九 = true;
 	bool 混全带幺九 = true;
-	for_each(tile_group_string.begin(), tile_group_string.end(), [&纯全带幺九, &混全带幺九](string s) {
+	for_each(tile_group_string.begin(), tile_group_string.end(), [&纯全带幺九, &混全带幺九](const string& s) {
 		if (s[1] == 'z') {
 			纯全带幺九 = false;
 			return;
@@ -779,15 +782,15 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	bool 平和 = true;
 
 	平和 &= 门清;
-	平和 &= none_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](string s) {
+	平和 &= none_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](const string& s) {
 		return is役牌对子(s, 自风, 场风);
 	});
-	平和 &= all_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](string s) {
+	平和 &= all_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](const string& s) {
 		if (s[2] == ':') return true;
 		if (s[2] == 'S') return true;
 		return false;
 	});
-	平和 &= all_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](string s) {
+	平和 &= all_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](const string &s) {
 		if (s.size() == 3) return true;
 		if (s[3] == '@') return false;
 		if (s[3] == '%') return false;
@@ -800,7 +803,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	if (平和) yakus.push_back(Yaku::平和);
 
 	// 判断绿一色
-	bool 绿一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	bool 绿一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		return 纯绿牌(s);
 	});
 	if (绿一色) yakus.push_back(Yaku::绿一色);
@@ -809,22 +812,16 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 
 	// 判断三色同顺
 	bool 三色同顺 = false;
-	for (int i = 1; i <= 7; ++i) {
-		vector<string> 三色同顺tiles;
-		三色同顺tiles.push_back(string() + char(i + '0') + "sS");
-		三色同顺tiles.push_back(string() + char(i + '0') + "mS");
-		三色同顺tiles.push_back(string() + char(i + '0') + "pS");
-
-		// avoid using includes: it may only apply on an ordered sequence
-		
-		//if (includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
-		//	三色同顺tiles.begin(), 三色同顺tiles.end())) {
-		//	三色同顺 = true;
-		//	break;
-		//}
-		
-		if (all_of(三色同顺tiles.begin(), 三色同顺tiles.end(),
-			[&tile_group_string_no_4](string tiles) {return is_in(tile_group_string_no_4, tiles); })) {
+	const static string 三色同顺tiles[] =
+	{
+	  "1mS","2mS","3mS","4mS","5mS","6mS","7mS",
+	  "1pS","2pS","3pS","4pS","5pS","6pS","7pS",
+	  "1sS","2sS","3sS","4sS","5sS","6sS","7sS",
+	};
+	for (int i = 0; i < 7; ++i) {
+		if (is_in(tile_group_string_no_4, 三色同顺tiles[i]) &&
+			is_in(tile_group_string_no_4, 三色同顺tiles[i + 7]) &&
+			is_in(tile_group_string_no_4, 三色同顺tiles[i + 14])) {
 			三色同顺 = true;
 			break;
 		}
@@ -836,33 +833,27 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 
 	// 判断三色同刻
 	bool 三色同刻 = false;
-	for (int i = 1; i <= 9; ++i) {
-		vector<string> 三色同刻tiles;
-		三色同刻tiles.push_back(string() + char(i + '0') + "sK");
-		三色同刻tiles.push_back(string() + char(i + '0') + "mK");
-		三色同刻tiles.push_back(string() + char(i + '0') + "pK");
-
-		// avoid using includes: it may only apply on an ordered sequence
-
-		//if (includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
-		//	三色同刻tiles.begin(), 三色同刻tiles.end())) {
-		//	三色同刻 = true;
-		//	break;
-		//}
-
-		if (all_of(三色同刻tiles.begin(), 三色同刻tiles.end(),
-			[&tile_group_string_no_4](string tiles) {return is_in(tile_group_string_no_4, tiles); })) {
+	const static string 三色同刻tiles[] =
+	{ 
+	  "1mK","2mK","3mK","4mK","5mK","6mK","7mK","8mK","9mK",
+	  "1pK","2pK","3pK","4pK","5pK","6pK","7pK","8pK","9pK",
+	  "1sK","2sK","3sK","4sK","5sK","6sK","7sK","8sK","9sK",
+	};
+	for (int i = 0; i < 9; ++i) {
+		if (is_in(tile_group_string_no_4, 三色同刻tiles[i]) &&
+			is_in(tile_group_string_no_4, 三色同刻tiles[i + 9]) &&
+			is_in(tile_group_string_no_4, 三色同刻tiles[i + 18])) {
 			三色同刻 = true;
-			break;
+			break;		
 		}
 	}
 	if (三色同刻) yakus.push_back(Yaku::三色同刻);
 
 	// 判断一气通贯	
 	bool 一气通贯 = false;
-	vector<string> 一气通贯S = { "1sS", "4sS", "7sS" };
-	vector<string> 一气通贯M = { "1mS", "4mS", "7mS" };
-	vector<string> 一气通贯P = { "1pS", "4pS", "7pS" };
+	const static string 一气通贯M[] = { "1mS", "4mS", "7mS" };
+	const static string 一气通贯P[] = { "1pS", "4pS", "7pS" };
+	const static string 一气通贯S[] = { "1sS", "4sS", "7sS" };
 	
 	// avoid using includes: it may only apply on an ordered sequence
 	//一气通贯 |= includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
@@ -872,11 +863,11 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	//一气通贯 |= includes(tile_group_string_no_4.begin(), tile_group_string_no_4.end(),
 	//	一气通贯P.begin(), 一气通贯P.end());
 
-	一气通贯 |= all_of(一气通贯S.begin(), 一气通贯S.end(),
+	一气通贯 |= all_of(begin(一气通贯M), end(一气通贯M),
 		[&tile_group_string_no_4](string tiles) {return is_in(tile_group_string_no_4, tiles); });
-	一气通贯 |= all_of(一气通贯M.begin(), 一气通贯M.end(),
+	一气通贯 |= all_of(begin(一气通贯P), end(一气通贯P),
 		[&tile_group_string_no_4](string tiles) {return is_in(tile_group_string_no_4, tiles); });
-	一气通贯 |= all_of(一气通贯P.begin(), 一气通贯P.end(),
+	一气通贯 |= all_of(begin(一气通贯S), end(一气通贯S),
 		[&tile_group_string_no_4](string tiles) {return is_in(tile_group_string_no_4, tiles); });
 
 	if (一气通贯) {
@@ -884,15 +875,15 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		else yakus.push_back(Yaku::一气通贯副露版);
 	}
 
-	vector<string> 顺子牌型 = {
+	static const string 顺子牌型[] = {
 		"1sS", "2sS" ,"3sS" ,"4sS" ,"5sS" ,"6sS" ,"7sS",
 		"1pS", "2pS" ,"3pS" ,"4pS" ,"5pS" ,"6pS" ,"7pS",
 		"1mS", "2mS" ,"3mS" ,"4mS" ,"5mS" ,"6mS" ,"7mS"	
 	};
 	// 判断二杯口 && 一杯口
 	int n杯口 = 0;
-	for (auto tiles : 顺子牌型)
-		if (count_if(tile_group_string_no_4.begin(), tile_group_string_no_4.end(), [&tiles](string s) {
+	for (const string &tiles : 顺子牌型)
+		if (count_if(tile_group_string_no_4.begin(), tile_group_string_no_4.end(), [&tiles](const string &s) {
 			return s == tiles;
 		}) >= 2) {
 			n杯口++;
@@ -905,7 +896,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 
 	// 听牌型
 	if (单骑) fu += 2;
-	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		// 坎张
 		if (s.size() == 4)
 			if (s[3] == '@' || s[3] == '%') return true;
@@ -913,7 +904,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	})) 
 		fu += 2;
 
-	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		// 边张
 		if (s.size() == 4 && s[2] == 'S') {
 			if (s[0] == '1') if (s[3] == '#' || s[3] == '^') return true;
@@ -924,7 +915,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		fu += 2;
 
 	// 和了方式
-	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		// 自摸
 		if (s.size() == 4) {
 			if (s[3] == '!' || s[3] == '@' || s[3] == '#') return true;
@@ -933,7 +924,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	}))
 		fu += 2;
 
-	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		// 荣和
 		if (s.size() == 4) {
 			if (s[3] == '$' || s[3] == '%' || s[3] == '^') return true;
@@ -943,13 +934,13 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		fu += 10;
 
 	// 雀头符
-	for_each(tile_group_string.begin(), tile_group_string.end(), [&fu, &自风, &场风](string s) {
+	for_each(tile_group_string.begin(), tile_group_string.end(), [&fu, &自风, &场风](const string &s) {
 		// 荣和
 		fu += (is役牌对子(s, 自风, 场风) * 2);
 	});
 
 	// 面子符
-	for_each(tile_group_string.begin(), tile_group_string.end(), [&fu](string s) {
+	for_each(tile_group_string.begin(), tile_group_string.end(), [&fu](const string& s) {
 		if (s.size() == 3) {
 			if (s[2] == 'K') { 
 				if (幺九刻子(s)) fu += 8; 
@@ -978,7 +969,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	});
 
 	// 副露平和型，前面应该一定是20符
-	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		// 荣和
 		if (s.size() == 4) {
 			if (s[3] == '$' || s[3] == '%' || s[3] == '^') return true;
@@ -993,7 +984,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	}
 
 	// 自摸平和 20符
-	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](string s) {
+	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		// 自摸
 		if (s.size() == 4) {
 			if (s[3] == '!' || s[3] == '@' || s[3] == '#') return true;

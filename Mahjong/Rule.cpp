@@ -3,6 +3,8 @@
 #include "Table.h"
 using namespace std;
 
+static const BaseTile shuntsu_bad_head[] = { _8m, _9m, _8p, _9p, _8s, _9s, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
+
 基本和牌型& 基本和牌型::GetInstance()
 {
 	static 基本和牌型 inst;
@@ -11,9 +13,6 @@ using namespace std;
 
 void 基本和牌型::reset()
 {
-	// m_completedTiles.head.reset();
-	/*for (auto it : m_completedTiles.body)
-		it.reset();*/
 	completed_tiles.body.clear();
 	has_head = false;
 }
@@ -84,7 +83,7 @@ vector<CompletedTiles> 基本和牌型::getAllCompletedTiles(const vector<BaseTi
 		}
 
 		// 3. Find Shuntsu
-		if (!is_in({_8m, _9m, _8p, _9p, _8s, _9s, _1z, _2z, _3z, _4z, _5z, _6z, _7z }, this_tile)			
+		if (!is_in(shuntsu_bad_head, this_tile)
 			&& is_in(curTiles, BaseTile(curTiles[index] + 1))
 			&& is_in(curTiles, BaseTile(curTiles[index] + 2)))
 		{
@@ -233,8 +232,8 @@ bool 基本和牌型::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
 			completed_tiles.body.pop_back();
 		}
 
-		// 3. Find Shuntsu
-		if (!is_in({ _8m, _9m, _8p, _9p, _8s, _9s, _1z, _2z, _3z, _4z, _5z, _6z, _7z }, this_tile)
+		// 3. Find Shuntsu		
+		if (!is_in(shuntsu_bad_head, this_tile) // see definition of 'shuntsu_bad_head' at top
 			&& is_in(curTiles, BaseTile(curTiles[index] + 1))
 			&& is_in(curTiles, BaseTile(curTiles[index] + 2)))
 
