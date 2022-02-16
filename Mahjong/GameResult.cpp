@@ -288,7 +288,8 @@ Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_pl
 		result.results.insert({ winner, yaku });
 
 		result.score[winner] += yaku.score1;
-		result.score[table->turn] -= yaku.score1;		
+		result.score[table->turn] -= yaku.score1;	
+		result.score[table->turn] -= (table->n本场 * 300);
 	}
 
 	// riichi 结算
@@ -299,6 +300,7 @@ Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_pl
 		return get_distance(loser, x1) < get_distance(loser, x2);
 	});
 	result.score[*iter] += (table->n立直棒 * 1000);
+	result.score[*iter] += (table->n本场 * 300);
 
 	if (is_in(response_player, table->庄家))
 	{
