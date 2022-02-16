@@ -6,7 +6,7 @@
 
 提供C++与Python接口，以便：	
 	实现不同种类的AI Agent
-	人类游玩（并不
+	人类游玩
 
 ## Performance
 
