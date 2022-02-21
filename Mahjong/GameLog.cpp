@@ -51,7 +51,7 @@ string BaseGameLog::to_string()
 		ss << "立直通过:" << score_to_string(score);
 		return ss.str();
 	default:
-		throw runtime_error("Invalid LogAction. Action: " + std::to_string(int(action)));
+		throw runtime_error("Invalid LogAction. BaseAction: " + std::to_string(int(action)));
 	}
 }
 
@@ -113,22 +113,22 @@ void GameLog::log手切立直(int player, Tile* tile)
 }
 
 void GameLog::log_response_鸣牌(int player_call, int player_turn,
-	Tile* tile, vector<Tile*> tiles, Action action)
+	Tile* tile, vector<Tile*> tiles, BaseAction action)
 {
 	LogAction la;
 	switch (action)
 	{
-	case Action::吃:
+	case BaseAction::吃:
 		la = LogAction::吃;
 		break;
-	case Action::碰:
+	case BaseAction::碰:
 		la = LogAction::碰;
 		break;
-	case Action::杠:
+	case BaseAction::杠:
 		la = LogAction::杠;
 		break;
 	default:
-		throw runtime_error("Invalid Action when logging. Action:" +
+		throw runtime_error("Invalid BaseAction when logging. BaseAction:" +
 			std::to_string(int(action)));
 	}
 	_log({ player_call, player_turn, la, tile, tiles });

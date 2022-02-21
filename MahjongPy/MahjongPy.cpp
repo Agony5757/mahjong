@@ -10,6 +10,7 @@
 #include "pybind11/operators.h"
 #include "Table.h"
 #include "ScoreCounter.h"
+#include "GamePlay.h"
 
 using namespace std;
 using namespace pybind11::literals;
@@ -98,22 +99,22 @@ PYBIND11_MODULE(MahjongPy, m)
 		.value("North", Wind::North)
 		;
 
-	py::enum_<Action>(m, "Action")
-		.value("Pass", Action::pass)
-		.value("Chi", Action::吃)
-		.value("Pon", Action::碰)
-		.value("Kan", Action::杠)
-		.value("Ron", Action::荣和)
+	py::enum_<BaseAction>(m, "BaseAction")
+		.value("Pass", BaseAction::pass)
+		.value("Chi", BaseAction::吃)
+		.value("Pon", BaseAction::碰)
+		.value("Kan", BaseAction::杠)
+		.value("Ron", BaseAction::荣和)
 
-		.value("ChanAnKan", Action::抢暗杠)
-		.value("ChanKan", Action::抢杠)
+		.value("ChanAnKan", BaseAction::抢暗杠)
+		.value("ChanKan", BaseAction::抢杠)
 
-		.value("Ankan", Action::暗杠)
-		.value("Kakan", Action::加杠)
-		.value("Play", Action::出牌)
-		.value("Riichi", Action::立直)
-		.value("Tsumo", Action::自摸)
-		.value("KyuShuKyuHai", Action::九种九牌)
+		.value("Ankan", BaseAction::暗杠)
+		.value("Kakan", BaseAction::加杠)
+		.value("Play", BaseAction::出牌)
+		.value("Riichi", BaseAction::立直)
+		.value("Tsumo", BaseAction::自摸)
+		.value("KyuShuKyuHai", BaseAction::九种九牌)
 		;
 
 	py::class_<SelfAction>(m, "SelfAction")
@@ -164,10 +165,10 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("get_phase", &Table::get_phase)
 		.def("make_selection", &Table::make_selection)
 		.def("get_info", &Table::get_info, py::return_value_policy::reference)
-		.def("get_selected_action", &Table::get_selected_action)
+		.def("get_selected_base_action", &Table::get_selected_base_action)
 		.def("who_make_selection", &Table::who_make_selection)
 		.def("get_selected_action_tile", &Table::get_selected_action_tile, py::return_value_policy::reference)
-		.def("get_full_selected_action", &Table::get_full_selected_action)
+		.def("get_selected_action", &Table::get_selected_action)
 		.def("get_result", &Table::get_result)
 		.def("get_self_actions", &Table::get_self_actions)
 		.def("get_response_actions", &Table::get_response_actions)
@@ -294,7 +295,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def_readonly("score2", &CounterResult::score2)
 		;
 
-	py::enum_<Table::PhaseEnum>(m, "_Phase_")
+	py::enum_<Table::PhaseEnum>(m, "PhaseEnum")
 		.value("GAME_OVER", Table::PhaseEnum::GAME_OVER)
 		.value("P1_ACTION", Table::PhaseEnum::P1_ACTION)
 		.value("P2_ACTION", Table::PhaseEnum::P2_ACTION)
@@ -318,6 +319,18 @@ PYBIND11_MODULE(MahjongPy, m)
 		;
 
 	m.def("yakus_to_string", [](std::vector<Yaku> yakus) {return py::bytes(yakus_to_string(yakus)); });
+
+	py::class_<PaiPuReplayer>(m, "PaiPuReplayer")
+		.def(py::init<>())
+		.def_readwrite("table", &PaiPuReplayer::table)
+		.def("init", &PaiPuReplayer::init)
+		.def("get_self_actions", &PaiPuReplayer::get_self_actions)
+		.def("get_response_actions", &PaiPuReplayer::get_response_actions)
+		.def("make_selection", &PaiPuReplayer::make_selection)
+		.def("get_phase", &PaiPuReplayer::get_phase)
+		.def("get_result", &PaiPuReplayer::get_result)
+		;
+
 }
 
 #ifdef __GNUC__

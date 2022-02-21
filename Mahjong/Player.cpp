@@ -95,7 +95,7 @@ vector<SelfAction> Player::get_加杠()
 			if (match_tile != hand.end()) {
 				SelfAction action;
 				action.correspond_tiles.push_back(*match_tile);
-				action.action = Action::加杠;
+				action.action = BaseAction::加杠;
 				actions.push_back(action);
 			}
 		}
@@ -111,7 +111,7 @@ vector<SelfAction> Player::get_暗杠()
 		auto duplicate = get_duplicate(hand, tile->tile, 4);
 		if (duplicate.size() == 4) {
 			SelfAction action;
-			action.action = Action::暗杠;
+			action.action = BaseAction::暗杠;
 			action.correspond_tiles.assign(duplicate.begin(), duplicate.end());
 			actions.push_back(action);
 		}
@@ -189,7 +189,7 @@ vector<SelfAction> Player::get_打牌(bool after_chipon)
 
 		// 其他所有牌均可打出
 		SelfAction action;
-		action.action = Action::出牌;
+		action.action = BaseAction::出牌;
 		action.correspond_tiles.push_back(tile);
 		actions.push_back(action);
 	}
@@ -205,7 +205,7 @@ vector<SelfAction> Player::get_自摸(Table* table)
 		auto result = yaku_counter(table, *this, nullptr, false, false, wind, table->场风);
 		if (can_agari(result.yakus)) {
 			SelfAction action;
-			action.action = Action::自摸;
+			action.action = BaseAction::自摸;
 			actions.push_back(action);
 		}
 	}
@@ -220,7 +220,7 @@ vector<SelfAction> Player::get_立直()
 	auto riichi_tiles = is_riichi_able(hand, 门清);
 	for (auto riichi_tile : riichi_tiles) {
 		SelfAction action;
-		action.action = Action::立直;
+		action.action = BaseAction::立直;
 		action.correspond_tiles.push_back(riichi_tile);
 		actions.push_back(action);
 	}
@@ -250,7 +250,7 @@ vector<SelfAction> Player::get_九种九牌()
 
 	if (九种九牌counter(hand) >= 9) {
 		SelfAction action;
-		action.action = Action::九种九牌;
+		action.action = BaseAction::九种九牌;
 		actions.push_back(action);
 	}
 	return actions;
@@ -313,7 +313,7 @@ vector<ResponseAction> Player::get_荣和(Table* table, Tile* tile)
 	if (is_in(听牌, tile->tile)) {
 		if (can_agari(yaku_counter(table, *this, tile, false, false, wind, table->场风).yakus)) {
 			ResponseAction action;
-			action.action = Action::荣和;
+			action.action = BaseAction::荣和;
 			actions.push_back(action);
 		}
 	}
@@ -369,7 +369,7 @@ vector<ResponseAction> Player::get_Chi(Tile* tile)
 		}
 		// 不属于食替特殊情况才可以吃
 		ResponseAction action;
-		action.action = Action::吃;
+		action.action = BaseAction::吃;
 		action.correspond_tiles = one_chi_tiles;
 		actions.push_back(action);
 	}
@@ -386,7 +386,7 @@ vector<ResponseAction> Player::get_Pon(Tile* tile)
 
 	for (auto one_chi_tiles : chi_tiles) {
 		ResponseAction action;
-		action.action = Action::碰;
+		action.action = BaseAction::碰;
 		action.correspond_tiles.assign(one_chi_tiles.begin(), one_chi_tiles.end());
 		actions.push_back(action);
 	}
@@ -403,7 +403,7 @@ vector<ResponseAction> Player::get_Kan(Tile* tile)
 
 	for (auto one_chi_tiles : chi_tiles) {
 		ResponseAction action;
-		action.action = Action::杠;
+		action.action = BaseAction::杠;
 		action.correspond_tiles.assign(one_chi_tiles.begin(), one_chi_tiles.end());
 		actions.push_back(action);
 	}
@@ -418,7 +418,7 @@ vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
 
 	if (is_in(听牌, tile->tile)) {
 		ResponseAction action;
-		action.action = Action::抢暗杠;
+		action.action = BaseAction::抢暗杠;
 		actions.push_back(action);
 	}
 
@@ -431,7 +431,7 @@ vector<ResponseAction> Player::get_抢杠(Tile* tile)
 
 	if (is_in(听牌, tile->tile)) {
 		ResponseAction action;
-		action.action = Action::抢杠;
+		action.action = BaseAction::抢杠;
 		actions.push_back(action);
 	}
 
@@ -462,7 +462,7 @@ vector<SelfAction> Player::riichi_get_暗杠()
 
 			if (is_same_container(final_听牌, original_听牌)) {
 				SelfAction action;
-				action.action = Action::暗杠;
+				action.action = BaseAction::暗杠;
 				action.correspond_tiles.assign(duplicate.begin(), duplicate.end());
 				actions.push_back(action);
 			}
@@ -476,7 +476,7 @@ vector<SelfAction> Player::riichi_get_打牌()
 	vector<SelfAction> actions;
 
 	SelfAction action;
-	action.action = Action::出牌;
+	action.action = BaseAction::出牌;
 	action.correspond_tiles.push_back(hand.back());
 	actions.push_back(action);
 

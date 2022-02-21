@@ -164,9 +164,9 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 
 		/* 海底的条件是1. remain_tile == 0, 2. 上一手不是杠相关 */
 		if (table->get_remain_tile() == 0 &&
-			table->last_action != Action::暗杠 &&
-			table->last_action != Action::杠 &&
-			table->last_action != Action::加杠) {
+			table->last_action != BaseAction::暗杠 &&
+			table->last_action != BaseAction::杠 &&
+			table->last_action != BaseAction::加杠) {
 
 			// 如果是tsumo
 			if (tsumo) 场役.push_back(Yaku::海底捞月);
@@ -179,9 +179,9 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 		}
 
 		/* 如果上一轮动作是杠，这一轮是tsumo，那么就是岭上 */
-		if (table->last_action == Action::暗杠 ||
-			table->last_action == Action::加杠 ||
-			table->last_action == Action::杠) {
+		if (table->last_action == BaseAction::暗杠 ||
+			table->last_action == BaseAction::加杠 ||
+			table->last_action == BaseAction::杠) {
 			if (tsumo) {
 				场役.push_back(Yaku::岭上开花);
 			}

@@ -3,7 +3,7 @@
 
 #include "Tile.h"
 
-enum class Action : uint8_t {
+enum class BaseAction : uint8_t {
 	// response begin
 	pass,
 	吃, 
@@ -26,20 +26,25 @@ enum class Action : uint8_t {
 	// self action end
 };
 
-struct SelfAction {
-	SelfAction() = default;
-	SelfAction(Action, std::vector<Tile*>);
-	Action action = Action::pass;
+struct Action
+{
+	Action() = default;
+	Action(BaseAction action, std::vector<Tile*>);
+	BaseAction action = BaseAction::pass;
 	std::vector<Tile*> correspond_tiles;
 	std::string to_string() const;
 };
 
-struct ResponseAction {
+struct SelfAction : public Action
+{
+	SelfAction() = default;
+	SelfAction(BaseAction, std::vector<Tile*>);
+};
+
+struct ResponseAction : public Action
+{
 	ResponseAction() = default;
-	ResponseAction(Action, std::vector<Tile*>);
-	Action action = Action::pass;
-	std::vector<Tile*> correspond_tiles;
-	std::string to_string() const;
+	ResponseAction(BaseAction, std::vector<Tile*>);
 };
 
 #endif

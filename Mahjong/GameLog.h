@@ -86,7 +86,7 @@ public:
 	}
 
 	void log_response_鸣牌(int player_call, int player_turn,
-		Tile*, std::vector<Tile*> tiles, Action action);
+		Tile*, std::vector<Tile*> tiles, BaseAction action);
 
 	void log加杠(int player, Tile*);
 	void log暗杠(int player, std::vector<Tile*> tiles);

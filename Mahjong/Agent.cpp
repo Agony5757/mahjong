@@ -25,16 +25,16 @@ int RealPlayer::get_response_action(Table *status, SelfAction action, Tile* tile
 	cout << "You are player " << i_player << "." << endl;
 	cout << "Player " << status->turn;
 	switch (action.action) {
-	case Action::立直:
+	case BaseAction::立直:
 		cout << " calls riichi and plays ";
 		break;
-	case Action::出牌:
+	case BaseAction::出牌:
 		cout << " plays ";
 		break;
-	case Action::暗杠:
+	case BaseAction::暗杠:
 		cout << " 暗杠 ";
 		break;
-	case Action::加杠:
+	case BaseAction::加杠:
 		cout << " 加杠 ";
 		break;
 	default:
@@ -62,13 +62,13 @@ int RandomPlayer::get_self_action(Table * status, std::vector<SelfAction> action
 	size_t dice_roll = distribution(generator);  // generates number in the range 1..6 
 
 	for (int i = 0; i < actions.size(); ++i) {
-		if (actions[i].action == Action::自摸) {
+		if (actions[i].action == BaseAction::自摸) {
 			dice_roll = i; break;
 		}
-		if (actions[i].action == Action::立直) {
+		if (actions[i].action == BaseAction::立直) {
 			dice_roll = i; break;
 		}
-		if (actions[i].action == Action::九种九牌) {
+		if (actions[i].action == BaseAction::九种九牌) {
 			dice_roll = i; break;
 		}
 	}
@@ -97,7 +97,7 @@ int RandomPlayer::get_response_action(Table * status, SelfAction action, Tile *t
 	size_t dice_roll = distribution(generator);  // generates number in the range 1..6
 
 	for (int i = 0; i < actions.size(); ++i) {
-		if (actions[i].action == Action::荣和) {
+		if (actions[i].action == BaseAction::荣和) {
 			dice_roll = i;
 			break;
 		}
@@ -108,16 +108,16 @@ int RandomPlayer::get_response_action(Table * status, SelfAction action, Tile *t
 			ss << "You are player " << i_player << "." << endl;
 			ss << "Player " << status->turn;
 			switch (action.action) {
-			case Action::立直:
+			case BaseAction::立直:
 				ss << " calls riichi and plays ";
 				break;
-			case Action::出牌:
+			case BaseAction::出牌:
 				ss << " plays ";
 				break;
-			case Action::暗杠:
+			case BaseAction::暗杠:
 				ss << " 暗杠 ";
 				break;
-			case Action::加杠:
+			case BaseAction::加杠:
 				ss << " 加杠 ";
 				break;
 			default:

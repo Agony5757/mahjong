@@ -188,13 +188,13 @@ void resume_from_seed_and_yama(long long seed, string yama) {
 			size_t dice_roll = distribution(generator);  // generates number in the range 1..6 
 
 			for (int i = 0; i < table.get_self_actions().size(); ++i) {
-				if (table.get_self_actions()[i].action == Action::自摸) {
+				if (table.get_self_actions()[i].action == BaseAction::自摸) {
 					dice_roll = i; break;
 				}
-				if (table.get_self_actions()[i].action == Action::立直) {
+				if (table.get_self_actions()[i].action == BaseAction::立直) {
 					dice_roll = i; break;
 				}
-				if (table.get_self_actions()[i].action == Action::九种九牌) {
+				if (table.get_self_actions()[i].action == BaseAction::九种九牌) {
 					dice_roll = i; break;
 				}
 			}
@@ -207,7 +207,7 @@ void resume_from_seed_and_yama(long long seed, string yama) {
 				dice_roll = distribution(generator);  // generates number in the range 1..6
 
 				for (int i = 0; i < table.get_response_actions().size(); ++i) {
-					if (table.get_response_actions()[i].action == Action::荣和) {
+					if (table.get_response_actions()[i].action == BaseAction::荣和) {
 						dice_roll = i;
 						break;
 					}
@@ -284,17 +284,17 @@ void test_passive_table() {
 			cout << endl;
 			cout << "You are player " << table.who_make_selection() << "." << endl;
 			cout << "Player " << table.turn;
-			switch (table.get_selected_action()) {
-			case Action::立直:
+			switch (table.get_selected_base_action()) {
+			case BaseAction::立直:
 				cout << " calls riichi and plays ";
 				break;
-			case Action::出牌:
+			case BaseAction::出牌:
 				cout << " plays ";
 				break;
-			case Action::暗杠:
+			case BaseAction::暗杠:
 				cout << " 暗杠 ";
 				break;
-			case Action::加杠:
+			case BaseAction::加杠:
 				cout << " 加杠 ";
 				break;
 			default:
@@ -327,7 +327,7 @@ int main() {
 	//testGameProcess3("GameLog.txt");
 	//testGamePlay1("GamePlay.txt");
 
-	size_t max_plays = 1000;
+	size_t max_plays = 10000000;
 	test_passive_table_auto(max_plays);
 
 	profiler::print_profiles();

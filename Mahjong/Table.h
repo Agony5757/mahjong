@@ -26,7 +26,7 @@ public:
 	std::vector<Tile*> 里宝牌指示牌;
 	
 	// 牌山的起始是岭上牌(0,1,2,3)
-	// 然后标记宝牌和ura的位置(4,6,8,10,12), (5,7,9,11,13)
+	// 然后标记宝牌和ura的位置(5,7,9,11,13)、(4,6,8,10,12)
 	// 初始情况dora_spec = 1，每次翻宝牌只需要dora_spec++
 	// 杠的时候所有牌在vector牌山中位置变化的
 	// 并不会影响到宝牌/ura的位置，因为它们一开始就被标记过了
@@ -35,7 +35,7 @@ public:
 	
 	std::array<Player, 4> players;
 	int turn = 0;
-	Action last_action = Action::出牌;
+	BaseAction last_action = BaseAction::出牌;
 	Wind 场风 = Wind::East;
 	int 庄家 = 0; // 庄家
 	int n本场 = 0;
@@ -62,11 +62,13 @@ public:
 	void shuffle_tiles();
 	void init_yama();
 	void import_yama(std::string yama);
+	void import_yama(std::array<int, 136> yama);
 	std::string export_yama();
 	void init_wind();
-	
 	void deal_tile(int i_player);
 	void deal_tile(int i_player, int n_tiles);
+	void deal_tile_岭上(int i_player);
+	void deal_tenhou_style();
 
 	void 发牌(int i_player);
 	void 发岭上牌(int i_player);
@@ -84,10 +86,10 @@ public:
 	};
 	std::string to_string(int option = YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE) const;
 
-	inline bool after_chipon() { return last_action == Action::吃 || last_action == Action::碰; }
-	inline bool after_daiminkan() {	return last_action == Action::杠; }
-	inline bool after_ankan() {	return last_action == Action::暗杠; }
-	inline bool after_加杠() { return last_action == Action::加杠; }
+	inline bool after_chipon() { return last_action == BaseAction::吃 || last_action == BaseAction::碰; }
+	inline bool after_daiminkan() {	return last_action == BaseAction::杠; }
+	inline bool after_ankan() {	return last_action == BaseAction::暗杠; }
+	inline bool after_加杠() { return last_action == BaseAction::加杠; }
 	inline bool after_杠() { return after_daiminkan() || after_加杠(); }
 	std::array<int, 4> get_scores();
 
@@ -133,27 +135,28 @@ public:
 		P1_抢暗杠RESPONSE, P2_抢暗杠RESPONSE, P3_抢暗杠RESPONSE, P4_抢暗杠RESPONSE,
 		GAME_OVER,
 	};
-	std::vector<SelfAction> self_action;
-	std::vector<ResponseAction> response_action;
+	std::vector<SelfAction> self_actions;
+	std::vector<ResponseAction> response_actions;
 
 	Result result;
 	PhaseEnum phase = GAME_OVER; // initialized to GAME_OVER to avoid illegal gameplay.
 	int selection = -1;	// initialized to -1 to avoid illegal gameplay.
 	SelfAction selected_action;
 	Tile* tile = nullptr;
-	std::vector<ResponseAction> actions; // player actions
+	std::vector<ResponseAction> actions; // response actions
 	bool FROM_手切摸切 = false; // global variable for river log
-	Action final_action = Action::pass;
+	BaseAction final_action = BaseAction::pass;
 	
-	void _from_beginning();
+	void from_beginning();
 
 	// Initialize the game.
 	void game_init();
+	void game_init_for_replay(std::array<int, N_TILES> yama, std::array<int, 4> init_scores, int 立直棒, int 本场, int 场风, int 亲家);
 
 	void game_init_with_metadata(std::unordered_map<std::string, std::string> metadata);
 	
 	// Get the phase of the game
-	inline int get_phase() { return (int)phase; }
+	inline int get_phase() const { return (int)phase; }
 
 	// Make a selection and game moves on.
 	void make_selection(int selection);
@@ -162,16 +165,16 @@ public:
 	inline Table* get_info() { return this; }
 
 	// When a player needs response, it can refer to the selection made by the "self-action" player
-	inline SelfAction get_full_selected_action() { return selected_action; }
-	inline Action get_selected_action() { return selected_action.action; }	
+	inline SelfAction get_selected_action() const { return selected_action; }
+	inline BaseAction get_selected_base_action() const { return selected_action.action; }
 	inline Tile* get_selected_action_tile() { return tile; };
 
 	// Tell that who has to make the selection.
-	inline int who_make_selection() { return (get_phase() - Table::P1_ACTION) % 4; }
+	inline int who_make_selection() const { return (get_phase() - Table::P1_ACTION) % 4; }
 	
-	inline Result get_result() { return result; }	
-	inline std::vector<SelfAction> get_self_actions() { return self_action; }
-	inline std::vector<ResponseAction> get_response_actions() { return response_action; }
+	inline Result get_result() const { return result; }	
+	inline std::vector<SelfAction> get_self_actions() const { return self_actions; }
+	inline std::vector<ResponseAction> get_response_actions() const { return response_actions; }
 
 };
 

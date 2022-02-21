@@ -5,7 +5,7 @@
 #include "Table.h"
 // abstract class of Agent
 
-// For Action Phase
+// For BaseAction Phase
 // Agent gets the std::vector<SelfAction> as input,
 // outputs its choice (in integer);
 

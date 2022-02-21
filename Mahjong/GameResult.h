@@ -20,6 +20,8 @@ struct Result {
 	ResultType result_type = ResultType::Error;
 	std::unordered_map<int, CounterResult> results;
 
+	std::vector<int> winner;
+	std::vector<int> loser;
 	std::array<int, 4> score;
 	int 役满倍数[4];
 	int n立直棒;
@@ -59,9 +61,6 @@ struct Result {
 		}
 		return ss.str();
 	}
-	
-	std::vector<int> winner;
-	std::vector<int> loser;
 };
 
 // Forward Decl

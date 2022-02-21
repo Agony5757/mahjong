@@ -3,18 +3,18 @@
 
 using namespace std;
 
-std::array<int, 4> 东风局(array<Agent *, 4> agents, stringstream &ss)
+array<int, 4> 东风局(array<Agent *, 4> agents, stringstream &ss)
 {
 	return FullGame(Wind::East, agents, ss);
 }
 
-std::array<int, 4> 南风局(array<Agent *, 4> agents, stringstream &ss) {
+array<int, 4> 南风局(array<Agent *, 4> agents, stringstream &ss) {
 	return FullGame(Wind::South, agents, ss);
 }
 
-std::array<int, 4> FullGame(Wind 局风, std::array<Agent*, 4> agents, std::stringstream &ss)
+array<int, 4> FullGame(Wind 局风, array<Agent*, 4> agents, stringstream &ss)
 {
-	std::array<int, 4> score = { 25000,25000,25000,25000 };
+	array<int, 4> score = { 25000,25000,25000,25000 };
 
 	Wind 场风 = Wind::East;
 	int n立直棒 = 0;
@@ -67,4 +67,73 @@ std::array<int, 4> FullGame(Wind 局风, std::array<Agent*, 4> agents, std::stri
 
 	}
 	return score;
+}
+
+void PaiPuReplayer::init(array<int, N_TILES> yama, array<int, 4> init_scores, int 立直棒, int 本场, int 场风, int 亲家)
+{
+	table.game_init_for_replay(yama, init_scores, 立直棒, 本场, 场风, 亲家);
+}
+
+vector<SelfAction> PaiPuReplayer::get_self_actions() const
+{
+	return table.get_self_actions();
+}
+
+vector<ResponseAction> PaiPuReplayer::get_response_actions() const
+{
+	return table.get_response_actions();
+}
+
+bool PaiPuReplayer::make_selection(int selection)
+{
+	// 通过make_slelection_from_action调用时永远不会出现错误
+	if (selection >= get_self_actions().size()) { return false; }
+
+	table.make_selection(selection);
+	return true;
+}
+
+bool PaiPuReplayer::make_selection_from_action(BaseAction action, vector<Tile*> correspond_tiles)
+{
+	if (get_phase() <= Table::P4_ACTION)
+	{
+		auto& actions = table.self_actions;
+		SelfAction action_obj(action, correspond_tiles);
+		auto iter = find(actions.begin(), actions.end(), action_obj);
+		if (iter == actions.end())
+		{
+			// 出错
+			return false;
+		}
+		else
+		{
+			return make_selection(iter - actions.begin());			
+		}
+	}
+	else
+	{
+		auto& actions = table.response_actions;
+		ResponseAction action_obj(action, correspond_tiles);
+
+		auto iter = find(actions.begin(), actions.end(), action_obj);
+		if (iter == actions.end())
+		{
+			// 出错
+			return false;
+		}
+		else
+		{
+			return make_selection(iter - actions.begin());
+		}
+	}
+}
+
+int PaiPuReplayer::get_phase() const
+{
+	return table.get_phase();
+}
+
+Result PaiPuReplayer::get_result() const
+{
+	return table.get_result();
 }
