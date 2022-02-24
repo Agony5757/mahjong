@@ -16,17 +16,5 @@ elseif(WIN32)
     set_target_properties(${LIB_MahjongPy} PROPERTIES SUFFIX ".pyd")
 endif(UNIX)
 
-target_link_libraries(${LIB_MahjongPy} Mahjong ${PYTHON_LIBRARIES} fmt)
+target_link_libraries(${LIB_MahjongPy} MahjongCore ${PYTHON_LIBRARIES} fmt)
 
-# set(LIB_MahjongPy_OUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../pymahjong)
-# if (UNIX)
-#     set(LIB_MahjongPy_OUT_LIB "${LIB_MahjongPy}.so")
-#     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-# elseif (WIN32)
-#     set(LIB_MahjongPy_OUT_LIB "${LIB_MahjongPy}.pyd")
-# endif(UNIX)
-
-# add_custom_command(OUTPUT ${LIB_MahjongPy_OUT_LIB}
-#    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE}/${LIB_MahjongPy_OUT_LIB} ${LIB_MahjongPy_OUT_PATH}/${LIB_MahjongPy_OUT_LIB}
-#  )
-# add_custom_target(CopyTask ALL DEPENDS ${LIB_MahjongPy_OUT_LIB} ${LIB_MahjongPy})
