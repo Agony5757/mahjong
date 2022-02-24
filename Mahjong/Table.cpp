@@ -130,6 +130,7 @@ void Table::game_init_for_replay(std::vector<int> yama, std::vector<int> init_sc
 	init_tiles();
 	init_red_dora_3();
 	import_yama(yama);
+	init_dora();
 	deal_tenhou_style();
 
 	for (int i = 0; i < 4; ++i) {
@@ -188,7 +189,6 @@ void Table::from_beginning()
 	FunctionProfiler;
 #endif
 
-	printf("Init 1.\n");
 	// 四风连打判定
 	if (players[0].river.size() == 1 &&
 		players[1].river.size() == 1 &&
@@ -206,7 +206,6 @@ void Table::from_beginning()
 		return;
 	}
 
-	printf("Init 2.\n");
 	if (players[0].riichi &&
 		players[1].riichi &&
 		players[2].riichi &&
@@ -216,7 +215,6 @@ void Table::from_beginning()
 		return;
 	}
 
-	printf("Init 3.\n");
 	// 判定四杠散了
 	if (get_remain_kan_tile() == 0) {
 		int n_杠 = 0;
@@ -239,21 +237,18 @@ void Table::from_beginning()
 		}
 	}
 
-	printf("Init 4.\n");
 	if (get_remain_tile() == 0) {
 		result = 荒牌流局结算(this);
 		phase = GAME_OVER;
 		return;
 	}
 
-	printf("Init 5.\n");
 	// 全部自动整理手牌（可能不需要）
 	for (int i = 0; i < 4; ++i) {
 		if (i != turn)
 			players[i].sort_hand();
 	}
 
-	printf("Init 6.\n");
 	// 杠后从岭上摸牌
 	if (after_daiminkan() || after_ankan() || after_加杠()) {
 		发岭上牌(turn);
@@ -263,7 +258,6 @@ void Table::from_beginning()
 		发牌(turn);
 	}
 
-	printf("Init 7.\n");
 	// 此时统计每个人的牌河振听状态
 	// turn可以解除振听，即使player[turn]确实振听了，在下一次WAITING_PHASE之前，也会追加振听效果
 	// 其他人按照规则追加振听效果

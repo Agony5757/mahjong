@@ -249,6 +249,7 @@ def paipu_replay():
         # =================== 开始解析牌谱 =======================
 
         replayer = None
+        riichi_status = False
         for child_no, child in enumerate(root):
             # Initial information, discard
             if child.tag == "SHUFFLE":
@@ -407,9 +408,9 @@ def paipu_replay():
                 discarded_tile = int(child.tag[1:])
                 print("玩家{}舍牌{}".format(player_id, discarded_tile))
                 if riichi_status:
-                    replayer.make_selection_from_action(mp.Riichi, [discarded_tile])
+                    replayer.make_selection_from_action(mp.BaseAction.Riichi, [discarded_tile])
                 else:
-                    replayer.make_selection_from_action(mp.Play, [discarded_tile])
+                    replayer.make_selection_from_action(mp.BaseAction.Play, [discarded_tile])
 
             elif child.tag == "N":  # 鸣牌 （包括暗杠）
                 naru_player_id = int(child.get("who"))
@@ -425,13 +426,13 @@ def paipu_replay():
                 print("玩家{}用手上的{}进行了一个{}，形成了{}".format(
                     naru_player_id, hand_tiles_removed_by_naru, naru_type, side_tiles_added_by_naru))
                 for i in range(4):
-                    if replayer.get_phase() > mp.P4_ACTION: #回复阶段，除该人之外
+                    if replayer.get_phase() > int(mp.PhaseEnum.P4_ACTION): #回复阶段，除该人之外
                         if i != naru_player_id:
                             replayer.make_selection(0)
                     else: #自己暗杠或者鸣牌
                         response_types = ['Chi', 'Pon', 'Min-Kan']
-                        action_types = {'Chi': mp.Chi, 'Pon': mp.Pon, 'Min-Kan': mp.Kan,
-                                        'An-Kan': mp.AnKan, 'Ka-Kan': mp.KaKan}
+                        action_types = {'Chi': mp.BaseAction.Chi, 'Pon': mp.BaseAction.Pon, 'Min-Kan': mp.BaseAction.Kan,
+                                        'An-Kan': mp.BaseAction.AnKan, 'Ka-Kan': mp.BaseAction.KaKan}
                         if naru_type in response_types:
                             side_tiles_added_by_naru.remove(hand_tiles_removed_by_naru)
                             side_tiles_added_by_naru.sort()                                                        
@@ -474,23 +475,23 @@ def paipu_replay():
                     for i in range(4):
                         phase = replayer.get_phase()
                         ret = False
-                        if phase <= mp.P4_ACTION:
-                            ret = replayer.make_selection_from_action(mp.Tsumo, [])
+                        if phase <= int(mp.PhaseEnum.P4_ACTION):
+                            ret = replayer.make_selection_from_action(mp.BaseAction.Tsumo, [])
                         else:
                             if i not in who_agari:
                                 replayer.make_selection(0)
                             else:
-                                if phase <= mp.P4_RESPONSE:
-                                    ret = replayer.make_selection_from_action(mp.Ron, [])
-                                elif phase <= mp.P4_chankan:
-                                    ret = replayer.make_selection_from_action(mp.ChanKan, [])
-                                elif phase <= mp.P4_chanankan:
-                                    ret = replayer.make_selection_from_action(mp.ChanAnKan, [])
+                                if phase <= int(mp.PhaseEnum.P4_RESPONSE):
+                                    ret = replayer.make_selection_from_action(mp.BaseAction.Ron, [])
+                                elif phase <= int(mp.PhaseEnum.P4_chankan):
+                                    ret = replayer.make_selection_from_action(mp.BaseAction.ChanKan, [])
+                                elif phase <= int(mp.PhaseEnum.P4_chanankan):
+                                    ret = replayer.make_selection_from_action(mp.BaseAction.ChanAnKan, [])
                     
                     if not ret:
                         raise RuntimeError('Replay fail.')
                     
-                    if replayer.get_phase() != mp.GAME_OVER:
+                    if replayer.get_phase() != int(mp.PhaseEnum.GAME_OVER):
                         raise RuntimeError('Replay fail.')
 
                     result = replayer.get_result()
