@@ -1107,7 +1107,7 @@ void Table::make_selection(int selection)
 		if (self_actions.size() == 0) {
 			throw runtime_error("Empty Selection Lists.");
 		}
-
+		
 		selected_action = self_actions[selection];
 		cout << "(选择" << selection <<": "<< selected_action.to_string() << ")";
 		switch (selected_action.action) {

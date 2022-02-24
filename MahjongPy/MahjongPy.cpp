@@ -79,6 +79,7 @@ PYBIND11_MODULE(MahjongPy, m)
 	py::class_<Tile>(m, "Tile")
 		.def_readonly("tile", &Tile::tile)
 		.def_readonly("red_dora", &Tile::red_dora)
+		.def_readonly("id", &Tile::id)
 		.def("to_string", &Tile::to_string)
 		;
 

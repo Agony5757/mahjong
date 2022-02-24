@@ -29,6 +29,7 @@ bool SelfAction::operator==(const SelfAction& other)
 				return false;
 			}
 		}
+		cout << "Yes!" << to_string() << other.to_string();
 		return true;
 	}
 

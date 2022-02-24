@@ -431,9 +431,20 @@ def paipu_replay():
                     sa_str += ','
                 print(sa_str)
                 if riichi_status:
-                    replayer.make_selection_from_action(mp.BaseAction.Riichi, [discarded_tile])
+                    for i, sa in enumerate(self_actions):
+                        if sa.correspond_tiles[0].id == discarded_tile:
+                            replayer.make_selection(int(i))
+
+                    # replayer.make_selection_from_action(mp.BaseAction.Riichi, [discarded_tile])
                 else:
-                    replayer.make_selection_from_action(mp.BaseAction.Play, [discarded_tile])
+                    for i, sa in enumerate(self_actions):
+                        if sa.action == mp.BaseAction.Play and \
+                           sa.correspond_tiles[0].id == discarded_tile:
+
+                            print(i, sa.to_string())
+                            replayer.make_selection(int(i))
+
+                    # replayer.make_selection_from_action(mp.BaseAction.Play, [discarded_tile])
                 print(replayer.table.get_selected_action().to_string())
             elif child.tag == "N":  # 鸣牌 （包括暗杠）
                 naru_player_id = int(child.get("who"))

@@ -84,12 +84,12 @@ vector<ResponseAction> PaipuReplayer::get_response_actions() const
 	return table.get_response_actions();
 }
 
-bool PaipuReplayer::make_selection(int selection)
+bool PaipuReplayer::make_selection(double selection)
 {
-	// 通过make_slelection_from_action调用时永远不会出现错误
+	cout << "makeselection" << int(selection);
 	if (selection >= get_self_actions().size()) { return false; }
-
-	table.make_selection(selection);
+	cout << "makeselection" << selection;
+	table.make_selection(int(selection));
 	return true;
 }
 
