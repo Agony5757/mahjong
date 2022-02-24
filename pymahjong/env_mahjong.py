@@ -416,24 +416,24 @@ class EnvMahjong(gym.Env):
 
             else:
                 for act in aval_actions:
-                    if act.action == mp.Action.Play:
+                    if act.action == mp.BaseAction.Play:
                         self.curr_valid_actions.append(int(act.correspond_tiles[0].tile))  # considered shiti
                         self.aval_action_obs[int(act.correspond_tiles[0].tile), DISCARD_ACT_IND] = 1
-                    elif act.action == mp.Action.Ankan:
+                    elif act.action == mp.BaseAction.Ankan:
                         self.curr_valid_actions.append(ANKAN)
                         self.aval_action_obs[int(act.correspond_tiles[0].tile), ANKAN_ACT_IND] = 1
-                    elif act.action == mp.Action.Kakan:
+                    elif act.action == mp.BaseAction.Kakan:
                         self.curr_valid_actions.append(KAKAN)
                         self.aval_action_obs[int(act.correspond_tiles[0].tile), KAKAN_ACT_IND] = 1
-                    elif act.action == mp.Action.Tsumo:
+                    elif act.action == mp.BaseAction.Tsumo:
                         self.curr_valid_actions.append(TSUMO)
                         self.aval_action_obs[int(self.latest_tile / 4), TSUMO_ACT_IND] = 1
-                    elif act.action == mp.Action.KyuShuKyuHai:
+                    elif act.action == mp.BaseAction.KyuShuKyuHai:
                         self.curr_valid_actions.append(PUSH)
                         for ht in self.hand_tiles[self.t.who_make_selection()]:
                             if int(ht / 4) in [0, 8, 9, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33]:
                                 self.aval_action_obs[int(ht / 4), PUSH_ACT_IND] = 1
-                    elif act.action != mp.Action.Riichi:
+                    elif act.action != mp.BaseAction.Riichi:
                         print(act.action)
                         raise ValueError
 
@@ -444,18 +444,18 @@ class EnvMahjong(gym.Env):
                 self.curr_valid_actions = [PASS_RESPONSE]
             else:
                 for act in aval_actions:
-                    if act.action == mp.Action.Pon:
+                    if act.action == mp.BaseAction.Pon:
                         self.curr_valid_actions.append(PON)
                         self.aval_action_obs[int(act.correspond_tiles[0].tile), PON_ACT_IND] = 1
-                    elif act.action == mp.Action.Kan:
+                    elif act.action == mp.BaseAction.Kan:
                         self.curr_valid_actions.append(MINKAN)
                         self.aval_action_obs[int(act.correspond_tiles[0].tile), MINKAN_ACT_IND] = 1
-                    elif act.action in [mp.Action.Ron, mp.Action.ChanKan, mp.Action.ChanAnKan]:
+                    elif act.action in [mp.BaseAction.Ron, mp.BaseAction.ChanKan, mp.BaseAction.ChanAnKan]:
                         self.curr_valid_actions.append(RON)
                         self.aval_action_obs[int(self.t.get_selected_action_tile().tile), RON_ACT_IND] = 1
-                    elif act.action == mp.Action.Pass:
+                    elif act.action == mp.BaseAction.Pass:
                         self.curr_valid_actions.append(PASS_RESPONSE)
-                    elif act.action == mp.Action.Chi:
+                    elif act.action == mp.BaseAction.Chi:
                         chi_parents_tiles = act.correspond_tiles
                         if is_consecutive(int(self.t.get_selected_action_tile().tile), int(chi_parents_tiles[0].tile),
                                           int(chi_parents_tiles[1].tile)):
@@ -643,7 +643,7 @@ class EnvMahjong(gym.Env):
         win_action_no = 0
         aval_self_actions = aval_actions
         for self_action in aval_self_actions:
-            if self_action.action == mp.Action.Tsumo:
+            if self_action.action == mp.BaseAction.Tsumo:
                 can_win = True
                 break
             win_action_no += 1
@@ -652,17 +652,17 @@ class EnvMahjong(gym.Env):
         if self.force_win and can_win:
             warnings.warn("Can win, automatically choose to win !!")
             self.t.make_selection(win_action_no)
-            desired_action_type = mp.Action.Tsumo
+            desired_action_type = mp.BaseAction.Tsumo
             self.do_not_update_hand_and_latest_tiles_this_time = False
         elif action == TSUMO:
             self.t.make_selection(win_action_no)
-            desired_action_type = mp.Action.Tsumo
+            desired_action_type = mp.BaseAction.Tsumo
             self.do_not_update_hand_and_latest_tiles_this_time = False
         else:
             self.can_riichi = False
             self.can_riichi_tiles_id = []
             for act in aval_actions:
-                if act.action == mp.Action.Riichi:
+                if act.action == mp.BaseAction.Riichi:
                     self.can_riichi = True
                     self.can_riichi_tiles_id.append(int(act.correspond_tiles[0].tile))
 
@@ -707,12 +707,12 @@ class EnvMahjong(gym.Env):
 
                 if self.force_riichi:
                     for act in aval_actions:
-                        if act.action == mp.Action.Riichi and int(act.correspond_tiles[0].tile) == self.riichi_tile_id:
+                        if act.action == mp.BaseAction.Riichi and int(act.correspond_tiles[0].tile) == self.riichi_tile_id:
                             riichi = True
                             warnings.warn("Can richii, automatically choose to riichi !!")
                             break
                 if riichi:
-                    desired_action_type = mp.Action.Riichi
+                    desired_action_type = mp.BaseAction.Riichi
                     desired_action_tile_id = self.riichi_tile_id
                     if self.riichi_tile_id == int(self.latest_tile / 4):
                         is_from_hand = 1
@@ -720,7 +720,7 @@ class EnvMahjong(gym.Env):
                         is_from_hand = 0
                 else:  # normal step
                     if action < 34:
-                        desired_action_type = mp.Action.Play
+                        desired_action_type = mp.BaseAction.Play
                         desired_action_tile_id = action
                         if action != int(self.hand_tiles[playerNo][-1] / 4):
                             is_from_hand = 1
@@ -728,18 +728,18 @@ class EnvMahjong(gym.Env):
                             is_from_hand = 0
                     elif action == ANKAN:
                         desired_action_tile_id = None  # TODO: There is some simplification
-                        desired_action_type = mp.Action.Ankan
+                        desired_action_type = mp.BaseAction.Ankan
                     elif action == KAKAN:
                         desired_action_tile_id = None  # TODO: There is some simplification
-                        desired_action_type = mp.Action.Kakan
+                        desired_action_type = mp.BaseAction.Kakan
                     elif action == TSUMO:
-                        desired_action_type = mp.Action.Tsumo
+                        desired_action_type = mp.BaseAction.Tsumo
                         desired_action_tile_id = None
                     elif action == PUSH:
-                        desired_action_type = mp.Action.KyuShuKyuHai
+                        desired_action_type = mp.BaseAction.KyuShuKyuHai
                         desired_action_tile_id = None
                     elif action == PASS_RIICHI:
-                        desired_action_type = mp.Action.Play
+                        desired_action_type = mp.BaseAction.Play
                         desired_action_tile_id = self.riichi_tile_id
                         action = self.riichi_tile_id
                         if action != int(self.hand_tiles[playerNo][-1] / 4):
@@ -757,7 +757,7 @@ class EnvMahjong(gym.Env):
                             (desired_action_tile_id is None or int(act.correspond_tiles[0].tile) == desired_action_tile_id):
                         has_valid_action = True
 
-                        if desired_action_type in [mp.Action.Ankan, mp.Action.Kakan]:
+                        if desired_action_type in [mp.BaseAction.Ankan, mp.BaseAction.Kakan]:
                             kan_tile_id = int(act.correspond_tiles[0].tile)
 
                         break
@@ -772,7 +772,7 @@ class EnvMahjong(gym.Env):
 
                 self.t.make_selection(action_no)
 
-                if self.t.get_selected_action() == mp.Action.Play or self.t.get_selected_action() == mp.Action.Riichi:
+                if self.t.get_selected_base_action() == mp.BaseAction.Play or self.t.get_selected_base_action() == mp.BaseAction.Riichi:
                     self.played_a_tile[playerNo] = True
                     assert aval_actions[action_no].correspond_tiles[0].tile == self.t.get_selected_action_tile().tile
                     if aval_actions[action_no].correspond_tiles[0].red_dora:
@@ -785,11 +785,11 @@ class EnvMahjong(gym.Env):
                 # ----------------- State update -------------------
 
                 # if is riici or discard:
-                if desired_action_type == mp.Action.Riichi or desired_action_type == mp.Action.Play:
+                if desired_action_type == mp.BaseAction.Riichi or desired_action_type == mp.BaseAction.Play:
                     discard_tile_id = int(self.t.get_selected_action_tile().tile)
                     assert desired_action_tile_id == int(self.t.get_selected_action_tile().tile)
 
-                    if desired_action_type == mp.Action.Play:
+                    if desired_action_type == mp.BaseAction.Play:
                         if not self.is_deciding_riichi:
                             correctly_discarded = False
                             for xx in range(4):
@@ -806,7 +806,7 @@ class EnvMahjong(gym.Env):
                             self.river_tiles[playerNo].append([removed_tile, is_from_hand, 0])
                             self.latest_tile = removed_tile
 
-                    if desired_action_type == mp.Action.Riichi:  # discard already done
+                    if desired_action_type == mp.BaseAction.Riichi:  # discard already done
                         self.river_tiles[playerNo][-1][-1] = 1  # make riichi obs True
 
                 elif action == TSUMO or action == PUSH:
@@ -895,7 +895,7 @@ class EnvMahjong(gym.Env):
         win_action_no = 0
         aval_response_actions = self.t.get_response_actions()
         for response_action in aval_response_actions:
-            if response_action.action in [mp.Action.Ron, mp.Action.ChanKan, mp.Action.ChanAnKan]:
+            if response_action.action in [mp.BaseAction.Ron, mp.BaseAction.ChanKan, mp.BaseAction.ChanAnKan]:
                 can_win = True
                 break
             win_action_no += 1
@@ -911,17 +911,17 @@ class EnvMahjong(gym.Env):
             self.hand_tiles[playerNo].append(self.ron_tile)
         else:
             if action == PON:
-                desired_action_type = mp.Action.Pon
+                desired_action_type = mp.BaseAction.Pon
             elif action == MINKAN:
-                desired_action_type = mp.Action.Kan
+                desired_action_type = mp.BaseAction.Kan
             elif action in [CHILEFT, CHIMIDDLE, CHIRIGHT]:
-                desired_action_type = mp.Action.Chi
+                desired_action_type = mp.BaseAction.Chi
             elif action == PASS_RESPONSE:
-                desired_action_type = mp.Action.Pass
+                desired_action_type = mp.BaseAction.Pass
                 if can_win:
                     print("见逃！！！")
             elif action == RON:
-                desired_action_type = mp.Action.Ron
+                desired_action_type = mp.BaseAction.Ron
             else:
                 raise ValueError
 
@@ -1087,5 +1087,5 @@ class EnvMahjong(gym.Env):
             return self.t.who_make_selection(), "play"
 
     def render(self, mode='human'):
-        print(self.t.get_selected_action.action)
+        print(self.t.get_selected_base_action().action)
 

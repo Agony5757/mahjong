@@ -1,6 +1,9 @@
 #ifndef SHA512_H
 #define SHA512_H
 
+#include <cstring>
+#include <cassert>
+#include <cstdint>
 /* do we have sha512 header defs */
 #ifndef SHA512_DIGEST_LENGTH
 #define SHA512_BLOCK_LENGTH		128

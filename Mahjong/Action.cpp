@@ -6,14 +6,34 @@ Action::Action(BaseAction action, vector<Tile*> tiles)
 	:action(action), correspond_tiles(tiles)
 { }
 
+bool Action::operator==(const Action& other)
+{
+	if (other.action == this->action && other.correspond_tiles == correspond_tiles)
+	    return true;
+	else return false;
+}
+
 SelfAction::SelfAction(BaseAction action, vector<Tile*> tiles)
 	: Action(action, tiles)
 { }
+
+bool SelfAction::operator==(const SelfAction& other)
+{
+	if (other.action == this->action && other.correspond_tiles == correspond_tiles)
+	    return true;
+	else return false;
+}
 
 ResponseAction::ResponseAction(BaseAction action, vector<Tile*> tiles)
 	: Action(action, tiles)
 { }
 
+bool ResponseAction::operator==(const ResponseAction& other)
+{
+	if (other.action == this->action && other.correspond_tiles == correspond_tiles)
+	    return true;
+	else return false;
+}
 
 string Action::to_string() const 
 {

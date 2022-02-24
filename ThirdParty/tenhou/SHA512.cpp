@@ -1,5 +1,3 @@
-#include <string.h>	/* memcpy()/memset() or bcopy()/bzero() */
-#include <assert.h>	/* assert() */
 #include "SHA512.h"
 
 /*** SHA-256/384/512 Machine Architecture Definitions *****************/
@@ -30,6 +28,7 @@
  * <machine/endian.h> where the appropriate definitions are actually
  * made).
  */
+#include <endian.h>
 #if !defined(BYTE_ORDER) || (BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN)
 #error Define BYTE_ORDER to be equal to either LITTLE_ENDIAN or BIG_ENDIAN
 #endif

@@ -45,5 +45,5 @@ setup(
     cmdclass=dict(build_ext=CMakeBuild),
     # package_data = {"pymahjong": ["MahjongPy.so", "MahjongPy.pyd", "MahjongPy.dylib"]},
     packages = ['pymahjong'],
-    install_requires=[]
+    install_requires=['eventlet']
 )

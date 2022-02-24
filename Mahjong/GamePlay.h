@@ -18,7 +18,7 @@ public:
 	std::vector<SelfAction> get_self_actions() const;
 	std::vector<ResponseAction> get_response_actions() const;
 	bool make_selection(int selection);
-	bool make_selection_from_action(BaseAction action, vector<Tile*> correspond_tiles);
+	bool make_selection_from_action(BaseAction action, std::vector<Tile*> correspond_tiles);
 	int get_phase() const;
 	Result get_result() const;	
 };

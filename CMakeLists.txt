@@ -4,6 +4,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Mahjong
                     ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty
                     ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/pybind11
                     ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/fmt/include
+                    ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tenhou
                     ${CMAKE_CURRENT_SOURCE_DIR}
                     )
 

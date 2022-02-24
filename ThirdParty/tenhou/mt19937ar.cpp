@@ -48,7 +48,7 @@ static unsigned long mt[N]; /* the array for the state vector  */
 static int mti = N + 1; /* mti==N+1 means mt[N] is not initialized */
 
 /* initializes mt[N] with a seed */
-void init_genrand(DWORD s)
+void init_genrand(unsigned long s)
 {
     mt[0] = s & 0xffffffffUL;
     for (mti = 1; mti < N; mti++) {
@@ -67,7 +67,7 @@ void init_genrand(DWORD s)
 /* init_key is the array for initializing keys */
 /* key_length is its length */
 /* slight change for C++, 2004/2/26 */
-void init_by_array(DWORD *init_key, int key_length)
+void init_by_array(unsigned int *init_key, int key_length)
 {
     int i, j, k;
     init_genrand(19650218UL);
@@ -93,10 +93,10 @@ void init_by_array(DWORD *init_key, int key_length)
 }
 
 /* generates a random number on [0,0xffffffff]-interval */
-unsigned long genrand_int32(void)
+unsigned int genrand_int32(void)
 {
-    unsigned long y;
-    static unsigned long mag01[2] = { 0x0UL, MATRIX_A };
+    unsigned int y;
+    static unsigned int mag01[2] = { 0x0UL, MATRIX_A };
     /* mag01[x] = x * MATRIX_A  for x=0,1 */
 
     if (mti >= N) { /* generate N words at one time */
@@ -131,9 +131,9 @@ unsigned long genrand_int32(void)
 }
 
 /* generates a random number on [0,0x7fffffff]-interval */
-long genrand_int31(void)
+int genrand_int31(void)
 {
-    return (long)(genrand_int32() >> 1);
+    return (int)(genrand_int32() >> 1);
 }
 
 /* generates a random number on [0,1]-real-interval */

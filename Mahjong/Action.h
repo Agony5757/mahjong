@@ -33,18 +33,22 @@ struct Action
 	BaseAction action = BaseAction::pass;
 	std::vector<Tile*> correspond_tiles;
 	std::string to_string() const;
+    bool operator==(const Action& other);
 };
+
 
 struct SelfAction : public Action
 {
 	SelfAction() = default;
 	SelfAction(BaseAction, std::vector<Tile*>);
+    bool operator==(const SelfAction& other);
 };
 
 struct ResponseAction : public Action
 {
 	ResponseAction() = default;
 	ResponseAction(BaseAction, std::vector<Tile*>);
+    bool operator==(const ResponseAction& other);
 };
 
 #endif

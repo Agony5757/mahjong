@@ -1,30 +1,16 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-// #include <windows.h>
-// #include <openssl/sha.h>
-#include "SHA512.h"
-#include "mt19937ar.h"
-// #include "base64.h" //http://yamatyuu.net/computer/program/vc2013/base64/index.html
-#define DWORD unsigned long
-#ifndef BYTE
-#define BYTE unsigned char
-#define
-#define MTRAND_N 624
-#define DEBUG 1
-
 // http://tenhou.net/0/?log=2014021221gm-00a9-0000-23324af3&tw=0
 // char MTseed_b64[] = "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";
-// mjlog§À”õ§µ§Ï§∆§§§Î<SHUFFLE seed="mt19937ar-sha512-n288-base64,~> 3328Œƒ◊÷
+// mjlog„Å´Ë®ò„Åï„Çå„Å¶„ÅÑ„Çã<SHUFFLE seed="mt19937ar-sha512-n288-base64,~> 3328ÊñáÂ≠ó
+#include "tenhou.h"
 
 static const char* haiDisp[34] = {
     "<1m>", "<2m>", "<3m>", "<4m>", "<5m>", "<6m>", "<7m>", "<8m>", "<9m>",
     "<1p>", "<2p>", "<3p>", "<4p>", "<5p>", "<6p>", "<7p>", "<8p>", "<9p>",
     "<1s>", "<2s>", "<3s>", "<4s>", "<5s>", "<6s>", "<7s>", "<8s>", "<9s>",
-    "<ñ|>", "<ƒœ>", "<Œ˜>", "<±±>", "<∞◊>", "<∞l>", "<÷–>"
+    "<Êù±>", "<Âçó>", "<Ë•ø>", "<Âåó>", "<ÁôΩ>", "<Áôº>", "<‰∏≠>"
 };
 
-//	base64§Œ1Œƒ◊÷§Ú6bit§ŒÇé§Àâ‰ìQ§π§Î
+//	base64„ÅÆ1ÊñáÂ≠ó„Çí6bit„ÅÆÂÄ§„Å´Â§âÊèõ„Åô„Çã
 
 inline int base64_to_6bit(int c) {
     if (c == '=')
@@ -40,11 +26,11 @@ inline int base64_to_6bit(int c) {
     return (c - 'A');
 }
 
-//	base64§ŒŒƒ◊÷¡–src§Ú•«•≥©`•…§∑§∆•–•§• •ÍÇé§Àâ‰ìQ§∑dtc§À∏Òº{
-//	len§œbase64§ŒŒƒ◊÷ ˝
-//	â‰ìQ··§Œ•–•§•» ˝§Ú∑µ§π
+//	base64„ÅÆÊñáÂ≠óÂàósrc„Çí„Éá„Ç≥„Éº„Éâ„Åó„Å¶„Éê„Ç§„Éä„É™ÂÄ§„Å´Â§âÊèõ„Åódtc„Å´Ê†ºÁ¥ç
+//	len„ÅØbase64„ÅÆÊñáÂ≠óÊï∞
+//	Â§âÊèõÂæå„ÅÆ„Éê„Ç§„ÉàÊï∞„ÇíËøî„Åô
 
-inline int base64Decode(char* src, char* dtc) {
+inline int base64Decode(const char* src, char* dtc) {
     unsigned o0, o1, o2, o3;
     char* p = dtc;
     for (int n = 0; src[n];) {
@@ -62,12 +48,12 @@ inline int base64Decode(char* src, char* dtc) {
     return int(p - dtc);
 }
 
-//	•–•§• •Í§Œ≈‰¡–src§Úbase64§«•®•Û•≥©`•…§π§Î
-//	src:•–•§• •Í≈‰¡– len:•–•§• •Í≈‰¡–ÈL§µ
-//	dtc:â‰ìQ··§ŒŒƒ◊÷¡–§Ú±£¥Ê§π§Î•¢•…•Ï•π dtc_len:â‰ìQ··§Œ•–•§•» ˝§Ú±£¥Ê§π§Î•¢•…•Ï•π
+//	„Éê„Ç§„Éä„É™„ÅÆÈÖçÂàósrc„Çíbase64„Åß„Ç®„É≥„Ç≥„Éº„Éâ„Åô„Çã
+//	src:„Éê„Ç§„Éä„É™ÈÖçÂàó len:„Éê„Ç§„Éä„É™ÈÖçÂàóÈï∑„Åï
+//	dtc:Â§âÊèõÂæå„ÅÆÊñáÂ≠óÂàó„Çí‰øùÂ≠ò„Åô„Çã„Ç¢„Éâ„É¨„Çπ dtc_len:Â§âÊèõÂæå„ÅÆ„Éê„Ç§„ÉàÊï∞„Çí‰øùÂ≠ò„Åô„Çã„Ç¢„Éâ„É¨„Çπ
 
 inline void base64Encode(char* src, char* dtc, int len, int* dtc_len) {
-    //	6bit§´§Èbase64§ŒŒƒ◊÷§ÿâ‰ìQ§π§Î•∆©`•÷•Î
+    //	6bit„Åã„Çâbase64„ÅÆÊñáÂ≠ó„Å∏Â§âÊèõ„Åô„Çã„ÉÜ„Éº„Éñ„É´
     //                              1         2         3         4         5         6
     //                    0123456789012345678901234567890123456789012345678901234567890123456789
     //                                    1               2               3
@@ -77,7 +63,7 @@ inline void base64Encode(char* src, char* dtc, int len, int* dtc_len) {
     int n;
     int mod = len % 3;
 
-    int adj_len = len - mod;	//	3§Œ±∂ ˝§À–ﬁ’˝
+    int adj_len = len - mod;	//	3„ÅÆÂÄçÊï∞„Å´‰øÆÊ≠£
     char* p = dtc;
     int o0, o1, o2, o3;
     for (n = 0; n < adj_len;) {
@@ -118,37 +104,38 @@ inline void base64Encode(char* src, char* dtc, int len, int* dtc_len) {
 }
 
 
-// •®•Û•«•£•¢•Ûâ‰ìQÈv ˝
+// „Ç®„É≥„Éá„Ç£„Ç¢„É≥Â§âÊèõÈñ¢Êï∞
 //http://torasukenote.blog120.fc2.com/page-3.html
 inline int convertEndian(void* input, size_t s) {
-    // °æ“˝ ˝°ø: void *input...•®•Û•«•£•¢•Ûâ‰ìQåùœÛ§ÿ§Œ•›•§•Û•ø
-    // °æ“˝ ˝°ø: size_t    s...â‰ìQåùœÛ§Œ•–•§•» ˝
-    int i;   // •´•¶•Û•ø
-    char* temp;   // â‰ìQïr§À”√§§§Î“ªïrµƒ≈‰¡–
+    // „ÄêÂºïÊï∞„Äë: void *input...„Ç®„É≥„Éá„Ç£„Ç¢„É≥Â§âÊèõÂØæË±°„Å∏„ÅÆ„Éù„Ç§„É≥„Çø
+    // „ÄêÂºïÊï∞„Äë: size_t    s...Â§âÊèõÂØæË±°„ÅÆ„Éê„Ç§„ÉàÊï∞
+    int i;   // „Ç´„Ç¶„É≥„Çø
+    char* temp;   // Â§âÊèõÊôÇ„Å´Áî®„ÅÑ„Çã‰∏ÄÊôÇÁöÑÈÖçÂàó
     if ((temp = (char*)calloc(s, sizeof(char))) == NULL) {
-        return 0;   // ÓI”Ú¥_±£§«§≠§∫£® ßî°£©
+        return 0;   // È†òÂüüÁ¢∫‰øù„Åß„Åç„ÅöÔºàÂ§±ÊïóÔºâ
     }
-    for (i = 0; i < s; i++) {   // input•«©`•ø§Útemp§À“ªïr±£π‹
+    for (i = 0; i < s; i++) {   // input„Éá„Éº„Çø„Çítemp„Å´‰∏ÄÊôÇ‰øùÁÆ°
         temp[i] = ((char*)input)[i];
     }
-    for (i = 1; i <= s; i++) {   // temp•«©`•ø§ÚƒÊ∑ΩœÚ§À§∑§∆input§ÿ¥˙»Î
+    for (i = 1; i <= s; i++) {   // temp„Éá„Éº„Çø„ÇíÈÄÜÊñπÂêë„Å´„Åó„Å¶input„Å∏‰ª£ÂÖ•
         ((char*)input)[i - 1] = temp[s - i];
     }
-    free(temp);   // ¥_±£§∑§øÓI”Ú§ÚΩ‚∑≈
-    return 1;   // ’˝≥£ΩK¡À
+    free(temp);   // Á¢∫‰øù„Åó„ÅüÈ†òÂüü„ÇíËß£Êîæ
+    return 1;   // Ê≠£Â∏∏ÁµÇ‰∫Ü
 }
 
-inline void yama_from_seed(char *MTseed_b64, BYTE yama[136]) {
+void TenhouShuffle::init(const char* seed)
+{
     int i;
+    MTseed_b64 = seed;
+    // unsigned char MTseed[MTRAND_N * 4 + 1];//4992+1(ÁµÇ‰∫Ü„Ç≥„Éº„ÉâËøΩÂä†Áî®„ÅÆ+1)
 
-    unsigned char MTseed[MTRAND_N * 4 + 1];//4992+1(ΩK¡À•≥©`•…◊∑º””√§Œ+1)
-
-    base64Decode(MTseed_b64, (char*)MTseed);
-
-    //MTseed§ÚDWORD[]§Àâ‰ìQ
-    DWORD RTseed[MTRAND_N];//•Î©`•»MT§Œ•∑©`•…
+    base64Decode(seed, (char*)MTseed);
+  
+    // MTseed„ÇíDWORD[]„Å´Â§âÊèõ
+    // DWORD RTseed[MTRAND_N];//„É´„Éº„ÉàMT„ÅÆ„Ç∑„Éº„Éâ
     {
-        //¥˙»Î
+        //‰ª£ÂÖ•
         for (i = 0; i < MTRAND_N; i++) {
             RTseed[i] = MTseed[4 * i] << 24 |
                 MTseed[4 * i + 1] << 16 |
@@ -156,37 +143,90 @@ inline void yama_from_seed(char *MTseed_b64, BYTE yama[136]) {
                 MTseed[4 * i + 3];
         }
 
-        //RTseed§Œ•®•Û•«•£•¢•Ûâ‰ìQ
+        //RTseed„ÅÆ„Ç®„É≥„Éá„Ç£„Ç¢„É≥Â§âÊèõ
         for (i = 0; i < sizeof(RTseed) / sizeof(*RTseed); ++i) convertEndian(&RTseed[i], sizeof(*RTseed));
     }
-    //•Î©`•»MT§Ú≥ı∆⁄ªØ
+    //„É´„Éº„ÉàMT„ÇíÂàùÊúüÂåñ
+    init_by_array(RTseed, sizeof(RTseed) / sizeof(*RTseed));
+}
+
+std::vector<int> TenhouShuffle::generate_yama()
+{
+    int i;
+    std::vector<int> yama(136, 0);
+
+    //„É≠„Éº„Ç´„É´MT„Åß‰π±Êï∞ÁîüÊàê
+    for (i = 0; i < sizeof(src) / sizeof(*src); ++i) src[i] = genrand_int32();
+
+    //„Éè„ÉÉ„Ç∑„É•Ë®àÁÆó
+    for (i = 0; i < sizeof(rnd) / SHA512_DIGEST_LENGTH/*=9 */; ++i) {
+        SHA512((BYTE*)src + i * SHA512_DIGEST_LENGTH * 2, SHA512_DIGEST_LENGTH * 2, (BYTE*)rnd + i * SHA512_DIGEST_LENGTH);
+    }
+
+    BYTE tmp_yama; // „Çµ„É≥„Éû„ÅØ108
+    int tmp_index;
+
+    for (i = 0; i < 136; ++i) yama[i] = i;
+    for (i = 0; i < 136 - 1; ++i) {
+        //swap(yama[i],yama[i + (rnd[i]%(136-i))]); // 1/2^32‰ª•‰∏ã„ÅÆË™§Â∑Æ„ÅØË®±ÂÆπ
+        tmp_index = i + (rnd[i] % (136 - i));
+        tmp_yama = yama[i];
+        yama[i] = yama[tmp_index];
+        yama[tmp_index] = tmp_yama;
+    }    
+    // int dice0 = rnd[135] % 6;
+    // int dice1 = rnd[136] % 6;
+}
+
+void tenhou_yama_from_seed(const char *MTseed_b64, unsigned int yama[136]) {
+    int i;
+
+    unsigned char MTseed[MTRAND_N * 4 + 1];//4992+1(ÁµÇ‰∫Ü„Ç≥„Éº„ÉâËøΩÂä†Áî®„ÅÆ+1)
+
+    base64Decode(MTseed_b64, (char*)MTseed);
+  
+    //MTseed„ÇíDWORD[]„Å´Â§âÊèõ
+    DWORD RTseed[MTRAND_N];//„É´„Éº„ÉàMT„ÅÆ„Ç∑„Éº„Éâ
+    {
+        //‰ª£ÂÖ•
+        for (i = 0; i < MTRAND_N; i++) {
+            RTseed[i] = MTseed[4 * i] << 24 |
+                MTseed[4 * i + 1] << 16 |
+                MTseed[4 * i + 2] << 8 |
+                MTseed[4 * i + 3];
+        }
+
+        //RTseed„ÅÆ„Ç®„É≥„Éá„Ç£„Ç¢„É≥Â§âÊèõ
+        for (i = 0; i < sizeof(RTseed) / sizeof(*RTseed); ++i) convertEndian(&RTseed[i], sizeof(*RTseed));
+    }
+    //„É´„Éº„ÉàMT„ÇíÂàùÊúüÂåñ
     init_by_array(RTseed, sizeof(RTseed) / sizeof(*RTseed));
 
     int nGame;
     for (nGame = 0; nGame < 10; nGame++) {
-        //•Ì©`•´•ÎMT§Œ¬“ ˝…˙≥…+SHA512
-        DWORD rnd[SHA512_DIGEST_LENGTH / sizeof(DWORD) * 9]; // 135+2“‘…œ§Ú¥_±£
+        //„É≠„Éº„Ç´„É´MT„ÅÆ‰π±Êï∞ÁîüÊàê+SHA512
+        DWORD rnd[SHA512_DIGEST_LENGTH / sizeof(DWORD) * 9]; // 135+2‰ª•‰∏ä„ÇíÁ¢∫‰øù
         {
-            DWORD src[sizeof(rnd) / sizeof(*rnd) * 2]; // 1024bitÖgŒª§«512bit§ÿhash
+            DWORD src[sizeof(rnd) / sizeof(*rnd) * 2]; // 1024bitÂçò‰Ωç„Åß512bit„Å∏hash
 
-            //•Ì©`•´•ÎMT§«¬“ ˝…˙≥…
+            //„É≠„Éº„Ç´„É´MT„Åß‰π±Êï∞ÁîüÊàê
             for (i = 0; i < sizeof(src) / sizeof(*src); ++i) src[i] = genrand_int32();
 
-            //•œ•√•∑•Â”ãÀ„
+            //„Éè„ÉÉ„Ç∑„É•Ë®àÁÆó
             for (i = 0; i < sizeof(rnd) / SHA512_DIGEST_LENGTH/*=9 */; ++i) {
                 SHA512((BYTE*)src + i * SHA512_DIGEST_LENGTH * 2, SHA512_DIGEST_LENGTH * 2, (BYTE*)rnd + i * SHA512_DIGEST_LENGTH);
             }
         }
 
-        //≈∆…Ω•∑•„•√•’•Î
+        //ÁâåÂ±±„Ç∑„É£„ÉÉ„Éï„É´
         // BYTE yama[136];
         {
-            BYTE tmp_yama; // •µ•Û•ﬁ§œ108
+            BYTE tmp_yama; // „Çµ„É≥„Éû„ÅØ108
             int tmp_index;
 
             for (i = 0; i < 136; ++i) yama[i] = i;
             for (i = 0; i < 136 - 1; ++i) {
-                //swap(yama[i],yama[i + (rnd[i]%(136-i))]); // 1/2^32“‘œ¬§Œ’`≤Ó§œ‘S»›
+                //swap(yama[i],yama[i + (rnd[i]%(136-i))]); // 1/2^32‰ª•‰∏ã„ÅÆË™§Â∑Æ„ÅØË®±ÂÆπ
                 tmp_index = i + (rnd[i] % (136 - i));
                 tmp_yama = yama[i];
                 yama[i] = yama[tmp_index];
@@ -194,21 +234,21 @@ inline void yama_from_seed(char *MTseed_b64, BYTE yama[136]) {
             }
         }
 
-        //≈∆…Ω±Ì æ
+        //ÁâåÂ±±Ë°®Á§∫
         printf("--------Game %d--------\r\n", nGame);
         printf("yama =\r\n");
         for (i = 0; i < 136; ++i) {
             printf("%s", haiDisp[yama[i] / 4]);
             if ((i + 1) % 17 == 0) printf("\r\n");
-            if (i == 83) printf("  ");//≈‰≈∆ΩK¡Àµÿµ„§À•π•⁄©`•π§Ú–Æ§‡
+            if (i == 83) printf("  ");//ÈÖçÁâåÁµÇ‰∫ÜÂú∞ÁÇπ„Å´„Çπ„Éö„Éº„Çπ„ÇíÊåü„ÇÄ
         }
         printf("\r\n");
 
-        //•µ•§•≥•Ì±Ì æ
+        //„Çµ„Ç§„Ç≥„É≠Ë°®Á§∫
         int dice0 = rnd[135] % 6;
         int dice1 = rnd[136] % 6;
         printf("dice0 = %d, dice1 = %d\r\n\r\n\r\n", dice0 + 1, dice1 + 1);
-        // rnd[137]°´rnd[143]§œŒ¥ π”√
+        // rnd[137]ÔΩûrnd[143]„ÅØÊú™‰ΩøÁî®
     }
     return;
 }

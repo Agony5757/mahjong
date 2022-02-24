@@ -1,6 +1,5 @@
 #ifndef MT19937AR_H
 #define MT19937AR_H
-#include <Windows.h>
 /*
    A C-program for MT19937, with initialization improved 2002/1/26.
    Coded by Takuji Nishimura and Makoto Matsumoto.
@@ -37,22 +36,20 @@
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
 */
 
-struct _MTRAND {
-
 /* initializes mt[N] with a seed */
-void init_genrand(DWORD s);
+void init_genrand(unsigned int s);
 
 /* initialize by an array with array-length */
 /* init_key is the array for initializing keys */
 /* key_length is its length */
 /* slight change for C++, 2004/2/26 */
-void init_by_array(DWORD *init_key, int key_length);
+void init_by_array(unsigned int *init_key, int key_length);
 
 /* generates a random number on [0,0xffffffff]-interval */
-DWORD genrand_int32(void);
+unsigned int genrand_int32(void);
 
 /* generates a random number on [0,0x7fffffff]-interval */
-long genrand_int31(void);
+int genrand_int31(void);
 
 /* These real versions are due to Isaku Wada, 2002/01/09 added */
 /* generates a random number on [0,1]-real-interval */
@@ -66,7 +63,5 @@ double genrand_real3(void);
 
 /* generates a random number on [0,1) with 53-bit resolution*/
 double genrand_res53(void);
-
-};
 
 #endif /* MT19937AR_H */
