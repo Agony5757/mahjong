@@ -94,8 +94,7 @@ bool PaipuReplayer::make_selection(int selection)
 }
 
 bool PaipuReplayer::make_selection_from_action(BaseAction action, vector<int> correspond_tiles)
-{
-	
+{	
 	vector<Tile*> correspond_tiles_1;
 	for (int i : correspond_tiles) {
 		correspond_tiles_1.push_back(&table.tiles[i]);
@@ -112,7 +111,8 @@ bool PaipuReplayer::make_selection_from_action(BaseAction action, vector<int> co
 		}
 		else
 		{
-			return make_selection(iter - actions.begin());			
+			int idx = iter - actions.begin();
+			return make_selection(idx);			
 		}
 	}
 	else

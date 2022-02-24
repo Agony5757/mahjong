@@ -1109,6 +1109,7 @@ void Table::make_selection(int selection)
 		}
 
 		selected_action = self_actions[selection];
+		cout << "(选择" << selection <<": "<< selected_action.to_string() << ")";
 		switch (selected_action.action) {
 		case BaseAction::九种九牌:
 			result = 九种九牌流局结算(this);

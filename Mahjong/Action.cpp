@@ -19,8 +19,19 @@ SelfAction::SelfAction(BaseAction action, vector<Tile*> tiles)
 
 bool SelfAction::operator==(const SelfAction& other)
 {
-	if (other.action == this->action && other.correspond_tiles == correspond_tiles)
-	    return true;
+	if (other.action == action && 
+	other.correspond_tiles.size() == correspond_tiles.size())
+	{
+		for (size_t i = 0; i < other.correspond_tiles.size(); ++i)
+		{
+			if (correspond_tiles[i] != other.correspond_tiles[i])
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 	else return false;
 }
 

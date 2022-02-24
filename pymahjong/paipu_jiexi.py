@@ -13,6 +13,22 @@ import MahjongPy as mp
 
 eventlet.monkey_patch()
 
+def get_tile_from_id(id):
+    color = id // 36
+    number = (id % 36) // 4 + 1
+    color_str = "mpsz"
+    return str(number) + color_str[color]
+
+def get_tiles_from_id(tiles):
+    ret = ''
+    for tile in tiles:
+        ret += get_tile_from_id(tile)
+    return ret
+
+def paipu_link(paipu):
+    paipu = paipu[:-4]
+    return r'http://tenhou.net/0/?log='+paipu
+    
 
 # 把副露的5位数解码成具体的东西
 def decodem(naru_tiles_int, naru_player_id):
@@ -370,8 +386,9 @@ def paipu_replay():
                 for pid in range(4):
                     tiles_str = child.get("hai{}".format(pid)).split(",")
                     hand_tiles_player = [int(tmp) for tmp in tiles_str]
+                    hand_tiles_player.sort()
                     hand_tiles.append(hand_tiles_player)
-                    print("玩家{}的开局手牌是{}".format(pid, hand_tiles_player))
+                    print("玩家{}的开局手牌是{}".format(pid, get_tiles_from_id(hand_tiles_player)))
 
                 game_has_init = True  # 表示这一局开始了
                 remaining_tiles = 70
@@ -396,7 +413,7 @@ def paipu_replay():
                 player_id = "TUVW".find(child.tag[0])
                 remaining_tiles -= 1
                 obtained_tile = int(child.tag[1:])
-                print("玩家{}摸牌{}".format(player_id, obtained_tile))
+                print("玩家{}摸牌{}".format(player_id, get_tile_from_id(obtained_tile)))
                 # 进行4次放弃动作
                 replayer.make_selection(0)
                 replayer.make_selection(0)
@@ -406,12 +423,18 @@ def paipu_replay():
             elif child.tag[0] in ["D", "E", "F", "G"] and child.attrib == {}:  # 打牌
                 player_id = "DEFG".find(child.tag[0])
                 discarded_tile = int(child.tag[1:])
-                print("玩家{}舍牌{}".format(player_id, discarded_tile))
+                print("玩家{}舍牌{}".format(player_id, get_tile_from_id(discarded_tile)))
+                self_actions = replayer.table.get_self_actions()
+                sa_str = ''
+                for sa in self_actions:
+                    sa_str += sa.to_string()
+                    sa_str += ','
+                print(sa_str)
                 if riichi_status:
                     replayer.make_selection_from_action(mp.BaseAction.Riichi, [discarded_tile])
                 else:
                     replayer.make_selection_from_action(mp.BaseAction.Play, [discarded_tile])
-
+                print(replayer.table.get_selected_action().to_string())
             elif child.tag == "N":  # 鸣牌 （包括暗杠）
                 naru_player_id = int(child.get("who"))
                 player_id = naru_player_id
@@ -433,22 +456,21 @@ def paipu_replay():
                         response_types = ['Chi', 'Pon', 'Min-Kan']
                         action_types = {'Chi': mp.BaseAction.Chi, 'Pon': mp.BaseAction.Pon, 'Min-Kan': mp.BaseAction.Kan,
                                         'An-Kan': mp.BaseAction.AnKan, 'Ka-Kan': mp.BaseAction.KaKan}
-                        if naru_type in response_types:
-                            side_tiles_added_by_naru.remove(hand_tiles_removed_by_naru)
-                            side_tiles_added_by_naru.sort()                                                        
-                        elif naru_type == 'An-Kan':
-                            side_tiles_added_by_naru = side_tiles_added_by_naru # 都是corres.
-                        elif naru_type == 'Ka-Kan':
-                            side_tiles_added_by_naru = [hand_tiles_removed_by_naru]
-                        else:
-                            raise RuntimeError('???')
+                        # if naru_type in response_types:
+                        #     correspond_tiles = hand_tiles_removed_by_naru                                                      
+                        # elif naru_type == 'An-Kan':
+                        #     hand_tiles_removed_by_naru # 都是corres.
+                        # elif naru_type == 'Ka-Kan':
+                        #     side_tiles_added_by_naru = [hand_tiles_removed_by_naru]
+                        # else:
+                        #     raise RuntimeError('???')
 
                         ret = replayer.make_selection_from_action(action_types[naru_type], 
-                            side_tiles_added_by_naru)
+                            hand_tiles_removed_by_naru)
                         if not ret:
-                            print(f'要{naru_type} {hand_tiles_removed_by_naru}, Fail.\n'
-                                    f'{mp.PlayerToString(replayer.table.players[naru_player_id])}')
-                            raise RuntimeError('Replay Fail.')
+                            print(f'要{naru_type} {get_tiles_from_id(hand_tiles_removed_by_naru)}, Fail.\n'
+                                    f'{replayer.table.players[naru_player_id].to_string()}')
+                            raise RuntimeError('Replay Fail.' + paipu_link(paipu))
 
             elif child.tag == "BYE":  # 掉线
                 bye_player_id = int(child.get("who"))
