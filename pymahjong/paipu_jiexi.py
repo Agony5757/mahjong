@@ -9,6 +9,8 @@ import xml.etree.ElementTree as ET
 import urllib.request
 import gzip
 
+import MahjongPy as mp
+
 eventlet.monkey_patch()
 
 
@@ -246,11 +248,19 @@ def paipu_replay():
 
         # =================== 开始解析牌谱 =======================
 
+        replayer = None
         for child_no, child in enumerate(root):
             # Initial information, discard
             if child.tag == "SHUFFLE":
                 # 牌山生成，参见 http://blog.tenhou.net/article/30503297.html
-                pass
+                seed_str = child.get("seed")
+                prefix = 'mt19937ar-sha512-n288-base64,'
+                if not seed_str.startswith(prefix):
+                    print('Bad seed string')
+                    continue
+                seed = seed_str[len(prefix):]
+                inst = mp.TenhouShuffle.instance()
+                inst.init(seed)
 
             elif child.tag == "GO":  # 牌桌规则和等级等信息.
                 #         print(child.attrib)
@@ -339,6 +349,17 @@ def paipu_replay():
                 dice_numbers = [int(child.get("seed").split(",")[3]) + 1, int(child.get("seed").split(",")[4]) + 1]
                 print("骰子的数字是", dice_numbers)
 
+                # 牌山
+                inst = mp.TenhouShuffle.instance()
+                yama = inst.generate_yama()
+                print("牌山是: ", yama)
+
+                # 利用PaiPuReplayer进行重放
+                replayer = mp.PaipuReplayer()
+                print(f'Replayer.init: {yama} {scores} {riichi_sticks} {honba} {game_order // 4} {oya_id}')
+                replayer.init(yama, scores, riichi_sticks, honba, game_order // 4, oya_id)
+                print('Init over.')
+
                 # 开局的dora
                 dora_tiles = [int(child.get("seed").split(",")[5])]
                 print("开局DORA：{}".format(dora_tiles[-1]))
@@ -363,9 +384,11 @@ def paipu_replay():
                 # 立直
                 player_id = int(child.get("who"))
                 if int(child.get("step")) == 1:
+                    riichi_status = True
                     print("玩家{}宣布立直".format(player_id))
 
                 if int(child.get("step")) == 2:
+                    riichi_status = False
                     print("玩家{}立直成功".format(player_id))
 
             elif child.tag[0] in ["T", "U", "V", "W"] and child.attrib == {}:  # 摸牌
@@ -373,11 +396,20 @@ def paipu_replay():
                 remaining_tiles -= 1
                 obtained_tile = int(child.tag[1:])
                 print("玩家{}摸牌{}".format(player_id, obtained_tile))
+                # 进行4次放弃动作
+                replayer.make_selection(0)
+                replayer.make_selection(0)
+                replayer.make_selection(0)
+                replayer.make_selection(0)
 
             elif child.tag[0] in ["D", "E", "F", "G"] and child.attrib == {}:  # 打牌
                 player_id = "DEFG".find(child.tag[0])
                 discarded_tile = int(child.tag[1:])
                 print("玩家{}舍牌{}".format(player_id, discarded_tile))
+                if riichi_status:
+                    replayer.make_selection_from_action(mp.Riichi, [discarded_tile])
+                else:
+                    replayer.make_selection_from_action(mp.Play, [discarded_tile])
 
             elif child.tag == "N":  # 鸣牌 （包括暗杠）
                 naru_player_id = int(child.get("who"))
@@ -392,26 +424,83 @@ def paipu_replay():
 
                 print("玩家{}用手上的{}进行了一个{}，形成了{}".format(
                     naru_player_id, hand_tiles_removed_by_naru, naru_type, side_tiles_added_by_naru))
+                for i in range(4):
+                    if replayer.get_phase() > mp.P4_ACTION: #回复阶段，除该人之外
+                        if i != naru_player_id:
+                            replayer.make_selection(0)
+                    else: #自己暗杠或者鸣牌
+                        response_types = ['Chi', 'Pon', 'Min-Kan']
+                        action_types = {'Chi': mp.Chi, 'Pon': mp.Pon, 'Min-Kan': mp.Kan,
+                                        'An-Kan': mp.AnKan, 'Ka-Kan': mp.KaKan}
+                        if naru_type in response_types:
+                            side_tiles_added_by_naru.remove(hand_tiles_removed_by_naru)
+                            side_tiles_added_by_naru.sort()                                                        
+                        elif naru_type == 'An-Kan':
+                            side_tiles_added_by_naru = side_tiles_added_by_naru # 都是corres.
+                        elif naru_type == 'Ka-Kan':
+                            side_tiles_added_by_naru = [hand_tiles_removed_by_naru]
+                        else:
+                            raise RuntimeError('???')
+
+                        ret = replayer.make_selection_from_action(action_types[naru_type], 
+                            side_tiles_added_by_naru)
+                        if not ret:
+                            print(f'要{naru_type} {hand_tiles_removed_by_naru}, Fail.\n'
+                                    f'{mp.PlayerToString(replayer.table.players[naru_player_id])}')
+                            raise RuntimeError('Replay Fail.')
 
             elif child.tag == "BYE":  # 掉线
                 bye_player_id = int(child.get("who"))
                 print("### 玩家{}掉线！！ ".format(bye_player_id))
 
             elif child.tag == "RYUUKYOKU" or child.tag == "AGARI":
-
+                
                 score_info_str = child.get("sc").split(",")
                 score_info = [int(tmp) for tmp in score_info_str]
                 score_changes = [score_info[1] * 100, score_info[3] * 100, score_info[5] * 100, score_info[7] * 100]
 
                 if child.tag == "RYUUKYOKU":
-                    print("本局结束: 结果是流局")
+                    print("本局结束: 结果是流局")                    
 
                 if child.tag == "AGARI":
-
+                    who_agari = []
                     if child_no + 1 < len(root) and root[child_no + 1].tag == "AGARI":
                         print("这局是Double Ron!!!!!!!!!!!!")
+                        who_agari.append(int(root[child_no + 1].get("who")))
 
-                    agari_player_id = int(child.get("who"))
+                    agari_player_id = int(child.get("who"))  
+                    who_agari.append(int(child.get("who")))
+
+                    for i in range(4):
+                        phase = replayer.get_phase()
+                        ret = False
+                        if phase <= mp.P4_ACTION:
+                            ret = replayer.make_selection_from_action(mp.Tsumo, [])
+                        else:
+                            if i not in who_agari:
+                                replayer.make_selection(0)
+                            else:
+                                if phase <= mp.P4_RESPONSE:
+                                    ret = replayer.make_selection_from_action(mp.Ron, [])
+                                elif phase <= mp.P4_chankan:
+                                    ret = replayer.make_selection_from_action(mp.ChanKan, [])
+                                elif phase <= mp.P4_chanankan:
+                                    ret = replayer.make_selection_from_action(mp.ChanAnKan, [])
+                    
+                    if not ret:
+                        raise RuntimeError('Replay fail.')
+                    
+                    if replayer.get_phase() != mp.GAME_OVER:
+                        raise RuntimeError('Replay fail.')
+
+                    result = replayer.get_result()
+                    scores = result.score
+                    for i in range(4):
+                        if score_changes[i] != scores[i]:
+                            raise RuntimeError('Replay fail.')
+                    
+                    print('OK!')
+
                     from_who = int(child.get("fromWho"))
                     agari_tile = int(child.get("machi"))
                     honba = int(child.get("ba").split(",")[0])

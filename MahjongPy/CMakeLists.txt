@@ -16,5 +16,5 @@ elseif(WIN32)
     set_target_properties(${LIB_MahjongPy} PROPERTIES SUFFIX ".pyd")
 endif(UNIX)
 
-target_link_libraries(${LIB_MahjongPy} MahjongCore ${PYTHON_LIBRARIES} fmt)
+target_link_libraries(${LIB_MahjongPy} MahjongCore ${PYTHON_LIBRARIES} fmt tenhou_shuffle)
 

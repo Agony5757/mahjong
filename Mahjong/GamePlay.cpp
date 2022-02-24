@@ -69,22 +69,22 @@ array<int, 4> FullGame(Wind 局风, array<Agent*, 4> agents, stringstream &ss)
 	return score;
 }
 
-void PaiPuReplayer::init(array<int, N_TILES> yama, array<int, 4> init_scores, int 立直棒, int 本场, int 场风, int 亲家)
+void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家)
 {
 	table.game_init_for_replay(yama, init_scores, 立直棒, 本场, 场风, 亲家);
 }
 
-vector<SelfAction> PaiPuReplayer::get_self_actions() const
+vector<SelfAction> PaipuReplayer::get_self_actions() const
 {
 	return table.get_self_actions();
 }
 
-vector<ResponseAction> PaiPuReplayer::get_response_actions() const
+vector<ResponseAction> PaipuReplayer::get_response_actions() const
 {
 	return table.get_response_actions();
 }
 
-bool PaiPuReplayer::make_selection(int selection)
+bool PaipuReplayer::make_selection(int selection)
 {
 	// 通过make_slelection_from_action调用时永远不会出现错误
 	if (selection >= get_self_actions().size()) { return false; }
@@ -93,12 +93,17 @@ bool PaiPuReplayer::make_selection(int selection)
 	return true;
 }
 
-bool PaiPuReplayer::make_selection_from_action(BaseAction action, vector<Tile*> correspond_tiles)
+bool PaipuReplayer::make_selection_from_action(BaseAction action, vector<int> correspond_tiles)
 {
+	
+	vector<Tile*> correspond_tiles_1;
+	for (int i : correspond_tiles) {
+		correspond_tiles_1.push_back(&table.tiles[i]);
+	}
 	if (get_phase() <= Table::P4_ACTION)
 	{
 		auto& actions = table.self_actions;
-		SelfAction action_obj(action, correspond_tiles);
+		SelfAction action_obj(action, correspond_tiles_1);
 		auto iter = find(actions.begin(), actions.end(), action_obj);
 		if (iter == actions.end())
 		{
@@ -113,7 +118,7 @@ bool PaiPuReplayer::make_selection_from_action(BaseAction action, vector<Tile*> 
 	else
 	{
 		auto& actions = table.response_actions;
-		ResponseAction action_obj(action, correspond_tiles);
+		ResponseAction action_obj(action, correspond_tiles_1);
 
 		auto iter = find(actions.begin(), actions.end(), action_obj);
 		if (iter == actions.end())
@@ -128,12 +133,12 @@ bool PaiPuReplayer::make_selection_from_action(BaseAction action, vector<Tile*> 
 	}
 }
 
-int PaiPuReplayer::get_phase() const
+int PaipuReplayer::get_phase() const
 {
 	return table.get_phase();
 }
 
-Result PaiPuReplayer::get_result() const
+Result PaipuReplayer::get_result() const
 {
 	return table.get_result();
 }

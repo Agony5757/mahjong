@@ -166,14 +166,15 @@ std::vector<int> TenhouShuffle::generate_yama()
     BYTE tmp_yama; // サンマは108
     int tmp_index;
 
-    for (i = 0; i < 136; ++i) yama[i] = i;
+    for (i = 0; i < 136; ++i) 
+        yama[i] = i;
+
     for (i = 0; i < 136 - 1; ++i) {
         //swap(yama[i],yama[i + (rnd[i]%(136-i))]); // 1/2^32以下の誤差は許容
         tmp_index = i + (rnd[i] % (136 - i));
-        tmp_yama = yama[i];
-        yama[i] = yama[tmp_index];
-        yama[tmp_index] = tmp_yama;
-    }    
+        std::swap(yama[i], yama[tmp_index]);
+    }
+    return yama;
     // int dice0 = rnd[135] % 6;
     // int dice1 = rnd[136] % 6;
 }

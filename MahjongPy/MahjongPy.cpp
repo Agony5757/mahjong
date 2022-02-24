@@ -11,7 +11,7 @@
 #include "Table.h"
 #include "ScoreCounter.h"
 #include "GamePlay.h"
-
+#include "tenhou.h"
 using namespace std;
 using namespace pybind11::literals;
 namespace py = pybind11;
@@ -320,17 +320,22 @@ PYBIND11_MODULE(MahjongPy, m)
 
 	m.def("yakus_to_string", [](std::vector<Yaku> yakus) {return py::bytes(yakus_to_string(yakus)); });
 
-	py::class_<PaiPuReplayer>(m, "PaiPuReplayer")
+	py::class_<PaipuReplayer>(m, "PaipuReplayer")
 		.def(py::init<>())
-		.def_readwrite("table", &PaiPuReplayer::table)
-		.def("init", &PaiPuReplayer::init)
-		.def("get_self_actions", &PaiPuReplayer::get_self_actions)
-		.def("get_response_actions", &PaiPuReplayer::get_response_actions)
-		.def("make_selection", &PaiPuReplayer::make_selection)
-		.def("get_phase", &PaiPuReplayer::get_phase)
-		.def("get_result", &PaiPuReplayer::get_result)
+		.def_readwrite("table", &PaipuReplayer::table)
+		.def("init", &PaipuReplayer::init)
+		.def("get_self_actions", &PaipuReplayer::get_self_actions)
+		.def("get_response_actions", &PaipuReplayer::get_response_actions)
+		.def("make_selection", &PaipuReplayer::make_selection)
+		.def("get_phase", &PaipuReplayer::get_phase)
+		.def("get_result", &PaipuReplayer::get_result)
 		;
 
+	py::class_<TenhouShuffle>(m, "TenhouShuffle")
+		.def_static("instance", &TenhouShuffle::instance)
+		.def("init", &TenhouShuffle::init)
+		.def("generate_yama", &TenhouShuffle::generate_yama)
+		;
 }
 
 #ifdef __GNUC__

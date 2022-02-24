@@ -46,7 +46,7 @@ void Table::init_red_dora_3()
 void Table::shuffle_tiles()
 {
 	static std::default_random_engine rd(time(nullptr));
-	std::shuffle(tiles, tiles + N_TILES, rd);
+	std::shuffle(牌山.begin(), 牌山.end(), rd);
 }
 
 void Table::init_yama()
@@ -55,11 +55,13 @@ void Table::init_yama()
 	for (int i = 0; i < N_TILES; ++i) {
 		牌山[i] = &(tiles[i]);
 	}
+}
 
+void Table::init_dora()
+{
 	dora_spec = 1;
 	宝牌指示牌 = { 牌山[5],牌山[7],牌山[9],牌山[11],牌山[13] };
 	里宝牌指示牌 = { 牌山[4],牌山[6],牌山[8],牌山[10],牌山[12] };
-
 }
 
 string Table::export_yama() {
@@ -80,13 +82,14 @@ void Table::import_yama(string yama) {
 	}
 }
 
-void Table::import_yama(std::array<int, N_TILES> yama)
+void Table::import_yama(std::vector<int> yama)
 {
-	Tile new_yama[136];
+	if (yama.size() != N_TILES)
+		throw runtime_error("Yama import fail.");
+	牌山.resize(N_TILES);
 	for (int i = 0; i < N_TILES; i++) {
-		new_yama[i] = tiles[yama[i]];
+		牌山[i] = tiles + yama[i];
 	}
-	swap(new_yama, tiles);
 }
 
 void Table::init_wind()
@@ -100,8 +103,9 @@ void Table::init_wind()
 void Table::game_init() {
 	init_tiles();
 	init_red_dora_3();
-	shuffle_tiles();
 	init_yama();
+	shuffle_tiles();
+	init_dora();
 
 	// 每人发13张牌
 	for (int i = 0; i < 4; ++i){
@@ -116,7 +120,7 @@ void Table::game_init() {
 	from_beginning();
 }
 
-void Table::game_init_for_replay(std::array<int, N_TILES> yama, std::array<int, 4> init_scores, int 立直棒_, int 本场_, int 场风_, int 亲家_)
+void Table::game_init_for_replay(std::vector<int> yama, std::vector<int> init_scores, int 立直棒_, int 本场_, int 场风_, int 亲家_)
 {
 	庄家 = 亲家_;
 	场风 = Wind(场风_);
@@ -183,6 +187,8 @@ void Table::from_beginning()
 #ifdef Profiling
 	FunctionProfiler;
 #endif
+
+	printf("Init 1.\n");
 	// 四风连打判定
 	if (players[0].river.size() == 1 &&
 		players[1].river.size() == 1 &&
@@ -200,6 +206,7 @@ void Table::from_beginning()
 		return;
 	}
 
+	printf("Init 2.\n");
 	if (players[0].riichi &&
 		players[1].riichi &&
 		players[2].riichi &&
@@ -209,6 +216,7 @@ void Table::from_beginning()
 		return;
 	}
 
+	printf("Init 3.\n");
 	// 判定四杠散了
 	if (get_remain_kan_tile() == 0) {
 		int n_杠 = 0;
@@ -231,18 +239,21 @@ void Table::from_beginning()
 		}
 	}
 
+	printf("Init 4.\n");
 	if (get_remain_tile() == 0) {
 		result = 荒牌流局结算(this);
 		phase = GAME_OVER;
 		return;
 	}
 
+	printf("Init 5.\n");
 	// 全部自动整理手牌（可能不需要）
 	for (int i = 0; i < 4; ++i) {
 		if (i != turn)
 			players[i].sort_hand();
 	}
 
+	printf("Init 6.\n");
 	// 杠后从岭上摸牌
 	if (after_daiminkan() || after_ankan() || after_加杠()) {
 		发岭上牌(turn);
@@ -252,6 +263,7 @@ void Table::from_beginning()
 		发牌(turn);
 	}
 
+	printf("Init 7.\n");
 	// 此时统计每个人的牌河振听状态
 	// turn可以解除振听，即使player[turn]确实振听了，在下一次WAITING_PHASE之前，也会追加振听效果
 	// 其他人按照规则追加振听效果
@@ -360,8 +372,9 @@ Result Table::GameProcess(bool verbose, string yama)
 	if (yama == "") {
 		init_tiles();
 		init_red_dora_3();
-		shuffle_tiles();
 		init_yama();
+		shuffle_tiles();
+		init_dora();
 
 		// 将牌山导出为字符串
 		// VERBOSE{
@@ -987,12 +1000,14 @@ void Table::game_init_with_metadata(unordered_map<string, string> metadata)
 	// yama : "1z1z1z..."
 	using namespace std;
 
+	// TODO: Fix "tiles"
 	if (metadata.find("yama") != metadata.end()) {
 		auto val = metadata["yama"];
 		if (val.size() != N_TILES * 2) throw runtime_error("Yama string incomplete.");
 		for (int i = 0; i < N_TILES * 2; i += 2) {
 			bool red_dora;
 			// 逆序插入
+
 			tiles[N_TILES - 1 - i / 2].tile = char2_to_basetile(val[i], val[i + 1], red_dora);
 			tiles[N_TILES - 1 - i / 2].red_dora = red_dora;
 		}
@@ -1000,7 +1015,9 @@ void Table::game_init_with_metadata(unordered_map<string, string> metadata)
 	else {
 		init_tiles();
 		init_red_dora_3();
+		init_yama();
 		shuffle_tiles();
+		init_dora();
 	}
 
 	if (metadata.find("oya") != metadata.end()) {

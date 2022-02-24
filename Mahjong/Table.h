@@ -61,8 +61,9 @@ public:
 	void init_red_dora_3();
 	void shuffle_tiles();
 	void init_yama();
+	void init_dora();
 	void import_yama(std::string yama);
-	void import_yama(std::array<int, 136> yama);
+	void import_yama(std::vector<int> yama);
 	std::string export_yama();
 	void init_wind();
 	void deal_tile(int i_player);
@@ -151,7 +152,7 @@ public:
 
 	// Initialize the game.
 	void game_init();
-	void game_init_for_replay(std::array<int, N_TILES> yama, std::array<int, 4> init_scores, int 立直棒, int 本场, int 场风, int 亲家);
+	void game_init_for_replay(std::vector<int> yama, std::vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家);
 
 	void game_init_with_metadata(std::unordered_map<std::string, std::string> metadata);
 	
