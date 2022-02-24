@@ -81,6 +81,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def_readonly("red_dora", &Tile::red_dora)
 		.def_readonly("id", &Tile::id)
 		.def("to_string", &Tile::to_string)
+		.def("to_simple_string", &Tile::to_simple_string)
 		;
 
 	m.def("TileToString", [](const Tile *tile) {return py::bytes(tile->to_string()); });

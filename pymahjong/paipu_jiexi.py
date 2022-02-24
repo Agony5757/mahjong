@@ -415,36 +415,56 @@ def paipu_replay():
                 obtained_tile = int(child.tag[1:])
                 print("玩家{}摸牌{}".format(player_id, get_tile_from_id(obtained_tile)))
                 # 进行4次放弃动作
-                replayer.make_selection(0)
-                replayer.make_selection(0)
-                replayer.make_selection(0)
-                replayer.make_selection(0)
+                if not (child_no - 1 >= 0 and root[child_no - 1].tag == "INIT"):
+                    replayer.make_selection(0)
+                    replayer.make_selection(0)
+                    replayer.make_selection(0)
+                    replayer.make_selection(0)
 
             elif child.tag[0] in ["D", "E", "F", "G"] and child.attrib == {}:  # 打牌
                 player_id = "DEFG".find(child.tag[0])
                 discarded_tile = int(child.tag[1:])
                 print("玩家{}舍牌{}".format(player_id, get_tile_from_id(discarded_tile)))
-                self_actions = replayer.table.get_self_actions()
-                sa_str = ''
-                for sa in self_actions:
-                    sa_str += sa.to_string()
-                    sa_str += ','
-                print(sa_str)
+                self_actions = replayer.table.get_self_actions()  
+                phase = int(replayer.table.get_phase())
                 if riichi_status:
-                    for i, sa in enumerate(self_actions):
-                        if sa.correspond_tiles[0].id == discarded_tile:
-                            replayer.make_selection(int(i))
+                    # for i, sa in enumerate(self_actions):
+                    #     if sa.action == mp.BaseAction.Riichi and \
+                    #        sa.correspond_tiles[0].id == discarded_tile:
+                    #         replayer.table.make_selection(i)
 
-                    # replayer.make_selection_from_action(mp.BaseAction.Riichi, [discarded_tile])
+                    replayer.make_selection_from_action(mp.BaseAction.Riichi, [discarded_tile])
+                    
+                    if not ret:
+                        print(f'要打 {get_tile_from_id(discarded_tile)}立直, Fail.\n'
+                                    f'{replayer.table.players[phase].to_string()}')
+                            
+                        raise RuntimeError('Replay Fail.' + paipu_link(paipu))
+                    else:
+                        hand = replayer.table.players[phase].hand
+                        s = ''
+                        for t in hand:
+                            s += t.to_simple_string()
+                        print(s)
                 else:
-                    for i, sa in enumerate(self_actions):
-                        if sa.action == mp.BaseAction.Play and \
-                           sa.correspond_tiles[0].id == discarded_tile:
+                    # for i, sa in enumerate(self_actions):
+                    #     if sa.action == mp.BaseAction.Play and \
+                    #        sa.correspond_tiles[0].id == discarded_tile:
+                    #         replayer.table.make_selection(i)
+                    
+                    ret = replayer.make_selection_from_action(mp.BaseAction.Play, [discarded_tile])
+                    if not ret:
+                        print(f'要打 {get_tile_from_id(discarded_tile)}, Fail.\n'
+                                    f'{replayer.table.players[phase].to_string()}')
+                            
+                        raise RuntimeError('Replay Fail.' + paipu_link(paipu))
+                    else:
+                        hand = replayer.table.players[phase].hand
+                        s = ''
+                        for t in hand:
+                            s += t.to_simple_string()
+                        print(s)
 
-                            print(i, sa.to_string())
-                            replayer.make_selection(int(i))
-
-                    # replayer.make_selection_from_action(mp.BaseAction.Play, [discarded_tile])
                 print(replayer.table.get_selected_action().to_string())
             elif child.tag == "N":  # 鸣牌 （包括暗杠）
                 naru_player_id = int(child.get("who"))

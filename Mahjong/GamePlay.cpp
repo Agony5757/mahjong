@@ -84,12 +84,10 @@ vector<ResponseAction> PaipuReplayer::get_response_actions() const
 	return table.get_response_actions();
 }
 
-bool PaipuReplayer::make_selection(double selection)
+bool PaipuReplayer::make_selection(int selection)
 {
-	cout << "makeselection" << int(selection);
 	if (selection >= get_self_actions().size()) { return false; }
-	cout << "makeselection" << selection;
-	table.make_selection(int(selection));
+	table.make_selection(selection);
 	return true;
 }
 
@@ -98,20 +96,27 @@ bool PaipuReplayer::make_selection_from_action(BaseAction action, vector<int> co
 	vector<Tile*> correspond_tiles_1;
 	for (int i : correspond_tiles) {
 		correspond_tiles_1.push_back(&table.tiles[i]);
+		printf("【%d %s】", i, table.tiles[i].to_simple_string().c_str());
 	}
 	if (get_phase() <= Table::P4_ACTION)
 	{
 		auto& actions = table.self_actions;
 		SelfAction action_obj(action, correspond_tiles_1);
-		auto iter = find(actions.begin(), actions.end(), action_obj);
+		auto iter = find(actions.begin(), actions.end(), action_obj);	
+
+		if (correspond_tiles[0] == 37) {
+			for (auto sa:actions){printf("%s ", sa.to_string().c_str());}
+			printf("-> %d\n", iter-actions.begin())	;	
+		}
+		
 		if (iter == actions.end())
 		{
 			// 出错
 			return false;
 		}
 		else
-		{
-			int idx = iter - actions.begin();
+		{		
+			int idx = iter - actions.begin();		
 			return make_selection(idx);			
 		}
 	}

@@ -245,8 +245,7 @@ void Table::from_beginning()
 
 	// 全部自动整理手牌（可能不需要）
 	for (int i = 0; i < 4; ++i) {
-		if (i != turn)
-			players[i].sort_hand();
+		players[i].sort_hand();
 	}
 
 	// 杠后从岭上摸牌
@@ -808,8 +807,6 @@ void Table::deal_tenhou_style()
 	for (int i = 0; i < 4; ++i) {
 		deal_tile((庄家 + i) % 4);
 	}
-	// 庄再摸一下
-	deal_tile(庄家);
 }
 
 void Table::发牌(int i_player)
@@ -1109,7 +1106,6 @@ void Table::make_selection(int selection)
 		}
 		
 		selected_action = self_actions[selection];
-		cout << "(选择" << selection <<": "<< selected_action.to_string() << ")";
 		switch (selected_action.action) {
 		case BaseAction::九种九牌:
 			result = 九种九牌流局结算(this);
