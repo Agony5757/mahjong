@@ -8,7 +8,7 @@
 #include <array>
 #include "Tile.h"
 #define Profiling
-#include "profiler.h"
+#include "Profiler.h"
 
 #define VERBOSE if (verbose)
 #define SORT(player) player.sort_hand();
