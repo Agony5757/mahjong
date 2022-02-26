@@ -92,6 +92,7 @@ public:
 	std::string hand_to_string() const;
 	std::string river_to_string() const;
 	std::string to_string() const;
+	std::string tenpai_to_string() const;
 
 	void update_听牌();
 	void update_舍牌振听();

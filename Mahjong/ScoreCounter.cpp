@@ -256,7 +256,7 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 					}
 				}
 
-				if (correspond_tile->tile == doratile) {
+				if (correspond_tile && correspond_tile->tile == doratile) {
 					Dora役.push_back(Yaku::里宝牌);
 				}
 			}
@@ -497,9 +497,15 @@ static inline bool 纯绿牌(string s) {
 }
 
 static inline bool 幺九刻子(string s) {
-	if (s[2] == 'K' || s[2] == '|') return s[0] == '1' || s[0] == '9';
-	if (s[1] == 'z') return true;
-	return false;
+	if (s[2] == 'K' || s[2] == '|') {
+		if (s[1] != 'z')
+			return s[0] == '1' || s[0] == '9';
+		else
+			return true;
+	}
+	else {
+		return false;
+	}
 }
 
 static inline int is役牌对子(string s, Wind 自风, Wind 场风) {
@@ -507,8 +513,8 @@ static inline int is役牌对子(string s, Wind 自风, Wind 场风) {
 
 	int cases = 0;
 	if (s[1] == 'z') {
-		if ((s[0] - '0') == (int)自风) cases++;
-		if ((s[0] - '0') == (int)场风) cases++;
+		if ((s[0] - '1') == (int)自风) cases++;
+		if ((s[0] - '1') == (int)场风) cases++;
 		if ((s[0] - '0') >= 5) cases++;
 	}
 	return cases;
@@ -940,6 +946,16 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	});
 
 	// 面子符
+
+	// string s;
+	// for (auto ts : tile_group_string)
+	// {
+	// 	s += ts;
+	// 	s += " ";
+	// }
+
+	// printf("%s\n", s.c_str());
+
 	for_each(tile_group_string.begin(), tile_group_string.end(), [&fu](const string& s) {
 		if (s.size() == 3) {
 			if (s[2] == 'K') { 
@@ -979,10 +995,6 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		if (fu == 20) fu = 30;
 	}
 
-	if (fu % 10 != 0) {
-		fu = (fu / 10) * 10 + 10;
-	}
-
 	// 自摸平和 20符
 	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		// 自摸
@@ -992,6 +1004,10 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		return false;
 	}) && (平和)) {
 		fu = 20;
+	}
+
+	if (fu % 10 != 0) {
+		fu = (fu / 10) * 10 + 10;
 	}
 
 	// 注意七对子统一25符，并且不跳符。

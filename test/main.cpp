@@ -48,13 +48,27 @@ void test和牌状态3() {
 }
 
 void test和牌状态4() {
-	Table t;
-	t.init_tiles();
-	t.init_yama();
-	auto &yama = t.牌山;
-	vector<BaseTile> tiles = { _1m, _1m, _1z, _2z, _3z };
+	vector<BaseTile> tiles1 = { _4m, _5m, _5m, _5m, _6m, 
+	_3s, _4s, _4s,_5s,_6s,
+	_6z,_6z,_5s,_5m
+	};
+	vector<BaseTile> tiles2 = { _4m, _5m, _5m, _5m, _6m, 
+	_3s, _4s, _4s,_5s,_6s,
+	_6z,_6z,_5s,_6z
+	};
 
-	TEST_EQ_VERBOSE(true, isCommon和牌型(tiles));
+	vector<BaseTile> tiles3 = { _4m, _5m, _5m, _5m, _6m, 
+	_3s, _4s, _4s,_5s,_6s,
+	_6z,_6z,_5s
+	};
+
+	auto ten_tiles = get听牌(tiles3);
+	for (auto ten_tile : ten_tiles){
+		printf("%s ", basetile_to_string_simple(ten_tile).c_str());
+	}
+
+	TEST_EQ_VERBOSE(true, isCommon和牌型(tiles1));
+	TEST_EQ_VERBOSE(true, isCommon和牌型(tiles2));
 }
 
 void testCompletedTiles1() {
@@ -344,12 +358,314 @@ void test_tenhou_yama() {
 	else printf("Incorrect!\n");
 }
 
+void test_tenhou_game()
+{Table table;
+table.game_init_for_replay({101,40,123,132,77,116,133,64,67,113,79,56,117,84,95,48,63,23,72,57,29,112,36,27,19,93,50,9,8,110,128,58,107,70,6,7,68,12,83,87,51,43,49,96,41,66,75,129,42,120,103,22,94,38,10,105,115,16,3,89,47,100,111,92,104,108,46,37,99,35,85,25,61,21,4,52,114,127,55,1,45,30,82,18,86,73,97,78,80,130,5,126,62,98,32,119,28,118,81,76,31,24,106,20,122,60,90,125,131,0,14,17,135,109,44,11,134,88,74,69,15,102,53,124,39,121,54,33,65,59,91,71,13,2,26,34,}, {23000,13000,29900,34100,}, 0, 1, 0, 2);
+table.make_selection(7);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(11);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(5);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(7);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(11);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(5);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(8);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(10);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(12);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(9);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(12);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(10);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(12);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(9);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(2);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(8);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(12);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(8);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(6);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(8);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(1);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(6);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(10);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(5);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(10);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(3);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(10);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(1);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(12);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(10);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(2);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(9);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(2);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(10);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(10);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(12);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(0);
+table.make_selection(13);
+table.make_selection(0);
+table.make_selection(1);
+table.make_selection(0);
+table.make_selection(0);
+
+
+
+cout << "Phase: " << table.get_phase() << endl;
+Result result = table.get_result();
+cout << "Result: " << result.to_string() << endl;
+
+}
+
 int main() {
 	
 	//test和牌状态1();
 	//test和牌状态2();
 	//test和牌状态3();
-	//test和牌状态4();
+	// test和牌状态4();
 	//testGameProcess3("GameLog.txt");
 	//testGamePlay1("GamePlay.txt");
 
@@ -357,8 +673,8 @@ int main() {
 	// test_passive_table_auto(max_plays);
 	// profiler::print_profiles();
 
-	test_tenhou_yama();
-
+	// test_tenhou_yama();
+	test_tenhou_game();
 	// resume_from_seed_and_yama();
 
 	// testCompletedTiles2();

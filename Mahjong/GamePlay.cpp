@@ -70,8 +70,22 @@ array<int, 4> FullGame(Wind 局风, array<Agent*, 4> agents, stringstream &ss)
 }
 
 void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家)
-{
+{	
 	table.game_init_for_replay(yama, init_scores, 立直棒, 本场, 场风, 亲家);
+	auto vec2str = [](vector<int> vec)
+	{
+		string str = "{";
+		for (auto t : vec){str+=to_string(t); str+= ",";}
+		str += "}";
+		return str;
+	};
+    FILE* fp = fopen("logs.txt", "w+");
+	fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
+		vec2str(yama).c_str(),
+		vec2str(init_scores).c_str(),
+		立直棒,	本场, 场风, 亲家);
+
+	fclose(fp);
 }
 
 vector<SelfAction> PaipuReplayer::get_self_actions() const
@@ -85,8 +99,21 @@ vector<ResponseAction> PaipuReplayer::get_response_actions() const
 }
 
 bool PaipuReplayer::make_selection(int selection)
-{
-	if (selection >= get_self_actions().size()) { return false; }
+{	
+	if (selection < 0)
+	    return false;
+	// if (get_phase() <= Table::PhaseEnum::P4_ACTION)
+	// 	if (selection >= get_self_actions().size())
+	// 		return false; 
+	// else 
+	//     if (selection >= get_response_actions().size())
+	// 		return false; 		
+#define LOG
+#ifdef LOG
+	FILE* fp = fopen("logs.txt", "a+");
+    fprintf(fp, "table.make_selection(%d);\n", selection);
+	fclose(fp);
+#endif
 	table.make_selection(selection);
 	return true;
 }
@@ -96,7 +123,6 @@ bool PaipuReplayer::make_selection_from_action(BaseAction action, vector<int> co
 	vector<Tile*> correspond_tiles_1;
 	for (int i : correspond_tiles) {
 		correspond_tiles_1.push_back(&table.tiles[i]);
-		printf("【%d %s】", i, table.tiles[i].to_simple_string().c_str());
 	}
 	if (get_phase() <= Table::P4_ACTION)
 	{
@@ -104,11 +130,6 @@ bool PaipuReplayer::make_selection_from_action(BaseAction action, vector<int> co
 		SelfAction action_obj(action, correspond_tiles_1);
 		auto iter = find(actions.begin(), actions.end(), action_obj);	
 
-		if (correspond_tiles[0] == 37) {
-			for (auto sa:actions){printf("%s ", sa.to_string().c_str());}
-			printf("-> %d\n", iter-actions.begin())	;	
-		}
-		
 		if (iter == actions.end())
 		{
 			// 出错
@@ -134,6 +155,46 @@ bool PaipuReplayer::make_selection_from_action(BaseAction action, vector<int> co
 		else
 		{
 			return make_selection(iter - actions.begin());
+		}
+	}
+}
+
+int PaipuReplayer::get_selection_from_action(BaseAction action, vector<int> correspond_tiles)
+{	
+	vector<Tile*> correspond_tiles_1;
+	for (int i : correspond_tiles) {
+		correspond_tiles_1.push_back(&table.tiles[i]);
+	}
+	if (get_phase() <= Table::P4_ACTION)
+	{
+		auto& actions = table.self_actions;
+		SelfAction action_obj(action, correspond_tiles_1);
+		auto iter = find(actions.begin(), actions.end(), action_obj);	
+	
+		if (iter == actions.end())
+		{
+			// 出错
+			return -1;
+		}
+		else
+		{		
+			return iter - actions.begin();				
+		}
+	}
+	else
+	{
+		auto& actions = table.response_actions;
+		ResponseAction action_obj(action, correspond_tiles_1);
+
+		auto iter = find(actions.begin(), actions.end(), action_obj);
+		if (iter == actions.end())
+		{
+			// 出错
+			return -1;
+		}
+		else
+		{		
+			return iter - actions.begin();				
 		}
 	}
 }

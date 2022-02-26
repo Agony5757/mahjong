@@ -288,7 +288,9 @@ Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_pl
 		result.results.insert({ winner, yaku });
 
 		result.score[winner] += yaku.score1;
-		result.score[table->turn] -= yaku.score1;		
+		result.score[winner] += table->n本场 * 300;
+		result.score[table->turn] -= yaku.score1;	
+		result.score[table->turn] -= table->n本场 * 300;			
 	}
 
 	// riichi 结算

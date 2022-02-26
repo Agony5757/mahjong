@@ -342,6 +342,7 @@ def paipu_replay():
             elif child.tag == "INIT":
                 print("-----   此局开始  -------")
 
+                riichi_status = False
                 # 开局时候的各家分数
                 scores_str = child.get("ten").split(',')
                 scores = [int(tmp) * 100 for tmp in scores_str]
@@ -408,6 +409,7 @@ def paipu_replay():
                 if int(child.get("step")) == 2:
                     riichi_status = False
                     print("玩家{}立直成功".format(player_id))
+                    scores[player_id] -= 1000
 
             elif child.tag[0] in ["T", "U", "V", "W"] and child.attrib == {}:  # 摸牌
                 player_id = "TUVW".find(child.tag[0])
@@ -415,6 +417,7 @@ def paipu_replay():
                 obtained_tile = int(child.tag[1:])
                 print("玩家{}摸牌{}".format(player_id, get_tile_from_id(obtained_tile)))
                 # 进行4次放弃动作
+
                 if not (child_no - 1 >= 0 and root[child_no - 1].tag == "INIT"):
                     replayer.make_selection(0)
                     replayer.make_selection(0)
@@ -425,47 +428,42 @@ def paipu_replay():
                 player_id = "DEFG".find(child.tag[0])
                 discarded_tile = int(child.tag[1:])
                 print("玩家{}舍牌{}".format(player_id, get_tile_from_id(discarded_tile)))
-                self_actions = replayer.table.get_self_actions()  
                 phase = int(replayer.table.get_phase())
-                if riichi_status:
-                    # for i, sa in enumerate(self_actions):
-                    #     if sa.action == mp.BaseAction.Riichi and \
-                    #        sa.correspond_tiles[0].id == discarded_tile:
-                    #         replayer.table.make_selection(i)
+                print(f'phase {phase}')                
 
-                    replayer.make_selection_from_action(mp.BaseAction.Riichi, [discarded_tile])
-                    
-                    if not ret:
-                        print(f'要打 {get_tile_from_id(discarded_tile)}立直, Fail.\n'
-                                    f'{replayer.table.players[phase].to_string()}')
-                            
-                        raise RuntimeError('Replay Fail.' + paipu_link(paipu))
-                    else:
-                        hand = replayer.table.players[phase].hand
-                        s = ''
-                        for t in hand:
-                            s += t.to_simple_string()
-                        print(s)
-                else:
-                    # for i, sa in enumerate(self_actions):
-                    #     if sa.action == mp.BaseAction.Play and \
-                    #        sa.correspond_tiles[0].id == discarded_tile:
-                    #         replayer.table.make_selection(i)
-                    
-                    ret = replayer.make_selection_from_action(mp.BaseAction.Play, [discarded_tile])
+                print('SelfAction Options')
+                self_actions = replayer.get_self_actions()
+                for sa in self_actions:
+                    print(sa.to_string(), end="|")
+                print('\nSelfAction Options End')
+                if riichi_status:
+                    selection = replayer.get_selection_from_action(mp.BaseAction.Riichi, [discarded_tile])
+                    print(f'Select: {selection}')
+                    ret = replayer.make_selection(selection)
+
                     if not ret:
                         print(f'要打 {get_tile_from_id(discarded_tile)}, Fail.\n'
                                     f'{replayer.table.players[phase].to_string()}')
                             
-                        raise RuntimeError('Replay Fail.' + paipu_link(paipu))
-                    else:
-                        hand = replayer.table.players[phase].hand
-                        s = ''
-                        for t in hand:
-                            s += t.to_simple_string()
-                        print(s)
+                        raise RuntimeError('Replay fail.' + \
+                            paipu_link(paipu) + \
+                            "此局是{}{}局{}本场".format(winds[game_order // 4], chinese_numbers[game_order % 4], honba)
+                            ) 
+                else:
+                    
+                    selection = replayer.get_selection_from_action(mp.BaseAction.Play, [discarded_tile])
+                    print(f'Select: {selection}')
+                    ret = replayer.make_selection(selection)
 
-                print(replayer.table.get_selected_action().to_string())
+                    if not ret:
+                        print(f'要打 {get_tile_from_id(discarded_tile)}, Fail.\n'
+                                    f'{replayer.table.players[phase].to_string()}')
+                            
+                        raise RuntimeError('Replay fail.' + \
+                            paipu_link(paipu) + \
+                            "此局是{}{}局{}本场".format(winds[game_order // 4], chinese_numbers[game_order % 4], honba)
+                            ) 
+
             elif child.tag == "N":  # 鸣牌 （包括暗杠）
                 naru_player_id = int(child.get("who"))
                 player_id = naru_player_id
@@ -482,8 +480,10 @@ def paipu_replay():
                 for i in range(4):
                     if replayer.get_phase() > int(mp.PhaseEnum.P4_ACTION): #回复阶段，除该人之外
                         if i != naru_player_id:
+                            print(f'Select: {0}')
                             replayer.make_selection(0)
-                    else: #自己暗杠或者鸣牌
+                       # else: #自己暗杠或者鸣牌
+                    if i == naru_player_id:
                         response_types = ['Chi', 'Pon', 'Min-Kan']
                         action_types = {'Chi': mp.BaseAction.Chi, 'Pon': mp.BaseAction.Pon, 'Min-Kan': mp.BaseAction.Kan,
                                         'An-Kan': mp.BaseAction.AnKan, 'Ka-Kan': mp.BaseAction.KaKan}
@@ -496,9 +496,18 @@ def paipu_replay():
                         # else:
                         #     raise RuntimeError('???')
 
-                        ret = replayer.make_selection_from_action(action_types[naru_type], 
+
+                        print('Response Options')
+                        response_actions = replayer.get_response_actions()
+                        for ra in response_actions:
+                            print(ra.to_string(), end="|")
+                        print('\nResponse Options End')
+
+                        selection = replayer.get_selection_from_action(action_types[naru_type], 
                             hand_tiles_removed_by_naru)
-                        if not ret:
+                        print(f'Select: {selection}')
+                        ret = replayer.make_selection(selection)
+                        if not ret:                            
                             print(f'要{naru_type} {get_tiles_from_id(hand_tiles_removed_by_naru)}, Fail.\n'
                                     f'{replayer.table.players[naru_player_id].to_string()}')
                             raise RuntimeError('Replay Fail.' + paipu_link(paipu))
@@ -508,7 +517,7 @@ def paipu_replay():
                 print("### 玩家{}掉线！！ ".format(bye_player_id))
 
             elif child.tag == "RYUUKYOKU" or child.tag == "AGARI":
-                
+                print('~Game Over~')
                 score_info_str = child.get("sc").split(",")
                 score_info = [int(tmp) for tmp in score_info_str]
                 score_changes = [score_info[1] * 100, score_info[3] * 100, score_info[5] * 100, score_info[7] * 100]
@@ -527,31 +536,59 @@ def paipu_replay():
 
                     for i in range(4):
                         phase = replayer.get_phase()
-                        ret = False
+                        print(f'phase {phase}')
+                        ret = True
                         if phase <= int(mp.PhaseEnum.P4_ACTION):
-                            ret = replayer.make_selection_from_action(mp.BaseAction.Tsumo, [])
+                            print('SelfAction Options')
+                            self_actions = replayer.get_self_actions()
+                            for sa in self_actions:
+                                print(sa.to_string(), end="|")
+                            print('\nSelfAction Options End')
+                            selection = replayer.get_selection_from_action(mp.BaseAction.Tsumo, [])
+                            print(f'Select: {selection}')
+                            ret = replayer.make_selection(selection)
+                            
+                            if not ret:
+                                print(replayer.table.players[int(phase)].to_string(),
+                                    '听牌:' + replayer.table.players[int(phase)].tenpai_to_string()
+                                )
+                                raise RuntimeError('Replay fail. ' + paipu_link(paipu))
+                           
+                            break
+
                         else:
                             if i not in who_agari:
+                                print('Select: 0')
                                 replayer.make_selection(0)
                             else:
                                 if phase <= int(mp.PhaseEnum.P4_RESPONSE):
-                                    ret = replayer.make_selection_from_action(mp.BaseAction.Ron, [])
+                                    selection = replayer.get_selection_from_action(mp.BaseAction.Ron, [])
+                                    print(f'Select: {selection}')
+                                    ret = replayer.make_selection(selection)  
                                 elif phase <= int(mp.PhaseEnum.P4_chankan):
-                                    ret = replayer.make_selection_from_action(mp.BaseAction.ChanKan, [])
+                                    selection = replayer.get_selection_from_action(mp.BaseAction.ChanKan, [])
+                                    print(f'Select: {selection}')
+                                    ret = replayer.make_selection(selection)
                                 elif phase <= int(mp.PhaseEnum.P4_chanankan):
-                                    ret = replayer.make_selection_from_action(mp.BaseAction.ChanAnKan, [])
-                    
-                    if not ret:
-                        raise RuntimeError('Replay fail.')
+                                    selection = replayer.get_selection_from_action(mp.BaseAction.ChanAnKan, [])
+                                    print(f'Select: {selection}')
+                                    ret = replayer.make_selection(selection)
+                                if not ret:
+                                    raise RuntimeError('Replay fail.' + paipu_link(paipu))  
                     
                     if replayer.get_phase() != int(mp.PhaseEnum.GAME_OVER):
-                        raise RuntimeError('Replay fail.')
+                        raise RuntimeError('Replay fail.' + paipu_link(paipu))
 
                     result = replayer.get_result()
-                    scores = result.score
+                    result_score = result.score
+                    print(score_changes, scores, result_score)
+                    print(result.to_string())
                     for i in range(4):
-                        if score_changes[i] != scores[i]:
-                            raise RuntimeError('Replay fail.')
+                        if score_changes[i] + scores[i] != result_score[i] :
+                            raise RuntimeError('Replay fail.' + \
+                            paipu_link(paipu) + \
+                            "此局是{}{}局{}本场".format(winds[game_order // 4], chinese_numbers[game_order % 4], honba)
+                            )
                     
                     print('OK!')
 

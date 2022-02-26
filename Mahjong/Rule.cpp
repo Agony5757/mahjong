@@ -70,7 +70,7 @@ vector<CompletedTiles> 基本和牌型::getAllCompletedTiles(const vector<BaseTi
 			TileGroup tmp_group;
 
 			// 设置全局状态的head已经并移除刻子
-			tmp_group.type = TileGroup::Type::Toitsu;
+			tmp_group.type = TileGroup::Type::Koutsu;
 			tmp_group.set_tiles({ this_tile , this_tile , this_tile });
 			erase_n(tmpTiles, this_tile, 3);
 			// 设置临时状态
@@ -454,15 +454,12 @@ vector<BaseTile> get听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles
 		tiles.push_back(static_cast<BaseTile>(i));
 		if (is_幺九牌(static_cast<BaseTile>(i)) && is国士无双和牌型(tiles)) {
 			听牌.push_back(static_cast<BaseTile>(i));
-			continue;
 		}
-		if (is七对和牌型(tiles)) {
+		else if (is七对和牌型(tiles)) {
 			听牌.push_back(static_cast<BaseTile>(i));
-			continue;
 		}
-		if (isCommon和牌型(tiles)) {
+		else if (isCommon和牌型(tiles)) {
 			听牌.push_back(static_cast<BaseTile>(i));
-			continue;
 		}
 		tiles.pop_back();
 	}

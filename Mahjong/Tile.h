@@ -15,7 +15,7 @@
 // #define MAJ_DEBUG
 
 enum Wind {
-	East = 1, South, West, North
+	East, South, West, North
 };
 
 enum BaseTile : unsigned char {

@@ -168,6 +168,9 @@ void Table::next_turn(int nextturn)
 		if (player.river.river.back().fromhand) {
 			// 手切立直需要更新听牌列表
 			player.update_听牌();
+			printf("- turn: %d %s, tenpai: %s\n", turn, 
+				last_action == BaseAction::立直? "立":"出",
+			    player.tenpai_to_string().c_str());
 		}
 		player.update_舍牌振听();
 	}
@@ -613,6 +616,10 @@ Result Table::GameProcess(bool verbose, string yama)
 					n立直棒++;
 					players[turn].score -= 1000;
 					players[turn].一发 = true;
+					last_action = BaseAction::立直;
+				}
+				else {					
+					last_action = BaseAction::出牌;
 				}
 
 				// 杠，打出牌之后且其他人pass
@@ -622,11 +629,9 @@ Result Table::GameProcess(bool verbose, string yama)
 
 				players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
 
-
 				// 消除第一巡
 				players[turn].first_round = false;
 
-				last_action = BaseAction::出牌;
 				next_turn((turn + 1) % 4);
 				continue;
 			case BaseAction::吃:
@@ -650,7 +655,7 @@ Result Table::GameProcess(bool verbose, string yama)
 				players[response].门清 = false;
 				players[response].move_from_hand_to_fulu(
 					actions[response].correspond_tiles, tile);
-				turn = response;
+				
 
 				// 这是鸣牌，消除所有人第一巡和一发
 				for (int i = 0; i < 4; ++i) {
@@ -660,6 +665,7 @@ Result Table::GameProcess(bool verbose, string yama)
 
 				// 明杠，打出牌之后且其他人吃碰
 				if (after_杠()) { dora_spec++; }
+				next_turn(response);
 				last_action = final_action;
 				continue;
 
@@ -1252,6 +1258,9 @@ void Table::make_selection(int selection)
 		switch (final_action) {
 		case BaseAction::pass:
 
+			// 杠，打出牌之后且其他人pass
+			if (after_杠()) { dora_spec++; }
+
 			if (selected_action.action == BaseAction::立直) {
 				// 立直成功
 				if (players[turn].first_round) {
@@ -1261,26 +1270,26 @@ void Table::make_selection(int selection)
 				n立直棒++;
 				players[turn].score -= 1000;
 				players[turn].一发 = true;
+				last_action = BaseAction::立直;
+			} 
+			else {				
+				last_action = BaseAction::出牌;
 			}
 
-			// 杠，打出牌之后且其他人pass
-			if (after_杠()) { dora_spec++; }
-
 			// 什么都不做。将action对应的牌从手牌移动到牌河里面	
-
 			players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
 
 			// 消除第一巡
 			players[turn].first_round = false;
 
-			last_action = BaseAction::出牌;
 			next_turn((turn + 1) % 4);
-
 			break;
 		case BaseAction::吃:
 		case BaseAction::碰:
 		case BaseAction::杠:
 
+			// 明杠，打出牌之后且其他人吃碰
+			if (after_杠()) { dora_spec++; }
 			if (selected_action.action == BaseAction::立直) {
 				// 立直成功
 				if (players[turn].first_round) {
@@ -1299,18 +1308,15 @@ void Table::make_selection(int selection)
 			players[response].move_from_hand_to_fulu(
 				actions[response].correspond_tiles, tile);
 
-
 			// 这是鸣牌，消除所有人第一巡和一发
 			for (int i = 0; i < 4; ++i) {
 				players[i].first_round = false;
 				players[i].一发 = false;
 			}
 
-			// 明杠，打出牌之后且其他人吃碰
-			if (after_杠()) { dora_spec++; }
-			last_action = final_action;
 			// 切换turn
 			next_turn(response);
+			last_action = final_action;
 			break;
 
 		case BaseAction::荣和:

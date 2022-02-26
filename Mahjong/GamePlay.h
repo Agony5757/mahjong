@@ -20,8 +20,10 @@ public:
 	
 	bool make_selection(int selection);
 	bool make_selection_from_action(BaseAction action, std::vector<int> correspond_tiles);
+	int get_selection_from_action(BaseAction action, std::vector<int> correspond_tiles);
 	int get_phase() const;
 	Result get_result() const;	
+	~PaipuReplayer() {  } 
 };
 
 #endif

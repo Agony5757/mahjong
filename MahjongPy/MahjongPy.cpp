@@ -154,6 +154,8 @@ PYBIND11_MODULE(MahjongPy, m)
 		// 函数们
 		.def("is_furiten", &Player::is振听)
 		.def("to_string", &Player::to_string)
+		.def("hand_to_string", &Player::to_string)
+		.def("tenpai_to_string", &Player::tenpai_to_string)
 		;
 
 	m.def("PlayerToString", [](const Player& player) {return py::bytes(player.to_string()); });
@@ -330,6 +332,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("get_response_actions", &PaipuReplayer::get_response_actions)
 		.def("make_selection", &PaipuReplayer::make_selection)
 		.def("make_selection_from_action", &PaipuReplayer::make_selection_from_action)
+		.def("get_selection_from_action", &PaipuReplayer::get_selection_from_action)
 		.def("get_phase", &PaipuReplayer::get_phase)
 		.def("get_result", &PaipuReplayer::get_result)
 		;
