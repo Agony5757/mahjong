@@ -28,7 +28,7 @@ class CMakeBuild(build_ext):
         print(install_prefix)
         cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}'.format(install_prefix),
                       '-DCMAKE_CXX_COMPILER=clang++',
-                      '-DCMAKE_BUILD_TYPE=Debug']
+                      '-DCMAKE_BUILD_TYPE=Release']
         print(self.build_temp)
         subprocess.check_call(['cmake', ext.sourcedir, *cmake_args], cwd=self.build_temp)
         subprocess.check_call(['cmake', '--build', os.path.join(ext.sourcedir, self.build_temp), '--target', 'MahjongPy'], cwd=self.build_temp)

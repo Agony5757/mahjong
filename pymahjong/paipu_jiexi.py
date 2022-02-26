@@ -442,6 +442,7 @@ def paipu_replay():
                     ret = replayer.make_selection(selection)
 
                     if not ret:
+                        print(int(phase))
                         print(f'要打 {get_tile_from_id(discarded_tile)}, Fail.\n'
                                     f'{replayer.table.players[phase].to_string()}')
                             
