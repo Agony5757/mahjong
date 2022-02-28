@@ -20,5 +20,4 @@ log/checkpoint
 MahjongRelease/
 dist/
 pymahjong.egg-info/
-*.txt
 *.html
