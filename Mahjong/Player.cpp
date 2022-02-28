@@ -119,6 +119,7 @@ vector<SelfAction> Player::get_暗杠()
 
 	for (auto tile : hand) {
 		auto duplicate = get_duplicate(hand, tile->tile, 4);
+		sort(duplicate.begin(), duplicate.end());
 		if (duplicate.size() == 4) {
 			SelfAction action;
 			action.action = BaseAction::暗杠;
@@ -409,9 +410,9 @@ vector<ResponseAction> Player::get_Kan(Tile* tile)
 	vector<ResponseAction> actions;
 
 	BaseTile t = tile->tile;
-	auto chi_tiles = get_Kan_tiles(hand, tile);
-
-	for (auto one_chi_tiles : chi_tiles) {
+	auto kan_tiles = get_Kan_tiles(hand, tile);
+	sort(kan_tiles.begin(), kan_tiles.end());
+	for (auto one_chi_tiles : kan_tiles) {
 		ResponseAction action;
 		action.action = BaseAction::杠;
 		action.correspond_tiles.assign(one_chi_tiles.begin(), one_chi_tiles.end());
@@ -453,7 +454,7 @@ vector<SelfAction> Player::riichi_get_暗杠()
 	vector<SelfAction> actions;
 
 	// 从手牌获取听牌
-	auto original_听牌 = get听牌(convert_tiles_to_base_tiles(hand));
+	auto original_听牌 = 听牌;
 
 	for (auto tile : hand) {
 		auto duplicate = get_duplicate(hand, tile->tile, 4);
@@ -575,11 +576,11 @@ void Player::play_暗杠(BaseTile tile)
 	for_each(hand.begin(), hand.end(),
 		[&fulu, tile](Tile* t)
 		{
-			if (tile == t->tile)
-				fulu.tiles.push_back(t);
+			if (tile == t->tile) fulu.tiles.push_back(t);
 		});
 	auto iter = remove_if(hand.begin(), hand.end(),
 			[tile](Tile* t) {return t->tile == tile; });
+	副露s.push_back(fulu);
 	hand.erase(iter, hand.end());
 }
 

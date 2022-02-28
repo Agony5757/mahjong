@@ -162,22 +162,23 @@ static bool 四风连打牌(array<Player, 4> &players) {
 void Table::next_turn(int nextturn)
 {
 	Player& player = players[turn];
+	BaseAction selected_base_action = selected_action.action;
 	// 在切换之前，更新玩家的听牌列表，以及更新他的振听情况
-	if (last_action == BaseAction::立直 || last_action == BaseAction::出牌) {
+	if (selected_base_action == BaseAction::立直 || selected_base_action == BaseAction::出牌) {
 		// 立直时需要判断打出去的这张牌和听牌列表是否符合
 		if (player.river.river.back().fromhand) {
 			// 手切立直需要更新听牌列表
 			player.update_听牌();
 			printf("- turn: %d %s, tenpai: %s\n", turn, 
-				last_action == BaseAction::立直? "立":"出",
+				selected_base_action == BaseAction::立直? "立":"出",
 			    player.tenpai_to_string().c_str());
 		}
 		player.update_舍牌振听();
 	}
-	if (last_action == BaseAction::暗杠) {
+	if (selected_base_action == BaseAction::暗杠) {
 		player.update_听牌();
 	}
-	if (last_action == BaseAction::加杠) {
+	if (selected_base_action == BaseAction::加杠) {
 		player.remove_听牌(selected_action.correspond_tiles[0]->tile);
 	}
 
@@ -253,7 +254,7 @@ void Table::from_beginning()
 
 	// 杠后从岭上摸牌
 	if (after_daiminkan() || after_ankan() || after_加杠()) {
-		发岭上牌(turn);
+		deal_tile_岭上(turn);
 	}
 	// 吃碰后不摸牌，其他时候正常发牌
 	else if (!after_chipon()){
@@ -1136,7 +1137,9 @@ void Table::make_selection(int selection)
 			// 并且判定抉择弃牌是不是最后一张牌
 
 			FROM_手切摸切 = FROM_手切;
-			if (last_action == BaseAction::出牌 || last_action == BaseAction::加杠 || last_action == BaseAction::暗杠) {
+			if (last_action == BaseAction::出牌 || 
+			    last_action == BaseAction::加杠 || 
+				last_action == BaseAction::暗杠) {
 				// tile是不是最后一张
 				if (tile == players[turn].hand.back())
 					FROM_手切摸切 = FROM_摸切;
@@ -1270,19 +1273,16 @@ void Table::make_selection(int selection)
 				n立直棒++;
 				players[turn].score -= 1000;
 				players[turn].一发 = true;
-				last_action = BaseAction::立直;
 			} 
-			else {				
-				last_action = BaseAction::出牌;
-			}
+			
 
 			// 什么都不做。将action对应的牌从手牌移动到牌河里面	
 			players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
 
 			// 消除第一巡
 			players[turn].first_round = false;
-
-			next_turn((turn + 1) % 4);
+			next_turn((turn + 1) % 4);			
+			last_action = selected_action.action;
 			break;
 		case BaseAction::吃:
 		case BaseAction::碰:

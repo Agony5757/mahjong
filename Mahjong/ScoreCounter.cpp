@@ -638,7 +638,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	bool 字牌对子[7] = { false };
 	for_each(tile_group_string.begin(), tile_group_string.end(), [&字牌刻子, &字牌对子](const string& s) {
 		if (s[1] == 'z') {
-			if (s[2] == 'K') {
+			if (s[2] == 'K' || s[2] == '|') {
 				字牌刻子[s[0] - '1'] = true;
 			}
 			if (s[2] == ':') {
@@ -888,12 +888,15 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	};
 	// 判断二杯口 && 一杯口
 	int n杯口 = 0;
-	for (const string &tiles : 顺子牌型)
-		if (count_if(tile_group_string_no_4.begin(), tile_group_string_no_4.end(), [&tiles](const string &s) {
-			return s == tiles;
-		}) >= 2) {
-			n杯口++;
+	if (门清) {
+		for (const string &tiles : 顺子牌型) {
+		    if (count_if(tile_group_string_no_4.begin(), 
+		                 tile_group_string_no_4.end(),
+						 [&tiles](const string &s) {return s == tiles;})
+						 >= 2) n杯口++;
+						
 		}
+	}
 
 	if (n杯口 == 2) yakus.push_back(Yaku::二杯口);
 	else if (n杯口 == 1) yakus.push_back(Yaku::一杯口);
@@ -945,7 +948,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 		fu += (is役牌对子(s, 自风, 场风) * 2);
 	});
 
-	// 面子符
+	//面子符
 
 	// string s;
 	// for (auto ts : tile_group_string)
@@ -957,7 +960,8 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	// printf("%s\n", s.c_str());
 
 	for_each(tile_group_string.begin(), tile_group_string.end(), [&fu](const string& s) {
-		if (s.size() == 3) {
+		if (s.size() == 3 || 
+		   (s.size() == 4 && (s[3] == '!' || s[3] == '@' || s[3] == '#'))) {
 			if (s[2] == 'K') { 
 				if (幺九刻子(s)) fu += 8; 
 				else fu += 4;
@@ -1030,7 +1034,7 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
 	else {
 		last_tile = correspond_tile->tile;
 	}
-
+	
 	vector<pair<vector<Yaku>, int>> yaku_fus;
 	// 当这个 荣和/自摸 的牌存在于不同的地方的时候，也有可能会导致解释不同
 	// 这个牌一定在ct里面

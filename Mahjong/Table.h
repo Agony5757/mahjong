@@ -52,7 +52,7 @@ public:
 
 	// 通过这种方式判断杠了几次，相对于判断dora个数更为准确
 	inline int get_remain_kan_tile() const 
-	{ return int(std::find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]) - 牌山.begin()); }
+	{ return int(std::find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]) - 牌山.begin() - 1); }
 
 	inline int get_remain_tile() const 
 	{ return int(牌山.size() - 14);	}
