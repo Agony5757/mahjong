@@ -74,7 +74,8 @@ public:
 	bool 门清 = true;
 	Wind wind;
 	bool 亲家;
-	bool 振听 = false;
+	bool 同巡振听 = false;
+	bool 舍牌振听 = false;
 	bool 立直振听 = false;
 	int score = 25000;
 	std::vector<Tile*> hand;
@@ -88,7 +89,7 @@ public:
 	Player();
 	Player(int init_score);
 	inline bool is_riichi() { return riichi || double_riichi; }
-	inline bool is振听() { return 振听 || 立直振听; }
+	inline bool is振听() { return 同巡振听 || 舍牌振听 || 立直振听; }
 	std::string hand_to_string() const;
 	std::string river_to_string() const;
 	std::string to_string() const;

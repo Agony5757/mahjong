@@ -496,7 +496,7 @@ Result Table::GameProcess(bool verbose, string yama)
 		// 其他人按照规则追加振听效果
 		for (int i = 0; i < 4; ++i) {
 			if (i == turn) {
-				players[turn].振听 = false;
+				players[turn].同巡振听 = false;
 				continue;
 			}
 
@@ -508,7 +508,7 @@ Result Table::GameProcess(bool verbose, string yama)
 			for (auto& tile : tiles) {
 				if (find(river.begin(), river.end(), tile) != river.end()) {
 					// 只要找到一个
-					players[i].振听 = true;
+					players[i].舍牌振听 = true;
 					continue;
 				}
 			}
@@ -580,7 +580,7 @@ Result Table::GameProcess(bool verbose, string yama)
 							players[i].立直振听 = true;
 						}
 						else {
-							players[i].振听 = true;
+							players[i].同巡振听 = true;
 						}
 					}
 

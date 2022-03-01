@@ -80,7 +80,10 @@ void Player::update_舍牌振听()
 			[&rivertile](BaseTile t) {return t == rivertile.tile->tile; })) 
 		{
 			if (is_riichi()) { 立直振听 = true; }
-			else { 振听 = true; }
+			else { 舍牌振听 = true; }
+		}
+		else {
+			舍牌振听 = false;
 		}
 	}
 }

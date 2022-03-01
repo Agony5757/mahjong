@@ -782,14 +782,20 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 
 	平和 &= 门清;
 	平和 &= (!单骑);
+
+	// 对子不是役牌
 	平和 &= none_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](const string& s) {
 		return is役牌对子(s, 自风, 场风);
 	});
+
+	// 对子 顺子
 	平和 &= all_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](const string& s) {
 		if (s[2] == ':') return true;
 		if (s[2] == 'S') return true;
 		return false;
 	});
+
+	// 和牌型
 	平和 &= all_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](const string &s) {
 		if (s.size() == 3) return true;
 		if (s[3] == '@') return false;
@@ -925,7 +931,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 			if (s[3] == '!' || s[3] == '@' || s[3] == '#') return true;
 		}
 		return false;
-	}))
+	}) && !门清)
 		fu += 2;
 
 	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
@@ -957,7 +963,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	for_each(tile_group_string.begin(), tile_group_string.end(), [&fu](const string& s) {
 		if (s.size() == 3 && s[2] == 'K') { 
 			if (幺九刻子(s)) fu += 8; 
-			else fu += 4;
+			else fu += 4;			
 		}
 		if (s.size() == 4) {
 			switch (s[2]) {
