@@ -20,5 +20,9 @@ log/checkpoint
 MahjongRelease/
 dist/
 pymahjong.egg-info/
+<<<<<<< HEAD
 *.html
 pymahjong/paipuxmls/
+=======
+*.html
+>>>>>>> 40b02a1d168162f0ea6f509f65a2078e724b39e6
