@@ -82,7 +82,7 @@ void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直�
 		return str;
 	};
 	
-    FILE* fp = fopen("logs.txt", "w+");
+    FILE* fp = fopen("replay.log", "w+");
 	fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
 		vec2str(yama).c_str(),
 		vec2str(init_scores).c_str(),
@@ -114,7 +114,7 @@ bool PaipuReplayer::make_selection(int selection)
 	// 		return false; 		
 
 #ifdef LOG
-	FILE* fp = fopen("logs.txt", "a+");
+	FILE* fp = fopen("replay.log", "a+");
     fprintf(fp, "table.make_selection(%d);\n", selection);
 	fclose(fp);
 #endif
