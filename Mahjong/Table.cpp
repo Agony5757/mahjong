@@ -912,7 +912,7 @@ vector<SelfAction> Table::GetSelfActions()
 	merge_into(actions, the_player.get_九种九牌());
 	merge_into(actions, the_player.get_自摸(this));
 
-	if (players[turn].score >= 1000 && get_remain_tile() > 4)
+	if (players[turn].score >= 1000 && get_remain_tile() >= 4)
 		// 有1000点才能立直，否则不行
 		// 牌河有4张以下牌，则不能立直
 		merge_into(actions, the_player.get_立直());
@@ -1390,6 +1390,7 @@ void Table::make_selection(int selection)
 			players[i].first_round = false;
 			players[i].一发 = false;
 		}
+		next_turn(turn);
 		from_beginning();
 		return;
 	}
@@ -1454,6 +1455,7 @@ void Table::make_selection(int selection)
 			players[i].first_round = false;
 			players[i].一发 = false;
 		}
+		next_turn(turn);
 		from_beginning();
 		return;
 	}

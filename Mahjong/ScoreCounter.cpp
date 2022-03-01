@@ -931,7 +931,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 			if (s[3] == '!' || s[3] == '@' || s[3] == '#') return true;
 		}
 		return false;
-	}) && !门清)
+	}) && !平和)
 		fu += 2;
 
 	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {

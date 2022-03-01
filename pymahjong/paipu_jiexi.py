@@ -3,6 +3,7 @@ import re
 import os
 import time
 import numpy as np
+import shutil
 
 # 下面这些包用于下载和解析牌谱
 import eventlet
@@ -592,11 +593,23 @@ class PaipuReplay:
         is_new_round = False
 
         # ----------------- start ---------------------
+        
         basepath = os.path.dirname(__file__)
         path = basepath + "/paipuxmls"
+
+        if mode == 'mark':
+            from datetime import datetime 
+            timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
+            logfilename = basepath + '/error_logs/error_'+timestr+'.log'
+            fp = open(logfilename, 'w')
+            fp.close()
         files = os.listdir(path)  # 得到文件夹下的所有文件名称
         self.total_games = len(files)
-        for i, paipu in enumerate(files):
+        for paipu in files:            
+            if not paipu.endswith('txt'): 
+                continue
+            
+            print(paipu)
             self.num_games += 1
             try:
                 self.log_cache = ""
@@ -608,6 +621,11 @@ class PaipuReplay:
                     raise e
                 elif mode == 'test':
                     self.errors.append(paipu)
+                elif mode == 'mark':
+                    fp = open(logfilename, 'a+')
+                    print(paipu, file = fp)
+                    self.errors.append(paipu)
+                    fp.close()
                 else:
                     self.errors.append(paipu)
 
