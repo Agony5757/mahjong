@@ -611,6 +611,11 @@ class PaipuReplay:
                 else:
                     self.errors.append(paipu)
 
+    def paipu_replay_1(self, paipu_name):
+        basepath = os.path.dirname(__file__)
+        path = basepath + "/paipuxmls"
+        self._paipu_replay(path, paipu_name)
+
 def paipu_replay(mode = 'debug'):
     if mode == 'debug':
         _logger = logger(fp = 'stdout')

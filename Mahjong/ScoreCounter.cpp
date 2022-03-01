@@ -331,7 +331,7 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 			REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
 		}
 		else if (fu == 30) {
-			REGISTER_SCORE(亲, 自摸, 11600, 3600, 7700, 3900, 2000);
+			REGISTER_SCORE(亲, 自摸, 11600, 3900, 7700, 3900, 2000);
 		}
 		else if (fu == 25) {
 			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
@@ -781,6 +781,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	bool 平和 = true;
 
 	平和 &= 门清;
+	平和 &= (!单骑);
 	平和 &= none_of(tile_group_string.begin(), tile_group_string.end(), [&自风, &场风](const string& s) {
 		return is役牌对子(s, 自风, 场风);
 	});
@@ -954,11 +955,9 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	// printf("%s\n", s.c_str());
 
 	for_each(tile_group_string.begin(), tile_group_string.end(), [&fu](const string& s) {
-		if (s.size() == 3) {
-			if (s[2] == 'K') { 
-				if (幺九刻子(s)) fu += 8; 
-				else fu += 4;
-			}
+		if (s.size() == 3 && s[2] == 'K') { 
+			if (幺九刻子(s)) fu += 8; 
+			else fu += 4;
 		}
 		if (s.size() == 4) {
 			switch (s[2]) {
@@ -980,6 +979,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 					else fu += 2;
 					break;
 				}
+				break;
 			case '|':
 				if (s[3] == '-') {
 					if (幺九刻子(s)) fu += 16;
