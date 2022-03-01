@@ -72,6 +72,8 @@ array<int, 4> FullGame(Wind 局风, array<Agent*, 4> agents, stringstream &ss)
 void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家)
 {	
 	table.game_init_for_replay(yama, init_scores, 立直棒, 本场, 场风, 亲家);
+
+#ifdef LOG
 	auto vec2str = [](vector<int> vec)
 	{
 		string str = "{";
@@ -79,6 +81,7 @@ void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直�
 		str += "}";
 		return str;
 	};
+	
     FILE* fp = fopen("logs.txt", "w+");
 	fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
 		vec2str(yama).c_str(),
@@ -86,6 +89,7 @@ void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直�
 		立直棒,	本场, 场风, 亲家);
 
 	fclose(fp);
+#endif
 }
 
 vector<SelfAction> PaipuReplayer::get_self_actions() const
@@ -108,7 +112,7 @@ bool PaipuReplayer::make_selection(int selection)
 	// else 
 	//     if (selection >= get_response_actions().size())
 	// 		return false; 		
-#define LOG
+
 #ifdef LOG
 	FILE* fp = fopen("logs.txt", "a+");
     fprintf(fp, "table.make_selection(%d);\n", selection);
