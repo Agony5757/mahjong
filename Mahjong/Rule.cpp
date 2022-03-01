@@ -263,6 +263,7 @@ bool 基本和牌型::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
 std::vector<CompletedTiles> get_completed_tiles(std::vector<BaseTile> tiles)
 {
 	if (tiles.size() % 3 != 2) throw runtime_error("Not Enough Tiles");	
+	sort(tiles.begin(), tiles.end());
 	auto& inst = 基本和牌型::GetInstance();
 	inst.reset();
 	auto completed_tiles = inst.getAllCompletedTiles(tiles);

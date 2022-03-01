@@ -111,16 +111,6 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 	// 接下来对牌进行拆解
 	auto complete_tiles_list = get_completed_tiles(convert_tiles_to_base_tiles(tiles));
 
-#ifdef MAJ_DEBUG
-	bool MAJ_DEBUG_SIG = false;
-	if (complete_tiles_list.size() > 2) {
-		cout << "MAJ_DEBUG: Start Remove Duplicate CompletedTiles" << endl;
-		MAJ_DEBUG_SIG = true;
-		for (auto ct : complete_tiles_list) {
-			cout << ct.to_string() << endl;
-		}
-	}
-#endif
 	{
 		sort(complete_tiles_list.begin(), complete_tiles_list.end(),
 			[](CompletedTiles c1, CompletedTiles c2) {

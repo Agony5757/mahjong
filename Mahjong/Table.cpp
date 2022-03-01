@@ -169,9 +169,14 @@ void Table::next_turn(int nextturn)
 		if (player.river.river.back().fromhand) {
 			// 手切立直需要更新听牌列表
 			player.update_听牌();
+<<<<<<< HEAD
 			// printf("- turn: %d %s, tenpai: %s\n", turn, 
 			// 	selected_base_action == BaseAction::立直? "立":"出",
 			//     player.tenpai_to_string().c_str());
+=======
+			const char* 立直or出牌 = selected_base_action == BaseAction::立直 ? "立" : "出";
+			printf("- turn: %d %s, tenpai: %s\n", turn, 立直or出牌, player.tenpai_to_string().c_str());
+>>>>>>> 40b02a1d168162f0ea6f509f65a2078e724b39e6
 		}
 		player.update_舍牌振听();
 	}
