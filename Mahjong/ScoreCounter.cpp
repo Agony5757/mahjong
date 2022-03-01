@@ -901,7 +901,8 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	if (any_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
 		// 坎张
 		if (s.size() == 4)
-			if (s[3] == '@' || s[3] == '%') return true;
+			if (s[2] == 'S' && (s[3] == '@' || s[3] == '%'))
+				return true;
 		return false;
 	})) 
 		fu += 2;
@@ -953,8 +954,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	// printf("%s\n", s.c_str());
 
 	for_each(tile_group_string.begin(), tile_group_string.end(), [&fu](const string& s) {
-		if (s.size() == 3 || 
-		   (s.size() == 4 && (s[3] == '!' || s[3] == '@' || s[3] == '#'))) {
+		if (s.size() == 3) {
 			if (s[2] == 'K') { 
 				if (幺九刻子(s)) fu += 8; 
 				else fu += 4;
@@ -965,9 +965,21 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 			case 'S':
 				break;
 			case 'K':
-				if (幺九刻子(s)) fu += 4;
-				else fu += 2;
-				break;
+				switch (s[3]) {
+				case '!':
+				case '@':
+				case '#':
+					if (幺九刻子(s)) fu += 8;
+					else fu += 4;
+					break;
+				case '$':
+				case '%':
+				case '^':
+				case '-':
+					if (幺九刻子(s)) fu += 4;
+					else fu += 2;
+					break;
+				}
 			case '|':
 				if (s[3] == '-') {
 					if (幺九刻子(s)) fu += 16;
