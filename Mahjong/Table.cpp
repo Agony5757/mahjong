@@ -178,7 +178,7 @@ void Table::next_turn(int nextturn)
 		player.update_听牌();
 	}
 	if (selected_base_action == BaseAction::加杠) {
-		player.remove_听牌(selected_action.correspond_tiles[0]->tile);
+		player.update_听牌();
 	}
 
 	// 更新完毕，正式切换turn
