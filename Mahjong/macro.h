@@ -190,9 +190,9 @@ inline std::vector<Tile*> get_duplicate(std::vector<Tile*> tiles, BaseTile t, un
 				duplicates--;
 				duplicate_tiles.push_back(tile);
 			}
-			if (duplicates == 0) return duplicate_tiles;
 		}
 	}
+	sort(duplicate_tiles.begin(), duplicate_tiles.end());
 	return duplicate_tiles;
 }
 

@@ -39,7 +39,10 @@ string Action::to_string() const
 {
 	switch (action) {
 	case BaseAction::暗杠:
-		return "暗杠" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string() + correspond_tiles[2]->to_string();
+		return "暗杠" + correspond_tiles[0]->to_string() 
+					  + correspond_tiles[1]->to_string() 
+					  + correspond_tiles[2]->to_string() 
+					  + correspond_tiles[3]->to_string();
 	case BaseAction::加杠:
 		return "加杠";
 	case BaseAction::出牌:
@@ -53,11 +56,15 @@ string Action::to_string() const
 	case BaseAction::pass:
 		return "pass";
 	case BaseAction::吃:
-		return "吃" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string();
+		return "吃" + correspond_tiles[0]->to_string()
+					+ correspond_tiles[1]->to_string();
 	case BaseAction::碰:
-		return "碰" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string();
+		return "碰" + correspond_tiles[0]->to_string() 
+		            + correspond_tiles[1]->to_string();
 	case BaseAction::杠:
-		return "杠" + correspond_tiles[0]->to_string() + correspond_tiles[1]->to_string() + correspond_tiles[2]->to_string();
+		return "杠" + correspond_tiles[0]->to_string() 
+		            + correspond_tiles[1]->to_string() 
+					+ correspond_tiles[2]->to_string();
 	case BaseAction::荣和:
 		return "荣和"; 
 	default:

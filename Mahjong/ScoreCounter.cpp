@@ -640,10 +640,13 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	// 统计暗刻数
 	int num_暗刻 = 0;
 	for_each(tile_group_string.begin(), tile_group_string.end(), [&num_暗刻](const string& s) {
-		if (s[2] == 'K' && s.size() == 3) {
+		if (s.size() == 3 && s[2] == 'K') {
 			num_暗刻++;
 		}
-		if (s[2] == '|' && s[3] == '+') {
+		else if (s.size() == 4 && s[2] == 'K' && (s[3] == '!' || s[3] == '@' || s[3] == '#')) {
+			num_暗刻++;
+		}
+		else if (s[2] == '|' && s[3] == '+') {
 			num_暗刻++;
 		}
 	});

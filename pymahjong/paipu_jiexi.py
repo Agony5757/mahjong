@@ -175,9 +175,13 @@ class PaipuReplay:
         self.total_games = 0
         self.errors = list()
         self.logger = logger()
+        self.log_cache = ""
 
     def log(self, *info):
-        self.logger.log(*info)
+        # self.logger.log(*info)
+        for s in info:
+            self.log_cache += str(s)
+            self.log_cache += '\n'
 
     def progress(self):
         print('Games {}/{}/{}'.format(self.success, self.num_games, self.total_games))
@@ -457,15 +461,25 @@ class PaipuReplay:
                 score_info_str = child.get("sc").split(",")
                 score_info = [int(tmp) for tmp in score_info_str]
                 score_changes = [score_info[1] * 100, score_info[3] * 100, score_info[5] * 100, score_info[7] * 100]
-
+                
+                score_changes1 = [_ for _ in score_changes]
+                score_changes2 = None
+                double_ron = False
                 if child.tag == "RYUUKYOKU":
-                    self.log("本局结束: 结果是流局")                    
-
+                    self.log("本局结束: 结果是流局")     
+                                   
                 if child.tag == "AGARI":
                     who_agari = []
                     if child_no + 1 < len(root) and root[child_no + 1].tag == "AGARI":
+                        double_ron = True
                         self.log("这局是Double Ron!!!!!!!!!!!!")
                         who_agari.append(int(root[child_no + 1].get("who")))
+                        
+                        score_info_str2 = root[child_no + 1].get("sc").split(",")
+                        score_info2 = [int(tmp) for tmp in score_info_str2]
+                        score_changes2 = [score_info2[1] * 100, score_info2[3] * 100, score_info2[5] * 100, score_info2[7] * 100]
+                        for i in range(4):
+                            score_changes[i] += score_changes2[i]
 
                     agari_player_id = int(child.get("who"))  
                     who_agari.append(int(child.get("who")))
@@ -488,8 +502,10 @@ class PaipuReplay:
                                 self.log(replayer.table.players[int(phase)].to_string(),
                                     '听牌:' + replayer.table.players[int(phase)].tenpai_to_string()
                                 )
-                                raise RuntimeError('Replay fail. ' + paipu_link(paipu))
-                        
+                                raise RuntimeError('Replay fail.' + \
+                                        paipu_link(paipu) + \
+                                        "此局是{}{}局{}本场".format(winds[game_order // 4], chinese_numbers[game_order % 4], honba)
+                                        ) 
                             break
 
                         else:
@@ -525,7 +541,7 @@ class PaipuReplay:
 
                     result = replayer.get_result()
                     result_score = result.score
-                    self.log(score_changes, scores, result_score)
+                    self.log(score_changes1, score_changes2, scores, result_score)
                     self.log(result.to_string())
                     for i in range(4):
                         if score_changes[i] + scores[i] != result_score[i] :
@@ -549,7 +565,8 @@ class PaipuReplay:
                     self.log("玩家{} 通过{} 用{} 和了{}点 ({}本场,{}根立直棒)".format(
                         agari_player_id, info, agari_tile, score_changes[agari_player_id] , honba, riichi_sticks))
                     self.log("和牌时候的手牌 (不包含副露):", [int(hai) for hai in child.get("hai").split(",")])
-
+                    if double_ron:
+                        break
                 self.log("本局各玩家的分数变化是", score_changes)
 
                 if not (child_no + 1 < len(root) and root[child_no + 1].tag == "AGARI"):
@@ -582,10 +599,12 @@ class PaipuReplay:
         for i, paipu in enumerate(files):
             self.num_games += 1
             try:
+                self.log_cache = ""
                 self._paipu_replay(path, paipu)
                 self.success += 1
             except Exception as e:
                 if mode == 'debug':
+                    print(self.log_cache)
                     raise e
                 elif mode == 'test':
                     self.errors.append(paipu)
@@ -593,7 +612,10 @@ class PaipuReplay:
                     self.errors.append(paipu)
 
 def paipu_replay(mode = 'debug'):
-    _logger = logger(fp = 'stdout')
+    if mode == 'debug':
+        _logger = logger(fp = 'stdout')
+    else:
+        _logger = logger()
     replayer = PaipuReplay()
     replayer.logger = _logger
     replayer.paipu_replay(mode)
