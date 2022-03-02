@@ -164,15 +164,17 @@ void Table::next_turn(int nextturn)
 	Player& player = players[turn];
 	BaseAction selected_base_action = selected_action.action;
 	// 在切换之前，更新玩家的听牌列表，以及更新他的振听情况
-	if (selected_base_action == BaseAction::立直 || selected_base_action == BaseAction::出牌) {
-		// 立直时需要判断打出去的这张牌和听牌列表是否符合
-		if (player.river.river.back().fromhand) {
-			// 手切立直需要更新听牌列表
-			player.update_听牌();
-			// const char* 立直or出牌 = selected_base_action == BaseAction::立直 ? "立" : "出";
-			// printf("- turn: %d %s, tenpai: %s\n", turn, 立直or出牌, player.tenpai_to_string().c_str());
-		}
+	if (selected_base_action == BaseAction::立直) {
+		// 立直一定更新
+		player.update_听牌();
 		player.update_舍牌振听();
+	}
+	else if (selected_base_action == BaseAction::出牌) {
+		if (player.river.river.back().fromhand) {
+			// 手切更新听牌列表
+			player.update_听牌();
+			player.update_舍牌振听();
+		}
 	}
 	if (selected_base_action == BaseAction::暗杠) {
 		player.update_听牌();
