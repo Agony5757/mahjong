@@ -269,7 +269,7 @@ Result 自摸结算(Table * table)
 	return result;
 }
 
-Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_player)
+Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_player, bool 抢杠, bool 抢暗杠)
 {
 	Result result;
 	result.result_type = ResultType::荣和终局;
@@ -282,7 +282,7 @@ Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_pl
 	}
 
 	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, table->players[winner], agari_tile, false, false, table->players[winner].wind, table->场风);
+		auto yaku = yaku_counter(table, table->players[winner], agari_tile, 抢杠, 抢暗杠, table->players[winner].wind, table->场风);
 		yaku.calculate_score(winner == table->庄家, false);
 
 		result.results.insert({ winner, yaku });
@@ -318,10 +318,10 @@ Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_pl
 
 Result 抢暗杠结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
 {
-	return 荣和结算(table, agari_tile, response_player);
+	return 荣和结算(table, agari_tile, response_player, false, true);
 }
 
 Result 抢杠结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
 {
-	return 荣和结算(table, agari_tile, response_player);
+	return 荣和结算(table, agari_tile, response_player, true, false);
 }

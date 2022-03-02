@@ -62,6 +62,7 @@ public:
 	void shuffle_tiles();
 	void init_yama();
 	void init_dora();
+	void init_before_playing();
 	void import_yama(std::string yama);
 	void import_yama(std::vector<int> yama);
 	std::string export_yama();
@@ -121,9 +122,7 @@ public:
 		test_show_all_player_info();		
 		std::cout << "轮到Player" << turn << std::endl;
 	}
-
-	Result GameProcess(bool, std::string = "");
-
+		
 public:
 	// ---------------------Manual Mode------------------------------
 	// The following part is for the manual instead of the automatic.
