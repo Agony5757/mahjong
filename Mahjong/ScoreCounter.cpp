@@ -250,11 +250,11 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 					Dora役.push_back(Yaku::里宝牌);
 				}
 			}
-		}
-		for (auto& yaku_fu : AllYakusAndFu) {
-			merge_into(yaku_fu.first, 场役);
-			merge_into(yaku_fu.first, Dora役);
-		}
+		}		
+	}
+	for (auto& yaku_fu : AllYakusAndFu) {
+		merge_into(yaku_fu.first, 场役);
+		merge_into(yaku_fu.first, Dora役);
 	}
 
 	//对于AllYakusAndFu，判定番最高的，番相同的，判定符最高的	
