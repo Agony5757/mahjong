@@ -15,6 +15,40 @@ import MahjongPy as mp
 
 eventlet.monkey_patch()
 
+def game_round(game_order, honba):
+    winds = "东南西北"
+    chinese_numbers = "一二三四"
+    return "此局是{}{}局{}本场".format(winds[game_order // 4], 
+        chinese_numbers[game_order % 4], honba)
+
+class MahjongException(Exception):
+    pass
+
+class ScoreException(MahjongException):
+    def __init__(self, what, paipu, game_order, honba):
+        self.info = what
+        self.paipu = paipu
+        self.ba = game_round(game_order, honba)
+
+    def __str__(self):
+        return f"ScoreException: {str(self.info)} {self.paipu} {self.ba}" 
+
+    def __repr__(self):
+        return self.__str__()
+
+class ActionException(MahjongException):  
+    def __init__(self, what, paipu, game_order, honba):
+        self.info = what
+        self.paipu = paipu
+        self.ba = game_round(game_order, honba)
+
+    def __str__(self):
+        return f"ActionException: {str(self.info)} {self.paipu} {self.ba}" 
+
+    def __repr__(self):
+        return self.__str__()
+
+
 def get_tile_from_id(id):
     color = id // 36
     number = (id % 36) // 4 + 1
@@ -169,6 +203,7 @@ class logger:
                 for s in info:
                     self.fp.write(s)
 
+
 class PaipuReplay:
     def __init__(self):
         self.num_games = 0
@@ -239,7 +274,8 @@ class PaipuReplay:
                         break
 
                     game_info["is_pro"] = int(tmp[-6])
-                    # no requirement
+                    if not game_info["is_pro"]:
+                        break
 
                     game_info["is_fast"] = int(tmp[-7])
                     if game_info["is_fast"]:
@@ -286,15 +322,14 @@ class PaipuReplay:
                 self.log("庄家是玩家{}".format(oya_id))
 
                 # 什么局
-                winds = "东南西北"
-                chinese_numbers = "一二三四"
+                
                 game_order = int(child.get("seed").split(",")[0])
-                self.log("此局是{}{}局".format(winds[game_order // 4], chinese_numbers[game_order % 4]))
+                #self.log("此局是{}{}局".format(winds[game_order // 4], chinese_numbers[game_order % 4]))
 
                 # 本场和立直棒
                 honba = int(child.get("seed").split(",")[1])
                 riichi_sticks = int(child.get("seed").split(",")[2])
-                self.log("此局是{}本场, 有{}根立直棒".format(honba, riichi_sticks))
+                #self.log("此局是{}本场, 有{}根立直棒".format(honba, riichi_sticks))
 
                 # 骰子数字
                 dice_numbers = [int(child.get("seed").split(",")[3]) + 1, int(child.get("seed").split(",")[4]) + 1]
@@ -303,13 +338,13 @@ class PaipuReplay:
                 # 牌山
                 inst = mp.TenhouShuffle.instance()
                 yama = inst.generate_yama()
-                self.log("牌山是: ", yama)
+                #self.log("牌山是: ", yama)
 
                 # 利用PaiPuReplayer进行重放
                 replayer = mp.PaipuReplayer()
-                self.log(f'Replayer.init: {yama} {scores} {riichi_sticks} {honba} {game_order // 4} {oya_id}')
+                #self.log(f'Replayer.init: {yama} {scores} {riichi_sticks} {honba} {game_order // 4} {oya_id}')
                 replayer.init(yama, scores, riichi_sticks, honba, game_order // 4, oya_id)
-                self.log('Init over.')
+                #self.log('Init over.')
 
                 # 开局的dora
                 dora_tiles = [int(child.get("seed").split(",")[5])]
@@ -379,28 +414,19 @@ class PaipuReplay:
 
                     if not ret:
                         self.log('phase', int(phase))
-                        self.log(f'要打 {get_tile_from_id(discarded_tile)}, Fail.\n'
-                                    f'{replayer.table.players[phase].to_string()}')
+                        self.log(f'要打 {get_tile_from_id(discarded_tile)}, Fail.\n')
                             
-                        raise RuntimeError('Replay fail.' + \
-                            paipu_link(paipu) + \
-                            "此局是{}{}局{}本场".format(winds[game_order // 4], chinese_numbers[game_order % 4], honba)
-                            ) 
-                else:
-                    
+                        raise ActionException('立直打牌', paipu, game_order, honba)
+                else:                    
                     selection = replayer.get_selection_from_action(mp.BaseAction.Play, [discarded_tile])
                     self.log(f'Select: {selection}')
                     ret = replayer.make_selection(selection)
 
                     if not ret:
                         self.log('phase', int(phase))
-                        self.log(f'要打 {get_tile_from_id(discarded_tile)}, Fail.\n'
-                                    f'{replayer.table.players[phase].to_string()}')
+                        self.log(f'要打 {get_tile_from_id(discarded_tile)}, Fail.')
                             
-                        raise RuntimeError('Replay fail.' + \
-                            paipu_link(paipu) + \
-                            "此局是{}{}局{}本场".format(winds[game_order // 4], chinese_numbers[game_order % 4], honba)
-                            ) 
+                        raise ActionException('打牌', paipu, game_order, honba)
 
             elif child.tag == "N":  # 鸣牌 （包括暗杠）
                 naru_player_id = int(child.get("who"))
@@ -449,7 +475,7 @@ class PaipuReplay:
                         if not ret:                            
                             self.log(f'要{naru_type} {get_tiles_from_id(hand_tiles_removed_by_naru)}, Fail.\n'
                                     f'{replayer.table.players[naru_player_id].to_string()}')
-                            raise RuntimeError('Replay Fail.' + paipu_link(paipu))
+                            raise ActionException(f'{naru_type}', paipu, game_order, honba)
                         if naru_type not in response_types:
                             break
 
@@ -503,10 +529,8 @@ class PaipuReplay:
                                 self.log(replayer.table.players[int(phase)].to_string(),
                                     '听牌:' + replayer.table.players[int(phase)].tenpai_to_string()
                                 )
-                                raise RuntimeError('Replay fail.' + \
-                                        paipu_link(paipu) + \
-                                        "此局是{}{}局{}本场".format(winds[game_order // 4], chinese_numbers[game_order % 4], honba)
-                                        ) 
+                                
+                                raise ActionException('自摸', paipu, game_order, honba)
                             break
 
                         else:
@@ -532,43 +556,39 @@ class PaipuReplay:
                                     selection = replayer.get_selection_from_action(mp.BaseAction.ChanAnKan, [])
                                     self.log(f'Select: {selection}')
                                     ret = replayer.make_selection(selection)
-                                if not ret:
-                                    raise RuntimeError('Replay fail.' + \
-                                        paipu_link(paipu) + \
-                                        "此局是{}{}局{}本场".format(winds[game_order // 4], chinese_numbers[game_order % 4], honba)
-                                        ) 
+                                if not ret:                                    
+                                    raise ActionException('荣和', paipu, game_order, honba)
                     if replayer.get_phase() != int(mp.PhaseEnum.GAME_OVER):
-                        raise RuntimeError('Replay fail.' + paipu_link(paipu))
+                        raise ActionException('牌局未结束', paipu, game_order, honba)
 
                     result = replayer.get_result()
                     result_score = result.score
                     self.log(score_changes1, score_changes2, scores, result_score)
                     self.log(result.to_string())
                     for i in range(4):
-                        if score_changes[i] + scores[i] != result_score[i] :
-                            raise RuntimeError('Replay fail.' + \
-                            paipu_link(paipu) + \
-                            "此局是{}{}局{}本场".format(winds[game_order // 4], chinese_numbers[game_order % 4], honba)
-                            )
+                        if -400 <= (score_changes[i] + scores[i] - result_score[i]) <= 400 :
+                            continue
+                        else:
+                            raise ScoreException(f'Expect: {score_changes}+{scores} Now: {result_score}', paipu, game_order, honba)
                     
                     self.log('OK!')
 
-                    from_who = int(child.get("fromWho"))
-                    agari_tile = int(child.get("machi"))
-                    honba = int(child.get("ba").split(",")[0])
-                    riichi_sticks = int(child.get("ba").split(",")[1])
+                    # from_who = int(child.get("fromWho"))
+                    # agari_tile = int(child.get("machi"))
+                    # honba = int(child.get("ba").split(",")[0])
+                    # riichi_sticks = int(child.get("ba").split(",")[1])
 
-                    if from_who == agari_player_id:
-                        info = "自摸"
-                    else:
-                        info = "玩家{}的点炮".format(from_who)
+                    # if from_who == agari_player_id:
+                    #     info = "自摸"
+                    # else:
+                    #     info = "玩家{}的点炮".format(from_who)
 
-                    self.log("玩家{} 通过{} 用{} 和了{}点 ({}本场,{}根立直棒)".format(
-                        agari_player_id, info, agari_tile, score_changes[agari_player_id] , honba, riichi_sticks))
-                    self.log("和牌时候的手牌 (不包含副露):", [int(hai) for hai in child.get("hai").split(",")])
+                    # self.log("玩家{} 通过{} 用{} 和了{}点 ({}本场,{}根立直棒)".format(
+                    #     agari_player_id, info, agari_tile, score_changes[agari_player_id] , honba, riichi_sticks))
+                    # self.log("和牌时候的手牌 (不包含副露):", [int(hai) for hai in child.get("hai").split(",")])
                     if double_ron:
                         break
-                self.log("本局各玩家的分数变化是", score_changes)
+                # self.log("本局各玩家的分数变化是", score_changes)
 
                 if not (child_no + 1 < len(root) and root[child_no + 1].tag == "AGARI"):
                     game_has_end = True  # 这一局结束了
@@ -577,11 +597,11 @@ class PaipuReplay:
                     # if num_games % 100 == 0:
                     #     self.log("****************** 已解析{}局 ***************".format(num_games))
 
-                if "owari" in child.attrib:
-                    owari_scores = child.get("owari").split(",")
-                    self.log("========== 此场终了，最终分数 ==========")
-                    self.log(int(owari_scores[0]) * 100, int(owari_scores[2]) * 100,
-                        int(owari_scores[4]) * 100, int(owari_scores[6]) * 100)
+                # if "owari" in child.attrib:
+                #     owari_scores = child.get("owari").split(",")
+                #     self.log("========== 此场终了，最终分数 ==========")
+                #     self.log(int(owari_scores[0]) * 100, int(owari_scores[2]) * 100,
+                #         int(owari_scores[4]) * 100, int(owari_scores[6]) * 100)
             else:
                 raise ValueError(child.tag, child.attrib, "Unexpected Element!")
 
@@ -595,13 +615,13 @@ class PaipuReplay:
         # ----------------- start ---------------------
         
         basepath = os.path.dirname(__file__)
-        path = basepath + "/paipuxmls"
+        path = basepath + "/paipu/paipuxmls"
 
         if mode == 'mark':
             from datetime import datetime 
             timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
-            logfilename = basepath + '/error_logs/error_'+timestr+'.log'
-            fp = open(logfilename, 'w')
+            logfilename = basepath + '/paipu/error_logs/error_'+timestr+'.log'
+            fp = open(logfilename, 'w+')
             fp.close()
         files = os.listdir(path)  # 得到文件夹下的所有文件名称
         self.total_games = len(files)
@@ -615,15 +635,28 @@ class PaipuReplay:
                 self.log_cache = ""
                 self._paipu_replay(path, paipu)
                 self.success += 1
-            except Exception as e:
+            except MahjongException as e:  
                 if mode == 'debug':
                     print(self.log_cache)
                     raise e
                 elif mode == 'test':
-                    self.errors.append(paipu)
+                    self.errors.append(paipu)          
                 elif mode == 'mark':
                     fp = open(logfilename, 'a+')
-                    print(paipu, file = fp)
+                    print(str(e), file = fp)
+                    self.errors.append(paipu)
+                    fp.close()
+                else:
+                    self.errors.append(paipu)    
+            except RuntimeError as e:
+                if mode == 'debug':
+                    print(self.log_cache)
+                    raise e
+                elif mode == 'test':
+                    self.errors.append(paipu)          
+                elif mode == 'mark':
+                    fp = open(logfilename, 'a+')
+                    print('RuntimeError: ' + str(e) + ' ' + paipu, file = fp)
                     self.errors.append(paipu)
                     fp.close()
                 else:
@@ -631,7 +664,7 @@ class PaipuReplay:
 
     def paipu_replay_1(self, paipu_name):
         basepath = os.path.dirname(__file__)
-        path = basepath + "/paipuxmls"
+        path = basepath + "/paipu/paipuxmls"
         self._paipu_replay(path, paipu_name)
 
 def paipu_replay(mode = 'debug'):
@@ -643,6 +676,16 @@ def paipu_replay(mode = 'debug'):
     replayer.logger = _logger
     replayer.paipu_replay(mode)
     print(replayer.progress())
+    return replayer
+
+def paipu_replay_1(filename):
+    replayer = PaipuReplay()
+    replayer.logger = logger(fp = 'stdout')
+    try:
+        replayer.paipu_replay_1(filename)
+    except Exception as e:
+        print(replayer.log_cache)
+        print(e)
     return replayer
 
 if __name__ == "__main__":

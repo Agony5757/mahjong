@@ -22,4 +22,4 @@ dist/
 pymahjong.egg-info/
 *.html
 pymahjong/paipuxmls/
-*.log
+paipu/

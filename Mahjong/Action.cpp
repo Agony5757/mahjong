@@ -66,7 +66,11 @@ string Action::to_string() const
 		            + correspond_tiles[1]->to_string() 
 					+ correspond_tiles[2]->to_string();
 	case BaseAction::荣和:
-		return "荣和"; 
+		return "荣和"; 		
+	case BaseAction::抢杠:
+		return "抢杠";
+	case BaseAction::抢暗杠:
+		return "抢暗杠";
 	default:
 		throw runtime_error("Invalid BaseAction");
 	}

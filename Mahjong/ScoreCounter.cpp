@@ -331,7 +331,7 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 			REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
 		}
 		else if (fu == 30) {
-			REGISTER_SCORE(亲, 自摸, 11600, 3900, 7700, 3900, 2000);
+			REGISTER_SCORE(亲, 自摸, 12000, 3900, 7700, 3900, 2000);
 		}
 		else if (fu == 25) {
 			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
@@ -346,7 +346,7 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 			REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
 		}
 		else if (fu == 60) {
-			REGISTER_SCORE(亲, 自摸, 11600, 3600, 7700, 3900, 2000);
+			REGISTER_SCORE(亲, 自摸, 11600, 3900, 7700, 3900, 2000);
 		}
 		else if (fu == 50) {
 			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
