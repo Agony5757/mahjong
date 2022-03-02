@@ -336,6 +336,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("get_selection_from_action", &PaipuReplayer::get_selection_from_action)
 		.def("get_phase", &PaipuReplayer::get_phase)
 		.def("get_result", &PaipuReplayer::get_result)
+		.def("set_log", &PaipuReplayer::set_log)
 		;
 
 	py::class_<TenhouShuffle>(m, "TenhouShuffle")
