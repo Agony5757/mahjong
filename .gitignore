@@ -23,3 +23,4 @@ pymahjong.egg-info/
 *.html
 pymahjong/paipuxmls/
 paipu/
+*.log
