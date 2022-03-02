@@ -153,14 +153,14 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 			场役.push_back(Yaku::立直);
 
 		/* 海底的条件是1. remain_tile == 0, 2. 上一手不是杠相关 */
-		if (table->get_remain_tile() == 0 &&
+		if (tsumo && table->get_remain_tile() == 0 &&
 			table->last_action != BaseAction::暗杠 &&
 			table->last_action != BaseAction::杠 &&
 			table->last_action != BaseAction::加杠) {
-
-			// 如果是tsumo
-			if (tsumo) 场役.push_back(Yaku::海底捞月);
-			else 场役.push_back(Yaku::河底捞鱼);
+			场役.push_back(Yaku::海底捞月);
+		}
+		if (!tsumo && table->get_remain_tile() == 0) {
+			场役.push_back(Yaku::河底捞鱼);
 		}
 
 		/* 如果是抢杠，那么计算抢杠 */
