@@ -212,12 +212,16 @@ class PaipuReplay:
         self.errors = list()
         self.logger = logger()
         self.log_cache = ""
+        self.write_log = False
 
     def log(self, *info):
         # self.logger.log(*info)
         for s in info:
             self.log_cache += str(s)
             self.log_cache += '\n'
+
+    def set_log(self, log):
+        self.write_log = log
 
     def progress(self):
         print('Games {}/{}/{}'.format(self.success, self.num_games, self.total_games))
@@ -342,6 +346,8 @@ class PaipuReplay:
 
                 # 利用PaiPuReplayer进行重放
                 replayer = mp.PaipuReplayer()
+                if self.write_log:
+                    replayer.set_log(True)
                 #self.log(f'Replayer.init: {yama} {scores} {riichi_sticks} {honba} {game_order // 4} {oya_id}')
                 replayer.init(yama, scores, riichi_sticks, honba, game_order // 4, oya_id)
                 #self.log('Init over.')
@@ -625,12 +631,15 @@ class PaipuReplay:
             fp.close()
         files = os.listdir(path)  # 得到文件夹下的所有文件名称
         self.total_games = len(files)
-        for paipu in files:            
+        for num, paipu in enumerate(files):            
             if not paipu.endswith('txt'): 
                 continue
+
+            if '0000' != paipu.split('-')[2]:
+                continue
             
-            print(paipu)
             self.num_games += 1
+            print(f"{num}/{self.num_games}/{self.total_games} {paipu}")
             try:
                 self.log_cache = ""
                 self._paipu_replay(path, paipu)
@@ -680,6 +689,7 @@ def paipu_replay(mode = 'debug'):
 
 def paipu_replay_1(filename):
     replayer = PaipuReplay()
+    replayer.set_log(True)
     replayer.logger = logger(fp = 'stdout')
     try:
         replayer.paipu_replay_1(filename)
