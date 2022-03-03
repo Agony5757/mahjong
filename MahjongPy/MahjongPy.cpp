@@ -12,6 +12,7 @@
 #include "ScoreCounter.h"
 #include "GamePlay.h"
 #include "tenhou.h"
+#include "TrainingDataEncoding.h"
 using namespace std;
 using namespace pybind11::literals;
 namespace py = pybind11;
@@ -344,6 +345,8 @@ PYBIND11_MODULE(MahjongPy, m)
 		.def("init", &TenhouShuffle::init)
 		.def("generate_yama", &TenhouShuffle::generate_yama)
 		;
+
+	m.def("encode_table", &TrainingDataEncoding::encode_table);
 }
 
 #ifdef __GNUC__

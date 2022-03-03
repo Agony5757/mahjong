@@ -153,7 +153,7 @@ void TenhouShuffle::init(const char* seed)
 std::vector<int> TenhouShuffle::generate_yama()
 {
     int i;
-    std::vector<int> yama(136, 0);
+    std::vector<int> yama(136, 0); // サンマは108
 
     //ローカルMTで乱数生成
     for (i = 0; i < sizeof(src) / sizeof(*src); ++i) src[i] = genrand_int32();
@@ -163,7 +163,6 @@ std::vector<int> TenhouShuffle::generate_yama()
         SHA512((BYTE*)src + i * SHA512_DIGEST_LENGTH * 2, SHA512_DIGEST_LENGTH * 2, (BYTE*)rnd + i * SHA512_DIGEST_LENGTH);
     }
 
-    BYTE tmp_yama; // サンマは108
     int tmp_index;
 
     for (i = 0; i < 136; ++i) 

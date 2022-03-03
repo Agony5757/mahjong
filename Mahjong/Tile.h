@@ -18,7 +18,7 @@ enum Wind {
 	East, South, West, North
 };
 
-enum BaseTile : unsigned char {
+enum BaseTile : char {
 	_1m, _2m, _3m, _4m, _5m, _6m, _7m, _8m, _9m,
 	_1p, _2p, _3p, _4p, _5p, _6p, _7p, _8p, _9p,
 	_1s, _2s, _3s, _4s, _5s, _6s, _7s, _8s, _9s,
@@ -33,7 +33,7 @@ inline std::string basetile_to_string_simple(BaseTile bt) {
 		"1s","2s","3s","4s","5s","6s","7s","8s","9s",	
 		"1z","2z","3z","4z","5z","6z","7z" 
 	};
-	return names[int(bt)];
+	return names[char(bt)];
 }
 
 inline BaseTile char2_to_basetile(char number, char color, bool& red_dora) {
@@ -345,7 +345,7 @@ struct Fulu {
 		暗杠,
 	};
 	std::vector<Tile*> tiles;
-	int take;
+	int take = 0;
 	// take标记的tiles中第几张牌拿的是别人的
 	// take == 0 说明 (1)23
 	// take == 1 说明 1(2)3
