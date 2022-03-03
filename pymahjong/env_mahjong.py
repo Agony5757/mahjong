@@ -1,11 +1,10 @@
-import platform
 import warnings
 import time
 
 import numpy as np
 from copy import deepcopy
 import gym
-import pymahjong as mp
+import MahjongPy as mp
 
 from mahjong.shanten import Shanten
 from mahjong.tile import TilesConverter
@@ -281,22 +280,20 @@ def generate_obs(playerNo, hand_tiles, river_tiles, side_tiles, dora_tiles, game
         return all_obs_kp
 
 
-class EnvMahjong4(gym.Env):
+class EnvMahjong(gym.Env):
     """
-    Mahjong Environment for FrOst Ver3
+    Mahjong Environment
     """
 
-    metadata = {'name': 'Mahjong', 'render.modes': ['human', 'rgb_array'], 'video.frames_per_second': 50}
-    spec = {'id': 'TaskT'}
-    version = "v2"
+    metadata = {'name': 'Mahjong'}
 
     def __init__(self, printing=True, reward_unit=100, force_win=False, force_riichi=False, append_aval_action_obs=True):
         self.t = mp.Table()
         self.Phases = (
             "P1_ACTION", "P2_ACTION", "P3_ACTION", "P4_ACTION", "P1_RESPONSE", "P2_RESPONSE", "P3_RESPONSE",
-            "P4_RESPONSE", "P1_抢杠RESPONSE", "P2_抢杠RESPONSE", "P3_抢杠RESPONSE", "P4_抢杠RESPONSE",
-            "P1_抢暗杠RESPONSE", "P2_抢暗杠RESPONSE", " P3_抢暗杠RESPONSE", " P4_抢暗杠RESPONSE", "GAME_OVER",
-            "P1_DRAW, P2_DRAW, P3_DRAW, P4_DRAW")
+            "P4_RESPONSE", "P1_ChanKanRESPONSE", "P2_ChanKanRESPONSE", "P3_ChanKanRESPONSE", "P4_ChanKanRESPONSE",
+            "P1_ChanAnKanRESPONSE", "P2_ChanAnKanRESPONSE", " P3_ChanAnKanRESPONSE", " P4_ChanAnKanRESPONSE",
+            "GAME_OVER", "P1_DRAW, P2_DRAW, P3_DRAW, P4_DRAW")
         self.horas = [False, False, False, False]
         self.played_a_tile = [False, False, False, False]
         self.tile_in_air = None
@@ -344,8 +341,11 @@ class EnvMahjong4(gym.Env):
         self.game_wind = game_wind
 
         # self.t.game_init()
-        self.t.game_init_with_metadata({"oya": oya, "wind": game_wind})
-
+        meta = {"oya": oya, "wind": game_wind}
+        print(meta)
+        print('Init...')
+        self.t.game_init_with_metadata(meta)
+        print('Initialized.')
         # ----------------- Statistics ------------------
         self.game_count += 1
 
@@ -371,17 +371,6 @@ class EnvMahjong4(gym.Env):
         # self.game_wind_obs = np.zeros(34)  # index: -4
 
         self.dora_tiles.append(dora_ind_2_dora_id(int(self.t.DORA[0].tile)) * 4 + 3)
-
-        # if game_wind == "east":
-        #     self.game_wind_obs[27] = 1
-        # elif game_wind == "south":
-        #     self.game_wind_obs[28] = 1
-        # elif game_wind == "west":
-        #     self.game_wind_obs[29] = 1
-        # elif game_wind == "north":
-        #     self.game_wind_obs[30] = 1
-        # else:
-        #     raise ValueError
 
         self.latest_tile = None
 
@@ -409,7 +398,6 @@ class EnvMahjong4(gym.Env):
 
     def get_valid_actions(self, nhot=True):
 
-        # gva_time = time.time()
 
         self.update_hand_and_latest_tiles()
 
@@ -421,8 +409,6 @@ class EnvMahjong4(gym.Env):
         if phase < 4:
             aval_actions = self.t.get_self_actions()
 
-            # if len(aval_actions) == 1:
-            #     print(aval_actions[0].action)
 
             if self.is_deciding_riichi:
                 self.curr_valid_actions += [RIICHI, PASS_RIICHI]
@@ -433,10 +419,10 @@ class EnvMahjong4(gym.Env):
                     if act.action == mp.BaseAction.Play:
                         self.curr_valid_actions.append(int(act.correspond_tiles[0].tile))  # considered shiti
                         self.aval_action_obs[int(act.correspond_tiles[0].tile), DISCARD_ACT_IND] = 1
-                    elif act.action == mp.BaseAction.AnKan:
+                    elif act.action == mp.BaseAction.Ankan:
                         self.curr_valid_actions.append(ANKAN)
                         self.aval_action_obs[int(act.correspond_tiles[0].tile), ANKAN_ACT_IND] = 1
-                    elif act.action == mp.BaseAction.KaKan:
+                    elif act.action == mp.BaseAction.Kakan:
                         self.curr_valid_actions.append(KAKAN)
                         self.aval_action_obs[int(act.correspond_tiles[0].tile), KAKAN_ACT_IND] = 1
                     elif act.action == mp.BaseAction.Tsumo:
@@ -500,47 +486,6 @@ class EnvMahjong4(gym.Env):
 
         self.curr_valid_actions = list(set(self.curr_valid_actions))
 
-        # ## Note that the curr_valid_action are ordered, corresonding to self.t.get_aval_next_states()
-        #
-        # remaining_tiles = self.t.get_remain_tile()
-        #
-        # #--------------- judge whether can naru ----------------
-        # # TODO: how to make conditions
-        # can_naru = False
-        #
-        # self.curr_valid_actions = [PASS_RESPONSE]
-        #
-        # player_id = self.get_curr_player_id()
-        #
-        # discard_tile_id = int(self.t.get_selected_action_tile().tile)
-        # hand_tile_ids = [int(ht / 4) for ht in self.hand_tiles[player_id]]
-        #
-        # # TODO: currently is if can win, then win. Need to change this in the future.
-        #
-        # if hand_tile_ids.count(discard_tile_id) >= 2:  # Pon
-        #     can_naru = True
-        #     self.valid_int_actions.append(PON)
-        #
-        #     if hand_tile_ids.count(discard_tile_id) == 3 and remaining_tiles >= 1:  # Min-Kan
-        #         self.valid_int_actions.append(MINKAN)
-        #
-        # if player_id == (main_player_no + 3) % 4:  # TODO: how to make conditions
-        #     # Can Chi
-        #     for i in range(len(hand_tile_ids)):
-        #         for j in range(len(hand_tile_ids)):
-        #             if is_consecutive(discard_tile_id, hand_tile_ids[i], hand_tile_ids[j]):
-        #                 self.valid_int_actions.append(CHILEFT)
-        #                 can_naru = True
-        #             elif is_consecutive(hand_tile_ids[i], discard_tile_id, hand_tile_ids[j]):
-        #                 self.valid_int_actions.append(CHIMIDDLE)
-        #                 can_naru = True
-        #             elif is_consecutive(hand_tile_ids[i], hand_tile_ids[j], discard_tile_id):
-        #                 self.valid_int_actions.append(CHIRIGHT)
-        #                 can_naru = True
-        #
-
-        # print("get valid action time:", time.time() - gva_time)
-
         if not nhot:
             return self.curr_valid_actions
         else:
@@ -562,14 +507,9 @@ class EnvMahjong4(gym.Env):
 
     def step(self, player_id, action, raw_action=False):
 
-        step_start_time = time.time()
-
         who, what = self.who_do_what()
 
         self.prev_step_is_naru = False  # to make latest_tiles available
-
-        # if self.latest_tile is not None:
-        #     assert int(self.latest_tile / 4) == int(self.t.get_selected_action_tile().tile)
         self.update_hand_and_latest_tiles()
 
         assert who == player_id
@@ -594,9 +534,13 @@ class EnvMahjong4(gym.Env):
                 riichi = False
             results = self.step_play(action, player_id, riichi)
 
-        # print("step time taken:", time.time() - step_start_time)
+        while not self.has_done() and len(self.get_valid_actions(nhot=False)) == 1:
+            self.t.make_selection(0)
 
-        return results
+        if self.has_done():
+            return results[0], results[1], 1, results[3]
+        else:
+            return results
 
     def get_aval_action_obs(self, player_id):
         if not player_id == self.t.who_make_selection():
@@ -607,9 +551,6 @@ class EnvMahjong4(gym.Env):
 
     def get_obs(self, player_id):
         self.update_hand_and_latest_tiles()
-
-        # player_wind_obs = np.zeros([34])
-        # player_wind_obs[27 + (8 - self.oya_id + player_id) % 4] = 1
 
         self.curr_all_obs[player_id] = generate_obs(player_id,
             self.hand_tiles, self.river_tiles, self.side_tiles, self.dora_tiles,
@@ -624,9 +565,6 @@ class EnvMahjong4(gym.Env):
     def get_full_obs(self, player_id):
         self.update_hand_and_latest_tiles()
 
-        # player_wind_obs = np.zeros([34])
-        # player_wind_obs[27 + (8 - self.oya_id + player_id) % 4] = 1
-
         self.curr_all_obs[player_id] = generate_obs(player_id,
             self.hand_tiles, self.river_tiles, self.side_tiles, self.dora_tiles,
             self.game_wind, self.oya_id, latest_tile=self.latest_tile)
@@ -640,9 +578,6 @@ class EnvMahjong4(gym.Env):
 
     def get_oracle_obs(self, player_id):
         self.update_hand_and_latest_tiles()
-
-        # player_wind_obs = np.zeros([34])
-        # player_wind_obs[27 + (8 - self.oya_id + player_id) % 4] = 1
 
         self.curr_all_obs[player_id] = generate_obs(player_id,
             self.hand_tiles, self.river_tiles, self.side_tiles, self.dora_tiles,
@@ -670,8 +605,6 @@ class EnvMahjong4(gym.Env):
 
         if self.t.get_phase() != 16:
             playerNo = self.get_curr_player_id()
-            # old_hand_tiles_player = deepcopy(self.hand_tiles[playerNo])
-            # old_hand_tiles_id_player = np.array([int(ht / 4) for ht in old_hand_tiles_player])
 
             if not self.do_not_update_hand_and_latest_tiles_this_time:
                 self.hand_tiles = [[], [], [], []]
@@ -681,24 +614,10 @@ class EnvMahjong4(gym.Env):
                             self.hand_tiles[pid].append(int(self.t.players[pid].hand[i].tile) * 4)
                         else:
                             self.hand_tiles[pid].append(int(self.t.players[pid].hand[i].tile) * 4 + 3)
-
-                # hand_tiles_id_player = np.array([int(ht / 4) for ht in self.hand_tiles[playerNo]])
-                # if np.any(hand_tiles_id_player != old_hand_tiles_id_player):
-                #     print("---------- Hand Tiles Dismatch ----------------")
-                #     print("Hand Tiles ID from Table:", hand_tiles_id_player)
-                #     print("Hand Tiles ID from Old:", old_hand_tiles_id_player)
-
                 if self.t.get_phase() < 4:
                     self.latest_tile = self.hand_tiles[playerNo][-1]
         else:
             pass
-            # print("This game has ended!")
-
-        # if len(self.hand_tiles[playerNo]) - len(old_hand_tiles_player) == -1:  # just discard a tile
-        #     if self.t.get_selected_action_tile().red_dora:
-        #         self.latest_tile = int(self.t.get_selected_action_tile().tile) * 4
-        #     else:
-        #         self.latest_tile = int(self.t.get_selected_action_tile().tile) * 4 + 3
 
     def step_play(self, action, playerNo, riichi=False):
         # self action phase
@@ -809,10 +728,10 @@ class EnvMahjong4(gym.Env):
                             is_from_hand = 0
                     elif action == ANKAN:
                         desired_action_tile_id = None  # TODO: There is some simplification
-                        desired_action_type = mp.BaseAction.AnKan
+                        desired_action_type = mp.BaseAction.Ankan
                     elif action == KAKAN:
                         desired_action_tile_id = None  # TODO: There is some simplification
-                        desired_action_type = mp.BaseAction.KaKan
+                        desired_action_type = mp.BaseAction.Kakan
                     elif action == TSUMO:
                         desired_action_type = mp.BaseAction.Tsumo
                         desired_action_tile_id = None
@@ -838,7 +757,7 @@ class EnvMahjong4(gym.Env):
                             (desired_action_tile_id is None or int(act.correspond_tiles[0].tile) == desired_action_tile_id):
                         has_valid_action = True
 
-                        if desired_action_type in [mp.BaseAction.AnKan, mp.BaseAction.KaKan]:
+                        if desired_action_type in [mp.BaseAction.Ankan, mp.BaseAction.Kakan]:
                             kan_tile_id = int(act.correspond_tiles[0].tile)
 
                         break
@@ -951,9 +870,11 @@ class EnvMahjong4(gym.Env):
 
         return self.get_state(), reward, done, info
 
+    def has_done(self):
+        return self.Phases[self.t.get_phase()] == "GAME_OVER"
+
     def step_response(self, action: int, playerNo: int):
         # response phase
-        # action now is an int from 0 to 45
         action = int(action)
 
         # -------------------- update latest tile for drawing a tile ----------
@@ -1166,5 +1087,4 @@ class EnvMahjong4(gym.Env):
             return self.t.who_make_selection(), "play"
 
     def render(self, mode='human'):
-        print(self.t.get_selected_base_action.action)
-
+        print(self.t.get_selected_base_action().action)

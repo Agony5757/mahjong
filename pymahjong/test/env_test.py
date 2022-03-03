@@ -12,15 +12,7 @@ from copy import deepcopy
 np.set_printoptions(threshold=np.inf)
 
 
-# t.game_init()
-
-
-
-# ---------------- Test ----------------------
-playerNo = np.random.randint(0, 4)
-
-
-def encoding_test_by_random_play(num_games=100, verbose=1):
+def encoding_test_by_random_play(num_games=100, verbose=1, error_pause=0):
 
 
     winds = ['east', 'south', 'west', 'north']
@@ -39,7 +31,7 @@ def encoding_test_by_random_play(num_games=100, verbose=1):
     winning_counts = []
     deal_in_counts = []
 
-    wrong_dimensions = np.zeros([81])
+    wrong_dimensions_total = np.zeros([81])
 
     while game < num_games:
 
@@ -71,14 +63,19 @@ def encoding_test_by_random_play(num_games=100, verbose=1):
                 if np.any(dq_obs != ag_obs):
                     wrong_dimensions = np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()
                     if verbose >= 1:
-                        print("feature dimensions that are different:", wrong_dimensions)
+                        print("wrong encoding! feature dimensions that are different: \n", wrong_dimensions)
                     if verbose >= 2:
-                        print("")
+                        for dim in wrong_dimensions:
+                            print("------------- player {}, dimension: {} ---------------".format(curr_pid, dim))
+                            print("DQ's encoding:", dq_obs[dim, :])
+                            print("AG's encoding:", ag_obs[dim, :])
+                            print("------------------------------------------------------".format(dim))
 
-                    wrong_dimensions[np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()] = 1
+                    wrong_dimensions_total[np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()] = 1
+
+                    time.sleep(error_pause)
 
                 # --------------------------------------------------
-
 
                 a = np.random.randint(0, len(valid_actions))
                 sp, r, done, _ = env_test.step(curr_pid, valid_actions[a])
@@ -110,11 +107,14 @@ def encoding_test_by_random_play(num_games=100, verbose=1):
                 break
 
 
-    print("feature dimensions that are wrong:", np.argwhere(wrong_dimensions).flatten())
-    print("Test {} games, spend {} s".format(times, time.time() - start_time))
+    print("feature dimensions that are different \n:", np.argwhere(wrong_dimensions_total).flatten())
+    print("Test {} games, spend {} s".format(num_games, time.time() - start_time))
 
 
 if __name__ == "__main__":
 
+    # verbose = 0: only show feature dimensions that are different after playing all the games
+    # verbose = 1: also show feature dimensions that are different at each step
+    # verbose = 2: also show detailed data at the feature dimensions that are different at each step
 
-    encoding_test_by_random_play(num_games=100, verbose=1)
+    encoding_test_by_random_play(num_games=40, verbose=2, error_pause=0)

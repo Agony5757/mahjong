@@ -1,3 +1,4 @@
-from MahjongPy import *
-from .env_mahjong_example import *
-from .paipu_jiexi import PaipuReplay, paipu_replay, paipu_replay_1
+from pymahjong import *
+from .env_mahjong import *
+from .env_test import encoding_test_by_random_play
+
