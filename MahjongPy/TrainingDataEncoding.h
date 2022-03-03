@@ -1,7 +1,7 @@
 #ifndef TRAINING_DATA_ENCODING_H
 #define TRAINING_DATA_ENCODING_H
 
-#include <pybind11\numpy.h>
+#include "pybind11/numpy.h"
 #include <vector>
 #include "Table.h"
 
