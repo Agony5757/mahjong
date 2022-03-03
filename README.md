@@ -31,14 +31,14 @@ C++环境下：
 
 
 ## 安装（暂时不支持Ubuntu16.04）
-``
+```
 git clone https://github.com/Agony5757/mahjong/
 cd mahjong
 sudo apt-get upgrade
 sudo apt-get update
 sudo apt-get install clang cmake
 python setup.py install
-``
+```
 
 ------------------------------
 # 下面是旧版本的信息，请暂时忽略 
