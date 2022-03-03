@@ -213,8 +213,6 @@ void Table::game_init_with_metadata(unordered_map<string, string> metadata)
 		场风 = Wind::East;
 	}
 
-	init_yama();
-
 	// 每人发13张牌
 	if (metadata.find("deal") != metadata.end()) {
 		auto val = metadata["deal"];
