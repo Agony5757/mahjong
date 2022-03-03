@@ -29,6 +29,20 @@ C++环境下：
 测试只能保证操作能回放，不能保证是否出现错误的操作待选项（例如无法ron的情况仍然有ron的选项）。
 这一点只能通过大量实战进行测试。
 
+
+## 安装（暂时不支持Ubuntu16.04）
+``
+git clone https://github.com/Agony5757/mahjong/
+cd mahjong
+sudo apt-get upgrade
+sudo apt-get update
+sudo apt-get install clang cmake
+python setup.py install
+``
+
+------------------------------
+# 下面是旧版本的信息，请暂时忽略 
+
 ## Example
 
 	import numpy as np
