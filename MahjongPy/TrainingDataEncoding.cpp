@@ -111,13 +111,11 @@ namespace TrainingDataEncoding {
 	{
 		for (auto t : table.宝牌指示牌) {
 			ntiles[char(get_dora_next(t->tile))] += (1 << 3);
-			ntiles[char(t->tile)] ++;
+			ntiles[char(t->tile)]++;
 		}
-		ntiles[char(table.场风 + BaseTile::_1z)] += (1 << 6);
-		ntiles[char(player.wind + BaseTile::_1z)] += (1 << 7);
 	}
 
-	void encode_field(const array<dtype, n_tile_types>& ntiles, dtype *data)
+	void encode_field(const Table& table, const Player& player, const array<dtype, n_tile_types>& ntiles, dtype *data)
 	{
 		for (size_t i = 0; i < n_tile_types; ++i) {
 			size_t pos = locate(n_col, i, col_field);
@@ -133,9 +131,9 @@ namespace TrainingDataEncoding {
 			case 2 << 3: data[pos + 5] = 1;
 			case 1 << 3: data[pos + 4] = 1;
 			}
-			if (ntiles[i] & field_wind_flag) data[pos + 8] = 1;
-			if (ntiles[i] & self_wind_flag) data[pos + 9] = 1;
 		}
+		data[char(table.场风 + BaseTile::_1z)] = 1;
+		data[char(player.wind + BaseTile::_1z)] = 1;
 	}
 
 	void encode_last(const Table& table, int pid, dtype* data)
@@ -176,10 +174,10 @@ namespace TrainingDataEncoding {
 		/* encoding */
 		encode_hand(hand, river[pid], data);
 		for (int i = 0; i < 4; ++i) {
-			encode_fulu(fulu[i], data, i);
-			encode_river(river[i], data, i);
+			encode_fulu(fulu[(i + pid) % 4], data, (i + pid) % 4);
+			encode_river(river[(i + pid) % 4], data, (i + pid) % 4);
 		}
-		encode_field(field, data);
+		encode_field(table, p, field, data);
 		encode_last(table, pid, data);
 	}
 }
