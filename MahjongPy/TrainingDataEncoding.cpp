@@ -12,7 +12,7 @@ namespace TrainingDataEncoding {
 	}
 
 	/* tile counter
-	 Ãù  Á¢  ºì   ÊÖÇÐ    ÕÅÊý
+	 é¸£  ç«‹  çº¢   æ‰‹åˆ‡    å¼ æ•°
 	0~1 0~1 0~1 000~100 000~100
 	 8   7   6    5~3     2~0
 	*/
@@ -53,8 +53,8 @@ namespace TrainingDataEncoding {
 			switch (f.type) {
 			case Fulu::Chi:
 			case Fulu::Pon:
-			case Fulu::¼Ó¸Ü:
-			case Fulu::´óÃ÷¸Ü:
+			case Fulu::åŠ æ :
+			case Fulu::å¤§æ˜Žæ :
 				ntiles[char(f.tiles[f.take]->tile)] ^= naki_flag;
 			}
 		}
@@ -109,11 +109,11 @@ namespace TrainingDataEncoding {
 
 	void count_field(const Table& table, const Player& player, array<dtype, n_tile_types> &ntiles)
 	{
-		for (auto t : table.±¦ÅÆÖ¸Ê¾ÅÆ) {
+		for (auto t : table.å®ç‰ŒæŒ‡ç¤ºç‰Œ) {
 			ntiles[char(get_dora_next(t->tile))] += (1 << 3);
 			ntiles[char(t->tile)] ++;
 		}
-		ntiles[char(table.³¡·ç + BaseTile::_1z)] += (1 << 6);
+		ntiles[char(table.åœºé£Ž + BaseTile::_1z)] += (1 << 6);
 		ntiles[char(player.wind + BaseTile::_1z)] += (1 << 7);
 	}
 
@@ -168,7 +168,7 @@ namespace TrainingDataEncoding {
 		const Player& p = table.players[pid];
 		count_hand_tiles(p.hand, hand);
 		for (int i = 0; i < 4; ++i) {
-			count_fulu(table.players[i].¸±Â¶s, fulu[i]);
+			count_fulu(table.players[i].å‰¯éœ²s, fulu[i]);
 			count_river_tiles(table.players[i].river.river, river[i]);
 		}
 		count_field(table, p, field);
