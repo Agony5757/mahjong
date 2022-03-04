@@ -10,6 +10,12 @@ namespace TrainingDataEncoding {
 	{
 		return n_col * row + col;
 	}
+	const static dtype m0[] = { 0,0,0,0 };
+	const static dtype m1[] = { 1,0,0,0 };
+	const static dtype m2[] = { 1,1,0,0 };
+	const static dtype m3[] = { 1,1,1,0 };
+	const static dtype m4[] = { 1,1,1,1 };
+	const static dtype* m[] = { m0,m1,m2,m3,m4 };
 
 	/* tile counter
 	 鸣  立  红   手切    张数
@@ -23,7 +29,6 @@ namespace TrainingDataEncoding {
 			auto id = char(t->tile);
 			ntiles[id]++;
 			if (t->red_dora) ntiles[id] ^= red_dora_flag; 
-
 		}
 	}
 
@@ -31,14 +36,9 @@ namespace TrainingDataEncoding {
 	{
 		for (size_t i = 0; i < n_tile_types; ++i) {
 			size_t pos = locate(n_col, i, col_hand);
-			switch (hand[i] & number_mask) {
-			case 4:	data[pos + 3] = 1;
-			case 3: data[pos + 2] = 1;
-			case 2: data[pos + 1] = 1;
-			case 1: data[pos + 0] = 1;
-			}
-			if (river[i] > 0) data[pos + 4] = 1;
-			if (hand[i] & red_dora_flag) data[pos + 5] = 1;
+			memcpy(data + pos, m[hand[i] & number_mask], sizeof(dtype) * 4);
+			data[pos + 4] = (river[i] > 0) ? 1 : 0;
+			data[pos + 5] = (hand[i] & red_dora_flag) ? 1 : 0;
 		}
 	}
 
@@ -56,6 +56,8 @@ namespace TrainingDataEncoding {
 			case Fulu::加杠:
 			case Fulu::大明杠:
 				ntiles[char(f.tiles[f.take]->tile)] ^= naki_flag;
+			default:
+				break;
 			}
 		}
 	}
@@ -64,14 +66,9 @@ namespace TrainingDataEncoding {
 	{
 		for (size_t i = 0; i < n_tile_types; ++i) {
 			size_t pos = locate(n_col, i, col_fulu + pid * size_fulu);
-			switch (ntiles[i] & number_mask) {
-			case 4:	data[pos + 3] = 1;
-			case 3: data[pos + 2] = 1;
-			case 2: data[pos + 1] = 1;
-			case 1: data[pos + 0] = 1;
-			}
-			if (ntiles[i] & naki_flag) data[pos + 4] = 1;
-			if (ntiles[i] & red_dora_flag) data[pos + 5] = 1;
+			memcpy(data + pos, m[ntiles[i] & number_mask], sizeof(dtype) * 4);
+			data[pos + 4] = (ntiles[i] & naki_flag) ? 1 : 0;
+			data[pos + 5] = (ntiles[i] & red_dora_flag) ? 1 : 0;
 		}
 	}
 
@@ -90,20 +87,12 @@ namespace TrainingDataEncoding {
 	{
 		for (size_t i = 0; i < n_tile_types; ++i) {
 			size_t pos = locate(n_col, i, col_river + pid * size_river);
-			switch (ntiles[i] & number_mask) {
-			case 4:	data[pos + 3] = 1;
-			case 3: data[pos + 2] = 1;
-			case 2: data[pos + 1] = 1;
-			case 1: data[pos + 0] = 1;
-			}
-			switch (ntiles[i] & hand_mask) {
-			case 4 << 3: data[pos + 7] = 1;
-			case 3 << 3: data[pos + 6] = 1;
-			case 2 << 3: data[pos + 5] = 1;
-			case 1 << 3: data[pos + 4] = 1;
-			}
-			if (ntiles[i] & red_dora_flag) data[pos + 8] = 1;
-			if (ntiles[i] & riichi_flag) data[pos + 9] = 1;
+
+			memcpy(data + pos, m[ntiles[i] & number_mask], sizeof(dtype) * 4);
+			memcpy(data + pos + 4, m[ntiles[i] & number_mask - 3], sizeof(dtype) * 4);
+
+			data[pos + 8] = (ntiles[i] & red_dora_flag) ? 1 : 0;
+			data[pos + 9] = (ntiles[i] & riichi_flag) ? 1 : 0;
 		}
 	}
 
@@ -112,6 +101,8 @@ namespace TrainingDataEncoding {
 		for (auto t : table.宝牌指示牌) {
 			ntiles[char(get_dora_next(t->tile))] += (1 << 3);
 			ntiles[char(t->tile)]++;
+			if (t->tile - BaseTile::_1z == table.场风) ntiles[char(t->tile)] += field_wind_flag;
+			if (t->tile - BaseTile::_1z == player.wind) ntiles[char(t->tile)] += self_wind_flag;
 		}
 	}
 
@@ -119,25 +110,18 @@ namespace TrainingDataEncoding {
 	{
 		for (size_t i = 0; i < n_tile_types; ++i) {
 			size_t pos = locate(n_col, i, col_field);
-			switch (ntiles[i] & dora_indicator_mask) {
-			case 4:	data[pos + 3] = 1;
-			case 3: data[pos + 2] = 1;
-			case 2: data[pos + 1] = 1;
-			case 1: data[pos + 0] = 1;
-			}
-			switch (ntiles[i] & dora_mask) {
-			case 4 << 3: data[pos + 7] = 1;
-			case 3 << 3: data[pos + 6] = 1;
-			case 2 << 3: data[pos + 5] = 1;
-			case 1 << 3: data[pos + 4] = 1;
-			}
+
+			memcpy(data + pos, m[ntiles[i] & dora_indicator_mask], sizeof(dtype) * 4);
+			memcpy(data + pos + 4, m[ntiles[i] & number_mask], sizeof(dtype) * 4);
+
+			data[pos + 8] = (ntiles[i] & field_wind_flag) ? 1 : 0;
+			data[pos + 9] = (ntiles[i] & self_wind_flag) ? 1 : 0;
 		}
-		data[char(table.场风 + BaseTile::_1z)] = 1;
-		data[char(player.wind + BaseTile::_1z)] = 1;
 	}
 
 	void encode_last(const Table& table, int pid, dtype* data)
 	{
+		char id = -1;
 		switch (table.get_phase()) {
 		case Table::PhaseEnum::P1_ACTION:
 		case Table::PhaseEnum::P2_ACTION:
@@ -145,22 +129,25 @@ namespace TrainingDataEncoding {
 		case Table::PhaseEnum::P4_ACTION:
 			if (pid == int(table.get_phase())) {
 				char id = table.players[pid].hand.back()->tile;
-				data[locate(n_col, id, col_last)] = 1;
+				// data[locate(n_col, id, col_last)] = 1;
 			}
 		default: {
 			auto& ct = table.selected_action.correspond_tiles;
 			if (ct.size() > 0) {
 				char id = ct[0]->tile;
-				data[locate(n_col, id, col_last)] = 1;
+				// data[locate(n_col, id, col_last)] = 1;
 			}
 		}
+		}
+		for (char i = _1m; i < _7z; ++i) {
+			data[locate(n_col, i, col_last)] = (i == id ? 1 : 0);
 		}
 	}
 
 	void encode_table(const Table& table, int pid, pybind11::array_t<dtype> arr)
 	{
 		dtype* data = arr.mutable_data();
-		array<dtype, n_tile_types> hand{ 0 }, fulu[4]{0}, river[4]{0}, field;
+		array<dtype, n_tile_types> hand{ 0 }, fulu[4]{ {0} }, river[4]{ {0} }, field{ 0 };
 
 		/* counting */
 		const Player& p = table.players[pid];
