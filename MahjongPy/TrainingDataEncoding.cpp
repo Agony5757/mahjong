@@ -102,11 +102,13 @@ namespace TrainingDataEncoding {
 	void count_field(const Table& table, const Player& player, array<dtype, n_tile_types> &ntiles)
 	{
 		ntiles.fill(0);
-		for (auto t : table.宝牌指示牌) {
+		auto& dora_indicator = table.宝牌指示牌;
+		for (auto i = 0; i < table.dora_spec; ++i) {
+			Tile* t = dora_indicator[i];
 			ntiles[char(get_dora_next(t->tile))] += (1 << 3);
 			ntiles[char(t->tile)]++;
-			if (t->tile - BaseTile::_1z == table.场风) ntiles[char(t->tile)] += field_wind_flag;
-			if (t->tile - BaseTile::_1z == player.wind) ntiles[char(t->tile)] += self_wind_flag;
+			if ((t->tile - BaseTile::_1z) == table.场风) ntiles[t->tile] ^= field_wind_flag;
+			if ((t->tile - BaseTile::_1z) == player.wind) ntiles[t->tile] ^= self_wind_flag;
 		}
 	}
 
