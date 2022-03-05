@@ -54,10 +54,13 @@ namespace TrainingDataEncoding {
 			}
 			switch (f.type) {
 			case Fulu::Chi:
+				ntiles[f.tiles[f.take]->tile] ^= naki_flag;
+				break;
 			case Fulu::Pon:
 			case Fulu::加杠:
 			case Fulu::大明杠:
-				ntiles[f.tiles[f.take]->tile] ^= naki_flag;
+				ntiles[f.tiles[0]->tile] ^= naki_flag;
+				break;
 			default:
 				break;
 			}
