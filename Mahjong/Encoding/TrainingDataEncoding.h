@@ -1,4 +1,4 @@
-#ifndef TRAINING_DATA_ENCODING_H
+﻿#ifndef TRAINING_DATA_ENCODING_H
 #define TRAINING_DATA_ENCODING_H
 
 #include <vector>

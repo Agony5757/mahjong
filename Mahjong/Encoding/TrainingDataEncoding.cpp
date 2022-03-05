@@ -1,4 +1,4 @@
-#include "TrainingDataEncoding.h"
+﻿#include "TrainingDataEncoding.h"
 
 using namespace std;
 
