@@ -43,37 +43,21 @@ namespace TrainingDataEncoding {
 		}
 	}
 
-	void count_fulu(const vector<Fulu>& fulus, array<dtype, n_tile_types>& ntiles)
+	void encode_fulu(const vector<Fulu>& fulus, dtype* data, size_t pid)
 	{
-		ntiles.fill(0);
-		for (const auto &f : fulus) {
-			for (auto t : f.tiles) {
-				auto id = char(t->tile);
-				ntiles[id]++;
-				if (t->red_dora) ntiles[id] |= red_dora_flag;
+		array<dtype, n_tile_types> ntiles = { 0 };
+		for (const auto& f : fulus) {
+			for (int i = 0; i < f.tiles.size();++i) {
+				auto &t = f.tiles[i];
+				size_t pos = locate(n_col, t->tile, col_fulu + pid * size_fulu);
+				data[pos + ntiles[t->tile]] = 1;
+				if (t->red_dora) {
+					data[pos + 5] = 1;
+					if (i == f.take)
+						data[pos + 6] = 1;
+				}
+				ntiles[t->tile]++;
 			}
-			switch (f.type) {
-			case Fulu::Chi:
-				ntiles[f.tiles[f.take]->tile] |= naki_flag;
-				break;
-			case Fulu::Pon:
-			case Fulu::加杠:
-			case Fulu::大明杠:
-				ntiles[f.tiles[0]->tile] |= naki_flag;
-				break;
-			default:
-				break;
-			}
-		}
-	}
-
-	void encode_fulu(const array<dtype, n_tile_types>& ntiles, dtype* data, size_t pid)
-	{
-		for (size_t i = 0; i < n_tile_types; ++i) {
-			size_t pos = locate(n_col, i, col_fulu + pid * size_fulu);
-			memcpy(data + pos, m[ntiles[i] & number_mask], sizeof(dtype) * 4);
-			data[pos + 4] = (ntiles[i] & naki_flag) ? 1 : 0;
-			data[pos + 5] = (ntiles[i] & red_dora_flag) ? 1 : 0;
 		}
 	}
 
