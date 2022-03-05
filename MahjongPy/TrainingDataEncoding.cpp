@@ -107,8 +107,10 @@ namespace TrainingDataEncoding {
 			Tile* t = dora_indicator[i];
 			ntiles[char(get_dora_next(t->tile))] += (1 << 3);
 			ntiles[char(t->tile)]++;
-			if ((t->tile - BaseTile::_1z) == table.场风) ntiles[t->tile] ^= field_wind_flag;
-			if ((t->tile - BaseTile::_1z) == player.wind) ntiles[t->tile] ^= self_wind_flag;
+		}
+		for (int t = 0; t <= 4; ++t) {
+			if (t == table.场风) ntiles[t + BaseTile::_1z] ^= field_wind_flag;
+			if (t == player.wind) ntiles[t + BaseTile::_1z] ^= self_wind_flag;
 		}
 	}
 
@@ -118,7 +120,7 @@ namespace TrainingDataEncoding {
 			size_t pos = locate(n_col, i, col_field);
 
 			memcpy(data + pos, m[ntiles[i] & dora_indicator_mask], sizeof(dtype) * 4);
-			memcpy(data + pos + 4, m[(ntiles[i] & number_mask) >> 3], sizeof(dtype) * 4);
+			memcpy(data + pos + 4, m[(ntiles[i] & dora_mask) >> 3], sizeof(dtype) * 4);
 
 			data[pos + 8] = (ntiles[i] & field_wind_flag) ? 1 : 0;
 			data[pos + 9] = (ntiles[i] & self_wind_flag) ? 1 : 0;
