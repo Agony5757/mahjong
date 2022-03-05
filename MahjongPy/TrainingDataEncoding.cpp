@@ -51,11 +51,12 @@ namespace TrainingDataEncoding {
 				auto &t = f.tiles[i];
 				size_t pos = locate(n_col, t->tile, col_fulu + pid * size_fulu);
 				data[pos + ntiles[t->tile]] = 1;
-				if (t->red_dora) {
+				if (t->red_dora) 
 					data[pos + 5] = 1;
-					if (i == f.take)
-						data[pos + 6] = 1;
-				}
+				
+				if (i == f.take)
+					data[pos + 6] = 1;
+
 				ntiles[t->tile]++;
 			}
 		}
