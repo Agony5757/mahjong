@@ -29,7 +29,7 @@ namespace TrainingDataEncoding {
 		for (auto t : tiles) {
 			auto id = char(t->tile);
 			ntiles[id]++;
-			if (t->red_dora) ntiles[id] ^= red_dora_flag; 
+			if (t->red_dora) ntiles[id] |= red_dora_flag; 
 		}
 	}
 
@@ -46,20 +46,20 @@ namespace TrainingDataEncoding {
 	void count_fulu(const vector<Fulu>& fulus, array<dtype, n_tile_types>& ntiles)
 	{
 		ntiles.fill(0);
-		for (auto f : fulus) {
+		for (const auto &f : fulus) {
 			for (auto t : f.tiles) {
 				auto id = char(t->tile);
 				ntiles[id]++;
-				if (t->red_dora) ntiles[id] ^= red_dora_flag;
+				if (t->red_dora) ntiles[id] |= red_dora_flag;
 			}
 			switch (f.type) {
 			case Fulu::Chi:
-				ntiles[f.tiles[f.take]->tile] ^= naki_flag;
+				ntiles[f.tiles[f.take]->tile] |= naki_flag;
 				break;
 			case Fulu::Pon:
 			case Fulu::加杠:
 			case Fulu::大明杠:
-				ntiles[f.tiles[0]->tile] ^= naki_flag;
+				ntiles[f.tiles[0]->tile] |= naki_flag;
 				break;
 			default:
 				break;
@@ -83,9 +83,9 @@ namespace TrainingDataEncoding {
 		for (auto t : tiles) {
 			auto id = char(t.tile->tile);
 			ntiles[id]++;
-			if (t.tile->red_dora) ntiles[id] ^= red_dora_flag;
+			if (t.tile->red_dora) ntiles[id] |= red_dora_flag;
 			if (t.fromhand) ntiles[id] += (1 << 3);
-			if (t.riichi) ntiles[id] ^= riichi_flag;
+			if (t.riichi) ntiles[id] |= riichi_flag;
 		}
 	}
 
@@ -112,8 +112,8 @@ namespace TrainingDataEncoding {
 			ntiles[char(t->tile)]++;
 		}
 		for (int t = 0; t <= 4; ++t) {
-			if (t == table.场风) ntiles[t + BaseTile::_1z] ^= field_wind_flag;
-			if (t == player.wind) ntiles[t + BaseTile::_1z] ^= self_wind_flag;
+			if (t == table.场风) ntiles[t + BaseTile::_1z] |= field_wind_flag;
+			if (t == player.wind) ntiles[t + BaseTile::_1z] |= self_wind_flag;
 		}
 	}
 
