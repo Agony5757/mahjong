@@ -28,6 +28,7 @@ namespace TrainingDataEncoding {
 	constexpr size_t n_col = n_tile_types;
 
 	void encode_table(const Table& table, int pid, dtype* data);
+	void encode_actions_vector(const Table& table, int pid, dtype* data);
 };
 
 #endif

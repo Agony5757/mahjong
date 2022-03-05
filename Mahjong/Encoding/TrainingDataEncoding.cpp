@@ -3,6 +3,8 @@
 using namespace std;
 
 namespace TrainingDataEncoding {
+
+	/* For obs encoding */
 	constexpr inline size_t locate(size_t row, size_t col)
 	{
 		return n_col * row + col;
@@ -28,8 +30,7 @@ namespace TrainingDataEncoding {
 			if (is_幺九牌(hand[i]->tile)) {
 				get(data, row_action + 11, id) = 1;
 			}
-		}
-		
+		}		
 	}
 
 	void encode_river(const vector<RiverTile>& tiles, int pid, int hand_offset, dtype* data)
@@ -101,7 +102,7 @@ namespace TrainingDataEncoding {
 		if (action_tile >= 0) get(data, row_last, action_tile) = 1;
 	}
 	
-	void encode_self_actions(const vector<SelfAction> &self_actions, int action_tile, dtype* data)
+	void encode_self_actions_matrix(const vector<SelfAction> &self_actions, int action_tile, dtype* data)
 	{
 		for (auto sa : self_actions) {
 			int row_offset = -1;
@@ -127,6 +128,8 @@ namespace TrainingDataEncoding {
 				row_data[action_tile] = 1;
 				row_offset = 10;
 				break;
+			case BaseAction::九种九牌:
+				break;
 			default:
 				throw runtime_error("Bad SelfAction (while encoding).");
 			}
@@ -134,7 +137,7 @@ namespace TrainingDataEncoding {
 		}
 	}
 
-	void encode_response_actions(const vector<ResponseAction> &response_actions, int action_tile, dtype *data)
+	void encode_response_actions_matrix(const vector<ResponseAction> &response_actions, int action_tile, dtype *data)
 	{		
 		for (auto ra : response_actions) {
 			int row_offset = -1;
@@ -157,6 +160,8 @@ namespace TrainingDataEncoding {
 				row_offset = 6;
 				break;
 			case BaseAction::荣和:
+			case BaseAction::抢杠:
+			case BaseAction::抢暗杠:
 				row_data[action_tile] = 1;
 				row_offset = 9;
 				break;
@@ -167,23 +172,22 @@ namespace TrainingDataEncoding {
 		}
 	}
 	
-	void encode_action(const Table& table, int action_tile, dtype* data)
+	void encode_action_matrix(const Table& table, int action_tile, dtype* data)
 	{
 		if (table.get_phase() <= Table::PhaseEnum::P4_ACTION) 
 		{
 		    auto &&actions = table.get_self_actions();
-			encode_self_actions(actions, action_tile, data);
+			encode_self_actions_matrix(actions, action_tile, data);
 		}
 		else if (table.get_phase() < Table::PhaseEnum::GAME_OVER)
 		{
 		    auto &&actions = table.get_response_actions();
-			encode_response_actions(actions, action_tile, data);
+			encode_response_actions_matrix(actions, action_tile, data);
 		}
 	}
 
 	void encode_table(const Table& table, int pid, dtype* data, bool use_oracle)
 	{
-		/* counting */
 		const auto& ps = table.players;
 		const auto& hand = ps[pid].hand;
 
@@ -220,12 +224,105 @@ namespace TrainingDataEncoding {
 		}
 		}
 		encode_last(action_tile, data);
-		encode_action(table, action_tile, data);
+		encode_action_matrix(table, action_tile, data);
 		if (use_oracle) {
 			for (int i = 1; i < 4; ++i) {
 				int other_pid = (pid + i) % 4;
 				encode_hand(ps[other_pid].hand, row_oracle + size_hand * (i - 1), data);
 			}
+		}
+	}
+	/* obs encoding over */
+
+	/* For action encoding */
+
+	void encode_self_actions_vector(const vector<SelfAction>& actions, dtype* data)
+	{
+		bool riichi_able = false;
+		for (auto sa : actions) {
+			switch (sa.action) {
+			case BaseAction::出牌:
+				data[int(sa.correspond_tiles[0]->tile)] = 1;
+				break;
+			case BaseAction::暗杠:
+				data[38] = 1;
+				break;
+			case BaseAction::加杠:
+				data[40] = 1;
+				break;
+			case BaseAction::立直:
+				data[41] = 1;
+				riichi_able = true;
+				break;
+			case BaseAction::自摸:
+				data[43] = 1;
+				break;
+			case BaseAction::九种九牌:
+				data[44] = 1;
+				break;
+			default:
+				throw runtime_error("Bad SelfAction (while encoding).");
+			}
+		}
+		if (riichi_able) data[45] = 1;
+	}
+	
+	void encode_response_actions_vector(const vector<SelfAction>& actions, int action_tile, dtype* data)
+	{
+		for (auto ra : actions) {
+			switch (ra.action) {
+			case BaseAction::pass:
+				data[46] = 1;
+				break;
+			case BaseAction::吃:
+				if (action_tile > ra.correspond_tiles[0]->tile)
+					if (action_tile < ra.correspond_tiles[1]->tile) data[35] = 1; // middle							
+					else data[36] = 1; // right						
+				else data[34] = 1; // left
+				break;
+			case BaseAction::碰:
+				data[37] = 1;
+				break;
+			case BaseAction::杠:
+				data[39] = 1;
+				break;
+			case BaseAction::荣和:
+			case BaseAction::抢杠:
+			case BaseAction::抢暗杠:
+				data[42] = 1;
+				break;
+			default:			
+				throw runtime_error("Bad ResponseAction (while encoding).");
+			}
+		}
+	}
+
+	void encode_actions_vector(const Table& table, int pid, dtype* data)
+	{
+		const auto& ps = table.players;
+		const auto& hand = ps[pid].hand;
+		
+		switch (table.get_phase()) {
+		case Table::PhaseEnum::P1_ACTION:
+		case Table::PhaseEnum::P2_ACTION:
+		case Table::PhaseEnum::P3_ACTION:
+		case Table::PhaseEnum::P4_ACTION:
+			if (pid == table.get_phase()) {
+				vector<SelfAction>&& actions = table.get_self_actions();
+				encode_self_actions_vector(actions, data);
+			}
+			break;
+		default: {	
+			int action_tile = -1;
+			auto& ct = table.selected_action.correspond_tiles;
+			if (ct.size() > 0) {
+				action_tile = ct[0]->tile;
+			}		
+			if (pid == table.get_phase() % 4) {
+				vector<ResponseAction>&& actions = table.get_response_actions();
+				encode_response_actions_matrix(actions, action_tile, data);
+			}
+		}
 		}
 	}
 }
