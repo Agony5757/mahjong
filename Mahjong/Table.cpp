@@ -698,7 +698,7 @@ void Table::make_selection(int selection)
 			// 大部分情况都是手切, 除了上一步动作为 出牌 加杠 暗杠
 			// 并且判定抉择弃牌是不是最后一张牌
 
-			FROM_手切摸切 = FROM_手切;
+			bool FROM_手切摸切 = FROM_手切;
 			if (last_action == BaseAction::出牌 || 
 			    last_action == BaseAction::加杠 || 
 				last_action == BaseAction::暗杠) {
@@ -706,6 +706,8 @@ void Table::make_selection(int selection)
 				if (tile == players[turn].hand.back())
 					FROM_手切摸切 = FROM_摸切;
 			}
+			players[turn].move_from_hand_to_river(tile, river_counter, FROM_手切摸切);
+
 			phase = P1_RESPONSE;
 			if (0 == turn) {
 				ResponseAction ra;
@@ -839,7 +841,7 @@ void Table::make_selection(int selection)
 			
 
 			// 什么都不做。将action对应的牌从手牌移动到牌河里面	
-			players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
+			// players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
 
 			// 消除第一巡
 			players[turn].first_round = false;
@@ -863,9 +865,8 @@ void Table::make_selection(int selection)
 				// 立直即鸣牌，一定没有一发
 			}
 
-			players[turn].remove_from_hand(tile);
-			players[turn].move_from_hand_to_river_log_only(tile, river_counter, FROM_手切摸切);
-
+			players[turn].set_not_remained();
+			
 			players[response].门清 = false;
 			players[response].move_from_hand_to_fulu(
 				actions[response].correspond_tiles, tile);

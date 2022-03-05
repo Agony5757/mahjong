@@ -88,11 +88,10 @@ namespace TrainingDataEncoding {
 				data[pos + ntiles[id]] = 1;
 				ntiles[id]++;
 
+				if (i == f.take)
+					data[pos + 4] = 1;
 				if (t->red_dora)
 					data[pos + 5] = 1;
-
-				if (i == f.take)
-					data[pos + 6] = 1;
 
 			}
 		}
