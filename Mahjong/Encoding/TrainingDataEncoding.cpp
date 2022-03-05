@@ -3,8 +3,6 @@
 using namespace std;
 
 namespace TrainingDataEncoding {
-
-
 	constexpr size_t locate(size_t n_col, size_t row, size_t col)
 	{
 		return n_col * row + col;
@@ -17,7 +15,7 @@ namespace TrainingDataEncoding {
 	const static dtype* m[] = { m0,m1,m2,m3,m4 };
 
 	/* tile counter
-	 Ãù  Á¢  ºì   ÊÖÇĞ   ÕÅÊı
+	 é¸£  ç«‹  çº¢   æ‰‹åˆ‡   å¼ æ•°
 	0~1 0~1 0~1   0~4   0~4
 	 8   7   6    5~3   2~0
 	*/
@@ -117,14 +115,14 @@ namespace TrainingDataEncoding {
 	void count_field(const Table& table, const Player& player, array<dtype, n_tile_types>& ntiles)
 	{
 		ntiles.fill(0);
-		auto& dora_indicator = table.±¦ÅÆÖ¸Ê¾ÅÆ;
+		auto& dora_indicator = table.å®ç‰ŒæŒ‡ç¤ºç‰Œ;
 		for (auto i = 0; i < table.dora_spec; ++i) {
 			Tile* t = dora_indicator[i];
 			ntiles[char(get_dora_next(t->tile))] += (1 << 3);
 			ntiles[char(t->tile)]++;
 		}
 		for (int t = 0; t <= 4; ++t) {
-			if (t == table.³¡·ç) ntiles[t + BaseTile::_1z] |= field_wind_flag;
+			if (t == table.åœºé£) ntiles[t + BaseTile::_1z] |= field_wind_flag;
 			if (t == player.wind) ntiles[t + BaseTile::_1z] |= self_wind_flag;
 		}
 	}
@@ -135,8 +133,8 @@ namespace TrainingDataEncoding {
 		array<dtype, n_tile_types> dora_count = { 0 };
 
 		for (size_t i = 0; i < table.dora_spec; ++i) {
-			auto dora_indicator_id = char(table.±¦ÅÆÖ¸Ê¾ÅÆ[i]->tile);
-			auto dora_id = char(get_dora_next(table.±¦ÅÆÖ¸Ê¾ÅÆ[i]->tile));
+			auto dora_indicator_id = char(table.å®ç‰ŒæŒ‡ç¤ºç‰Œ[i]->tile);
+			auto dora_id = char(get_dora_next(table.å®ç‰ŒæŒ‡ç¤ºç‰Œ[i]->tile));
 
 			size_t pos = locate(n_col, dora_indicator_id, col_field);
 			data[pos + dora_ind_count[dora_indicator_id]] = 1;
@@ -144,7 +142,7 @@ namespace TrainingDataEncoding {
 			data[pos + dora_count[dora_id]] = 1;
 			dora_count[dora_id]++;
 		}
-		data[locate(n_col, table.³¡·ç + BaseTile::_1z, col_field + 8)] = 1;
+		data[locate(n_col, table.åœºé£ + BaseTile::_1z, col_field + 8)] = 1;
 		data[locate(n_col, player.wind + BaseTile::_1z, col_field + 9)] = 1;
 	}
 
@@ -187,7 +185,7 @@ namespace TrainingDataEncoding {
 
 		encode_hand(hand, buf, data);
 		for (int i = 0; i < 4; ++i) {
-			encode_fulu(ps[(i + pid) % 4].¸±Â¶s, data, (i + pid) % 4);
+			encode_fulu(ps[(i + pid) % 4].å‰¯éœ²s, data, (i + pid) % 4);
 		}
 		encode_field(table, ps[pid], data);
 		encode_last(table, pid, data);

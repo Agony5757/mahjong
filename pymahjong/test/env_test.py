@@ -4,16 +4,28 @@ import platform
 import warnings
 import time
 
-from env_mahjong import EnvMahjong4
+from .env_mahjong import EnvMahjong4
 import pymahjong as mp
 import numpy as np
 from copy import deepcopy
 
 np.set_printoptions(threshold=np.inf)
 
+def col_name(col):
+    if col < 6:
+        return f'手牌{col}'
+    elif col < 30:
+        return f'副露Player[{(col-6)//6}] col={(col-6)%6}'
+    elif col < 70:
+        return f'牌河Player[{(col-30)//10}] col={(col-30)%10}'
+    elif col < 80:
+        return f'场{col-70}'
+    elif col < 81:
+        return f'最后'
+    else:
+        return "???"
 
-def encoding_test_by_random_play(num_games=100, verbose=1, error_pause=0):
-
+def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
 
     winds = ['east', 'south', 'west', 'north']
 
@@ -59,22 +71,25 @@ def encoding_test_by_random_play(num_games=100, verbose=1, error_pause=0):
                 pm.encode_table(env_test.t, curr_pid, obs_container)
 
                 ag_obs = deepcopy(obs_container).swapaxes(0, 1)[:81, :]
+                if curr_pid == 0:
+                    if np.any(dq_obs != ag_obs):
+                        wrong_dimensions = np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()
+                        if verbose >= 1:
+                            print("wrong encoding! feature dimensions that are different: \n", wrong_dimensions)
+                        if verbose >= 2:
+                            for dim in wrong_dimensions:
+                                print("------------- player {}, col: {} ---------------".format(curr_pid, col_name(dim)))
+                                print("DQ's encoding:", dq_obs[dim, :])
+                                print("AG's encoding:", ag_obs[dim, :])
+                                print("------------------------------------------------------")
 
-                if np.any(dq_obs != ag_obs):
-                    wrong_dimensions = np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()
-                    if verbose >= 1:
-                        print("wrong encoding! feature dimensions that are different: \n", wrong_dimensions)
-                    if verbose >= 2:
-                        for dim in wrong_dimensions:
-                            print("------------- player {}, dimension: {} ---------------".format(curr_pid, dim))
-                            print("DQ's encoding:", dq_obs[dim, :])
-                            print("AG's encoding:", ag_obs[dim, :])
-                            print("------------------------------------------------------".format(dim))
-
-                    wrong_dimensions_total[np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()] = 1
-
-                    time.sleep(error_pause)
-
+                        wrong_dimensions_total[np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()] = 1
+                    
+                        time.sleep(error_pause)
+                    print(env_test.t.players[0].to_string())
+                    print(env_test.t.players[1].to_string())
+                    print(env_test.t.players[2].to_string())
+                    print(env_test.t.players[3].to_string())
                 # --------------------------------------------------
 
                 a = np.random.randint(0, len(valid_actions))

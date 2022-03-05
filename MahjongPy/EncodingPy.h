@@ -1,6 +1,7 @@
 #ifndef ENCODINGPY_H
 #define ENCODINGPY_H
 
+#include "Encoding/TrainingDataEncoding.h"
 #include "pybind11/numpy.h"
 #include "Table.h"
 

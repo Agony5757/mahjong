@@ -4,6 +4,7 @@ import os
 import time
 import numpy as np
 import shutil
+import sys
 
 # 下面这些包用于下载和解析牌谱
 import eventlet
@@ -189,7 +190,6 @@ def decodem(naru_tiles_int, naru_player_id):
 
     return side_tiles_added, hand_tiles_removed, naru_type, opened
 
-import sys
 
 class logger:
     def __init__(self, fp = None):
