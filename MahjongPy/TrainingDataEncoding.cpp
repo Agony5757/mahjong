@@ -18,13 +18,14 @@ namespace TrainingDataEncoding {
 	const static dtype* m[] = { m0,m1,m2,m3,m4 };
 
 	/* tile counter
-	 鸣  立  红   手切    张数
-	0~1 0~1 0~1 000~100 000~100
-	 8   7   6    5~3     2~0
+	 鸣  立  红   手切   张数
+	0~1 0~1 0~1   0~4   0~4
+	 8   7   6    5~3   2~0
 	*/
 
 	void count_hand_tiles(const vector<Tile*>& tiles, array<dtype, n_tile_types>& ntiles)
 	{
+		ntiles.fill(0);
 		for (auto t : tiles) {
 			auto id = char(t->tile);
 			ntiles[id]++;
@@ -44,6 +45,7 @@ namespace TrainingDataEncoding {
 
 	void count_fulu(const vector<Fulu>& fulus, array<dtype, n_tile_types>& ntiles)
 	{
+		ntiles.fill(0);
 		for (auto f : fulus) {
 			for (auto t : f.tiles) {
 				auto id = char(t->tile);
@@ -55,7 +57,7 @@ namespace TrainingDataEncoding {
 			case Fulu::Pon:
 			case Fulu::加杠:
 			case Fulu::大明杠:
-				ntiles[char(f.tiles[f.take]->tile)] ^= naki_flag;
+				ntiles[f.tiles[f.take]->tile] ^= naki_flag;
 			default:
 				break;
 			}
@@ -74,6 +76,7 @@ namespace TrainingDataEncoding {
 
 	void count_river_tiles(const vector<RiverTile>& tiles, array<dtype, n_tile_types>& ntiles)
 	{
+		ntiles.fill(0);
 		for (auto t : tiles) {
 			auto id = char(t.tile->tile);
 			ntiles[id]++;
@@ -89,7 +92,7 @@ namespace TrainingDataEncoding {
 			size_t pos = locate(n_col, i, col_river + pid * size_river);
 
 			memcpy(data + pos, m[ntiles[i] & number_mask], sizeof(dtype) * 4);
-			memcpy(data + pos + 4, m[ntiles[i] & number_mask - 3], sizeof(dtype) * 4);
+			memcpy(data + pos + 4, m[(ntiles[i] & fromhand_mask) >> 3], sizeof(dtype) * 4);
 
 			data[pos + 8] = (ntiles[i] & red_dora_flag) ? 1 : 0;
 			data[pos + 9] = (ntiles[i] & riichi_flag) ? 1 : 0;
@@ -98,6 +101,7 @@ namespace TrainingDataEncoding {
 
 	void count_field(const Table& table, const Player& player, array<dtype, n_tile_types> &ntiles)
 	{
+		ntiles.fill(0);
 		for (auto t : table.宝牌指示牌) {
 			ntiles[char(get_dora_next(t->tile))] += (1 << 3);
 			ntiles[char(t->tile)]++;
@@ -112,7 +116,7 @@ namespace TrainingDataEncoding {
 			size_t pos = locate(n_col, i, col_field);
 
 			memcpy(data + pos, m[ntiles[i] & dora_indicator_mask], sizeof(dtype) * 4);
-			memcpy(data + pos + 4, m[ntiles[i] & number_mask], sizeof(dtype) * 4);
+			memcpy(data + pos + 4, m[(ntiles[i] & number_mask) >> 3], sizeof(dtype) * 4);
 
 			data[pos + 8] = (ntiles[i] & field_wind_flag) ? 1 : 0;
 			data[pos + 9] = (ntiles[i] & self_wind_flag) ? 1 : 0;
@@ -147,7 +151,7 @@ namespace TrainingDataEncoding {
 	void encode_table(const Table& table, int pid, pybind11::array_t<dtype> arr)
 	{
 		dtype* data = arr.mutable_data();
-		array<dtype, n_tile_types> hand{ 0 }, fulu[4]{ {0} }, river[4]{ {0} }, field{ 0 };
+		array<dtype, n_tile_types> hand, fulu[4], river[4], field;
 
 		/* counting */
 		const Player& p = table.players[pid];

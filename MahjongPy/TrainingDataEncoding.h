@@ -30,12 +30,13 @@ namespace TrainingDataEncoding {
 	constexpr int self_wind_flag = 1 << 7;
 	constexpr int riichi_flag = 1 << 7;
 	constexpr int naki_flag = 1 << 8;
-	constexpr int hand_mask = 7 << 3;
-	constexpr int dora_mask = 7 << 3;
-	constexpr int number_mask = 7;
-	constexpr int dora_indicator_mask = 7;
+	constexpr int number_mask = 0b000111;
+	constexpr int fromhand_mask = 0b111000;
+	constexpr int dora_indicator_mask = 0b000111;
+	constexpr int dora_mask = 0b111000;
 
 	void encode_table(const Table& table, int pid, pybind11::array_t<dtype> arr);
+	void encode_action();
 };
 
 #endif
