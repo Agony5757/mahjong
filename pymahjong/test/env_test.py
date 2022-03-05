@@ -86,10 +86,15 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
                         wrong_dimensions_total[np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()] = 1
                     
                         time.sleep(error_pause)
-                    print(env_test.t.players[0].to_string())
-                    print(env_test.t.players[1].to_string())
-                    print(env_test.t.players[2].to_string())
-                    print(env_test.t.players[3].to_string())
+                    # print("current player river tiles:", env_test.river_tiles[0])
+                    # print("current player river tiles:", env_test.river_tiles[1])
+                    # print("current player river tiles:", env_test.river_tiles[2])
+                    # print("current player river tiles:", env_test.river_tiles[3])
+                    # print(env_test.t.players[0].to_string())
+                    # print(env_test.t.players[1].to_string())
+                    # print(env_test.t.players[2].to_string())
+                    # print(env_test.t.players[3].to_string())
+                    # print(env_test.t.get_dora())
                 # --------------------------------------------------
 
                 a = np.random.randint(0, len(valid_actions))

@@ -7,56 +7,8 @@ namespace TrainingDataEncoding {
 	{
 		return n_col * row + col;
 	}
-	const static dtype m0[] = { 0,0,0,0 };
-	const static dtype m1[] = { 1,0,0,0 };
-	const static dtype m2[] = { 1,1,0,0 };
-	const static dtype m3[] = { 1,1,1,0 };
-	const static dtype m4[] = { 1,1,1,1 };
-	const static dtype* m[] = { m0,m1,m2,m3,m4 };
 
-	/* tile counter
-	 鸣  立  红   手切   张数
-	0~1 0~1 0~1   0~4   0~4
-	 8   7   6    5~3   2~0
-	*/
-
-	void encode_river(const vector<RiverTile>& tiles, int pid,
-		array<dtype, n_tile_types>& ntiles, dtype* data)
-	{
-		ntiles.fill(0);
-		array<dtype, n_tile_types> nfromhand = { 0 };
-
-		for (auto t : tiles) {
-			auto id = char(t.tile->tile);
-
-			size_t pos = locate(n_col, id, col_river + pid * size_river);
-			data[pos + ntiles[id]] = 1;
-
-			ntiles[id]++;
-			if (t.fromhand) {
-				data[pos + 4 + nfromhand[id]] = 1;
-				nfromhand[id]++;
-			}
-			if (t.tile->red_dora) {
-				data[pos + 8] = 1;
-			}
-			if (t.riichi) {
-				data[pos + 9] = 1;
-			}
-		}
-	}
-
-	//void encode_hand_tiles(const vector<Tile*>& tiles, array<dtype, n_tile_types>& ntiles)
-	//{
-	//	ntiles.fill(0);
-	//	for (auto t : tiles) {
-	//		auto id = char(t->tile);
-	//		ntiles[id]++;
-	//		if (t->red_dora) ntiles[id] |= red_dora_flag;
-	//	}
-	//}
-
-	void encode_hand(const vector<Tile*> hand, const array<dtype, n_tile_types>& river, dtype* data)
+	void encode_hand(const vector<Tile*> hand, dtype* data)
 	{
 		array<dtype, n_tile_types> ntiles = { 0 };
 
@@ -67,12 +19,37 @@ namespace TrainingDataEncoding {
 			data[pos + ntiles[id]] = 1;
 			ntiles[id]++;
 
-			if (river[id] > 0) {
-				data[pos + 4] = 1;
-			}
-
 			if (hand[i]->red_dora) {
 				data[pos + 5] = 1;
+			}
+		}
+	}
+
+	void encode_river(const vector<RiverTile>& tiles, int pid, bool self, dtype* data)
+	{
+		array<dtype, n_tile_types> ntiles = { 0 };
+		array<dtype, n_tile_types> nfromhand = { 0 };
+
+		for (auto t : tiles) {
+			auto id = char(t.tile->tile);
+
+			size_t pos = locate(n_col, id, col_river + pid * size_river);
+			if (self) {
+				size_t hand_pos = locate(n_col, id, col_hand + 4);
+				data[hand_pos] = 1;
+			}
+
+			data[pos + ntiles[id]] = 1;
+			if (t.fromhand) {
+				data[pos + 4 + ntiles[id]] = 1;
+			}
+			ntiles[id]++;
+
+			if (t.tile->red_dora) {
+				data[pos + 8] = 1;
+			}
+			if (t.riichi) {
+				data[pos + 9] = 1;
 			}
 		}
 	}
@@ -88,12 +65,11 @@ namespace TrainingDataEncoding {
 				data[pos + ntiles[id]] = 1;
 				ntiles[id]++;
 
+				if (i == f.take)
+					data[pos + 4] = 1;
+
 				if (t->red_dora)
 					data[pos + 5] = 1;
-
-				if (i == f.take)
-					data[pos + 6] = 1;
-
 			}
 		}
 	}
@@ -136,10 +112,12 @@ namespace TrainingDataEncoding {
 			auto dora_indicator_id = char(table.宝牌指示牌[i]->tile);
 			auto dora_id = char(get_dora_next(table.宝牌指示牌[i]->tile));
 
-			size_t pos = locate(n_col, dora_indicator_id, col_field);
-			data[pos + dora_ind_count[dora_indicator_id]] = 1;
+			size_t pos_dora_ind = locate(n_col, dora_indicator_id, col_field);
+			size_t pos_dora = locate(n_col, dora_id, col_field);
+
+			data[pos_dora_ind + dora_ind_count[dora_indicator_id]] = 1;
 			dora_ind_count[dora_indicator_id]++;
-			data[pos + dora_count[dora_id]] = 1;
+			data[pos_dora + 4 + dora_count[dora_id]] = 1;
 			dora_count[dora_id]++;
 		}
 		data[locate(n_col, table.场风 + BaseTile::_1z, col_field + 8)] = 1;
@@ -166,27 +144,22 @@ namespace TrainingDataEncoding {
 			}
 		}
 		}
-		for (char i = _1m; i < _7z; ++i) {
-			data[locate(n_col, i, col_last)] = (i == id ? 1 : 0);
-		}
+		data[locate(n_col, id, col_last)] = 1;
 	}
 
 	void encode_table(const Table& table, int pid, dtype* data)
 	{
-		array<dtype, n_tile_types> buf;
-
 		/* counting */
 		const auto& ps = table.players;
 		const auto& hand = ps[pid].hand;
 
-		for (int i = 1; i <= 4; ++i) {
-			encode_river(table.players[(i + pid)%4].river.river, pid, buf, data);
-		}
+		encode_hand(hand, data);
 
-		encode_hand(hand, buf, data);
 		for (int i = 0; i < 4; ++i) {
+			encode_river(ps[(i + pid) % 4].river.river, (i + pid) % 4, i == pid, data);
 			encode_fulu(ps[(i + pid) % 4].副露s, data, (i + pid) % 4);
 		}
+
 		encode_field(table, ps[pid], data);
 		encode_last(table, pid, data);
 	}
