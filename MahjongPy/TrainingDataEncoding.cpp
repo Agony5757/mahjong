@@ -145,21 +145,20 @@ namespace TrainingDataEncoding {
 		array<dtype, n_tile_types> hand, fulu[4], river[4], field;
 
 		/* counting */
-		const Player& p = table.players[pid];
-		count_hand_tiles(p.hand, hand);
+		const auto& ps = table.players;
+		count_hand_tiles(ps[pid].hand, hand);
 		for (int i = 0; i < 4; ++i) {
-			count_fulu(table.players[i].副露s, fulu[i]);
 			count_river_tiles(table.players[i].river.river, river[i]);
 		}
-		count_field(table, p, field);
+		count_field(table, ps[pid], field);
 
 		/* encoding */
 		encode_hand(hand, river[pid], data);
 		for (int i = 0; i < 4; ++i) {
-			encode_fulu(fulu[(i + pid) % 4], data, (i + pid) % 4);
+			encode_fulu(ps[(i + pid) % 4].副露s, data, (i + pid) % 4);
 			encode_river(river[(i + pid) % 4], data, (i + pid) % 4);
 		}
-		encode_field(table, p, field, data);
+		encode_field(table, ps[pid], field, data);
 		encode_last(table, pid, data);
 	}
 }
