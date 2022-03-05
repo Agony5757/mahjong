@@ -127,7 +127,7 @@ inline std::string yaku_to_string(Yaku yaku) {
 		"役牌_中",
 		"平和",
 		"一杯口",
-		"抢杠",
+		"ChanKan",
 		"岭上开花",
 		"海底捞月",
 		"河底捞鱼",

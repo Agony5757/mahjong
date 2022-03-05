@@ -505,10 +505,10 @@ bool is和牌(std::vector<BaseTile> tiles)
 	return false;
 }
 
-std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清)
+std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen)
 {
 	std::vector<Tile*> play_tiles;
-	if (!门清) return play_tiles;
+	if (!Menzen) return play_tiles;
 	if (hands.size() % 3 != 2) return play_tiles;
 
 	for (int i = 0; i < hands.size(); ++i) {
@@ -608,7 +608,7 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 //	return yaku;
 //}
 //
-//vector<Yaku> get_平和(CompletedTiles complete_tiles, bool 门清, BaseTile get_tile, 
+//vector<Yaku> get_平和(CompletedTiles complete_tiles, bool Menzen, BaseTile get_tile, 
 //	Wind 场风, Wind 自风)
 //{
 //	vector<Yaku> yaku;
@@ -617,7 +617,7 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 //	if (complete_tiles.body[0].type != TileGroup::Toitsu) {
 //		throw runtime_error("First group is not Toitsu.");
 //	}
-//	if (!门清) return yaku;
+//	if (!Menzen) return yaku;
 //	
 //	if (!all_of(complete_tiles.body.begin() + 1, complete_tiles.body.end(),
 //		[](TileGroup &s) {return (s.type == TileGroup::Shuntsu); })
@@ -655,10 +655,10 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 //	return yaku;
 //}
 //
-//std::vector<Yaku> get_门前自摸(bool 门清, bool 自摸)
+//std::vector<Yaku> get_门前自摸(bool Menzen, bool 自摸)
 //{
 //	vector<Yaku> yaku;
-//	if (门清 && 自摸) {
+//	if (Menzen && 自摸) {
 //		yaku.push_back(Yaku::门前清自摸和);
 //	}
 //	return yaku;
@@ -673,14 +673,14 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 //
 //std::vector<Yaku> get_yaku_tsumo(Table* table, Player * player)
 //{
-//	auto 门清 = player->门清;
+//	auto Menzen = player->Menzen;
 //	auto riichi = player->riichi;
 //	auto double_riichi = player->double_riichi;
 //	bool 自摸 = true;
 //	bool 一发 = player->一发;
 //
 //	vector<Yaku> yakus;
-//	merge_into(yakus, get_门前自摸(门清, 自摸));
+//	merge_into(yakus, get_门前自摸(Menzen, 自摸));
 //	merge_into(yakus, get_立直_双立直(double_riichi, riichi, 一发));
 //
 //	return yakus;
@@ -688,7 +688,7 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 //
 //std::vector<Yaku> get_yaku_ron(Table* table, Player * player, Tile* get_tile)
 //{
-//	auto 门清 = player->门清;
+//	auto Menzen = player->Menzen;
 //	auto riichi = player->riichi;
 //	auto double_riichi = player->double_riichi;
 //	bool 自摸 = true;

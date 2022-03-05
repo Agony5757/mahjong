@@ -231,7 +231,7 @@ public:
 	bool red_dora;
 	int id;
 
-	inline std::string to_simple_string() const {
+	inline std::string to_string() const {
 		std::stringstream ss;
 		int number = tile % 9 + 1;
 		if (red_dora)
@@ -252,8 +252,8 @@ public:
 		}
 		throw std::runtime_error("Error Tile.");
 	}
-
-	inline std::string to_string() const {
+	
+	/*inline std::string to_string() const {
 		std::string ret;
 		if (0 <= tile && tile <= 8) {
 			ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
@@ -291,20 +291,8 @@ public:
 			ret += '*';
 		}
 		return ret + ']';
-	}
+	}*/
 };
-
-inline bool tile_comparator(Tile* t2, Tile* t1) {
-	if (t1->tile > t2->tile) {
-		return true;
-	}
-	else if (t1->tile < t2->tile) {
-		return false;
-	}
-	else {
-		return t1 > t2;
-	}
-}
 
 inline std::string tiles_to_string(std::vector<Tile*> tiles) {
 	std::stringstream ss;

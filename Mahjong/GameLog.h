@@ -23,6 +23,9 @@ enum class LogAction {
 	立直通过,
 };
 
+constexpr bool DiscardFromTsumo = false;
+constexpr bool DiscardFromHand = true;
+
 class Table;
 
 struct BaseGameLog {
@@ -69,7 +72,7 @@ public:
 	void log手切(int player, Tile*);
 
 	inline void log出牌(int player, Tile* tile, bool 手切摸切) {
-		if (手切摸切 == FROM_手切)
+		if (手切摸切 == DiscardFromHand)
 			log手切(player, tile);
 		else
 			log摸切(player, tile);
@@ -79,7 +82,7 @@ public:
 	void log手切立直(int player, Tile*);
 
 	inline void log立直(int player, Tile* tile, bool 手切摸切) {
-		if (手切摸切 == FROM_手切)
+		if (手切摸切 == DiscardFromHand)
 			log手切立直(player, tile);
 		else
 			log摸切立直(player, tile);

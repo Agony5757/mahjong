@@ -24,10 +24,10 @@ string BaseGameLog::to_string()
 		ss << "暗杠" << tiles_to_string(副露);
 		return ss.str();
 	case LogAction::碰:
-		ss << "碰" << 牌->to_string() << "with" << tiles_to_string(副露);
+		ss << "Pon" << 牌->to_string() << "with" << tiles_to_string(副露);
 		return ss.str();
 	case LogAction::吃:
-		ss << "吃" << 牌->to_string() << "with" << tiles_to_string(副露);
+		ss << "Chi" << 牌->to_string() << "with" << tiles_to_string(副露);
 		return ss.str();
 	case LogAction::手切:
 		ss << "手切" << 牌->to_string();
@@ -118,13 +118,13 @@ void GameLog::log_response_鸣牌(int player_call, int player_turn,
 	LogAction la;
 	switch (action)
 	{
-	case BaseAction::吃:
+	case BaseAction::Chi:
 		la = LogAction::吃;
 		break;
-	case BaseAction::碰:
+	case BaseAction::Pon:
 		la = LogAction::碰;
 		break;
-	case BaseAction::杠:
+	case BaseAction::Kan:
 		la = LogAction::杠;
 		break;
 	default:

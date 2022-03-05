@@ -5,24 +5,24 @@
 
 enum class BaseAction : uint8_t {
 	// response begin
-	pass,
-	吃, 
-	碰,
-	杠,
-	荣和,
+	Pass,
+	Chi, 
+	Pon,
+	Kan,
+	Ron,
 	// response end
 	// 注意到所有的response Action可以通过大小来比较
 
-	抢暗杠,
-	抢杠,
+	ChanAnKan,
+	ChanKan,
 
 	// self action begin
-	暗杠,
-	加杠,
-	出牌,
-	立直,
-	自摸,
-	九种九牌,
+	AnKan,
+	KaKan,
+	Discard,
+	Riichi,
+	Tsumo,
+	Kyushukyuhai,
 	// self action end
 };
 
@@ -30,7 +30,7 @@ struct Action
 {
 	Action() = default;
 	Action(BaseAction action, std::vector<Tile*>);
-	BaseAction action = BaseAction::pass;
+	BaseAction action = BaseAction::Pass;
 	std::vector<Tile*> correspond_tiles;
 	std::string to_string() const;
     bool operator==(const Action& other);

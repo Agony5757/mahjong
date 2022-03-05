@@ -98,7 +98,7 @@ namespace TrainingDataEncoding {
 
 	void count_field(const Table& table, const Player& player, array<dtype, n_tile_types> &ntiles)
 	{
-		for (auto t : table.宝牌指示牌) {
+		for (auto t : table.dora_indicator) {
 			ntiles[char(get_dora_next(t->tile))] += (1 << 3);
 			ntiles[char(t->tile)]++;
 			if (t->tile - BaseTile::_1z == table.场风) ntiles[char(t->tile)] += field_wind_flag;

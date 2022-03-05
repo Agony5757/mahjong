@@ -7,17 +7,13 @@
 #include <string>
 #include <array>
 #include "Tile.h"
-#define Profiling
 #include "Profiler.h"
 
-#define VERBOSE if (verbose)
-#define SORT(player) player.sort_hand();
-#define SORT_TILES(hand) std::sort(hand.begin(), hand.end(), tile_comparator);
+// #define VERBOSE if (verbose)
+// #define SORT(player) player.sort_hand();
+// #define SORT_TILES(hand) std::sort(hand.begin(), hand.end(), tile_less);
+// #define TEST_EQ_VERBOSE(value, expected) if (value == expected) cout<<"PASS"<<endl; else cout<<"FAIL"<<endl;
 
-#define TEST_EQ_VERBOSE(value, expected) if (value == expected) cout<<"PASS"<<endl; else cout<<"FAIL"<<endl;
-
-constexpr bool FROM_摸切 = false;
-constexpr bool FROM_手切 = true;
 
 template<typename ContainerType, typename ElemType>
 bool is_in(const ContainerType &container, const ElemType &elem){

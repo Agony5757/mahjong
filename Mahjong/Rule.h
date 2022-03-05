@@ -165,7 +165,7 @@ std::vector<BaseTile> get听牌(std::vector<BaseTile> tiles, std::vector<BaseTil
 bool is听牌(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
 bool is和牌(std::vector<BaseTile> tiles);
 
-std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清);
+std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen);
 
 bool can_ron(std::vector<Tile*> hands, Tile* get_tile);
 bool can_tsumo(std::vector<Tile*> hands);

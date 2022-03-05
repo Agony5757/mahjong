@@ -71,7 +71,7 @@ public:
 	bool double_riichi = false;
 	bool riichi = false;
 
-	bool 门清 = true;
+	bool Menzen = true;
 	Wind wind;
 	bool 亲家;
 	bool 同巡振听 = false;

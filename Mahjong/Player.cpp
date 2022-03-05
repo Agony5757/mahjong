@@ -16,7 +16,7 @@ string Player::hand_to_string() const
 	stringstream ss;
 
 	for (auto hand_tile : hand) {
-		ss << hand_tile->to_simple_string() << " ";
+		ss << hand_tile->to_string() << " ";
 	}
 	return ss.str();
 }
@@ -49,7 +49,7 @@ string Player::to_string() const
 
 	ss << "|";
 
-	if (门清)	ss << "门清";
+	if (Menzen)	ss << "Menzen";
 	else		ss << "副露";
 	ss << endl;
 
@@ -231,7 +231,7 @@ vector<SelfAction> Player::get_立直()
 {
 	vector<SelfAction> actions;
 
-	auto riichi_tiles = is_riichi_able(hand, 门清);
+	auto riichi_tiles = is_riichi_able(hand, Menzen);
 	for (auto riichi_tile : riichi_tiles) {
 		SelfAction action;
 		action.action = BaseAction::立直;
@@ -383,7 +383,7 @@ vector<ResponseAction> Player::get_Chi(Tile* tile)
 		}
 		// 不属于食替特殊情况才可以吃
 		ResponseAction action;
-		action.action = BaseAction::吃;
+		action.action = BaseAction::Chi;
 		action.correspond_tiles = one_chi_tiles;
 		actions.push_back(action);
 	}
@@ -400,7 +400,7 @@ vector<ResponseAction> Player::get_Pon(Tile* tile)
 
 	for (auto one_chi_tiles : chi_tiles) {
 		ResponseAction action;
-		action.action = BaseAction::碰;
+		action.action = BaseAction::Pon;
 		action.correspond_tiles.assign(one_chi_tiles.begin(), one_chi_tiles.end());
 		actions.push_back(action);
 	}
@@ -417,7 +417,7 @@ vector<ResponseAction> Player::get_Kan(Tile* tile)
 	sort(kan_tiles.begin(), kan_tiles.end());
 	for (auto one_chi_tiles : kan_tiles) {
 		ResponseAction action;
-		action.action = BaseAction::杠;
+		action.action = BaseAction::Kan;
 		action.correspond_tiles.assign(one_chi_tiles.begin(), one_chi_tiles.end());
 		actions.push_back(action);
 	}
@@ -432,7 +432,7 @@ vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
 
 	if (is_in(听牌, tile->tile)) {
 		ResponseAction action;
-		action.action = BaseAction::抢暗杠;
+		action.action = BaseAction::ChanAnKan;
 		actions.push_back(action);
 	}
 
@@ -445,7 +445,7 @@ vector<ResponseAction> Player::get_抢杠(Tile* tile)
 
 	if (is_in(听牌, tile->tile)) {
 		ResponseAction action;
-		action.action = BaseAction::抢杠;
+		action.action = BaseAction::ChanKan;
 		actions.push_back(action);
 	}
 
@@ -589,7 +589,7 @@ void Player::play_暗杠(BaseTile tile)
 
 void Player::play_加杠(Tile* tile)
 {
-	门清 = false;
+	Menzen = false;
 	for (auto& fulu : 副露s) {
 		if (fulu.type == Fulu::Pon) {
 			if (tile->tile == fulu.tiles[0]->tile)
@@ -611,7 +611,7 @@ void Player::move_from_hand_to_river(Tile* tile, int& number, bool remain, bool 
 
 void Player::sort_hand()
 {
-	sort(hand.begin(), hand.end(), tile_comparator);
+	sort(hand.begin(), hand.end(), tile_less);
 }
 
 void Player::test_show_hand()
