@@ -204,7 +204,7 @@ void test_encoding(size_t max_plays) {
 					if (table.get_phase() == 0) {
 						namespace enc = TrainingDataEncoding;
 						using dtype = enc::dtype;
-						dtype data[enc::n_row * enc::n_col];
+						dtype data[enc::n_row * enc::n_col] = { 0 };
 						enc::encode_table(table, 0, data);
 					}
 					table.make_selection((int)dice_roll);

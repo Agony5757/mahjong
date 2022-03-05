@@ -602,11 +602,11 @@ void Player::play_加杠(Tile* tile)
 	remove_from_hand(tile);
 }
 
-void Player::move_from_hand_to_river(Tile* tile, int& number, bool remain, bool fromhand)
+void Player::move_from_hand_to_river(Tile* tile, int& number, bool fromhand)
 {
 	remove_from_hand(tile);
 	number++;
-	river.push_back({ tile, number, riichi, remain, fromhand });
+	river.push_back({ tile, number, riichi, true, fromhand });
 }
 
 void Player::sort_hand()
