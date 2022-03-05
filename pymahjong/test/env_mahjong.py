@@ -1060,7 +1060,7 @@ class EnvMahjong4(gym.Env):
                 assert pon_no_problem is True
                 side_tiles_added_by_naru = [[TileTo136(aval_response_actions[response_action_no].correspond_tiles[0]), 0],
                                             [TileTo136(aval_response_actions[response_action_no].correspond_tiles[1]), 0],
-                                            [pon_tile, 1]]
+                                            [self.latest_tile, 1]]
                 self.side_tiles[playerNo] += side_tiles_added_by_naru
                 self.prev_step_is_naru = True
 
