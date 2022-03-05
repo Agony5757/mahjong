@@ -1,19 +1,17 @@
 #ifndef TRAINING_DATA_ENCODING_H
 #define TRAINING_DATA_ENCODING_H
 
-#include "pybind11/numpy.h"
 #include <vector>
 #include "Table.h"
 
-using dtype = int8_t;
-
 namespace TrainingDataEncoding {
 
-	constexpr size_t size_player = 4, 
+	using dtype = int8_t;
+	constexpr size_t size_player = 4,
 		col_hand = 0,
 		size_hand = 6,
 		col_fulu = col_hand + size_hand,
-		size_fulu = 6,		
+		size_fulu = 6,
 		col_river = col_fulu + size_fulu * size_player,
 		size_river = 10,
 		col_field = col_river + size_river * size_player,
@@ -35,7 +33,7 @@ namespace TrainingDataEncoding {
 	constexpr int dora_indicator_mask = 0b000111;
 	constexpr int dora_mask = 0b111000;
 
-	void encode_table(const Table& table, int pid, pybind11::array_t<dtype> arr);
+	void encode_table(const Table& table, int pid, dtype* data);
 	void encode_action();
 };
 
