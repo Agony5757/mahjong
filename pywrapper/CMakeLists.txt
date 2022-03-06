@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
-project(MahjongPy)
+project(MahjongPyWrapper)
 
-set(LIB_MahjongPy MahjongPy)
+set(LIB_MahjongPy {PROJECT_NAME})
 file(GLOB_RECURSE MahjongPy_SRC_CPP *.cpp)
 add_library(${LIB_MahjongPy} SHARED ${MahjongPy_SRC_CPP})
 if (UNIX)

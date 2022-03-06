@@ -17,7 +17,7 @@ using namespace std;
 using namespace pybind11::literals;
 namespace py = pybind11;
 
-PYBIND11_MODULE(MahjongPy, m)
+PYBIND11_MODULE(MahjongPyWrapper, m)
 {
 	m.doc() = "An essential Japanese riichi mahjong environment.";
 	

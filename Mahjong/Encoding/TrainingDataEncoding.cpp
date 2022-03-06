@@ -106,29 +106,23 @@ namespace TrainingDataEncoding {
 	void encode_self_actions_matrix(const vector<SelfAction> &self_actions, int action_tile, bool &can_kyushukyuhai, dtype* data)
 	{
 		can_kyushukyuhai = false;
-		array<dtype, n_tile_types> row_discard{0};
+		
 		for (auto sa : self_actions) {
-			int row_offset = -1;
-			array<dtype, n_tile_types> row_data{0}; 
 			switch (sa.action) {
 			case BaseAction::出牌:
-				row_discard[sa.correspond_tiles[0]->tile] = 1;
+				get(data, row_discard + row_action, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::暗杠:
-				row_data[sa.correspond_tiles[0]->tile] = 1;
-				row_offset = 5;
+				get(data, row_ankan + row_action, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::加杠:
-				row_data[sa.correspond_tiles[0]->tile] = 1;
-				row_offset = 7;
+				get(data, row_kakan + row_action, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::立直:
-				row_data[sa.correspond_tiles[0]->tile] = 1;
-				row_offset = 8;
+				get(data, row_riichi + row_action, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::自摸:
-				row_data[action_tile] = 1;
-				row_offset = 10;
+				get(data, row_tsumo + row_action, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::九种九牌:
 				can_kyushukyuhai = true;
@@ -136,44 +130,38 @@ namespace TrainingDataEncoding {
 			default:
 				throw runtime_error("Bad SelfAction (while encoding).");
 			}
-			if (row_offset >= 0) memcpy(data + locate(row_action + row_offset, 0), row_data.data(), sizeof(dtype) * n_col);
 		}
-		memcpy(data + locate(row_action, 0), row_discard.data(), sizeof(dtype) * n_col);
 	}
 
 	void encode_response_actions_matrix(const vector<ResponseAction> &response_actions, int action_tile, dtype *data)
 	{		
 		for (auto ra : response_actions) {
-			int row_offset = -1;
-			array<dtype, n_tile_types> row_data{0}; 
+			int row_chi = 0;
 			switch (ra.action) {				
 			case BaseAction::pass:
 				break;
 			case BaseAction::吃:
-				row_data[action_tile] = 1;
 				if (action_tile > ra.correspond_tiles[0]->tile)
-					if (action_tile < ra.correspond_tiles[1]->tile) row_offset = 2; // middle							
-					else row_offset = 3; // right						
-				else row_offset = 1; // left
+					if (action_tile < ra.correspond_tiles[1]->tile) row_chi = row_chi_middle + row_action; // middle							
+					else row_chi = row_chi_right + row_action; // right						
+				else row_chi = row_chi_left+row_action; // left
+
+				get(data, row_chi, action_tile) = 1;
 				break;
 			case BaseAction::碰:
-				row_data[ra.correspond_tiles[0]->tile] = 1;
-				row_offset = 4;
+				get(data, row_pon, ra.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::杠:
-				row_data[ra.correspond_tiles[0]->tile] = 1;
-				row_offset = 6;
+				get(data, row_kan, ra.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::荣和:
 			case BaseAction::抢杠:
 			case BaseAction::抢暗杠:
-				row_data[action_tile] = 1;
-				row_offset = 9;
+				get(data, row_ron, ra.correspond_tiles[0]->tile) = 1;
 				break;
 			default:			
 				throw runtime_error("Bad ResponseAction (while encoding).");
 			}
-			if (row_offset >= 0) memcpy(data + locate(row_action + row_offset, 0), row_data.data(), sizeof(dtype) * n_col);
 		}
 	}
 	
@@ -209,9 +197,6 @@ namespace TrainingDataEncoding {
 			auto& ct = table.selected_action.correspond_tiles;
 			if (ct.size() > 0) {
 				action_tile = ct[0]->tile;
-			}
-			else {
-				throw runtime_error("Bad corresponding tile (while encoding).");
 			}
 		}
 		encode_last(action_tile, data);
