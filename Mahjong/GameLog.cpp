@@ -1,12 +1,13 @@
 ﻿#include "GameLog.h"
 #include "Table.h"
+#include "fmt/core.h"
 #include <sstream>
 
 using namespace std;
 
 BaseGameLog::BaseGameLog(int p1, int p2, LogAction action, Tile* tile,
 	vector<Tile*> fulu)
-	:player(p1), player2(p2), action(action), 牌(tile), 副露(fulu)
+	:player(p1), player2(p2), action(action), tile(tile), call_tiles(fulu)
 {
 }
 
@@ -20,35 +21,40 @@ string BaseGameLog::to_string()
 	stringstream ss;
 	ss << "p" << player;
 	switch (action) {
-	case LogAction::暗杠:
-		ss << "暗杠" << tiles_to_string(副露);
+	case LogAction::AnKan:
+		return fmt::format("AnKan {}", tiles_to_string(call_tiles));
+		/*ss << "AnKan" << tiles_to_string(call_tiles);
+		return ss.str();*/
+	case LogAction::Pon:
+		return fmt::format("Pon {} with {}", tile->to_string(), tiles_to_string(call_tiles));
+		/*ss << "Pon" << tile->to_string() << "with" << tiles_to_string(call_tiles);
+		return ss.str();*/
+	case LogAction::Chi:
+		return fmt::format("Chi {} with {}", tile->to_string(), tiles_to_string(call_tiles));
+		/*ss << "Chi" << tile->to_string() << "with" << tiles_to_string(call_tiles);
+		return ss.str();*/
+	case LogAction::DiscardFromHand:
+		return fmt::format("Discard (te giri) {}", tile->to_string());
+		/*ss << "Discard (te giri)" << tile->to_string();
+		return ss.str();*/
+	case LogAction::DiscardFromTsumo:
+		return fmt::format("Discard (tsumo giri) {}", tile->to_string());
+		/*ss << "Discard (tsumo giri)" << tile->to_string();
+		return ss.str();*/
+	case LogAction::Draw:
+		ss << "Draw" << tile->to_string();
 		return ss.str();
-	case LogAction::碰:
-		ss << "Pon" << 牌->to_string() << "with" << tiles_to_string(副露);
+	case LogAction::RiichiDiscardFromHand:
+		ss << "Riichi Discard (te giri)" << tile->to_string();
 		return ss.str();
-	case LogAction::吃:
-		ss << "Chi" << 牌->to_string() << "with" << tiles_to_string(副露);
+	case LogAction::RiichiDiscardFromTsumo:
+		ss << "Riichi Discard (tsumo giri)" << tile->to_string();
 		return ss.str();
-	case LogAction::手切:
-		ss << "手切" << 牌->to_string();
+	case LogAction::Kyushukyuhai:
+		ss << "Kyushukyuhai";
 		return ss.str();
-	case LogAction::摸切:
-		ss << "摸切" << 牌->to_string();
-		return ss.str();
-	case LogAction::摸牌:
-		ss << "摸牌" << 牌->to_string();
-		return ss.str();
-	case LogAction::手切立直:
-		ss << "手切立直" << 牌->to_string();
-		return ss.str();
-	case LogAction::摸切立直:
-		ss << "摸切立直" << 牌->to_string();
-		return ss.str();
-	case LogAction::九种九牌:
-		ss << "九种九牌";
-		return ss.str();
-	case LogAction::立直通过:
-		ss << "立直通过:" << score_to_string(score);
+	case LogAction::RiichiSuccess:
+		ss << "Riichi Success " << score_to_string(score);
 		return ss.str();
 	default:
 		throw runtime_error("Invalid LogAction. BaseAction: " + std::to_string(int(action)));
@@ -58,9 +64,9 @@ string BaseGameLog::to_string()
 string GameLog::to_string()
 {
 	stringstream ss;
-	ss << "庄家: Player " << 庄家 << endl
-		<< "场风: " << wind_to_string(场风) << endl
-		<< start本场 << "本场 " << start立直棒 << "立直棒" << endl
+	ss << "庄家: Player " << oya << endl
+		<< "场风: " << wind_to_string(game_wind) << endl
+		<< start_honba << "本场 " << start_kyoutaku << "立直棒" << endl
 		<< "点数:" << score_to_string(start_scores) << endl
 		<< "牌山:" << yama << endl;
 	for (auto log : logs) {
@@ -75,57 +81,57 @@ void GameLog::_log(BaseGameLog log) {
 	logs.push_back(log);
 }
 
-void GameLog::logGameStart(
+void GameLog::log_game_start(
 	int _start本场, int _start立直棒, int _oya, Wind _场风, string _yama,
 	array<int, 4> scores)
 {
-	start本场 = _start本场;
-	start立直棒 = _start立直棒;
-	庄家 = _oya;
-	场风 = _场风;
+	start_honba = _start本场;
+	start_kyoutaku = _start立直棒;
+	oya = _oya;
+	game_wind = _场风;
 	yama = _yama;
 	start_scores = scores;
 }
 
-void GameLog::log摸牌(int player, Tile* tile)
+void GameLog::log_draw(int player, Tile* tile)
 {
-	_log({ player, -1, LogAction::摸牌, tile, {} });
+	_log({ player, -1, LogAction::Draw, tile, {} });
 }
 
-void GameLog::log摸切(int player, Tile* tile)
+void GameLog::log_discard_from_tsumo(int player, Tile* tile)
 {
-	_log({ player, -1, LogAction::摸切, tile, {} });
+	_log({ player, -1, LogAction::DiscardFromTsumo, tile, {} });
 }
 
-void GameLog::log手切(int player, Tile* tile)
+void GameLog::log_discard_from_hand(int player, Tile* tile)
 {
-	_log({ player, -1, LogAction::手切, tile, {} });
+	_log({ player, -1, LogAction::DiscardFromHand, tile, {} });
 }
 
-void GameLog::log摸切立直(int player, Tile* tile)
+void GameLog::log_riichi_discard_from_tsumo(int player, Tile* tile)
 {
-	_log({ player, -1, LogAction::摸切立直, tile, {} });
+	_log({ player, -1, LogAction::RiichiDiscardFromTsumo, tile, {} });
 }
 
-void GameLog::log手切立直(int player, Tile* tile)
+void GameLog::log_riichi_discard_from_hand(int player, Tile* tile)
 {
-	_log({ player, -1, LogAction::手切立直, tile, {} });
+	_log({ player, -1, LogAction::RiichiDiscardFromHand, tile, {} });
 }
 
-void GameLog::log_response_鸣牌(int player_call, int player_turn,
+void GameLog::log_call(int player_call, int player_turn,
 	Tile* tile, vector<Tile*> tiles, BaseAction action)
 {
 	LogAction la;
 	switch (action)
 	{
 	case BaseAction::Chi:
-		la = LogAction::吃;
+		la = LogAction::Chi;
 		break;
 	case BaseAction::Pon:
-		la = LogAction::碰;
+		la = LogAction::Pon;
 		break;
 	case BaseAction::Kan:
-		la = LogAction::杠;
+		la = LogAction::Kan;
 		break;
 	default:
 		throw runtime_error("Invalid BaseAction when logging. BaseAction:" +
@@ -134,31 +140,31 @@ void GameLog::log_response_鸣牌(int player_call, int player_turn,
 	_log({ player_call, player_turn, la, tile, tiles });
 }
 
-void GameLog::log加杠(int player, Tile* tile)
+void GameLog::log_kakan(int player, Tile* tile)
 {
-	_log({ player, -1, LogAction::加杠, tile, {} });
+	_log({ player, -1, LogAction::KaKan, tile, {} });
 }
 
-void GameLog::log暗杠(int player, vector<Tile*> tiles)
+void GameLog::log_ankan(int player, vector<Tile*> tiles)
 {
-	_log({ player, -1, LogAction::加杠, nullptr, tiles });
+	_log({ player, -1, LogAction::AnKan, nullptr, tiles });
 }
 
-void GameLog::log立直通过(Table* table)
+void GameLog::log_riichi_success(Table* table)
 {
 	BaseGameLog gamelog(table->get_scores());
 	gamelog.player = table->turn;
-	gamelog.action = LogAction::立直通过;
+	gamelog.action = LogAction::RiichiSuccess;
 	logs.push_back(gamelog);
 }
 
-void GameLog::log九种九牌(int player, Result result)
+void GameLog::log_kyushukyuhai(int player, Result result)
 {
-	_log({ player,-1, LogAction::九种九牌, nullptr, {} });
-	logGameOver(result);
+	_log({ player,-1, LogAction::Kyushukyuhai, nullptr, {} });
+	log_gameover(result);
 }
 
-void GameLog::logGameOver(Result _result)
+void GameLog::log_gameover(Result _result)
 {
 	result = _result;
 }

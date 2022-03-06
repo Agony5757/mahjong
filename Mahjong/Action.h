@@ -11,19 +11,19 @@ enum class BaseAction : uint8_t {
 	Kan,
 	Ron,
 	// response end
-	// 注意到所有的response Action可以通过大小来比较
+	// Response action can be compared.
 
 	ChanAnKan,
 	ChanKan,
 
-	// self action begin
+	// Self action begin
 	AnKan,
 	KaKan,
 	Discard,
 	Riichi,
 	Tsumo,
 	Kyushukyuhai,
-	// self action end
+	// Self action end
 };
 
 struct Action

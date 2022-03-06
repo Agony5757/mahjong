@@ -7,20 +7,20 @@
 #include "macro.h"
 
 enum class LogAction {
-	暗杠,
-	碰,
-	吃,
-	杠,
-	加杠,
-	手切,
-	摸切,
-	摸牌,
-	手切立直,
-	摸切立直,
-	九种九牌,
-	荣和,
-	自摸,
-	立直通过,
+	AnKan,
+	Pon,
+	Chi,
+	Kan,
+	KaKan,
+	DiscardFromHand,
+	DiscardFromTsumo,
+	Draw,
+	RiichiDiscardFromHand,
+	RiichiDiscardFromTsumo,
+	Kyushukyuhai,
+	Ron,
+	Tsumo,
+	RiichiSuccess,
 };
 
 constexpr bool DiscardFromTsumo = false;
@@ -34,11 +34,11 @@ protected:
 	BaseGameLog() {}
 
 public:
-	int player; // 主叫
-	int player2;// 被叫
+	int player;
+	int player2; 
 	LogAction action;
-	Tile* 牌;
-	std::vector<Tile*> 副露;
+	Tile* tile;
+	std::vector<Tile*> call_tiles;
 	std::array<int, 4> score;
 
 	BaseGameLog(int, int, LogAction, Tile*, std::vector<Tile*>);
@@ -52,50 +52,50 @@ public:
 	std::vector<int> loser;
 	std::array<int, 4> start_scores;
 	std::string yama;
-	int start本场;
-	int end本场;
+	int start_honba;
+	int end_honba;
 
-	int start立直棒;
-	int end立直棒;
-	int 庄家;
+	int start_kyoutaku;
+	int end_kyoutaku;
+	int oya;
 
-	Wind 场风;
+	Wind game_wind;
 	Result result;
 	std::vector<BaseGameLog> logs;
 
 	void _log(BaseGameLog log);
-	void logGameStart(int start本场, int start立直棒, int oya, Wind 场风,
+	void log_game_start(int start_honba, int start_kyoutaku, int oya, Wind game_wind,
 		std::string yama,
 		std::array<int, 4>);
-	void log摸牌(int player, Tile*);
-	void log摸切(int player, Tile*);
-	void log手切(int player, Tile*);
+	void log_draw(int player, Tile*);
+	void log_discard_from_tsumo(int player, Tile*);
+	void log_discard_from_hand(int player, Tile*);
 
-	inline void log出牌(int player, Tile* tile, bool 手切摸切) {
-		if (手切摸切 == DiscardFromHand)
-			log手切(player, tile);
+	inline void log_discard(int player, Tile* tile, bool fromhand) {
+		if (fromhand == DiscardFromHand)
+			log_discard_from_hand(player, tile);
 		else
-			log摸切(player, tile);
+			log_discard_from_tsumo(player, tile);
 	}
 
-	void log摸切立直(int player, Tile*);
-	void log手切立直(int player, Tile*);
+	void log_riichi_discard_from_tsumo(int player, Tile*);
+	void log_riichi_discard_from_hand(int player, Tile*);
 
-	inline void log立直(int player, Tile* tile, bool 手切摸切) {
-		if (手切摸切 == DiscardFromHand)
-			log手切立直(player, tile);
+	inline void log_riichi_discard(int player, Tile* tile, bool fromhand) {
+		if (fromhand == DiscardFromHand)
+			log_riichi_discard_from_hand(player, tile);
 		else
-			log摸切立直(player, tile);
+			log_riichi_discard_from_tsumo(player, tile);
 	}
 
-	void log_response_鸣牌(int player_call, int player_turn,
+	void log_call(int player_call, int player_turn,
 		Tile*, std::vector<Tile*> tiles, BaseAction action);
 
-	void log加杠(int player, Tile*);
-	void log暗杠(int player, std::vector<Tile*> tiles);
-	void log立直通过(Table* table);
-	void log九种九牌(int player, Result result);
-	void logGameOver(Result result);
+	void log_kakan(int player, Tile*);
+	void log_ankan(int player, std::vector<Tile*> tiles);
+	void log_riichi_success(Table* table);
+	void log_kyushukyuhai(int player, Result result);
+	void log_gameover(Result result);
 	std::string to_string();
 };
 

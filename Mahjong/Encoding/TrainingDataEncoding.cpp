@@ -85,16 +85,16 @@ namespace TrainingDataEncoding {
 		array<dtype, n_tile_types> dora_ind_count = { 0 };
 		array<dtype, n_tile_types> dora_count = { 0 };
 
-		for (size_t i = 0; i < table.dora_spec; ++i) {
-			auto dora_indicator_id = char(table.宝牌指示牌[i]->tile);
-			auto dora_id = char(get_dora_next(table.宝牌指示牌[i]->tile));
+		for (size_t i = 0; i < table.n_active_dora; ++i) {
+			auto dora_indicator_id = char(table.dora_indicator[i]->tile);
+			auto dora_id = char(get_dora_next(table.dora_indicator[i]->tile));
 
 			get(data, row_field + dora_ind_count[dora_indicator_id], dora_indicator_id) = 1;
 			dora_ind_count[dora_indicator_id]++;
 			get(data, row_field + 4 + dora_count[dora_indicator_id], dora_id) = 1;
 			dora_count[dora_id]++;
 		}
-		get(data, row_field + 8, table.场风 + BaseTile::_1z) = 1;
+		get(data, row_field + 8, table.game_wind + BaseTile::_1z) = 1;
 		get(data, row_field + 9, player.wind + BaseTile::_1z) = 1;
 	}
 
@@ -109,22 +109,22 @@ namespace TrainingDataEncoding {
 		
 		for (auto sa : self_actions) {
 			switch (sa.action) {
-			case BaseAction::出牌:
+			case BaseAction::Discard:
 				get(data, row_discard + row_action, sa.correspond_tiles[0]->tile) = 1;
 				break;
-			case BaseAction::暗杠:
+			case BaseAction::AnKan:
 				get(data, row_ankan + row_action, sa.correspond_tiles[0]->tile) = 1;
 				break;
-			case BaseAction::加杠:
+			case BaseAction::KaKan:
 				get(data, row_kakan + row_action, sa.correspond_tiles[0]->tile) = 1;
 				break;
-			case BaseAction::立直:
+			case BaseAction::Riichi:
 				get(data, row_riichi + row_action, sa.correspond_tiles[0]->tile) = 1;
 				break;
-			case BaseAction::自摸:
+			case BaseAction::Tsumo:
 				get(data, row_tsumo + row_action, sa.correspond_tiles[0]->tile) = 1;
 				break;
-			case BaseAction::九种九牌:
+			case BaseAction::Kyushukyuhai:
 				can_kyushukyuhai = true;
 				break;
 			default:
@@ -138,9 +138,9 @@ namespace TrainingDataEncoding {
 		for (auto ra : response_actions) {
 			int row_chi = 0;
 			switch (ra.action) {				
-			case BaseAction::pass:
+			case BaseAction::Pass:
 				break;
-			case BaseAction::吃:
+			case BaseAction::Chi:
 				if (action_tile > ra.correspond_tiles[0]->tile)
 					if (action_tile < ra.correspond_tiles[1]->tile) row_chi = row_chi_middle + row_action; // middle							
 					else row_chi = row_chi_right + row_action; // right						
@@ -148,15 +148,15 @@ namespace TrainingDataEncoding {
 
 				get(data, row_chi, action_tile) = 1;
 				break;
-			case BaseAction::碰:
+			case BaseAction::Pon:
 				get(data, row_pon, ra.correspond_tiles[0]->tile) = 1;
 				break;
-			case BaseAction::杠:
+			case BaseAction::Kan:
 				get(data, row_kan, ra.correspond_tiles[0]->tile) = 1;
 				break;
-			case BaseAction::荣和:
-			case BaseAction::抢杠:
-			case BaseAction::抢暗杠:
+			case BaseAction::Ron:
+			case BaseAction::ChanKan:
+			case BaseAction::ChanAnKan:
 				get(data, row_ron, ra.correspond_tiles[0]->tile) = 1;
 				break;
 			default:			
@@ -235,23 +235,23 @@ namespace TrainingDataEncoding {
 		bool riichi_able = false;
 		for (auto sa : actions) {
 			switch (sa.action) {
-			case BaseAction::出牌:
+			case BaseAction::Discard:
 				data[int(sa.correspond_tiles[0]->tile)] = 1;
 				break;
-			case BaseAction::暗杠:
+			case BaseAction::AnKan:
 				data[38] = 1;
 				break;
-			case BaseAction::加杠:
+			case BaseAction::KaKan:
 				data[40] = 1;
 				break;
-			case BaseAction::立直:
+			case BaseAction::Riichi:
 				data[41] = 1;
 				riichi_able = true;
 				break;
-			case BaseAction::自摸:
+			case BaseAction::Tsumo:
 				data[43] = 1;
 				break;
-			case BaseAction::九种九牌:
+			case BaseAction::Kyushukyuhai:
 				data[44] = 1;
 				break;
 			default:
@@ -261,28 +261,28 @@ namespace TrainingDataEncoding {
 		if (riichi_able) data[45] = 1;
 	}
 	
-	void encode_response_actions_vector(const vector<SelfAction>& actions, int action_tile, dtype* data)
+	void encode_response_actions_vector(const vector<ResponseAction>& actions, int action_tile, dtype* data)
 	{
 		for (auto ra : actions) {
 			switch (ra.action) {
-			case BaseAction::pass:
+			case BaseAction::Pass:
 				data[46] = 1;
 				break;
-			case BaseAction::吃:
+			case BaseAction::Chi:
 				if (action_tile > ra.correspond_tiles[0]->tile)
 					if (action_tile < ra.correspond_tiles[1]->tile) data[35] = 1; // middle							
 					else data[36] = 1; // right						
 				else data[34] = 1; // left
 				break;
-			case BaseAction::碰:
+			case BaseAction::Pon:
 				data[37] = 1;
 				break;
-			case BaseAction::杠:
+			case BaseAction::Kan:
 				data[39] = 1;
 				break;
-			case BaseAction::荣和:
-			case BaseAction::抢杠:
-			case BaseAction::抢暗杠:
+			case BaseAction::Ron:
+			case BaseAction::ChanKan:
+			case BaseAction::ChanAnKan:
 				data[42] = 1;
 				break;
 			default:			
@@ -314,7 +314,7 @@ namespace TrainingDataEncoding {
 			}		
 			if (pid == table.get_phase() % 4) {
 				vector<ResponseAction>&& actions = table.get_response_actions();
-				encode_response_actions_matrix(actions, action_tile, data);
+				encode_response_actions_vector(actions, action_tile, data);
 			}
 		}
 		}
