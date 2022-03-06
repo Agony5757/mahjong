@@ -4,12 +4,15 @@ import platform
 import warnings
 import time
 
-from .env_mahjong import EnvMahjong4
+import env_mahjong
 import pymahjong as mp
 import numpy as np
 from copy import deepcopy
 
+EnvMahjong4 = env_mahjong.EnvMahjong4
+
 np.set_printoptions(threshold=np.inf)
+
 
 def col_name(col):
     if col < 6:
@@ -29,7 +32,8 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
 
     winds = ['east', 'south', 'west', 'north']
 
-    obs_container = np.zeros([34, 81], dtype=np.int8)
+    obs_container = np.zeros([93, 34], dtype=np.int8)
+    oracle_obs_container = np.zeros([111, 34], dtype=np.int8)
 
     env_test = EnvMahjong4()
 
@@ -43,7 +47,7 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
     winning_counts = []
     deal_in_counts = []
 
-    wrong_dimensions_total = np.zeros([81])
+    wrong_dimensions_total = np.zeros([111])
 
     while game < num_games:
 
@@ -58,7 +62,6 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
             curr_pid = env_test.get_curr_player_id()
             valid_actions = env_test.get_valid_actions(nhot=False)
 
-
             if len(valid_actions) == 1:
                 env_test.t.make_selection(0)
             else:
@@ -66,11 +69,11 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
 
                 # --------------- Check encoding !!!!!!!! ---------------
 
-                dq_obs = env_test.get_obs(curr_pid).astype(np.int8)[:81, :]
+                dq_obs = env_test.get_obs(curr_pid).astype(np.int8)
                 obs_container = obs_container - obs_container  # do we need this ???
-                pm.encode_table(env_test.t, curr_pid, obs_container)
+                pm.encode_table(env_test.t, curr_pid, False, obs_container)
 
-                ag_obs = deepcopy(obs_container).swapaxes(0, 1)[:81, :]
+                ag_obs = deepcopy(obs_container)
                 if curr_pid == 0:
                     if np.any(dq_obs != ag_obs):
                         wrong_dimensions = np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()
@@ -83,18 +86,21 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
                                 print("AG's encoding:", ag_obs[dim, :])
                                 print("------------------------------------------------------")
 
+                            print("current player river tiles:", env_test.river_tiles[0])
+                            print("current player river tiles:", env_test.river_tiles[1])
+                            print("current player river tiles:", env_test.river_tiles[2])
+                            print("current player river tiles:", env_test.river_tiles[3])
+                            print(env_test.t.players[0].to_string())
+                            print(env_test.t.players[1].to_string())
+                            print(env_test.t.players[2].to_string())
+                            print(env_test.t.players[3].to_string())
+                            print(env_test.t.get_phase())
+
+                        time.sleep(error_pause)
+
                         wrong_dimensions_total[np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()] = 1
                     
-                        time.sleep(error_pause)
-                    print("current player river tiles:", env_test.river_tiles[0])
-                    print("current player river tiles:", env_test.river_tiles[1])
-                    print("current player river tiles:", env_test.river_tiles[2])
-                    print("current player river tiles:", env_test.river_tiles[3])
-                    print(env_test.t.players[0].to_string())
-                    print(env_test.t.players[1].to_string())
-                    print(env_test.t.players[2].to_string())
-                    print(env_test.t.players[3].to_string())
-                    print(env_test.t.get_phase())
+
                 # --------------------------------------------------
 
                 a = np.random.randint(0, len(valid_actions))
