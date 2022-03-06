@@ -312,15 +312,15 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.value("P3_RESPONSE", Table::PhaseEnum::P3_RESPONSE)
 		.value("P4_RESPONSE", Table::PhaseEnum::P4_RESPONSE)
 		
-		.value("P1_chankan", Table::PhaseEnum::P1_抢杠RESPONSE)
-		.value("P2_chankan", Table::PhaseEnum::P2_抢杠RESPONSE)
-		.value("P3_chankan", Table::PhaseEnum::P3_抢杠RESPONSE)
-		.value("P4_chankan", Table::PhaseEnum::P4_抢杠RESPONSE)
+		.value("P1_chankan", Table::PhaseEnum::P1_CHANKAN_RESPONSE)
+		.value("P2_chankan", Table::PhaseEnum::P2_CHANKAN_RESPONSE)
+		.value("P3_chankan", Table::PhaseEnum::P3_CHANKAN_RESPONSE)
+		.value("P4_chankan", Table::PhaseEnum::P4_CHANKAN_RESPONSE)
 		
-		.value("P1_chanankan", Table::PhaseEnum::P1_抢暗杠RESPONSE)
-		.value("P2_chanankan", Table::PhaseEnum::P2_抢暗杠RESPONSE)
-		.value("P3_chanankan", Table::PhaseEnum::P3_抢暗杠RESPONSE)
-		.value("P4_chanankan", Table::PhaseEnum::P4_抢暗杠RESPONSE)
+		.value("P1_chanankan", Table::PhaseEnum::P1_CHANANKAN_RESPONSE)
+		.value("P2_chanankan", Table::PhaseEnum::P2_CHANANKAN_RESPONSE)
+		.value("P3_chanankan", Table::PhaseEnum::P3_CHANANKAN_RESPONSE)
+		.value("P4_chanankan", Table::PhaseEnum::P4_CHANANKAN_RESPONSE)
 		;
 
 	m.def("yakus_to_string", [](std::vector<Yaku> yakus) {return py::bytes(yakus_to_string(yakus)); });

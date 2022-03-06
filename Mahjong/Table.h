@@ -60,12 +60,12 @@ public:
 	void import_yama(std::vector<int> yama);
 	std::string export_yama();
 	void init_wind();
-	void deal_tile(int i_player);
-	void deal_tile(int i_player, int n_tiles);
-	void deal_tile_岭上(int i_player);
-	void deal_tenhou_style();
+	void draw(int i_player);
+	void draw(int i_player, int n_tiles);
+	void draw_rinshan(int i_player);
+	void draw_tenhou_style();
 
-	void 发牌(int i_player);
+	void draw_normal(int i_player);
 	void 发岭上牌(int i_player);
 
 	void next_turn(int nextturn);
@@ -89,32 +89,18 @@ public:
 	std::array<int, 4> get_scores();
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
-	std::vector<SelfAction> GetSelfActions();
-	std::vector<SelfAction> GetRiichiSelfActions();
+	std::vector<SelfAction> generate_self_actions();
+	std::vector<SelfAction> generate_riichi_self_actions();
 
 	// 根据turn打出的tile，可以做出的决定
-	std::vector<ResponseAction> GetResponseActions(int player, Tile* tile, bool);
+	std::vector<ResponseAction> generate_response_actions(int player, Tile* tile, bool);
 
 	// 根据turn打出的tile，可以做出的抢杠决定
-	std::vector<ResponseAction> Get抢暗杠(int player, Tile* tile);
+	std::vector<ResponseAction> generate_chanankan_response_actions(int player, Tile* tile);
 
 	// 根据turn打出的tile，可以做出的抢杠决定
-	std::vector<ResponseAction> Get抢杠(int player, Tile* tile);
+	std::vector<ResponseAction> generate_chankan_response_actions(int player, Tile* tile);
 
-	void test_show_yama_with_王牌();
-	void test_show_yama();
-	void test_show_player_hand(int i_player);
-	void test_show_all_player_hand();
-	void test_show_player_info(int i_player);
-	void test_show_all_player_info();
-	void test_show_full_gamelog();
-
-	inline void test_show_all() {
-		test_show_yama_with_王牌();
-		test_show_all_player_info();		
-		std::cout << "轮到Player" << turn << std::endl;
-	}
-		
 public:
 	// ---------------------Manual Mode------------------------------
 	// The following part is for the manual instead of the automatic.
@@ -123,8 +109,8 @@ public:
 	enum PhaseEnum {
 		P1_ACTION, P2_ACTION, P3_ACTION, P4_ACTION,
 		P1_RESPONSE, P2_RESPONSE, P3_RESPONSE, P4_RESPONSE,
-		P1_抢杠RESPONSE, P2_抢杠RESPONSE, P3_抢杠RESPONSE, P4_抢杠RESPONSE,
-		P1_抢暗杠RESPONSE, P2_抢暗杠RESPONSE, P3_抢暗杠RESPONSE, P4_抢暗杠RESPONSE,
+		P1_CHANKAN_RESPONSE, P2_CHANKAN_RESPONSE, P3_CHANKAN_RESPONSE, P4_CHANKAN_RESPONSE,
+		P1_CHANANKAN_RESPONSE, P2_CHANANKAN_RESPONSE, P3_CHANANKAN_RESPONSE, P4_CHANANKAN_RESPONSE,
 		GAME_OVER,
 	};
 	std::vector<SelfAction> self_actions;

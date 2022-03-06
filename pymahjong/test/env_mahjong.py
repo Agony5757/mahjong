@@ -294,8 +294,8 @@ class EnvMahjong4(gym.Env):
         self.t = mp.Table()
         self.Phases = (
             "P1_ACTION", "P2_ACTION", "P3_ACTION", "P4_ACTION", "P1_RESPONSE", "P2_RESPONSE", "P3_RESPONSE",
-            "P4_RESPONSE", "P1_抢杠RESPONSE", "P2_抢杠RESPONSE", "P3_抢杠RESPONSE", "P4_抢杠RESPONSE",
-            "P1_抢暗杠RESPONSE", "P2_抢暗杠RESPONSE", " P3_抢暗杠RESPONSE", " P4_抢暗杠RESPONSE", "GAME_OVER",
+            "P4_RESPONSE", "P1_CHANKAN_RESPONSE", "P2_CHANKAN_RESPONSE", "P3_CHANKAN_RESPONSE", "P4_CHANKAN_RESPONSE",
+            "P1_CHANANKAN_RESPONSE", "P2_CHANANKAN_RESPONSE", " P3_CHANANKAN_RESPONSE", " P4_CHANANKAN_RESPONSE", "GAME_OVER",
             "P1_DRAW, P2_DRAW, P3_DRAW, P4_DRAW")
         self.horas = [False, False, False, False]
         self.played_a_tile = [False, False, False, False]

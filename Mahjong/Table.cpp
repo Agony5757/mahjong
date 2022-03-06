@@ -81,13 +81,13 @@ void Table::import_yama(string yama) {
 	}
 }
 
-void Table::import_yama(std::vector<int> yama)
+void Table::import_yama(std::vector<int> yama_input)
 {
 	if (yama.size() != N_TILES)
 		throw runtime_error("Yama import fail.");
 	yama.resize(N_TILES);
 	for (int i = 0; i < N_TILES; i++) {
-		yama[i] = tiles + yama[i];
+		yama[i] = tiles + yama_input[i];
 	}
 }
 
@@ -122,24 +122,24 @@ void Table::game_init() {
 
 	// 每人发13张牌
 	for (int i = 0; i < 4; ++i){
-		deal_tile((i + oya) % 4, 13); // 从庄
+		draw((i + oya) % 4, 13); // 从庄
 		players[i].sort_hand();
 	}
 	init_before_playing();
 }
 
-void Table::game_init_for_replay(std::vector<int> yama, std::vector<int> init_scores, int 立直棒_, int 本场_, int 场风_, int 亲家_)
+void Table::game_init_for_replay(std::vector<int> yama, std::vector<int> init_scores, int kyoutaku_, int honba_, int game_wind_, int oya_)
 {
-	oya = 亲家_;
-	game_wind = Wind(场风_);
-	kyoutaku = 立直棒_;
-	honba = 本场_;
+	oya = oya_;
+	game_wind = Wind(game_wind_);
+	kyoutaku = kyoutaku_;
+	honba = honba_;
 
 	init_tiles();
 	init_red_dora_3();
 	import_yama(yama);
 	init_dora();
-	deal_tenhou_style();
+	draw_tenhou_style();
 
 	for (int i = 0; i < 4; ++i) {
 		players[i].score = init_scores[i];
@@ -218,22 +218,22 @@ void Table::game_init_with_metadata(unordered_map<string, string> metadata)
 		auto val = metadata["deal"];
 		if (val == "from_oya") {
 			for (int i = oya; i < oya + 4; ++i) {
-				deal_tile(i % 4, 13);
+				draw(i % 4, 13);
 			}
 		}
 		if (val == "from_0") {
-			deal_tile(0, 13);
-			deal_tile(1, 13);
-			deal_tile(2, 13);
-			deal_tile(3, 13);
+			draw(0, 13);
+			draw(1, 13);
+			draw(2, 13);
+			draw(3, 13);
 		}
 		else throw runtime_error("Cannot Read Option: deal");
 	}
 	else {
-		deal_tile(0, 13);
-		deal_tile(1, 13);
-		deal_tile(2, 13);
-		deal_tile(3, 13);
+		draw(0, 13);
+		draw(1, 13);
+		draw(2, 13);
+		draw(3, 13);
 	}
 
 	init_before_playing();
@@ -283,7 +283,7 @@ void Table::from_beginning()
 	FunctionProfiler;
 #endif
 
-	const static auto 四风连打牌 = [](array<Player, 4>& players) {
+	const static auto check_four_winds = [](array<Player, 4>& players) {
 		BaseTile t0 = players[0].river[0].tile->tile;
 		BaseTile t1 = players[1].river[0].tile->tile;
 		BaseTile t2 = players[2].river[0].tile->tile;
@@ -301,7 +301,7 @@ void Table::from_beginning()
 		players[1].call_groups.size() == 0 &&
 		players[2].call_groups.size() == 0 &&
 		players[3].call_groups.size() == 0 &&
-		四风连打牌(players))
+		check_four_winds(players))
 	{
 		result = generate_result_4wind(this);
 		gamelog.log_gameover(result);
@@ -323,11 +323,7 @@ void Table::from_beginning()
 		int n_杠 = 0;
 		for (int i = 0; i < 4; ++i) {
 			if (any_of(players[i].call_groups.begin(), players[i].call_groups.end(),
-				[](CallGroup& f) {
-					return f.type == CallGroup::暗杠 ||
-						f.type == CallGroup::Daiminkan ||
-						f.type == CallGroup::加杠;
-				})) {
+				[](CallGroup& f) { return f.type == CallGroup::AnKan || f.type == CallGroup::DaiMinKan || f.type == CallGroup::KaKan; })) {
 				// 统计一共有多少个人杠过
 				n_杠++;
 			}
@@ -352,102 +348,30 @@ void Table::from_beginning()
 	}
 
 	// 杠后从岭上摸牌
-	if (after_daiminkan() || after_ankan() || after_加杠()) {
-		deal_tile_岭上(turn);
+	if (after_daiminkan() || after_ankan() || after_kakan()) {
+		draw_rinshan(turn);
 	}
 	// 吃碰后不摸牌，其他时候正常发牌
 	else if (!after_chipon()){
-		发牌(turn);
+		draw_normal(turn);
 	}
 
 	vector<SelfAction> actions;
 	if (players[turn].is_riichi())
 	{
-		self_actions = GetRiichiSelfActions();
+		self_actions = generate_riichi_self_actions();
 	}
 	else
 	{
 		volatile profiler _("SelfActions");
-		self_actions = GetSelfActions();
+		self_actions = generate_self_actions();
 	}
 
 	phase = (PhaseEnum)turn;
 }
 
-void Table::test_show_yama_with_王牌()
-{
-	cout << "yama:";
-	if (yama.size() < 14) {
-		cout << "牌不足14张" << endl;
-		return;
-	}
-	for (int i = 0; i < 14; ++i) {
-		cout << yama[i]->to_string() << " ";
-	}
-	cout << "(王牌区)| ";
-	for (int i = 14; i < yama.size(); ++i) {
-		cout << yama[i]->to_string() << " ";
-	}
-	cout << endl;
-	cout << "宝牌指示牌为:";
-	for (int i = 0; i < n_active_dora; ++i) {
-		cout << dora_indicator[i]->to_string() << " ";
-	}
-	cout << endl;
-}
-
-void Table::test_show_yama()
-{
-	cout << "yama:";
-	for (int i = 0; i < yama.size(); ++i) {
-		cout << yama[i]->to_string() << " ";
-	}
-	cout << "共" << yama.size() << "张牌";
-	cout << endl;
-}
-
-void Table::test_show_player_hand(int i_player)
-{
-	players[i_player].test_show_hand();
-}
-
-void Table::test_show_all_player_hand()
-{
-	for (int i = 0; i < 4; ++i) {
-		cout << "Player" << i << " : "
-			<< players[i].hand_to_string()
-			<< endl;
-	}
-	cout << endl;
-}
-
-void Table::test_show_player_info(int i_player)
-{
-	cout << "Player" << i_player << " : "
-		<< endl << players[i_player].to_string();
-}
-
-void Table::test_show_all_player_info()
-{
-	for (int i = 0; i < 4; ++i)
-		test_show_player_info(i);
-}
-
-void Table::test_show_full_gamelog()
-{
-	cout << "Full GameLog:" << endl;
-	cout << gamelog.to_string();
-}
-
-void Table::deal_tile(int i_player)
-{		
-	players[i_player].hand.push_back(yama.back());
-	gamelog.log_draw(i_player, yama.back());
-	yama.pop_back();
-}
-
 /* 如果还有2/4张岭上牌，则摸倒数第2张（因为最后一张压在下面）*/
-void Table::deal_tile_岭上(int i_player)
+void Table::draw_rinshan(int i_player)
 {
 	int n_kan = get_remain_kan_tile();
 	auto iter = yama.begin();
@@ -456,46 +380,53 @@ void Table::deal_tile_岭上(int i_player)
 	yama.erase(iter);
 }
 
-void Table::deal_tile(int i_player, int n_tiles)
+void Table::draw(int i_player)
+{
+	players[i_player].hand.push_back(yama.back());
+	gamelog.log_draw(i_player, yama.back());
+	yama.pop_back();
+}
+
+void Table::draw(int i_player, int n_tiles)
 {
 	for (int i = 0; i < n_tiles; ++i) {
-		deal_tile(i_player);
+		draw(i_player);
 	}
 }
 
-void Table::deal_tenhou_style()
+void Table::draw_tenhou_style()
 {
 	// 每次摸4个
 	for (int round = 0; round < 3; ++round) {
 		for (int i = 0; i < 4; ++i) {
-			deal_tile((oya + i) % 4, 4);
+			draw((oya + i) % 4, 4);
 		}
 	}
 	// 跳章
 	// 每次摸1个
 	for (int i = 0; i < 4; ++i) {
-		deal_tile((oya + i) % 4);
+		draw((oya + i) % 4);
 	}
 }
 
-void Table::发牌(int i_player)
+void Table::draw_normal(int i_player)
 {
-	deal_tile(i_player);
+	draw(i_player);
 }
 
 void Table::发岭上牌(int i_player)
 {
-	deal_tile(i_player);
+	draw(i_player);
 	gamelog.log_draw(i_player, players[i_player].hand.back());
 }
 
-string Table::to_string(int option) const
+string Table::to_string() const
 {
 	stringstream ss;
-	if (option & ToStringOption::YAMA) {
-		ss << "yama:";
+	if (true) {
+		ss << "Yama:";
 		if (yama.size() < 14) {
-			ss << "牌不足14张" << endl;
+			ss << "Less than 14" << endl;
 			return ss.str();
 		}
 		for (int i = 0; i < 14; ++i) {
@@ -507,7 +438,7 @@ string Table::to_string(int option) const
 		}
 		ss << endl;
 	}
-	if (option & ToStringOption::DORA) {
+	if (true) {
 		ss << "宝牌指示牌为:";
 		for (int i = 0; i < n_active_dora; ++i) {
 			ss << dora_indicator[i]->to_string() << " ";
@@ -537,7 +468,7 @@ string Table::to_string(int option) const
 	return ss.str();
 }
 
-vector<SelfAction> Table::GetSelfActions()
+vector<SelfAction> Table::generate_self_actions()
 {
 	FunctionProfiler;
 	vector<SelfAction> actions;
@@ -560,7 +491,7 @@ vector<SelfAction> Table::GetSelfActions()
 	return actions;
 }
 
-vector<SelfAction> Table::GetRiichiSelfActions()
+vector<SelfAction> Table::generate_riichi_self_actions()
 {
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
@@ -573,7 +504,7 @@ vector<SelfAction> Table::GetRiichiSelfActions()
 	return actions;
 }
 
-vector<ResponseAction> Table::GetResponseActions(
+vector<ResponseAction> Table::generate_response_actions(
 	int i, Tile* tile, bool is下家)
 {
 	FunctionProfiler;
@@ -603,7 +534,7 @@ vector<ResponseAction> Table::GetResponseActions(
 	return actions;
 }
 
-vector<ResponseAction> Table::Get抢暗杠(int i, Tile * tile)
+vector<ResponseAction> Table::generate_chanankan_response_actions(int i, Tile * tile)
 {
 	vector<ResponseAction> actions;
 
@@ -618,7 +549,7 @@ vector<ResponseAction> Table::Get抢暗杠(int i, Tile * tile)
 	return actions;
 }
 
-vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
+vector<ResponseAction> Table::generate_chankan_response_actions(int i, Tile * tile)
 {
 	vector<ResponseAction> actions;
 
@@ -698,7 +629,7 @@ void Table::make_selection(int selection)
 				bool is下家 = false;
 				if (0 == (turn + 1) % 4)
 					is下家 = true;
-				response_actions = GetResponseActions(0, tile, is下家);
+				response_actions = generate_response_actions(0, tile, is下家);
 			}			
 			return;
 		}
@@ -709,14 +640,14 @@ void Table::make_selection(int selection)
 			// 第一巡消除
 			players[turn].first_round = false;
 			// 等待回复
-			phase = P1_抢暗杠RESPONSE;
+			phase = P1_CHANANKAN_RESPONSE;
 			if (turn == 0) {
 				ResponseAction ra;
 				ra.action = BaseAction::Pass;
 				response_actions = { ra };
 			}
 			else {
-				response_actions = Get抢暗杠(0, tile);
+				response_actions = generate_chanankan_response_actions(0, tile);
 			}
 			return;
 		}
@@ -727,14 +658,14 @@ void Table::make_selection(int selection)
 			// 第一巡消除
 			players[turn].first_round = false;
 			// 等待回复
-			phase = P1_抢杠RESPONSE;
+			phase = P1_CHANKAN_RESPONSE;
 			if (0 == turn) {
 				ResponseAction ra;
 				ra.action = BaseAction::Pass;
 				response_actions = { ra };
 			}
 			else {
-				response_actions = Get抢杠(0, tile);
+				response_actions = generate_chankan_response_actions(0, tile);
 			}
 			return;
 		}
@@ -771,7 +702,7 @@ void Table::make_selection(int selection)
 			bool is下家 = false;
 			if (i == (turn + 1) % 4)
 				is下家 = true;
-			response_actions = GetResponseActions(i, tile, is下家);
+			response_actions = generate_response_actions(i, tile, is下家);
 		}
 		return;
 	}
@@ -873,11 +804,11 @@ void Table::make_selection(int selection)
 		return;
 	}
 	
-	case P1_抢杠RESPONSE:
+	case P1_CHANKAN_RESPONSE:
 		actions.resize(0);
 		final_action = BaseAction::Pass;
-	case P2_抢杠RESPONSE:
-	case P3_抢杠RESPONSE: {
+	case P2_CHANKAN_RESPONSE:
+	case P3_CHANKAN_RESPONSE: {
 		// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase
 
 		if (response_actions.size() == 0) {
@@ -890,18 +821,18 @@ void Table::make_selection(int selection)
 			final_action = response_actions[selection].action;
 
 		phase = PhaseEnum(phase + 1);
-		int i = phase - P1_抢杠RESPONSE;
+		int i = phase - P1_CHANKAN_RESPONSE;
 		if (i == turn) {
 			ResponseAction ra;
 			ra.action = BaseAction::Pass;
 			response_actions = { ra };
 		}
 		else {
-			response_actions = Get抢杠(i, tile);
+			response_actions = generate_chankan_response_actions(i, tile);
 		}
 		return;
 	}
-	case P4_抢杠RESPONSE: {
+	case P4_CHANKAN_RESPONSE: {
 		// 做出选择		
 		
 		if (response_actions.size() == 0) {
@@ -936,11 +867,11 @@ void Table::make_selection(int selection)
 		return;
 	}
 
-	case P1_抢暗杠RESPONSE:
+	case P1_CHANANKAN_RESPONSE:
 		actions.resize(0);
 		final_action = BaseAction::Pass;
-	case P2_抢暗杠RESPONSE:
-	case P3_抢暗杠RESPONSE: {
+	case P2_CHANANKAN_RESPONSE:
+	case P3_CHANANKAN_RESPONSE: {
 		// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase
 
 		if (response_actions.size() == 0) {
@@ -953,18 +884,18 @@ void Table::make_selection(int selection)
 			final_action = response_actions[selection].action;
 
 		phase = PhaseEnum(phase + 1);
-		int i = phase - P1_抢暗杠RESPONSE;
+		int i = phase - P1_CHANANKAN_RESPONSE;
 		if (i == turn) {
 			ResponseAction ra;
 			ra.action = BaseAction::Pass;
 			response_actions = { ra };
 		}
 		else {
-			response_actions = Get抢暗杠(i, tile);
+			response_actions = generate_chanankan_response_actions(i, tile);
 		}
 		return;
 	}
-	case P4_抢暗杠RESPONSE: {
+	case P4_CHANANKAN_RESPONSE: {
 		// 做出选择		
 
 		if (response_actions.size() == 0) {
