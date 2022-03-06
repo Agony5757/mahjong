@@ -140,8 +140,8 @@ inline bool is_kantsu(std::vector<BaseTile> tiles) {
 	return true;
 }
 
-inline bool is_wind_match(BaseTile tile, Wind 场风) {
-	switch (场风) {
+inline bool is_wind_match(BaseTile tile, Wind game_wind) {
+	switch (game_wind) {
 	case Wind::East:
 		return tile == BaseTile::_1z;
 	case Wind::South:
@@ -209,10 +209,10 @@ inline std::string tiles_to_string(std::vector<Tile*> tiles) {
 	return ss.str();
 }
 
-inline std::string 副露_to_string(Tile* head, std::vector<Tile*> CallGroup) {
+inline std::string call_to_string(Tile* head, std::vector<Tile*> call) {
 	std::stringstream ss;
 	ss << "[" << head->to_string() << "]";
-	ss << tiles_to_string(CallGroup);
+	ss << tiles_to_string(call);
 	return ss.str();
 }
 

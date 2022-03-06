@@ -320,16 +320,16 @@ void Table::from_beginning()
 
 	// 判定四杠散了
 	if (get_remain_kan_tile() == 0) {
-		int n_杠 = 0;
+		int n_kantsu = 0;
 		for (int i = 0; i < 4; ++i) {
 			if (any_of(players[i].call_groups.begin(), players[i].call_groups.end(),
 				[](CallGroup& f) { return f.type == CallGroup::AnKan || f.type == CallGroup::DaiMinKan || f.type == CallGroup::KaKan; })) {
 				// 统计一共有多少个人杠过
-				n_杠++;
+				n_kantsu++;
 			}
 		}
 		// 2个或更多人杠过
-		if (n_杠 >= 2) {
+		if (n_kantsu >= 2) {
 			result = generate_result_4kan(this);
 			phase = GAME_OVER;
 			return;
@@ -598,7 +598,7 @@ void Table::make_selection(int selection)
 				if (tile == players[turn].hand.back())
 					is_from_hand = DiscardFromTsumo;
 			}
-			players[turn].execute_discard(tile, river_counter, selected_action.action == BaseAction::立直, is_from_hand);
+			players[turn].execute_discard(tile, river_counter, selected_action.action == BaseAction::Riichi, is_from_hand);
 
 			phase = P1_RESPONSE;
 			if (0 == turn) {
@@ -681,10 +681,10 @@ void Table::make_selection(int selection)
 		}
 		else {
 			// 对于所有其他人
-			bool is下家 = false;
+			bool is_next = false;
 			if (i == (turn + 1) % 4)
-				is下家 = true;
-			response_actions = generate_response_actions(i, tile, is下家);
+				is_next = true;
+			response_actions = generate_response_actions(i, tile, is_next);
 		}
 		return;
 	}

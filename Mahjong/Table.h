@@ -68,15 +68,6 @@ public:
 
 	void next_turn(int nextturn);
 
-	enum ToStringOption : int {
-		YAMA = 1 << 0,
-		PLAYER = 1 << 1,
-		DORA = 1 << 2,
-		N_立直棒 = 1 << 3,
-		N_本场 = 1 << 4,
-		亲家 = 1 << 5,
-		REMAIN_TILE = 1 << 6,
-	};
 	std::string to_string() const;
 
 	inline bool after_chipon() { return last_action == BaseAction::Chi || last_action == BaseAction::Pon; }

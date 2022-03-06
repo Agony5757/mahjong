@@ -11,71 +11,11 @@
 
 using namespace std;
 
-void test和牌状态1() {
-	Table t;
-	t.init_tiles();
-	t.init_yama();
-	auto &yama = t.牌山;
-	vector<Tile*> tiles = { yama[0], yama[1], yama[2], yama[3], yama[3] };
-
-	TEST_EQ_VERBOSE(true, isCommon和牌型(convert_tiles_to_base_tiles(tiles)));
-}
-
-void test和牌状态2() {
-	Table t;
-	t.init_tiles();
-	t.init_yama();
-	auto &yama = t.牌山;
-	vector<Tile*> tiles = { yama[0], yama[0], yama[2], yama[3], yama[3] };
-
-	TEST_EQ_VERBOSE(false, isCommon和牌型(convert_tiles_to_base_tiles(tiles)));
-}
-
-void test和牌状态3() {
-	Table t;
-	t.init_tiles();
-	t.init_yama();
-	auto &yama = t.牌山;
-	vector<Tile*> tiles = { yama[0], yama[0], yama[0], yama[1], yama[2], yama[3], yama[4],
-							yama[5], yama[6], yama[7], yama[8], yama[8], yama[8] };
-
-	for (int i = 0; i < 9; ++i) {
-		tiles.push_back(yama[i]);
-		// SORT_TILES(tiles);
-		TEST_EQ_VERBOSE(true, isCommon和牌型(convert_tiles_to_base_tiles(tiles)));
-		tiles.pop_back();
-	}
-}
-
-void test和牌状态4() {
-	vector<BaseTile> tiles1 = { _4m, _5m, _5m, _5m, _6m, 
-	_3s, _4s, _4s,_5s,_6s,
-	_6z,_6z,_5s,_5m
-	};
-	vector<BaseTile> tiles2 = { _4m, _5m, _5m, _5m, _6m, 
-	_3s, _4s, _4s,_5s,_6s,
-	_6z,_6z,_5s,_6z
-	};
-
-	vector<BaseTile> tiles3 = { _4m, _5m, _5m, _5m, _6m, 
-	_3s, _4s, _4s,_5s,_6s,
-	_6z,_6z,_5s
-	};
-
-	auto ten_tiles = get_atari_hai(tiles3);
-	for (auto ten_tile : ten_tiles){
-		printf("%s ", basetile_to_string_simple(ten_tile).c_str());
-	}
-
-	TEST_EQ_VERBOSE(true, isCommon和牌型(tiles1));
-	TEST_EQ_VERBOSE(true, isCommon和牌型(tiles2));
-}
-
 void testCompletedTiles1() {
 	Table t;
 	t.init_tiles();
 	t.init_yama();
-	auto &yama = t.牌山;
+	auto &yama = t.yama;
 	vector<Tile*> tiles = { yama[0], yama[0], yama[0], yama[1], yama[2], yama[3], yama[4],
 							yama[5], yama[6], yama[7], yama[8], yama[8], yama[8] };
 
@@ -92,7 +32,7 @@ void testCompletedTiles2() {
 	Table t;
 	t.init_tiles();
 	t.init_yama();
-	auto &yama = t.牌山;
+	auto &yama = t.yama;
 	vector<BaseTile> tiles = { _1m, _1m, _1m, _2m, _2m, _2m, _3m, _3m, _3m, _4m, _4m};
 
 	auto completed_tiles = get_completed_tiles(tiles);
@@ -109,13 +49,13 @@ void resume_from_seed_and_yama(long long seed, string yama) {
 			size_t dice_roll = distribution(generator);  // generates number in the range 1..6 
 
 			for (int i = 0; i < table.get_self_actions().size(); ++i) {
-				if (table.get_self_actions()[i].action == BaseAction::自摸) {
+				if (table.get_self_actions()[i].action == BaseAction::Tsumo) {
 					dice_roll = i; break;
 				}
-				if (table.get_self_actions()[i].action == BaseAction::立直) {
+				if (table.get_self_actions()[i].action == BaseAction::Riichi) {
 					dice_roll = i; break;
 				}
-				if (table.get_self_actions()[i].action == BaseAction::九种九牌) {
+				if (table.get_self_actions()[i].action == BaseAction::Kyushukyuhai) {
 					dice_roll = i; break;
 				}
 			}
@@ -128,7 +68,7 @@ void resume_from_seed_and_yama(long long seed, string yama) {
 				dice_roll = distribution(generator);  // generates number in the range 1..6
 
 				for (int i = 0; i < table.get_response_actions().size(); ++i) {
-					if (table.get_response_actions()[i].action == BaseAction::荣和) {
+					if (table.get_response_actions()[i].action == BaseAction::Ron) {
 						dice_roll = i;
 						break;
 					}
@@ -185,58 +125,6 @@ void test_passive_table_auto(size_t max_plays) {
 	cout << "Time per play (avg.): " << duration_time / max_plays << " ms" << endl;
 }
 
-void test_encoding(size_t max_plays) {
-	FunctionProfiler;
-	size_t i = 0;
-	long long seed;
-	string yama;
-	auto timenow = std::chrono::system_clock::now();
-	for (size_t i = 0; i < max_plays; ++i) {
-		try {
-			seed = std::chrono::system_clock::now().time_since_epoch().count();
-			std::default_random_engine generator(seed);
-			Table table;
-			table.game_init();
-			while (table.get_phase() != Table::GAME_OVER) {
-				if (table.get_phase() <= Table::P4_ACTION) {
-					std::uniform_int_distribution<size_t> distribution(0, table.get_self_actions().size() - 1);
-					size_t dice_roll = distribution(generator);
-					if (table.get_phase() == 0) {
-						namespace enc = TrainingDataEncoding;
-						using dtype = enc::dtype;
-						dtype* data = new dtype[enc::n_row * enc::n_col];
-						memset(data, 0, sizeof(dtype) * enc::n_row * enc::n_col);
-						enc::encode_table(table, 0, data);
-						delete[] data;
-					}
-					table.make_selection((int)dice_roll);
-				}
-				else {
-					size_t dice_roll = 0;
-					if (table.get_response_actions().size() > 1) {
-						std::uniform_int_distribution<size_t> distribution(0, table.get_response_actions().size() - 1);
-						dice_roll = distribution(generator);
-					}
-					table.make_selection((int)dice_roll);
-
-				}
-			}
-		}
-		catch (exception& e) {
-			cout << e.what() << endl;
-			cout << "Seed" << seed << endl;
-			cout << "Yama" << yama << endl;
-			getchar();
-		}
-	}
-	auto duration = std::chrono::system_clock::now() - timenow;
-	double duration_time = chrono::duration_cast<chrono::milliseconds>(duration).count() * 1.0;
-
-	cout << "Test play time: " << max_plays << endl;
-	cout << "Duration: " << duration_time / 1000 << " s" << endl;
-	cout << "Time per play (avg.): " << duration_time / max_plays << " ms" << endl;
-}
-
 
 void test_tenhou_yama() {
 	// void tenhou_yama_from_seed(char *MTseed_b64, BYTE yama[136]);
@@ -276,8 +164,7 @@ int main() {
 	// size_t max_plays = 10000000;
 	// test_passive_table_auto(max_plays);
 	// profiler::print_profiles();
-	test_encoding(100);
 	// test_tenhou_yama();
-	// test_tenhou_game();
+	test_tenhou_game();
 	return 0;
 }

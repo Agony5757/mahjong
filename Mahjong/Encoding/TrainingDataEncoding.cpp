@@ -65,14 +65,14 @@ namespace TrainingDataEncoding {
 		}
 	}
 
-	void encode_CallGroup(const vector<CallGroup>& CallGroups, dtype* data, size_t pid)
+	void encode_fulu(const vector<CallGroup>& CallGroups, dtype* data, size_t pid)
 	{
 		array<dtype, n_tile_types> ntiles = { 0 };
 		for (const auto& f : CallGroups) {
 			for (int i = 0; i < f.tiles.size(); ++i) {
 				auto& t = f.tiles[i];
 				auto id = char(t->tile);
-				size_t pos = row_CallGroup + pid * size_CallGroup;
+				size_t pos = row_fulu + pid * size_fulu;
 				get(data, pos + ntiles[id], id) = 1;
 				++ntiles[id];
 
@@ -219,7 +219,7 @@ namespace TrainingDataEncoding {
 				else hand_offset = -1;
 			else hand_offset = row_hand;
 			encode_river(ps[encode_pid].river.river, i, hand_offset, data);
-			encode_CallGroup(ps[encode_pid].call_groups, data, i);
+			encode_fulu(ps[encode_pid].call_groups, data, i);
 		}
 
 		encode_field(table, ps[pid], data);

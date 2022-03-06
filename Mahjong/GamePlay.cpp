@@ -3,9 +3,9 @@
 
 using namespace std;
 
-void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直棒, int 本场, int game_wind, int 亲家)
+void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int kyoutaku, int honba, int game_wind, int oya)
 {	
-	table.game_init_for_replay(yama, init_scores, 立直棒, 本场, game_wind, 亲家);
+	table.game_init_for_replay(yama, init_scores, kyoutaku, honba, game_wind, oya);
 
 	if (write_log) {
 		auto vec2str = [](vector<int> vec)
@@ -20,7 +20,7 @@ void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直�
 		fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
 			vec2str(yama).c_str(),
 			vec2str(init_scores).c_str(),
-			立直棒, 本场, game_wind, 亲家);
+			kyoutaku, honba, game_wind, oya);
 
 		fclose(fp);
 	}

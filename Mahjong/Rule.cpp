@@ -354,7 +354,7 @@ std::vector<BaseTile> get_7toitsu_atari_hai(std::vector<BaseTile> tiles)
 	return atari_tiles;
 }
 
-bool is_kokushi_tenpai(std::vector<BaseTile> tiles)
+bool is_kokushi_shape(std::vector<BaseTile> tiles)
 {
 	FunctionProfiler;
 	vector<BaseTile> raw
@@ -393,7 +393,7 @@ std::vector<BaseTile> get_kokushi_atari_hai(std::vector<BaseTile> tiles)
 	vector<BaseTile> adds{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
 	for (auto i : adds) {
 		tiles.push_back(i);
-		if (is_kokushi_tenpai(tiles)) {
+		if (is_kokushi_shape(tiles)) {
 			atari_tiles.push_back(static_cast<BaseTile>(i));
 		}
 		tiles.pop_back();
@@ -412,7 +412,7 @@ vector<BaseTile> get_atari_hai(vector<BaseTile> tiles, vector<BaseTile> except_t
 			}
 		}
 		tiles.push_back(static_cast<BaseTile>(i));
-		if (is_yaochuhai(static_cast<BaseTile>(i)) && is_kokushi_tenpai(tiles)) {
+		if (is_yaochuhai(static_cast<BaseTile>(i)) && is_kokushi_shape(tiles)) {
 			atari_tiles.push_back(static_cast<BaseTile>(i));
 		}
 		else if (is_7toitsu_shape(tiles)) {
@@ -426,7 +426,7 @@ vector<BaseTile> get_atari_hai(vector<BaseTile> tiles, vector<BaseTile> except_t
 	return atari_tiles;
 }
 
-bool is听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
+bool is_tenpai(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
 {
 	FunctionProfiler;
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
@@ -436,7 +436,7 @@ bool is听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
 			}
 		}
 		tiles.push_back(static_cast<BaseTile>(i));
-		if (is_yaochuhai(static_cast<BaseTile>(i)) && is_kokushi_tenpai(tiles)) {
+		if (is_yaochuhai(static_cast<BaseTile>(i)) && is_kokushi_shape(tiles)) {
 			return true;
 		}
 		if (is_7toitsu_shape(tiles)) {
@@ -450,9 +450,9 @@ bool is听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
 	return false;
 }
 
-bool is和牌(std::vector<BaseTile> tiles)
+bool is_agari_shape(std::vector<BaseTile> tiles)
 {
-	if (is_kokushi_tenpai(tiles)) {
+	if (is_kokushi_shape(tiles)) {
 		return true;
 	}
 	if (is_7toitsu_shape(tiles)) {
@@ -485,26 +485,26 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen)
 bool can_ron(std::vector<Tile*> hands, Tile *get_tile)
 {
 	hands.push_back(get_tile);
-	if (is和牌(convert_tiles_to_base_tiles(hands)))
+	if (is_agari_shape(convert_tiles_to_base_tiles(hands)))
 		return true;
 	return false;
 }
 
 bool can_tsumo(std::vector<Tile*> hands)
 {
-	if (is和牌(convert_tiles_to_base_tiles(hands)))
+	if (is_agari_shape(convert_tiles_to_base_tiles(hands)))
 		return true;
 	return false;
 }
 
-bool is纯九莲和牌型(std::vector<BaseTile> tiles)
+bool is_churen_9_agari(std::vector<BaseTile> tiles)
 {
 	if (tiles.size() != 14) return false;
 	int mpsz = tiles[0] / 9;
-	vector<int> 纯九莲 = { 1,1,1,2,3,4,5,6,7,8,9,9,9 };
+	vector<int> pure_churen = { 1,1,1,2,3,4,5,6,7,8,9,9,9 };
 
 	for (int i = 0; i < 13; ++i) {
-		if (tiles[i] != BaseTile(纯九莲[i] + 9 * mpsz - 1)) {
+		if (tiles[i] != BaseTile(pure_churen[i] + 9 * mpsz - 1)) {
 			// 确定有序的前提下，逐张对比
 			return false;
 		}
@@ -513,39 +513,39 @@ bool is纯九莲和牌型(std::vector<BaseTile> tiles)
 	return true;
 }
 
-bool is九莲和牌型(std::vector<BaseTile> tiles)
+bool is_churen_agari(std::vector<BaseTile> tiles)
 {
 	sort(tiles.begin(), tiles.end());
 	if (tiles.size() != 14) return false;
 
-	vector<int> 九莲和牌型raw = { 1,1,1,2,3,4,5,6,7,8,9,9,9 };
-	vector<int> 九莲和牌型[9];
+	vector<int> churen_raw = { 1,1,1,2,3,4,5,6,7,8,9,9,9 };
+	vector<int> churen_shape[9];
 	for (int i = 1; i <= 9; ++i) {
-		九莲和牌型[i - 1].assign(九莲和牌型raw.begin(), 九莲和牌型raw.end());
-		九莲和牌型[i - 1].push_back(i);		
+		churen_shape[i - 1].assign(churen_raw.begin(), churen_raw.end());
+		churen_shape[i - 1].push_back(i);		
 	}
-	for (auto 九莲 : 九莲和牌型) {
-		vector<BaseTile> 九莲m;
+	for (auto churen : churen_shape) {
+		vector<BaseTile> m_churen;
 		for (int i = 0; i < 14; ++i) {
-			九莲m.push_back(BaseTile(九莲[i] + int(_1m) - 1));
+			m_churen.push_back(BaseTile(churen[i] + int(_1m) - 1));
 		}
-		sort(九莲m.begin(), 九莲m.end());
+		sort(m_churen.begin(), m_churen.end());
 
-		vector<BaseTile> 九莲s;
+		vector<BaseTile> s_churen;
 		for (int i = 0; i < 14; ++i) {
-			九莲s.push_back(BaseTile(九莲[i] + int(_1s) - 1));
+			s_churen.push_back(BaseTile(churen[i] + int(_1s) - 1));
 		}
-		sort(九莲s.begin(), 九莲s.end());
+		sort(s_churen.begin(), s_churen.end());
 
-		vector<BaseTile> 九莲p;
+		vector<BaseTile> p_churen;
 		for (int i = 0; i < 14; ++i) {
-			九莲p.push_back(BaseTile(九莲[i] + int(_1p) - 1));
+			p_churen.push_back(BaseTile(churen[i] + int(_1p) - 1));
 		}
-		sort(九莲p.begin(), 九莲p.end());
+		sort(p_churen.begin(), p_churen.end());
 
-		if (is_same_container(tiles, 九莲m)) return true;
-		if (is_same_container(tiles, 九莲p)) return true;
-		if (is_same_container(tiles, 九莲s)) return true;
+		if (is_same_container(tiles, m_churen)) return true;
+		if (is_same_container(tiles, p_churen)) return true;
+		if (is_same_container(tiles, s_churen)) return true;
 	}
 	return false;
 }

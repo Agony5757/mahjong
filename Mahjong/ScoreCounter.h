@@ -15,7 +15,7 @@ struct CounterResult {
 	int score1;
 	int score2; // 自摸时用。score1=亲，score2=子
 
-	void calculate_score(bool 亲, bool 自摸);
+	void calculate_score(bool oya, bool tsumo);
 	
 	int fan;
 	int fu;
@@ -26,6 +26,6 @@ class Tile;
 
 // turn 判定役的玩家
 // correspond_tile (自摸为nullptr，荣和为荣和牌）
-CounterResult yaku_counter(Table *table, Player &player, Tile* correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风);
+CounterResult yaku_counter(Table *table, Player &player, Tile* correspond_tile, bool chankan, bool chanankan, Wind self_wind, Wind game_wind);
 
 #endif

@@ -146,31 +146,31 @@ bool has_completed_tiles(std::vector<BaseTile> tiles);
 
 /* 判断和牌状态 */
 
-bool isCommon和牌型(std::vector<BaseTile> tiles);
+bool is_ordinary_shape(std::vector<BaseTile> tiles);
 
-std::vector<BaseTile> isCommon听牌型(std::vector<BaseTile> tiles);
+std::vector<BaseTile> get_ordinary_atari_hai(std::vector<BaseTile> tiles);
 
 /* 特殊役 */
 
-bool is七对和牌型(std::vector<BaseTile> tiles);
+bool is_7toitsu_shape(std::vector<BaseTile> tiles);
 
-std::vector<BaseTile> is七对听牌型(std::vector<BaseTile> tiles);
+std::vector<BaseTile> get_7toitsu_atari_hai(std::vector<BaseTile> tiles);
 
-bool is国士无双和牌型(std::vector<BaseTile> tiles);
+bool is_kokushi_shape(std::vector<BaseTile> tiles);
 
-std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles);
+std::vector<BaseTile> get_kokushi_atari_hai(std::vector<BaseTile> tiles);
 
 // 不考虑无役的听牌情况
 std::vector<BaseTile> get_atari_hai(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
-bool is听牌(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
-bool is和牌(std::vector<BaseTile> tiles);
+bool is_tenpai(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
+bool is_agari_shape(std::vector<BaseTile> tiles);
 
 std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen);
 
 bool can_ron(std::vector<Tile*> hands, Tile* get_tile);
 bool can_tsumo(std::vector<Tile*> hands);
 
-bool is纯九莲和牌型(std::vector<BaseTile> tiles);
-bool is九莲和牌型(std::vector<BaseTile> tiles);
+bool is_churen_9_agari(std::vector<BaseTile> tiles);
+bool is_churen_agari(std::vector<BaseTile> tiles);
 
 #endif

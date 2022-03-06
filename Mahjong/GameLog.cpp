@@ -82,14 +82,14 @@ void GameLog::_log(BaseGameLog log) {
 }
 
 void GameLog::log_game_start(
-	int _start本场, int _start立直棒, int _oya, Wind _场风, string _yama,
+	int start_honba_, int start_kyoutaku_, int oya_, Wind game_wind_, string yama_,
 	array<int, 4> scores)
 {
-	start_honba = _start本场;
-	start_kyoutaku = _start立直棒;
-	oya = _oya;
-	game_wind = _场风;
-	yama = _yama;
+	start_honba = start_honba_;
+	start_kyoutaku = start_kyoutaku_;
+	oya = oya_;
+	game_wind = game_wind_;
+	yama = yama_;
 	start_scores = scores;
 }
 

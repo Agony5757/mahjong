@@ -211,16 +211,16 @@ Result generate_result_tsumo(Table * table)
 	for (int i = 0; i < 4; ++i) if (i != winner) result.loser.push_back(i);
 
 	auto yakus = yaku_counter(table, table->players[winner], nullptr, false, false, table->players[winner].wind, table->game_wind);
-	bool is亲 = false;
+	bool is_oya = false;
 	if (table->turn == table->oya)
-		is亲 = true;
-	yakus.calculate_score(is亲, true);
+		is_oya = true;
+	yakus.calculate_score(is_oya, true);
 
 	for (int i = 0; i < 4; ++i) {
 		result.score[i] = table->players[i].score;
 	}
 
-	if (is亲) {
+	if (is_oya) {
 		for (int i = 0; i < 4; ++i) {
 			if (i == winner) {
 				result.score[i] += (yakus.score1 * 3);

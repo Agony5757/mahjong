@@ -10,7 +10,7 @@ public:
 	Table table;
 	bool write_log = false;
 	PaipuReplayer() = default;
-	void init(std::vector<int> yama, std::vector<int> init_scores, int 立直棒, int 本场, int game_wind, int 亲家);
+	void init(std::vector<int> yama, std::vector<int> init_scores, int kyoutaku, int honba, int game_wind, int oya);
 	std::vector<SelfAction> get_self_actions() const;
 	std::vector<ResponseAction> get_response_actions() const;
 	
