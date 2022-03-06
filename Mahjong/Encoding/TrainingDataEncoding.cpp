@@ -232,7 +232,6 @@ namespace TrainingDataEncoding {
 
 	void encode_self_actions_vector(const vector<SelfAction>& actions, dtype* data)
 	{
-		bool riichi_able = false;
 		for (auto sa : actions) {
 			switch (sa.action) {
 			case BaseAction::出牌:
@@ -245,8 +244,8 @@ namespace TrainingDataEncoding {
 				data[40] = 1;
 				break;
 			case BaseAction::立直:
-				data[41] = 1;
-				riichi_able = true;
+				data[41] = 1;	
+				data[45] = 1;
 				break;
 			case BaseAction::自摸:
 				data[43] = 1;
@@ -257,11 +256,10 @@ namespace TrainingDataEncoding {
 			default:
 				throw runtime_error("Bad SelfAction (while encoding).");
 			}
-		}
-		if (riichi_able) data[45] = 1;
+		} 
 	}
 	
-	void encode_response_actions_vector(const vector<SelfAction>& actions, int action_tile, dtype* data)
+	void encode_response_actions_vector(const vector<ResponseAction>& actions, int action_tile, dtype* data)
 	{
 		for (auto ra : actions) {
 			switch (ra.action) {
