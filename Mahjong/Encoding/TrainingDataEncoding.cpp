@@ -173,7 +173,7 @@ namespace TrainingDataEncoding {
 			default:			
 				throw runtime_error("Bad ResponseAction (while encoding).");
 			}
-			memcpy(data + locate(row_action + row_offset, 0), row_data.data(), sizeof(dtype) * n_col);
+			if (row_offset >= 0) memcpy(data + locate(row_action + row_offset, 0), row_data.data(), sizeof(dtype) * n_col);
 		}
 	}
 	
