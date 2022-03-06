@@ -77,7 +77,7 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
                 pm.encode_table(env_test.t, curr_pid, False, obs_container)
 
                 ag_obs = deepcopy(obs_container)
-                if curr_pid == 0:
+                if True:
                     if np.any(dq_obs != ag_obs):
                         wrong_dimensions = np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()
                         if verbose >= 1:

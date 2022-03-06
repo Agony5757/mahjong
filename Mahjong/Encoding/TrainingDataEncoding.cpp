@@ -136,7 +136,7 @@ namespace TrainingDataEncoding {
 			default:
 				throw runtime_error("Bad SelfAction (while encoding).");
 			}
-			memcpy(data + locate(row_action + row_offset, 0), row_data.data(), sizeof(dtype) * n_col);
+			if (row_offset >= 0) memcpy(data + locate(row_action + row_offset, 0), row_data.data(), sizeof(dtype) * n_col);
 		}
 		memcpy(data + locate(row_action, 0), row_discard.data(), sizeof(dtype) * n_col);
 	}
@@ -198,22 +198,24 @@ namespace TrainingDataEncoding {
 		const auto& hand = ps[pid].hand;
 
 		int action_tile = -1;
-		switch (table.get_phase()) {
-		case Table::PhaseEnum::P1_ACTION:
-		case Table::PhaseEnum::P2_ACTION:
-		case Table::PhaseEnum::P3_ACTION:
-		case Table::PhaseEnum::P4_ACTION:
+		if (table.get_phase() <= int(Table::PhaseEnum::P4_ACTION)) {
 			if (pid == table.get_phase()) {
 				action_tile = hand.back()->tile;
 			}
-			break;
-		default: {
+			else {
+				throw runtime_error("Pid does not match Table::Phase.");
+			}
+		}
+		else {
 			auto& ct = table.selected_action.correspond_tiles;
 			if (ct.size() > 0) {
 				action_tile = ct[0]->tile;
 			}
+			else {
+				throw runtime_error("Bad corresponding tile (while encoding).");
+			}
 		}
-		}
+		printf("**** Encode Last. %d *****\n", action_tile);
 		encode_last(action_tile, data);
 		bool can_kyushukyuhai = false;
 		/* if kyushukyuhai is available, then Kyuhais are extra recorded (row=92). */
@@ -223,12 +225,13 @@ namespace TrainingDataEncoding {
 
 		for (int i = 0; i < 4; ++i) {				
 			int hand_offset = 0;
+			int encode_pid = (i + pid) % 4;
 			if (i != 0) 
 				if (use_oracle) hand_offset = row_oracle + size_hand * (i - 1);				
 				else hand_offset = -1;
 			else hand_offset = row_hand;
-			encode_river(ps[(i + pid) % 4].river.river, i, hand_offset, data);
-			encode_fulu(ps[(i + pid) % 4].副露s, data, (i + pid) % 4);
+			encode_river(ps[encode_pid].river.river, i, hand_offset, data);
+			encode_fulu(ps[encode_pid].副露s, data, i);
 		}
 
 		encode_field(table, ps[pid], data);
