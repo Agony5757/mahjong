@@ -537,27 +537,6 @@ string Table::to_string(int option) const
 	return ss.str();
 }
 
-Table::Table(int 庄家, Agent * p1, Agent *p2, Agent *p3, Agent *p4)
-	: dora_spec(1), 庄家(庄家)
-{
-	agents[0] = p1;
-	agents[1] = p2;
-	agents[2] = p3;
-	agents[3] = p4;
-	for (int i = 0; i < 4; ++i) players[i].score = 25000;
-}
-
-Table::Table(int 庄家,
-	Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4])
-	: dora_spec(1), 庄家(庄家)
-{
-	agents[0] = p1;
-	agents[1] = p2;
-	agents[2] = p3;
-	agents[3] = p4;
-	for (int i = 0; i < 4; ++i) players[i].score = scores[i];
-}
-
 vector<SelfAction> Table::GetSelfActions()
 {
 	FunctionProfiler;

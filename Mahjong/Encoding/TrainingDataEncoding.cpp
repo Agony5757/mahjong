@@ -214,7 +214,6 @@ namespace TrainingDataEncoding {
 				throw runtime_error("Bad corresponding tile (while encoding).");
 			}
 		}
-		printf("**** Encode Last. %d *****\n", action_tile);
 		encode_last(action_tile, data);
 		bool can_kyushukyuhai = false;
 		/* if kyushukyuhai is available, then Kyuhais are extra recorded (row=92). */

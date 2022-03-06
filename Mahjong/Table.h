@@ -9,18 +9,13 @@
 #include "Player.h"
 #include <array>
 
-constexpr auto N_TILES = (34*4);
-constexpr auto INIT_SCORE = 25000;
-
-// Forward Decl
-class Agent;
+constexpr auto N_TILES = (34 * 4);
 
 class Table
 {
 public:
 	int river_counter = 0;
 	Tile tiles[N_TILES];
-	Agent* agents[4] = { nullptr };
 	int dora_spec = 1; // 翻开了几张宝牌指示牌
 	std::vector<Tile*> 宝牌指示牌;
 	std::vector<Tile*> 里宝牌指示牌;
@@ -44,8 +39,6 @@ public:
 
 public:
 	Table() = default;
-	Table(int 庄家, Agent* p1 = nullptr, Agent* p2 = nullptr, Agent* p3 = nullptr, Agent* p4 = nullptr);
-	Table(int 庄家, Agent* p1, Agent* p2, Agent* p3, Agent* p4, int scores[4]);
 
 	std::vector<BaseTile> get_dora() const;
 	std::vector<BaseTile> get_ura_dora() const;
@@ -114,7 +107,6 @@ public:
 	void test_show_all_player_hand();
 	void test_show_player_info(int i_player);
 	void test_show_all_player_info();
-	void test_show_open_gamelog();
 	void test_show_full_gamelog();
 
 	inline void test_show_all() {
