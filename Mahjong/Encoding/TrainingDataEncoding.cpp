@@ -150,8 +150,7 @@ namespace TrainingDataEncoding {
 			case BaseAction::pass:
 				break;
 			case BaseAction::吃:
-				row_data[ra.correspond_tiles[0]->tile] = 1;
-				row_data[ra.correspond_tiles[1]->tile] = 1;
+				row_data[action_tile] = 1;
 				if (action_tile > ra.correspond_tiles[0]->tile)
 					if (action_tile < ra.correspond_tiles[1]->tile) row_offset = 2; // middle							
 					else row_offset = 3; // right						
