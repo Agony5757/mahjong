@@ -23,17 +23,18 @@ namespace TrainingDataEncoding {
 		row_oracle = row_action + size_action
 		;
 
-	constexpr int row_discard = 0,
-		row_chi_left = 1,
-		row_chi_middle = 2,
-		row_chi_right = 3,
-		row_pon = 4,
-		row_ankan = 5,
-		row_kan = 6,
-		row_kakan = 7,
-		row_riichi = 8,
-		row_ron = 9,
-		row_tsumo = 10;
+	constexpr int row_discard = 0 + row_action,
+		row_chi_left = 1 + row_action,
+		row_chi_middle = 2 + row_action,
+		row_chi_right = 3 + row_action,
+		row_pon = 4 + row_action,
+		row_ankan = 5 + row_action,
+		row_kan = 6 + row_action,
+		row_kakan = 7 + row_action,
+		row_riichi = 8 + row_action,
+		row_ron = 9 + row_action,
+		row_tsumo = 10 + row_action,
+		row_kyushukyuhai = 11 + row_action;
 
 	constexpr size_t n_tile_types = 9 + 9 + 9 + 7;
 	constexpr size_t n_row = size_hand + size_fulu * size_player + size_river * size_player + size_field + size_last;

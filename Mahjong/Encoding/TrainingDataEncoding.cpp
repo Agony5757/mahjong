@@ -29,7 +29,7 @@ namespace TrainingDataEncoding {
 			}
 			
 			if (can_kyushukyuhai && is_幺九牌(hand[i]->tile)) {
-				get(data, row_action + 11, id) = 1;
+				get(data, row_kyushukyuhai, id) = 1;
 			}
 		}		
 	}
@@ -110,19 +110,19 @@ namespace TrainingDataEncoding {
 		for (auto sa : self_actions) {
 			switch (sa.action) {
 			case BaseAction::出牌:
-				get(data, row_discard + row_action, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_discard, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::暗杠:
-				get(data, row_ankan + row_action, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_ankan, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::加杠:
-				get(data, row_kakan + row_action, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_kakan, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::立直:
-				get(data, row_riichi + row_action, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_riichi, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::自摸:
-				get(data, row_tsumo + row_action, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_tsumo, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::九种九牌:
 				can_kyushukyuhai = true;
@@ -142,9 +142,9 @@ namespace TrainingDataEncoding {
 				break;
 			case BaseAction::吃:
 				if (action_tile > ra.correspond_tiles[0]->tile)
-					if (action_tile < ra.correspond_tiles[1]->tile) row_chi = row_chi_middle + row_action; // middle							
-					else row_chi = row_chi_right + row_action; // right						
-				else row_chi = row_chi_left+row_action; // left
+					if (action_tile < ra.correspond_tiles[1]->tile) row_chi = row_chi_middle; // middle							
+					else row_chi = row_chi_right; // right						
+				else row_chi = row_chi_left; // left
 
 				get(data, row_chi, action_tile) = 1;
 				break;
@@ -221,8 +221,8 @@ namespace TrainingDataEncoding {
 
 		if (use_oracle) {
 			for (int i = 1; i < 4; ++i) {
-				int other_pid = (pid + i) % 4;
-				encode_hand(ps[other_pid].hand, row_oracle + size_hand * (i - 1), false, data);
+				int encode_pid = (pid + i) % 4;
+				encode_hand(ps[encode_pid].hand, row_oracle + size_hand * (i - 1), false, data);
 			}
 		}
 	}
