@@ -1,4 +1,5 @@
 ﻿#include "TrainingDataEncoding.h"
+#include "fmt/core.h"
 
 using namespace std;
 
@@ -7,6 +8,10 @@ namespace TrainingDataEncoding {
 	/* For obs encoding */
 	constexpr inline size_t locate(size_t row, size_t col)
 	{
+		if (row >= n_row || col >= n_col)
+		{
+			throw runtime_error(fmt::format("Bad access to [{},{}]", row, col));
+		}
 		return n_col * row + col;
 	}
 
@@ -29,7 +34,7 @@ namespace TrainingDataEncoding {
 			}
 			
 			if (can_kyushukyuhai && is_yaochuhai(hand[i]->tile)) {
-				get(data, row_action + 11, id) = 1;
+				get(data, row_kyushukyuhai, id) = 1;
 			}
 		}		
 	}
@@ -110,19 +115,19 @@ namespace TrainingDataEncoding {
 		for (auto sa : self_actions) {
 			switch (sa.action) {
 			case BaseAction::Discard:
-				get(data, row_discard + row_action, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_discard, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::AnKan:
-				get(data, row_ankan + row_action, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_ankan, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::KaKan:
-				get(data, row_kakan + row_action, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_kakan, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::Riichi:
-				get(data, row_riichi + row_action, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_riichi, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::Tsumo:
-				get(data, row_tsumo + row_action, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_tsumo, action_tile) = 1;
 				break;
 			case BaseAction::Kyushukyuhai:
 				can_kyushukyuhai = true;
@@ -142,9 +147,9 @@ namespace TrainingDataEncoding {
 				break;
 			case BaseAction::Chi:
 				if (action_tile > ra.correspond_tiles[0]->tile)
-					if (action_tile < ra.correspond_tiles[1]->tile) row_chi = row_chi_middle + row_action; // middle							
-					else row_chi = row_chi_right + row_action; // right						
-				else row_chi = row_chi_left+row_action; // left
+					if (action_tile < ra.correspond_tiles[1]->tile) row_chi = row_chi_middle; // middle							
+					else row_chi = row_chi_right; // right						
+				else row_chi = row_chi_left; // left
 
 				get(data, row_chi, action_tile) = 1;
 				break;
@@ -169,12 +174,12 @@ namespace TrainingDataEncoding {
 	{
 		if (table.get_phase() <= Table::PhaseEnum::P4_ACTION) 
 		{
-		    auto &&actions = table.get_self_actions();
+		    const auto &actions = table.get_self_actions();
 			encode_self_actions_matrix(actions, action_tile, can_kyushukyuhai, data);
 		}
 		else if (table.get_phase() < Table::PhaseEnum::GAME_OVER)
 		{
-		    auto &&actions = table.get_response_actions();
+		    const auto &actions = table.get_response_actions();
 			encode_response_actions_matrix(actions, action_tile, data);
 		}
 	}
@@ -221,19 +226,34 @@ namespace TrainingDataEncoding {
 
 		if (use_oracle) {
 			for (int i = 1; i < 4; ++i) {
-				int other_pid = (pid + i) % 4;
-				encode_hand(ps[other_pid].hand, row_oracle + size_hand * (i - 1), false, data);
+				int encode_pid = (pid + i) % 4;
+				encode_hand(ps[encode_pid].hand, row_oracle + size_hand * (i - 1), false, data);
 			}
 		}
 	}
+
+	void encode_table_riichi_step2(const Table& table, BaseTile riichi_tile, dtype *data)
+	{
+		const auto &actions = table.get_self_actions();
+		auto iter = find_if(actions.begin(), actions.end(), 
+		    [riichi_tile](SelfAction sa) 
+			{ return sa.action == BaseAction::Riichi && sa.correspond_tiles[0]->tile == riichi_tile; });
+		if (iter == actions.end()) 
+		    throw runtime_error(fmt::format("Cannot riichi with {}", riichi_tile));
+
+		get(data, row_hand + 4, riichi_tile) = 1;
+		array<dtype, size_action * n_col> buffer;
+		get(buffer.data(), row_riichi - row_discard, riichi_tile) = 1;
+		memcpy(data + locate(row_action, 0), buffer.data(), buffer.size());
+	}
+
 	/* obs encoding over */
 
 	/* For action encoding */
 
 	void encode_self_actions_vector(const vector<SelfAction>& actions, dtype* data)
 	{
-		bool riichi_able = false;
-		for (auto sa : actions) {
+		for (auto &sa : actions) {
 			switch (sa.action) {
 			case BaseAction::Discard:
 				data[int(sa.correspond_tiles[0]->tile)] = 1;
@@ -245,8 +265,8 @@ namespace TrainingDataEncoding {
 				data[40] = 1;
 				break;
 			case BaseAction::Riichi:
-				data[41] = 1;
-				riichi_able = true;
+				data[41] = 1;	
+				data[45] = 1;
 				break;
 			case BaseAction::Tsumo:
 				data[43] = 1;
@@ -257,13 +277,12 @@ namespace TrainingDataEncoding {
 			default:
 				throw runtime_error("Bad SelfAction (while encoding).");
 			}
-		}
-		if (riichi_able) data[45] = 1;
+		} 
 	}
 	
 	void encode_response_actions_vector(const vector<ResponseAction>& actions, int action_tile, dtype* data)
 	{
-		for (auto ra : actions) {
+		for (auto &ra : actions) {
 			switch (ra.action) {
 			case BaseAction::Pass:
 				data[46] = 1;
@@ -302,21 +321,42 @@ namespace TrainingDataEncoding {
 		case Table::PhaseEnum::P3_ACTION:
 		case Table::PhaseEnum::P4_ACTION:
 			if (pid == table.get_phase()) {
-				vector<SelfAction>&& actions = table.get_self_actions();
+				const auto &actions = table.get_self_actions();
 				encode_self_actions_vector(actions, data);
 			}
 			break;
 		default: {	
 			int action_tile = -1;
-			auto& ct = table.selected_action.correspond_tiles;
+			const auto& ct = table.selected_action.correspond_tiles;
 			if (ct.size() > 0) {
 				action_tile = ct[0]->tile;
 			}		
 			if (pid == table.get_phase() % 4) {
-				vector<ResponseAction>&& actions = table.get_response_actions();
+				const auto &actions = table.get_response_actions();
 				encode_response_actions_vector(actions, action_tile, data);
 			}
 		}
 		}
+	}
+
+	void encode_actions_vector_riichi_step2(dtype* data)
+	{
+		array<dtype, n_actions> buffer = { 0 };
+		buffer[41] = 1;
+		buffer[45] = 1;
+		memcpy(data, buffer.data(), buffer.size());
+	}
+
+	/* action encoding over */
+	
+	std::vector<BaseTile> get_riichi_tiles(const Table& table)
+	{
+		std::vector<BaseTile> bt;
+		for (const auto &sa : table.get_self_actions()){
+			if (sa.action == BaseAction::立直) {
+				bt.push_back(sa.correspond_tiles[0]->tile);
+			}
+		}
+		return bt;
 	}
 }

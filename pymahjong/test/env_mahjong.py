@@ -1122,7 +1122,7 @@ class EnvMahjong4(gym.Env):
 
             for pid in range(4):
                 shanten_num[pid] = shanten.calculate_shanten(TilesConverter.to_34_array(
-                    self.hand_tiles[pid] + [st[0] for st in self.side_tiles[pid]]))
+                    self.hand_tiles[pid]))
 
             tenpais = np.argwhere(shanten_num == 0)
 

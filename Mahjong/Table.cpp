@@ -598,7 +598,7 @@ void Table::make_selection(int selection)
 				if (tile == players[turn].hand.back())
 					is_from_hand = DiscardFromTsumo;
 			}
-			players[turn].execute_discard(tile, river_counter, is_from_hand);
+			players[turn].execute_discard(tile, river_counter, selected_action.action == BaseAction::立直, is_from_hand);
 
 			phase = P1_RESPONSE;
 			if (0 == turn) {
@@ -729,7 +729,6 @@ void Table::make_selection(int selection)
 				players[turn].score -= 1000;
 				players[turn].ippatsu = true;
 			} 
-			
 
 			// 什么都不做。将action对应的牌从手牌移动到牌河里面	
 			// players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);

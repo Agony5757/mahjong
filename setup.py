@@ -31,7 +31,7 @@ class CMakeBuild(build_ext):
                       '-DCMAKE_BUILD_TYPE=Release']
         print(self.build_temp)
         subprocess.check_call(['cmake', ext.sourcedir, *cmake_args], cwd=self.build_temp)
-        subprocess.check_call(['cmake', '--build', os.path.join(ext.sourcedir, self.build_temp), '--target', 'MahjongPy'], cwd=self.build_temp)
+        subprocess.check_call(['cmake', '--build', os.path.join(ext.sourcedir, self.build_temp), '--target', 'MahjongPyWrapper'], cwd=self.build_temp)
 
 setup(
     name = "pymahjong",

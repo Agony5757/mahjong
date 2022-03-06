@@ -8,6 +8,7 @@ import env_mahjong
 import pymahjong as mp
 import numpy as np
 from copy import deepcopy
+from collections import defaultdict
 
 EnvMahjong4 = env_mahjong.EnvMahjong4
 
@@ -35,13 +36,14 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
 
     winds = ['east', 'south', 'west', 'north']
 
-    obs_container = np.zeros([93, 34], dtype=np.int8)
-    oracle_obs_container = np.zeros([111, 34], dtype=np.int8)
+    obs_container = np.zeros([111, 34], dtype=np.int8)
 
     env_test = EnvMahjong4()
 
     steps_taken = 0
     max_steps = 1000
+
+    wrong_times = 0
     # -------------- Return vs. pretrained player -------------
     start_time = time.time()
     game = 0
@@ -49,6 +51,8 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
     payoffs_array = []
     winning_counts = []
     deal_in_counts = []
+
+    wrong_dimensions_count = defaultdict(int)
 
     wrong_dimensions_total = np.zeros([111])
 
@@ -59,6 +63,7 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
         env_test.reset(oya, game_wind)
 
         payoffs = np.zeros([4])
+        rl_step = 0
 
         for tt in range(max_steps):
 
@@ -69,40 +74,65 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
                 env_test.t.make_selection(0)
             else:
                 # action_mask = env_test.get_valid_actions(nhot=True)
-
+                rl_step += 1
                 # --------------- Check encoding !!!!!!!! ---------------
 
-                dq_obs = env_test.get_obs(curr_pid).astype(np.int8)
+                dq_obs = np.concatenate([env_test.get_obs(curr_pid).astype(np.int8),
+                                         env_test.get_oracle_obs(curr_pid).astype(np.int8)], axis=0)
                 obs_container = obs_container - obs_container  # do we need this ???
-                pm.encode_table(env_test.t, curr_pid, False, obs_container)
-
+                pm.encode_table(env_test.t, curr_pid, True, obs_container)
                 ag_obs = deepcopy(obs_container)
                 if True:
                     if np.any(dq_obs != ag_obs):
                         wrong_dimensions = np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()
-                        if verbose >= 1:
-                            print("wrong encoding! feature dimensions that are different: \n", wrong_dimensions)
-                        if verbose >= 2:
-                            for dim in wrong_dimensions:
-                                print("------------- player {}, col: {} ---------------".format(curr_pid, col_name(dim)))
-                                print("DQ's encoding:", dq_obs[dim, :])
-                                print("AG's encoding:", ag_obs[dim, :])
-                                print("------------------------------------------------------")
+                        for dim in wrong_dimensions:
+                            if 0 <= dim < 6:
 
-                            print("current player river tiles:", env_test.river_tiles[0])
-                            print("current player river tiles:", env_test.river_tiles[1])
-                            print("current player river tiles:", env_test.river_tiles[2])
-                            print("current player river tiles:", env_test.river_tiles[3])
-                            print(env_test.t.players[0].to_string())
-                            print(env_test.t.players[1].to_string())
-                            print(env_test.t.players[2].to_string())
-                            print(env_test.t.players[3].to_string())
-                            print(env_test.t.get_phase())
+                                wrong_dimensions_count[dim] += 1
 
-                        time.sleep(error_pause)
+                                if verbose:
+                                    print("----step {}, player {}, col: {} ----".format(rl_step, curr_pid, col_name(dim)))
+                                    print("DQ's encoding:", dq_obs[dim, :])
+                                    print("AG's encoding:", ag_obs[dim, :])
+
+                                    print("current player river tiles:", env_test.river_tiles[0])
+                                    print("current player river tiles:", env_test.river_tiles[1])
+                                    print("current player river tiles:", env_test.river_tiles[2])
+                                    print("current player river tiles:", env_test.river_tiles[3])
+                                    print(env_test.t.players[0].to_string())
+                                    print(env_test.t.players[1].to_string())
+                                    print(env_test.t.players[2].to_string())
+                                    print(env_test.t.players[3].to_string())
+                                    print(env_test.t.get_phase())
+
+                        # if verbose >= 1:
+                        #     print("wrong encoding! feature dimensions that are different: \n", wrong_dimensions)
+                        # if verbose >= 2:
+                        #     for dim in wrong_dimensions:
+                        #         if dim not in [34, 35, 36, 37, 38, 44, 45, 46, 47, 48, 54, 55, 56, 57, 58, 64, 65, 66, 67, 68, 80, 82, 83, 84, 70, 71, 72, 73, 74, 75, 76, 77]:
+                        #             print("-------step {}, player {}, col: {} ---------------".format(rl_step, curr_pid, col_name(dim)))
+                        #             if 70 <= dim <= 77:
+                        #                 print("DQ's encoding:", dq_obs[dim: dim + 4, :])
+                        #                 print("AG's encoding:", ag_obs[dim: dim + 4, :])
+                        #             else:
+                        #                 print("DQ's encoding:", dq_obs[dim, :])
+                        #                 print("AG's encoding:", ag_obs[dim, :])
+                        #             print("------------------------------------------------------")
+                        #
+                        #             print("current player river tiles:", env_test.river_tiles[0])
+                        #             print("current player river tiles:", env_test.river_tiles[1])
+                        #             print("current player river tiles:", env_test.river_tiles[2])
+                        #             print("current player river tiles:", env_test.river_tiles[3])
+                        #             print(env_test.t.players[0].to_string())
+                        #             print(env_test.t.players[1].to_string())
+                        #             print(env_test.t.players[2].to_string())
+                        #             print(env_test.t.players[3].to_string())
+                        #             print(env_test.t.get_phase())
+                        #
+                        #             time.sleep(error_pause)
+                        #             wrong_times += 1
 
                         wrong_dimensions_total[np.argwhere(np.sum(abs(dq_obs - ag_obs), axis=1)).flatten()] = 1
-                    
 
                 # --------------------------------------------------
 
@@ -125,8 +155,9 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
                 elif env_test.t.get_result().result_type == mp.ResultType.TsumoAgari:
                     curr_wins[np.argmax(payoffs)] = 1
 
-                if game % 1 == 0:
+                if game % 10 == 0:
                     print("game", game, payoffs)
+                    print(wrong_dimensions_count)
 
                 # results
                 payoffs_array.append(payoffs)
@@ -135,9 +166,9 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
                 game += 1
                 break
 
-
     print("feature dimensions that are different \n:", np.argwhere(wrong_dimensions_total).flatten())
     print("Test {} games, spend {} s".format(num_games, time.time() - start_time))
+    print("wrong times = ", wrong_times)
 
 
 if __name__ == "__main__":
@@ -146,4 +177,4 @@ if __name__ == "__main__":
     # verbose = 1: also show feature dimensions that are different at each step
     # verbose = 2: also show detailed data at the feature dimensions that are different at each step
 
-    encoding_test_by_random_play(num_games=40, verbose=2, error_pause=0)
+    encoding_test_by_random_play(num_games=1000, verbose=1, error_pause=0)

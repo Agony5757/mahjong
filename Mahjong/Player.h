@@ -133,7 +133,7 @@ public:
 	void execute_kakan(Tile* tile);
 
 	/* execute discard whenever it is called by others. */
-	void execute_discard(Tile* tile, int& number, bool fromhand);
+	void execute_discard(Tile* tile, int& number, bool on_riichi, bool fromhand);
 
 	inline void set_not_remained() {
 		river.set_not_remain();

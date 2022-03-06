@@ -108,8 +108,8 @@ vector<SelfAction> Player::get_kakan()
 				find_match_tile(hand, CallGroup.tiles[0]->tile);
 			if (match_tile != hand.end()) {
 				SelfAction action;
-				action.correspond_tiles.push_back(*match_tile);
 				action.action = BaseAction::KaKan;
+				action.correspond_tiles.push_back(*match_tile);
 				actions.push_back(action);
 			}
 		}
@@ -332,6 +332,7 @@ vector<ResponseAction> Player::get_ron(Table* table, Tile* tile)
 		if (can_agari(yaku_counter(table, *this, tile, false, false, wind, table->game_wind).yakus)) {
 			ResponseAction action;
 			action.action = BaseAction::Ron;
+			action.correspond_tiles = { tile };
 			actions.push_back(action);
 		}
 	}
@@ -437,6 +438,7 @@ vector<ResponseAction> Player::get_chanankan(Tile* tile)
 	if (is_in(atari_tiles, tile->tile)) {
 		ResponseAction action;
 		action.action = BaseAction::ChanAnKan;
+		action.correspond_tiles = { tile };
 		actions.push_back(action);
 	}
 
@@ -450,6 +452,7 @@ vector<ResponseAction> Player::get_chankan(Tile* tile)
 	if (is_in(atari_tiles, tile->tile)) {
 		ResponseAction action;
 		action.action = BaseAction::ChanKan;
+		action.correspond_tiles = { tile };
 		actions.push_back(action);
 	}
 
@@ -606,11 +609,11 @@ void Player::execute_kakan(Tile* tile)
 	remove_from_hand(tile);
 }
 
-void Player::execute_discard(Tile* tile, int& number, bool fromhand)
+void Player::execute_discard(Tile* tile, int& number, bool on_riichi, bool fromhand)
 {
 	remove_from_hand(tile);
 	number++;
-	river.push_back({ tile, number, riichi, true, fromhand });
+	river.push_back({ tile, number, riichi || on_riichi, true, fromhand });
 }
 
 void Player::sort_hand()

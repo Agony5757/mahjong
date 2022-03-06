@@ -346,7 +346,10 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		;
 
 	m.def("encode_table", &encode_table);
+	m.def("encode_table_riichi_step2", &encode_table_riichi_step2);
 	m.def("encode_action", &encode_action);
+	m.def("encode_action_riichi_step2", &encode_action_riichi_step2);
+	m.def("get_riichi_tiles", &TrainingDataEncoding::get_riichi_tiles);
 }
 
 #ifdef __GNUC__

@@ -27,5 +27,5 @@ include_directories(${PYTHON_INCLUDE_DIRS})
 
 add_subdirectory(ThirdParty EXCLUDE_FROM_ALL)
 add_subdirectory(Mahjong)
-add_subdirectory(pywrapper)
+add_subdirectory(MahjongPyWrapper)
 add_subdirectory(test)
