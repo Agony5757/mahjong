@@ -4,7 +4,7 @@ import time
 import numpy as np
 from copy import deepcopy
 import gym
-import MahjongPy as mp
+import MahjongPyWrapper as mp
 
 from mahjong.shanten import Shanten
 from mahjong.tile import TilesConverter
