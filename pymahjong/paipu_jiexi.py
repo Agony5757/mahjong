@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 import urllib.request
 import gzip
 
-import MahjongPy as mp
+import MahjongPyWrapper as mp
 
 eventlet.monkey_patch()
 
