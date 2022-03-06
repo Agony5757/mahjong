@@ -142,7 +142,9 @@ namespace TrainingDataEncoding {
 		for (auto ra : response_actions) {
 			int row_offset = -1;
 			array<dtype, n_tile_types> row_data{0}; 
-			switch (ra.action) {
+			switch (ra.action) {				
+			case BaseAction::pass:
+				break;
 			case BaseAction::吃:
 				row_data[ra.correspond_tiles[0]->tile] = 1;
 				row_data[ra.correspond_tiles[1]->tile] = 1;
@@ -193,8 +195,7 @@ namespace TrainingDataEncoding {
 
 		encode_hand(hand, row_hand, data);		
 
-		for (int i = 0; i < 4; ++i) {
-				
+		for (int i = 0; i < 4; ++i) {				
 			int hand_offset = 0;
 			if (i != 0) 
 				if (use_oracle) hand_offset = row_oracle + size_hand * (i - 1);				
