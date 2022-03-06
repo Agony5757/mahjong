@@ -353,7 +353,7 @@ namespace TrainingDataEncoding {
 	{
 		std::vector<BaseTile> bt;
 		for (const auto &sa : table.get_self_actions()){
-			if (sa.action == BaseAction::立直) {
+			if (sa.action == BaseAction::Riichi) {
 				bt.push_back(sa.correspond_tiles[0]->tile);
 			}
 		}
