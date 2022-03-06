@@ -337,15 +337,15 @@ bool isCommon和牌型(std::vector<BaseTile> tiles) {
 std::vector<BaseTile> isCommon听牌型(std::vector<BaseTile> tiles)
 {
 	sort(tiles.begin(), tiles.end());
-	vector<BaseTile> 听牌;
+	vector<BaseTile> atari_tiles;
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		tiles.push_back(static_cast<BaseTile>(i));
 		if (isCommon和牌型(tiles)) {
-			听牌.push_back(static_cast<BaseTile>(i));
+			atari_tiles.push_back(static_cast<BaseTile>(i));
 		}
 		tiles.pop_back();
 	}
-	return 听牌;
+	return atari_tiles;
 }
 
 bool is七对和牌型(std::vector<BaseTile> tiles)
@@ -384,15 +384,15 @@ bool is七对和牌型(std::vector<BaseTile> tiles)
 
 std::vector<BaseTile> is七对听牌型(std::vector<BaseTile> tiles)
 {
-	vector<BaseTile> 听牌;
+	vector<BaseTile> atari_tiles;
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		tiles.push_back(static_cast<BaseTile>(i));
 		if (is七对和牌型(tiles)) {
-			听牌.push_back(static_cast<BaseTile>(i));
+			atari_tiles.push_back(static_cast<BaseTile>(i));
 		}
 		tiles.pop_back();
 	}
-	return 听牌;
+	return atari_tiles;
 }
 
 bool is国士无双和牌型(std::vector<BaseTile> tiles)
@@ -408,7 +408,7 @@ bool is国士无双和牌型(std::vector<BaseTile> tiles)
 
 	// 任何一张牌不是幺九牌，直接返回（大概率减少运行时间）
 	if (any_of(tiles.begin(), tiles.end(),
-		[](BaseTile bt) { return !is_幺九牌(bt); })) {
+		[](BaseTile bt) { return !is_yaochuhai(bt); })) {
 		return false;
 	}
 	sort(tiles.begin(), tiles.end());
@@ -427,25 +427,25 @@ std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles)
 {
 	// 任何一张牌不是幺九牌，直接返回（大概率减少运行时间）
 	if (any_of(tiles.begin(), tiles.end(),
-		[](BaseTile bt) { return !is_幺九牌(bt); })) {
+		[](BaseTile bt) { return !is_yaochuhai(bt); })) {
 		return {};
 	}
-	vector<BaseTile> 听牌;
+	vector<BaseTile> atari_tiles;
 	vector<BaseTile> adds{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
 	for (auto i : adds) {
 		tiles.push_back(i);
 		if (is国士无双和牌型(tiles)) {
-			听牌.push_back(static_cast<BaseTile>(i));
+			atari_tiles.push_back(static_cast<BaseTile>(i));
 		}
 		tiles.pop_back();
 	}
-	return 听牌;
+	return atari_tiles;
 }
 
-vector<BaseTile> get听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
+vector<BaseTile> get_atari_hai(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
 {
 	FunctionProfiler;
-	vector<BaseTile> 听牌;
+	vector<BaseTile> atari_tiles;
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		if (except_tiles.size() > 0) {
 			if (is_in(except_tiles, static_cast<BaseTile>(i))) {
@@ -453,18 +453,18 @@ vector<BaseTile> get听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles
 			}
 		}
 		tiles.push_back(static_cast<BaseTile>(i));
-		if (is_幺九牌(static_cast<BaseTile>(i)) && is国士无双和牌型(tiles)) {
-			听牌.push_back(static_cast<BaseTile>(i));
+		if (is_yaochuhai(static_cast<BaseTile>(i)) && is国士无双和牌型(tiles)) {
+			atari_tiles.push_back(static_cast<BaseTile>(i));
 		}
 		else if (is七对和牌型(tiles)) {
-			听牌.push_back(static_cast<BaseTile>(i));
+			atari_tiles.push_back(static_cast<BaseTile>(i));
 		}
 		else if (isCommon和牌型(tiles)) {
-			听牌.push_back(static_cast<BaseTile>(i));
+			atari_tiles.push_back(static_cast<BaseTile>(i));
 		}
 		tiles.pop_back();
 	}
-	return 听牌;
+	return atari_tiles;
 }
 
 bool is听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
@@ -477,7 +477,7 @@ bool is听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
 			}
 		}
 		tiles.push_back(static_cast<BaseTile>(i));
-		if (is_幺九牌(static_cast<BaseTile>(i)) && is国士无双和牌型(tiles)) {
+		if (is_yaochuhai(static_cast<BaseTile>(i)) && is国士无双和牌型(tiles)) {
 			return true;
 		}
 		if (is七对和牌型(tiles)) {
@@ -515,7 +515,7 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen)
 		std::vector<Tile*> copy_hand(hands.begin(), hands.end());
 		copy_hand.erase(copy_hand.begin() + i);
 		auto s = convert_tiles_to_base_tiles(copy_hand);
-		auto tenhai = get听牌(s);
+		auto tenhai = get_atari_hai(s);
 		if (tenhai.size() != 0) {
 			play_tiles.push_back(hands[i]);
 		}
@@ -593,7 +593,7 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 
 
 //
-//std::vector<Yaku> get_立直_双立直(bool double_riichi, bool riichi, bool 一发)
+//std::vector<Yaku> get_立直_双立直(bool double_riichi, bool riichi, bool ippatsu)
 //{
 //	vector<Yaku> yaku;
 //	if (double_riichi) {
@@ -602,8 +602,8 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 //	else if (riichi) {
 //		yaku.push_back(Yaku::立直);
 //	}
-//	if (一发) {
-//		yaku.push_back(Yaku::一发);
+//	if (ippatsu) {
+//		yaku.push_back(Yaku::ippatsu);
 //	}
 //	return yaku;
 //}
@@ -677,11 +677,11 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 //	auto riichi = player->riichi;
 //	auto double_riichi = player->double_riichi;
 //	bool 自摸 = true;
-//	bool 一发 = player->一发;
+//	bool ippatsu = player->ippatsu;
 //
 //	vector<Yaku> yakus;
 //	merge_into(yakus, get_门前自摸(Menzen, 自摸));
-//	merge_into(yakus, get_立直_双立直(double_riichi, riichi, 一发));
+//	merge_into(yakus, get_立直_双立直(double_riichi, riichi, ippatsu));
 //
 //	return yakus;
 //}
@@ -692,10 +692,10 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 //	auto riichi = player->riichi;
 //	auto double_riichi = player->double_riichi;
 //	bool 自摸 = true;
-//	bool 一发 = player->一发;
+//	bool ippatsu = player->ippatsu;
 //
 //	vector<Yaku> yakus;
-//	merge_into(yakus, get_立直_双立直(double_riichi, riichi, 一发));
+//	merge_into(yakus, get_立直_双立直(double_riichi, riichi, ippatsu));
 //
 //	return yakus;
 //}

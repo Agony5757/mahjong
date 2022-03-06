@@ -6,8 +6,8 @@
 using namespace std;
 
 BaseGameLog::BaseGameLog(int p1, int p2, LogAction action, Tile* tile,
-	vector<Tile*> fulu)
-	:player(p1), player2(p2), action(action), tile(tile), call_tiles(fulu)
+	vector<Tile*> CallGroup)
+	:player(p1), player2(p2), action(action), tile(tile), call_tiles(CallGroup)
 {
 }
 

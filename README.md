@@ -161,14 +161,14 @@ metadata现在支持的Key为：
 
 （参见MahjongPy/MahjongPy.cpp）
 
-## Fulu类型
+## CallGroup类型
 
 包含一系列可以访问的属性
 
 	(pybind11封装的接口形式下)
-	.def_readonly("type", &Fulu::type)
-	.def_readonly("tiles", &Fulu::tiles)
-	.def_readonly("take", &Fulu::take)	
+	.def_readonly("type", &CallGroup::type)
+	.def_readonly("tiles", &CallGroup::tiles)
+	.def_readonly("take", &CallGroup::take)	
 
 ## Tile类型
 
@@ -212,12 +212,12 @@ metadata现在支持的Key为：
 	.def_readonly("wind", &Player::wind)
 	.def_readonly("oya", &Player::亲家)
 	.def_readonly("furiten", &Player::振听)
-	.def_readonly("riichi_furiten", &Player::立直振听)
+	.def_readonly("riichi_furiten", &Player::furiten_riichi)
 	.def_readonly("score", &Player::score)
 	.def_readonly("hand", &Player::hand)
-	.def_readonly("fulus", &Player::副露s)
+	.def_readonly("CallGroups", &Player::call_groups)
 	.def_readonly("river", &Player::river)
-	.def_readonly("ippatsu", &Player::一发)
+	.def_readonly("ippatsu", &Player::ippatsu)
 	.def_readonly("first_round", &Player::first_round)
 
 ## Yaku枚举
@@ -253,70 +253,3 @@ metadata现在支持的Key为：
 	.def_readonly("score1", &CounterResult::score1)
 	.def_readonly("score2", &CounterResult::score2)
 
-## 全局函数
-
-### yakus_to_string 将役打印出来
-
-参数:Yaku的list
-返回:GBK编码的bytes，需要进行decode
-
-### TableToString
-
-参数1: Table
-参数2：int : 表示打印选项
-
-打印选项的二进制位来表示需要打印的值，在选项中加上这个值即可
-	0：牌山(1)
-	1：玩家信息(2)
-	2：DORA信息(4)
-	3：立直棒(8)
-	4：本场棒(16)
-	5：亲家(32)
-	6：剩余牌量(64)
-
-返回的是GBK编码的bytes，需要进行decode
-
-例：
-想打印所有的信息，可以使用TableToString(table, 999)
-想打印牌山和玩家信息，可以使用TableToString(table, 1+2)
-想打印玩家信息，DORA信息和立直棒信息，可以使用TableToString(table, 2+4+8)
-
-### RiverToString
-
-参数:River类型
-返回的是GBK编码的bytes，需要进行decode
-
-### TileToString
-
-参数:Tile类型
-返回的是GBK编码的bytes，需要进行decode
-
-### FuluToString
-
-参数:Fulu类型
-返回的是GBK编码的bytes，需要进行decode
-
-### SelfActionToString
-
-参数:SelfAction类型
-返回的是GBK编码的bytes，需要进行decode
-
-### ResponseActionToString
-
-参数:ResponseAction类型
-返回的是GBK编码的bytes，需要进行decode
-
-### PlayerToString
-
-参数:Player类型
-返回的是GBK编码的bytes，需要进行decode
-
-### ResultToString
-
-参数:Result类型
-返回的是GBK编码的bytes，需要进行decode
-
-### CounterResultToString
-
-参数:CounterResult类型
-返回的是GBK编码的bytes，需要进行decode

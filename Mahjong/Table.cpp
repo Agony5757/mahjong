@@ -108,7 +108,7 @@ void Table::init_before_playing()
 	// 全部自动整理手牌（可能不需要）
 	for (int i = 0; i < 4; ++i) {
 		players[i].sort_hand();
-		players[i].update_听牌();
+		players[i].update_atari_tiles();
 	}
 	from_beginning();
 }
@@ -254,22 +254,22 @@ void Table::next_turn(int nextturn)
 	// 在切换之前，更新玩家的听牌列表，以及更新他的振听情况
 	if (selected_base_action == BaseAction::Riichi) {
 		// 立直一定更新
-		player.update_听牌();
-		player.update_舍牌振听();
+		player.update_atari_tiles();
+		player.update_furiten_river();
 	}
 	else if (selected_base_action == BaseAction::Discard) {
 		if (player.river.river.back().fromhand) {
 			// 手切更新听牌列表
-			player.update_听牌();
-			player.update_舍牌振听();
+			player.update_atari_tiles();
+			player.update_furiten_river();
 		}
 	}
 	if (selected_base_action == BaseAction::AnKan) {
-		player.update_听牌();
+		player.update_atari_tiles();
 	}
 	if (selected_base_action == BaseAction::KaKan) {
-		player.update_听牌();
-		player.remove_听牌(selected_action.correspond_tiles[0]->tile);
+		player.update_atari_tiles();
+		player.remove_atari_tiles(selected_action.correspond_tiles[0]->tile);
 	}
 
 	// 更新完毕，正式切换turn
@@ -297,14 +297,14 @@ void Table::from_beginning()
 		players[1].river.size() == 1 &&
 		players[2].river.size() == 1 &&
 		players[3].river.size() == 1 &&
-		players[0].副露s.size() == 0 &&
-		players[1].副露s.size() == 0 &&
-		players[2].副露s.size() == 0 &&
-		players[3].副露s.size() == 0 &&
+		players[0].call_groups.size() == 0 &&
+		players[1].call_groups.size() == 0 &&
+		players[2].call_groups.size() == 0 &&
+		players[3].call_groups.size() == 0 &&
 		四风连打牌(players))
 	{
-		result = 四风连打流局结算(this);
-		gamelog.logGameOver(result);
+		result = generate_result_4wind(this);
+		gamelog.log_gameover(result);
 		phase = GAME_OVER;
 		return;
 	}
@@ -313,7 +313,7 @@ void Table::from_beginning()
 		players[1].riichi &&
 		players[2].riichi &&
 		players[3].riichi) {
-		result = 四立直流局结算(this);
+		result = generate_result_4riichi(this);
 		phase = GAME_OVER;
 		return;
 	}
@@ -322,11 +322,11 @@ void Table::from_beginning()
 	if (get_remain_kan_tile() == 0) {
 		int n_杠 = 0;
 		for (int i = 0; i < 4; ++i) {
-			if (any_of(players[i].副露s.begin(), players[i].副露s.end(),
-				[](Fulu& f) {
-					return f.type == Fulu::暗杠 ||
-						f.type == Fulu::大明杠 ||
-						f.type == Fulu::加杠;
+			if (any_of(players[i].call_groups.begin(), players[i].call_groups.end(),
+				[](CallGroup& f) {
+					return f.type == CallGroup::暗杠 ||
+						f.type == CallGroup::Daiminkan ||
+						f.type == CallGroup::加杠;
 				})) {
 				// 统计一共有多少个人杠过
 				n_杠++;
@@ -334,14 +334,14 @@ void Table::from_beginning()
 		}
 		// 2个或更多人杠过
 		if (n_杠 >= 2) {
-			result = 四杠流局结算(this);
+			result = generate_result_4kan(this);
 			phase = GAME_OVER;
 			return;
 		}
 	}
 
 	if (get_remain_tile() == 0) {
-		result = 荒牌流局结算(this);
+		result = generate_result_notile(this);
 		phase = GAME_OVER;
 		return;
 	}
@@ -442,7 +442,7 @@ void Table::test_show_full_gamelog()
 void Table::deal_tile(int i_player)
 {		
 	players[i_player].hand.push_back(yama.back());
-	gamelog.log摸牌(i_player, yama.back());
+	gamelog.log_draw(i_player, yama.back());
 	yama.pop_back();
 }
 
@@ -486,7 +486,7 @@ void Table::发牌(int i_player)
 void Table::发岭上牌(int i_player)
 {
 	deal_tile(i_player);
-	gamelog.log摸牌(i_player, players[i_player].hand.back());
+	gamelog.log_draw(i_player, players[i_player].hand.back());
 }
 
 string Table::to_string(int option) const
@@ -545,17 +545,17 @@ vector<SelfAction> Table::GetSelfActions()
 
 	// Chi/碰后，且已经4杠的场合，不能继续杠
 	if (!after_chipon() && get_remain_kan_tile() > 0) {
-		merge_into(actions, the_player.get_暗杠());
-		merge_into(actions, the_player.get_加杠());
+		merge_into(actions, the_player.get_ankan());
+		merge_into(actions, the_player.get_kakan());
 	}
-	merge_into(actions, the_player.get_打牌(after_chipon()));
-	merge_into(actions, the_player.get_九种九牌());
-	merge_into(actions, the_player.get_自摸(this));
+	merge_into(actions, the_player.get_discard(after_chipon()));
+	merge_into(actions, the_player.get_kyushukyuhai());
+	merge_into(actions, the_player.get_tsumo(this));
 
 	if (players[turn].score >= 1000 && get_remain_tile() >= 4)
 		// 有1000点才能立直，否则不行
 		// 牌河有4张以下牌，则不能立直
-		merge_into(actions, the_player.get_立直());
+		merge_into(actions, the_player.get_riichi());
 
 	return actions;
 }
@@ -566,9 +566,9 @@ vector<SelfAction> Table::GetRiichiSelfActions()
 	auto& the_player = players[turn];
 	
 	if (get_remain_kan_tile() > 0)
-		merge_into(actions, the_player.riichi_get_暗杠());
-	merge_into(actions, the_player.riichi_get_打牌());
-	merge_into(actions, the_player.get_自摸(this));
+		merge_into(actions, the_player.riichi_get_ankan());
+	merge_into(actions, the_player.riichi_get_discard());
+	merge_into(actions, the_player.get_tsumo(this));
 
 	return actions;
 }
@@ -586,17 +586,17 @@ vector<ResponseAction> Table::GetResponseActions(
 
 	auto &the_player = players[i];
 
-	merge_into(actions, the_player.get_荣和(this, tile));
+	merge_into(actions, the_player.get_ron(this, tile));
 
 	// 立直则不能鸣牌
 	// 海底牌也不能鸣牌
 	if (!the_player.is_riichi() && get_remain_tile() != 0) {
-		merge_into(actions, the_player.get_Pon(tile));
+		merge_into(actions, the_player.get_pon(tile));
 		if (get_remain_kan_tile() > 0)
-			merge_into(actions, the_player.get_Kan(tile));
+			merge_into(actions, the_player.get_kan(tile));
 
 		if (is下家) {
-			merge_into(actions, the_player.get_Chi(tile));
+			merge_into(actions, the_player.get_chi(tile));
 		}
 	}
 
@@ -613,7 +613,7 @@ vector<ResponseAction> Table::Get抢暗杠(int i, Tile * tile)
 	actions.push_back(action_pass);
 
 	auto &the_player = players[i];
-	merge_into(actions, the_player.get_抢暗杠(tile));
+	merge_into(actions, the_player.get_chanankan(tile));
 
 	return actions;
 }
@@ -628,7 +628,7 @@ vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
 	actions.push_back(action_pass);
 
 	auto &the_player = players[i];
-	merge_into(actions, the_player.get_抢杠(tile));
+	merge_into(actions, the_player.get_chankan(tile));
 
 	return actions;
 }
@@ -656,20 +656,20 @@ void Table::make_selection(int selection)
 		selected_action = self_actions[selection];
 		switch (selected_action.action) {
 		case BaseAction::Kyushukyuhai:
-			result = 九种九牌流局结算(this);
-			gamelog.log九种九牌(turn, result);
+			result = generate_result_9hai(this);
+			gamelog.log_kyushukyuhai(turn, result);
 
 			phase = GAME_OVER;
 			return;
 		case BaseAction::Tsumo:
-			result = 自摸结算(this);
+			result = generate_result_tsumo(this);
 			phase = GAME_OVER;
 			return;
 		case BaseAction::Discard:
 		case BaseAction::Riichi:
 		{
-			// 决定不胡牌，则不具有一发状态
-			players[turn].一发 = false;
+			// 决定不胡牌，则不具有ippatsu状态
+			players[turn].ippatsu = false;
 
 			tile = selected_action.correspond_tiles[0];
 			// 等待回复
@@ -685,7 +685,7 @@ void Table::make_selection(int selection)
 				if (tile == players[turn].hand.back())
 					is_from_hand = DiscardFromTsumo;
 			}
-			players[turn].move_from_hand_to_river(tile, river_counter, FROM_手切摸切);
+			players[turn].execute_discard(tile, river_counter, FROM_手切摸切);
 
 			phase = P1_RESPONSE;
 			if (0 == turn) {
@@ -814,7 +814,7 @@ void Table::make_selection(int selection)
 				players[turn].riichi = true;
 				kyoutaku++;
 				players[turn].score -= 1000;
-				players[turn].一发 = true;
+				players[turn].ippatsu = true;
 			} 
 			
 
@@ -840,19 +840,19 @@ void Table::make_selection(int selection)
 				players[turn].riichi = true;
 				kyoutaku++;
 				players[turn].score -= 1000;
-				// 立直即鸣牌，一定没有一发
+				// 立直即鸣牌，一定没有ippatsu
 			}
 
 			players[turn].set_not_remained();
 			
 			players[response].Menzen = false;
-			players[response].move_from_hand_to_fulu(
+			players[response].execute_naki(
 				actions[response].correspond_tiles, tile);
 
-			// 这是鸣牌，消除所有人第一巡和一发
+			// 这是鸣牌，消除所有人第一巡和ippatsu
 			for (int i = 0; i < 4; ++i) {
 				players[i].first_round = false;
-				players[i].一发 = false;
+				players[i].ippatsu = false;
 			}
 
 			// 切换turn
@@ -861,7 +861,7 @@ void Table::make_selection(int selection)
 			break;
 
 		case BaseAction::Ron:
-			result = 荣和结算(this, selected_action.correspond_tiles[0], response_player);
+			result = generate_result_ron(this, selected_action.correspond_tiles[0], response_player);
 			phase = GAME_OVER;
 			return;
 		default:
@@ -918,18 +918,18 @@ void Table::make_selection(int selection)
 			}
 		}
 		if (response_player.size() != 0) {
-			// 有人抢杠则进行结算，除非加杠宣告成功，否则一发状态仍然存在
-			result = 抢杠结算(this, tile, response_player);
+			// 有人抢杠则进行结算，除非加杠宣告成功，否则ippatsu状态仍然存在
+			result = generate_result_chankan(this, tile, response_player);
 			phase = GAME_OVER;
 			return;
 		}
-		players[turn].play_加杠(selected_action.correspond_tiles[0]);
+		players[turn].execute_kakan(selected_action.correspond_tiles[0]);
 		last_action = BaseAction::KaKan;
 
-		// 这是鸣牌，消除所有人第一巡和一发
+		// 这是鸣牌，消除所有人第一巡和ippatsu
 		for (int i = 0; i < 4; ++i) {
 			players[i].first_round = false;
-			players[i].一发 = false;
+			players[i].ippatsu = false;
 		}
 		next_turn(turn);
 		from_beginning();
@@ -982,19 +982,19 @@ void Table::make_selection(int selection)
 		}
 		if (response_player.size() != 0) {
 			// 有人抢暗杠则进行结算
-			result = 抢暗杠结算(this, tile, response_player);
+			result = generate_result_chanankan(this, tile, response_player);
 			phase = GAME_OVER;
 			return;
 		}
-		players[turn].play_暗杠(selected_action.correspond_tiles[0]->tile);
+		players[turn].execute_ankan(selected_action.correspond_tiles[0]->tile);
 		last_action = BaseAction::暗杠;
 		// 立即翻宝牌指示牌
 		n_active_dora++;
 
-		// 这是暗杠，消除所有人第一巡和一发
+		// 这是暗杠，消除所有人第一巡和ippatsu
 		for (int i = 0; i < 4; ++i) {
 			players[i].first_round = false;
-			players[i].一发 = false;
+			players[i].ippatsu = false;
 		}
 		next_turn(turn);
 		from_beginning();

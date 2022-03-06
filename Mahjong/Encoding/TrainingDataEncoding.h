@@ -10,9 +10,9 @@ namespace TrainingDataEncoding {
 	constexpr size_t size_player = 4,
 		row_hand = 0,
 		size_hand = 6,
-		row_fulu = row_hand + size_hand,
-		size_fulu = 6,
-		row_river = row_fulu + size_fulu * size_player,
+		row_CallGroup = row_hand + size_hand,
+		size_CallGroup = 6,
+		row_river = row_CallGroup + size_CallGroup * size_player,
 		size_river = 10,
 		row_field = row_river + size_river * size_player,
 		size_field = 10,
@@ -36,7 +36,7 @@ namespace TrainingDataEncoding {
 		row_tsumo = 10;
 
 	constexpr size_t n_tile_types = 9 + 9 + 9 + 7;
-	constexpr size_t n_row = size_hand + size_fulu * size_player + size_river * size_player + size_field + size_last;
+	constexpr size_t n_row = size_hand + size_CallGroup * size_player + size_river * size_player + size_field + size_last;
 	constexpr size_t n_col = n_tile_types;
 
 	void encode_table(const Table& table, int pid, bool use_oracle, dtype* data);

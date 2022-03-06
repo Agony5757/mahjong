@@ -28,67 +28,68 @@ string Player::river_to_string() const
 
 string Player::to_string() const
 {
-	stringstream ss;
-	ss << "点数:" << score << endl;
-	ss << "自风" << wind_to_string(wind) << endl;
-	ss << "手牌:" << hand_to_string();
-
-	if (副露s.size() != 0)
+	std::string str_fuuro;
+	if (call_groups.size() != 0)
 	{
-		ss << " 副露:";
-		for (auto fulu : 副露s)
-			ss << fulu.to_string() << " ";
+		str_fuuro += "Calls: ";
+		for (auto CallGroup : call_groups) {
+			str_fuuro += CallGroup.to_string();
+			str_fuuro += ' ';
+		}
+		str_fuuro += '\n';
 	}
 
-	ss << endl;
-	ss << "牌河:" << river_to_string();
-	ss << endl;
-
-	if (riichi)	ss << "立";
-	else 		ss << "No立";
-
-	ss << "|";
-
-	if (Menzen)	ss << "Menzen";
-	else		ss << "副露";
-	ss << endl;
-
-	return ss.str();
+	return fmt::format(
+		"Pt: {}\n"
+		"Wind: {}\n"
+		"Hand: {}\n"
+		"{}"
+		"River: {}\n"
+		"Riichi: {}\n"
+		"Menzen: {}", 
+		score, 
+		wind_to_string(wind), 
+		hand_to_string(), 
+		str_fuuro, 
+		river_to_string(),
+		riichi ? "Yes" : "No", 
+		menzen ? "Yes" : "No"
+	);
 }
 
 string Player::tenpai_to_string() const
 {
 	string s = "";
-	for (int i = 0; i < 听牌.size(); ++i)
+	for (int i = 0; i < atari_tiles.size(); ++i)
 	{
-		s += basetile_to_string_simple(听牌[i]);
+		s += basetile_to_string(atari_tiles[i]);
 	}
 	return s;
 }
 
-void Player::update_听牌()
+void Player::update_atari_tiles()
 {
 	vector<BaseTile> bt = convert_tiles_to_base_tiles(hand);
-	听牌 = get听牌(bt);
+	atari_tiles = get_atari_hai(bt);
 }
 
-void Player::update_舍牌振听()
+void Player::update_furiten_river()
 {
-	if (立直振听) return;
+	if (furiten_riichi) return;
 	for (auto rivertile : river.river) {
-		if (any_of(听牌.begin(), 听牌.end(),
+		if (any_of(atari_tiles.begin(), atari_tiles.end(),
 			[&rivertile](BaseTile t) {return t == rivertile.tile->tile; })) 
 		{
-			if (is_riichi()) { 立直振听 = true; }
-			else { 舍牌振听 = true; }
+			if (is_riichi()) { furiten_riichi = true; }
+			else { furiten_river = true; }
 		}
 		else {
-			舍牌振听 = false;
+			furiten_river = false;
 		}
 	}
 }
 
-void Player::remove_听牌(BaseTile t)
+void Player::remove_atari_tiles(BaseTile t)
 {
 	// TODO: 不能听5张
 	// 暂时没有加入这个规则，假设认为可以听第5张
@@ -96,19 +97,19 @@ void Player::remove_听牌(BaseTile t)
 	// Player::get_except_tiles()
 }
 
-vector<SelfAction> Player::get_加杠()
+vector<SelfAction> Player::get_kakan()
 {
 	vector<SelfAction> actions;
 	//if (after_chipon == true) return actions;
 
-	for (auto fulu : 副露s) {
-		if (fulu.type == Fulu::Pon) {
+	for (auto CallGroup : call_groups) {
+		if (CallGroup.type == CallGroup::Pon) {
 			auto match_tile =
-				find_match_tile(hand, fulu.tiles[0]->tile);
+				find_match_tile(hand, CallGroup.tiles[0]->tile);
 			if (match_tile != hand.end()) {
 				SelfAction action;
 				action.correspond_tiles.push_back(*match_tile);
-				action.action = BaseAction::加杠;
+				action.action = BaseAction::KaKan;
 				actions.push_back(action);
 			}
 		}
@@ -116,16 +117,16 @@ vector<SelfAction> Player::get_加杠()
 	return actions;
 }
 
-vector<SelfAction> Player::get_暗杠()
+vector<SelfAction> Player::get_ankan()
 {
 	vector<SelfAction> actions;
 
 	for (auto tile : hand) {
-		auto duplicate = get_duplicate(hand, tile->tile, 4);
+		auto duplicate = get_n_copies(hand, tile->tile, 4);
 		sort(duplicate.begin(), duplicate.end());
 		if (duplicate.size() == 4) {
 			SelfAction action;
-			action.action = BaseAction::暗杠;
+			action.action = BaseAction::AnKan;
 			action.correspond_tiles.assign(duplicate.begin(), duplicate.end());
 			actions.push_back(action);
 		}
@@ -133,54 +134,54 @@ vector<SelfAction> Player::get_暗杠()
 	return actions;
 }
 
-static bool is食替(Player* player, BaseTile t)
+static bool is_kuikae(Player* player, BaseTile t)
  {
 	// 拿出最后一个副露
-	auto last_fulu = player->副露s.back();
+	auto last_CallGroup = player->call_groups.back();
 
-	if (last_fulu.type == Fulu::Pon) {
+	if (last_CallGroup.type == CallGroup::Pon) {
 		// 碰的情况，只要不是那一张就可以了
-		if (last_fulu.tiles[0]->tile == t)
+		if (last_CallGroup.tiles[0]->tile == t)
 			return true;
 		else return false;
 	}
-	else if (last_fulu.type == Fulu::Chi) {
+	else if (last_CallGroup.type == CallGroup::Chi) {
 		// 吃的情况
-		if (last_fulu.take == 1) {
+		if (last_CallGroup.take == 1) {
 			// 嵌张
-			if (last_fulu.tiles[last_fulu.take]->tile == t)
+			if (last_CallGroup.tiles[last_CallGroup.take]->tile == t)
 				return true;
 			else return false;
 		}
-		if (last_fulu.take == 0) {
-			if (is_九牌(last_fulu.tiles[2]->tile)) {
+		if (last_CallGroup.take == 0) {
+			if (is_9hai(last_CallGroup.tiles[2]->tile)) {
 				// 考虑(7)89
-				if (last_fulu.tiles[last_fulu.take]->tile == t)
+				if (last_CallGroup.tiles[last_CallGroup.take]->tile == t)
 					return true;
 				else return false;
 			}
 			else {
 				// (3)45(6)
-				if (last_fulu.tiles[last_fulu.take]->tile == t
+				if (last_CallGroup.tiles[last_CallGroup.take]->tile == t
 					||
-					last_fulu.tiles[last_fulu.take]->tile + 3 == t
+					last_CallGroup.tiles[last_CallGroup.take]->tile + 3 == t
 					)
 					return true;
 				else return false;
 			}
 		}
-		if (last_fulu.take == 2) {
-			if (is_幺牌(last_fulu.tiles[0]->tile)) {
+		if (last_CallGroup.take == 2) {
+			if (is_1hai(last_CallGroup.tiles[0]->tile)) {
 				// 考虑12(3)
-				if (last_fulu.tiles[last_fulu.take]->tile == t)
+				if (last_CallGroup.tiles[last_CallGroup.take]->tile == t)
 					return true;
 				else return false;
 			}
 			else {
 				// (3)45(6)
-				if (last_fulu.tiles[last_fulu.take]->tile == t
+				if (last_CallGroup.tiles[last_CallGroup.take]->tile == t
 					||
-					last_fulu.tiles[last_fulu.take]->tile - 3 == t
+					last_CallGroup.tiles[last_CallGroup.take]->tile - 3 == t
 					)
 					return true;
 				else return false;
@@ -189,37 +190,37 @@ static bool is食替(Player* player, BaseTile t)
 		else throw runtime_error("??");
 	}
 	else
-		throw runtime_error("最后一手既不是吃又不是碰，不考虑食替");
+		throw runtime_error("Cannot read last call group.");
 }
 
-vector<SelfAction> Player::get_打牌(bool after_chipon)
+vector<SelfAction> Player::get_discard(bool after_chipon)
 {
 	FunctionProfiler;
 	vector<SelfAction> actions;
 	for (auto tile : hand) {
 		// 检查食替情况,不可打出
-		if (after_chipon && is食替(this, tile->tile))
+		if (after_chipon && is_kuikae(this, tile->tile))
 			continue;
 
 		// 其他所有牌均可打出
 		SelfAction action;
-		action.action = BaseAction::出牌;
+		action.action = BaseAction::Discard;
 		action.correspond_tiles.push_back(tile);
 		actions.push_back(action);
 	}
 	return actions;
 }
 
-vector<SelfAction> Player::get_自摸(Table* table)
+vector<SelfAction> Player::get_tsumo(Table* table)
 {
 	vector<SelfAction> actions;
 
 	// 听牌列表里的牌可以被自摸
-	if (is_in(听牌, hand.back()->tile)) {
-		auto result = yaku_counter(table, *this, nullptr, false, false, wind, table->场风);
+	if (is_in(atari_tiles, hand.back()->tile)) {
+		auto result = yaku_counter(table, *this, nullptr, false, false, wind, table->game_wind);
 		if (can_agari(result.yakus)) {
 			SelfAction action;
-			action.action = BaseAction::自摸;
+			action.action = BaseAction::Tsumo;
 			actions.push_back(action);
 		}
 	}
@@ -227,14 +228,14 @@ vector<SelfAction> Player::get_自摸(Table* table)
 	return actions;
 }
 
-vector<SelfAction> Player::get_立直()
+vector<SelfAction> Player::get_riichi()
 {
 	vector<SelfAction> actions;
 
-	auto riichi_tiles = is_riichi_able(hand, Menzen);
+	auto riichi_tiles = is_riichi_able(hand, menzen);
 	for (auto riichi_tile : riichi_tiles) {
 		SelfAction action;
-		action.action = BaseAction::立直;
+		action.action = BaseAction::Riichi;
 		action.correspond_tiles.push_back(riichi_tile);
 		actions.push_back(action);
 	}
@@ -242,11 +243,12 @@ vector<SelfAction> Player::get_立直()
 	return actions;
 }
 
-static int 九种九牌counter(vector<Tile*> hand) {
+static int count_yaochuhai(vector<Tile*> hand) 
+{
 	int counter = 0;
 	for (int tile = BaseTile::_1m; tile <= BaseTile::_7z; ++tile) {
 		auto basetile = static_cast<BaseTile>(tile);
-		if (is_幺九牌(basetile)) {
+		if (is_yaochuhai(basetile)) {
 			if (find_match_tile(hand, basetile) != hand.end())
 				counter++;
 		}
@@ -254,7 +256,7 @@ static int 九种九牌counter(vector<Tile*> hand) {
 	return counter;
 }
 
-vector<SelfAction> Player::get_九种九牌()
+vector<SelfAction> Player::get_kyushukyuhai()
 {
 	vector<SelfAction> actions;
 	if (!first_round) return actions;
@@ -262,30 +264,32 @@ vector<SelfAction> Player::get_九种九牌()
 	// 考虑到第一巡可以有人暗杠，但是自己不行
 	if (hand.size() != 14) return actions;
 
-	if (九种九牌counter(hand) >= 9) {
+	if (count_yaochuhai(hand) >= 9) {
 		SelfAction action;
-		action.action = BaseAction::九种九牌;
+		action.action = BaseAction::Kyushukyuhai;
 		actions.push_back(action);
 	}
 	return actions;
 }
 
-static vector<vector<Tile*>> get_Chi_tiles(vector<Tile*> hand, Tile* tile) {
+static vector<vector<Tile*>> get_Chi_tiles(vector<Tile*> hand, Tile* tile) 
+{
 	vector<vector<Tile*>> chi_tiles;
 	for (int i = 0; i < hand.size() - 1; ++i) {
 		for (int j = 1; (i + j) < hand.size(); ++j)
-			if (is_顺子({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
+			if (is_shuntsu({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
 				chi_tiles.push_back({ hand[i] , hand[i + j] });
 			}
 	}
 	return chi_tiles;
 }
 
-static vector<vector<Tile*>> get_Pon_tiles(vector<Tile*> hand, Tile* tile) {
+static vector<vector<Tile*>> get_Pon_tiles(vector<Tile*> hand, Tile* tile) 
+{
 	vector<vector<Tile*>> chi_tiles;
 	for (int i = 0; i < hand.size() - 1; ++i) {
 		for (int j = 1; (i + j) < hand.size(); ++j)
-			if (is_刻子({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
+			if (is_koutsu({ hand[i]->tile, hand[i + j]->tile, tile->tile })) {
 				chi_tiles.push_back({ hand[i] , hand[i + j] });
 
 			}
@@ -303,7 +307,7 @@ static vector<vector<Tile*>> get_Kan_tiles(vector<Tile*> hand, Tile* tile) {
 		for (int j = 1; (i + j) < hand.size() - 1; ++j)
 			for (int k = 1; (i + j + k) < hand.size(); ++k)
 				if (
-					is_杠({
+					is_kantsu({
 						hand[i]->tile,
 						hand[i + j]->tile,
 						hand[i + j + k]->tile,
@@ -314,20 +318,20 @@ static vector<vector<Tile*>> get_Kan_tiles(vector<Tile*> hand, Tile* tile) {
 	return chi_tiles;
 }
 
-vector<ResponseAction> Player::get_荣和(Table* table, Tile* tile)
+vector<ResponseAction> Player::get_ron(Table* table, Tile* tile)
 {
 	vector<ResponseAction> actions;
 
-	if (is振听() == true) {
+	if (is_furiten() == true) {
 		// 振听直接无
 		return {};
 	}
 
 	// 听牌列表里的才能荣
-	if (is_in(听牌, tile->tile)) {
-		if (can_agari(yaku_counter(table, *this, tile, false, false, wind, table->场风).yakus)) {
+	if (is_in(atari_tiles, tile->tile)) {
+		if (can_agari(yaku_counter(table, *this, tile, false, false, wind, table->game_wind).yakus)) {
 			ResponseAction action;
-			action.action = BaseAction::荣和;
+			action.action = BaseAction::Ron;
 			actions.push_back(action);
 		}
 	}
@@ -335,7 +339,7 @@ vector<ResponseAction> Player::get_荣和(Table* table, Tile* tile)
 	return actions;
 }
 
-vector<ResponseAction> Player::get_Chi(Tile* tile)
+vector<ResponseAction> Player::get_chi(Tile* tile)
 {
 	vector<ResponseAction> actions;
 
@@ -391,7 +395,7 @@ vector<ResponseAction> Player::get_Chi(Tile* tile)
 	return actions;
 }
 
-vector<ResponseAction> Player::get_Pon(Tile* tile)
+vector<ResponseAction> Player::get_pon(Tile* tile)
 {
 	vector<ResponseAction> actions;
 
@@ -408,7 +412,7 @@ vector<ResponseAction> Player::get_Pon(Tile* tile)
 	return actions;
 }
 
-vector<ResponseAction> Player::get_Kan(Tile* tile)
+vector<ResponseAction> Player::get_kan(Tile* tile)
 {
 	vector<ResponseAction> actions;
 
@@ -425,12 +429,12 @@ vector<ResponseAction> Player::get_Kan(Tile* tile)
 	return actions;
 }
 
-vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
+vector<ResponseAction> Player::get_chanankan(Tile* tile)
 {
 	vector<ResponseAction> actions;
-	if (!is_幺九牌(tile->tile)) { return {}; }
+	if (!is_yaochuhai(tile->tile)) { return {}; }
 
-	if (is_in(听牌, tile->tile)) {
+	if (is_in(atari_tiles, tile->tile)) {
 		ResponseAction action;
 		action.action = BaseAction::ChanAnKan;
 		actions.push_back(action);
@@ -439,11 +443,11 @@ vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
 	return actions;
 }
 
-vector<ResponseAction> Player::get_抢杠(Tile* tile)
+vector<ResponseAction> Player::get_chankan(Tile* tile)
 {
 	vector<ResponseAction> actions;
 
-	if (is_in(听牌, tile->tile)) {
+	if (is_in(atari_tiles, tile->tile)) {
 		ResponseAction action;
 		action.action = BaseAction::ChanKan;
 		actions.push_back(action);
@@ -452,15 +456,15 @@ vector<ResponseAction> Player::get_抢杠(Tile* tile)
 	return actions;
 }
 
-vector<SelfAction> Player::riichi_get_暗杠()
+vector<SelfAction> Player::riichi_get_ankan()
 {
 	vector<SelfAction> actions;
 
 	// 从手牌获取听牌
-	auto original_听牌 = 听牌;
+	// auto original_听牌 = atari_tiles;
 
 	for (auto tile : hand) {
-		auto duplicate = get_duplicate(hand, tile->tile, 4);
+		auto duplicate = get_n_copies(hand, tile->tile, 4);
 		if (duplicate.size() == 4) {
 
 			// 尝试从手牌删除掉这四张牌，之后检查听牌
@@ -472,11 +476,11 @@ vector<SelfAction> Player::riichi_get_暗杠()
 						else return false;
 					}), copyhand.end());
 
-			auto final_听牌 = get听牌(convert_tiles_to_base_tiles(copyhand));
+			auto new_atari_hai = get_atari_hai(convert_tiles_to_base_tiles(copyhand));
 
-			if (is_same_container(final_听牌, original_听牌)) {
+			if (is_same_container(new_atari_hai, atari_tiles)) {
 				SelfAction action;
-				action.action = BaseAction::暗杠;
+				action.action = BaseAction::AnKan;
 				action.correspond_tiles.assign(duplicate.begin(), duplicate.end());
 				actions.push_back(action);
 			}
@@ -485,75 +489,76 @@ vector<SelfAction> Player::riichi_get_暗杠()
 	return actions;
 }
 
-vector<SelfAction> Player::riichi_get_打牌()
+vector<SelfAction> Player::riichi_get_discard()
 {
 	vector<SelfAction> actions;
 
 	SelfAction action;
-	action.action = BaseAction::出牌;
+	action.action = BaseAction::Discard;
 	action.correspond_tiles.push_back(hand.back());
 	actions.push_back(action);
 
 	return actions;
 }
 
-void Player::move_from_hand_to_fulu(vector<Tile*> tiles, Tile* tile)
+void Player::execute_naki(vector<Tile*> tiles, Tile* tile)
 {
-	Fulu fulu;
-	if (is_刻子({ tiles[0]->tile, tiles[1]->tile, tile->tile })
+	CallGroup CallGroup;
+	menzen = false;
+	if (is_koutsu({ tiles[0]->tile, tiles[1]->tile, tile->tile })
 		&& tiles.size() == 2) {
 		// 碰的情况
 		// 创建对象
-		fulu.type = Fulu::Pon;
-		fulu.take = 0;
-		fulu.tiles = { tiles[0], tiles[1], tile };
+		CallGroup.type = CallGroup::Pon;
+		CallGroup.take = 0;
+		CallGroup.tiles = { tiles[0], tiles[1], tile };
 
 		// 加入
-		副露s.push_back(fulu);
+		call_groups.push_back(CallGroup);
 
 		// 删掉原来的牌
 		hand.erase(find(hand.begin(), hand.end(), tiles[0]));
 		hand.erase(find(hand.begin(), hand.end(), tiles[1]));
 		return;
 	}
-	if (is_顺子({ tiles[0]->tile, tiles[1]->tile, tile->tile })
+	if (is_shuntsu({ tiles[0]->tile, tiles[1]->tile, tile->tile })
 		&& tiles.size() == 2) {
 		// 吃的情况
 		// 创建对象
-		fulu.type = Fulu::Chi;
+		CallGroup.type = CallGroup::Chi;
 		if (tile->tile < tiles[0]->tile) {
 			//(1)23
-			fulu.take = 0;
-			fulu.tiles = { tile, tiles[0], tiles[1] };
+			CallGroup.take = 0;
+			CallGroup.tiles = { tile, tiles[0], tiles[1] };
 		}
 		else if (tile->tile > tiles[1]->tile) {
 			//12(3)
-			fulu.take = 2;
-			fulu.tiles = { tiles[0], tiles[1], tile };
+			CallGroup.take = 2;
+			CallGroup.tiles = { tiles[0], tiles[1], tile };
 		}
 		else {
 			//1(2)3
-			fulu.take = 1;
-			fulu.tiles = { tiles[0], tile, tiles[1] };
+			CallGroup.take = 1;
+			CallGroup.tiles = { tiles[0], tile, tiles[1] };
 		}
 		// 加入
-		副露s.push_back(fulu);
+		call_groups.push_back(CallGroup);
 
 		// 删掉原来的牌
 		hand.erase(find(hand.begin(), hand.end(), tiles[0]));
 		hand.erase(find(hand.begin(), hand.end(), tiles[1]));
 		return;
 	}
-	if (is_杠({ tiles[0]->tile, tiles[1]->tile, tiles[2]->tile, tile->tile })
+	if (is_kantsu({ tiles[0]->tile, tiles[1]->tile, tiles[2]->tile, tile->tile })
 		&& tiles.size() == 3) {
 		// 杠的情况
 		// 创建对象
-		fulu.type = Fulu::大明杠;
-		fulu.take = 0;
-		fulu.tiles = { tiles[0], tiles[1], tiles[2], tile };
+		CallGroup.type = CallGroup::DaiMinKan;
+		CallGroup.take = 0;
+		CallGroup.tiles = { tiles[0], tiles[1], tiles[2], tile };
 
 		// 加入
-		副露s.push_back(fulu);
+		call_groups.push_back(CallGroup);
 
 		// 删掉原来的牌
 		hand.erase(find(hand.begin(), hand.end(), tiles[0]));
@@ -570,39 +575,38 @@ void Player::remove_from_hand(Tile* tile)
 	hand.erase(iter, hand.end());
 }
 
-void Player::play_暗杠(BaseTile tile)
+void Player::execute_ankan(BaseTile tile)
 {
-	Fulu fulu;
-	fulu.type = Fulu::暗杠;
-	fulu.take = 0;
+	CallGroup CallGroup;
+	CallGroup.type = CallGroup::AnKan;
+	CallGroup.take = 0;
 
 	for_each(hand.begin(), hand.end(),
-		[&fulu, tile](Tile* t)
+		[&CallGroup, tile](Tile* t)
 		{
-			if (tile == t->tile) fulu.tiles.push_back(t);
+			if (tile == t->tile) CallGroup.tiles.push_back(t);
 		});
 	auto iter = remove_if(hand.begin(), hand.end(),
 			[tile](Tile* t) {return t->tile == tile; });
-	副露s.push_back(fulu);
+	call_groups.push_back(CallGroup);
 	hand.erase(iter, hand.end());
 }
 
-void Player::play_加杠(Tile* tile)
+void Player::execute_kakan(Tile* tile)
 {
-	Menzen = false;
-	for (auto& fulu : 副露s) {
-		if (fulu.type == Fulu::Pon) {
-			if (tile->tile == fulu.tiles[0]->tile)
+	for (auto& CallGroup : call_groups) {
+		if (CallGroup.type == CallGroup::Pon) {
+			if (tile->tile == CallGroup.tiles[0]->tile)
 			{
-				fulu.type = Fulu::加杠;
-				fulu.tiles.push_back(tile);
+				CallGroup.type = CallGroup::KaKan;
+				CallGroup.tiles.push_back(tile);
 			}
 		}
 	}
 	remove_from_hand(tile);
 }
 
-void Player::move_from_hand_to_river(Tile* tile, int& number, bool fromhand)
+void Player::execute_discard(Tile* tile, int& number, bool fromhand)
 {
 	remove_from_hand(tile);
 	number++;
@@ -611,10 +615,5 @@ void Player::move_from_hand_to_river(Tile* tile, int& number, bool fromhand)
 
 void Player::sort_hand()
 {
-	sort(hand.begin(), hand.end(), tile_less);
-}
-
-void Player::test_show_hand()
-{
-	cout << hand_to_string();
+	sort(hand.begin(), hand.end());
 }

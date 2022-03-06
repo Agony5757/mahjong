@@ -161,7 +161,7 @@ bool is国士无双和牌型(std::vector<BaseTile> tiles);
 std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles);
 
 // 不考虑无役的听牌情况
-std::vector<BaseTile> get听牌(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
+std::vector<BaseTile> get_atari_hai(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
 bool is听牌(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
 bool is和牌(std::vector<BaseTile> tiles);
 

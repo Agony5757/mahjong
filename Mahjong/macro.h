@@ -8,15 +8,11 @@
 #include <array>
 #include "Tile.h"
 #include "Profiler.h"
-
-// #define VERBOSE if (verbose)
-// #define SORT(player) player.sort_hand();
-// #define SORT_TILES(hand) std::sort(hand.begin(), hand.end(), tile_less);
-// #define TEST_EQ_VERBOSE(value, expected) if (value == expected) cout<<"PASS"<<endl; else cout<<"FAIL"<<endl;
-
+#include "fmt/core.h"
 
 template<typename ContainerType, typename ElemType>
-bool is_in(const ContainerType &container, const ElemType &elem){
+bool is_in(const ContainerType &container, const ElemType &elem)
+{
 	if (std::find(std::begin(container), std::end(container), elem) != std::end(container)) {
 		return true;
 	}
@@ -24,7 +20,8 @@ bool is_in(const ContainerType &container, const ElemType &elem){
 }
 
 template<typename T>
-void erase_n(std::vector<T>& vec, const T& to_erase, size_t count) {
+void erase_n(std::vector<T>& vec, const T& to_erase, size_t count) 
+{
 	for (size_t i = 0; i < count; ++i) {		
 		vec.erase(find(vec.begin(), vec.end(), to_erase));
 	}
@@ -43,98 +40,10 @@ inline std::vector<BaseTile> convert_tiles_to_base_tiles(std::vector<Tile*> tile
 	return bts;
 }
 
-//inline std::vector<mahjong_algorithm::Tile> convert_basetiles_to_extern_tiles(std::vector<BaseTile> tiles) {
-//	std::vector<mahjong_algorithm::Tile> newtiles;
-//	for (auto t : tiles) {
-//		int type = (int)t / 9;
-//		int data = (t % 9 + 1);
-//		mahjong_algorithm::TileType mt;
-//		switch (type) {
-//		case 0:
-//			mt = mahjong_algorithm::TileType::Manzu;
-//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
-//			continue;
-//		case 1:
-//			mt = mahjong_algorithm::TileType::Souzu;
-//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
-//			continue;
-//		case 2:
-//			mt = mahjong_algorithm::TileType::Ponzu;
-//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
-//			continue;
-//		case 3:
-//			mt = mahjong_algorithm::TileType::Special;
-//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
-//			continue;
-//		default:
-//			throw std::runtime_error("??");
-//		}
-//	}
-//	return newtiles;
-//}
-//
-//inline std::vector<mahjong_algorithm::Tile> convert_tiles_to_extern_tiles(std::vector<Tile*> tiles) {
-//	std::vector<mahjong_algorithm::Tile> newtiles;
-//	for (auto tile : tiles) {
-//		BaseTile t = tile->tile;
-//		int type = (int)t / 9;
-//		int data = (t % 9 + 1);
-//		mahjong_algorithm::TileType mt;
-//		switch (type) {
-//		case 0: 
-//			mt = mahjong_algorithm::TileType::Manzu;
-//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
-//			continue;
-//		case 1:
-//			mt = mahjong_algorithm::TileType::Souzu;
-//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
-//			continue;
-//		case 2:
-//			mt = mahjong_algorithm::TileType::Ponzu;
-//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
-//			continue;
-//		case 3:
-//			mt = mahjong_algorithm::TileType::Special;
-//			newtiles.push_back(mahjong_algorithm::Tile(mt, data, false));
-//			continue;
-//		default:
-//			throw std::runtime_error("??");
-//		}
-//	}
-//	return newtiles;
-//}
-//
-//inline BaseTile convert_extern_tile_to_basetile(mahjong_algorithm::Tile tile) {
-//	int type;
-//	int number = tile.getTileNumber();
-//	switch (tile.getTileType()) {
-//	case mahjong_algorithm::TileType::Manzu:
-//		type = 0; break;
-//	case mahjong_algorithm::TileType::Souzu:
-//		type = 1; break;
-//	case mahjong_algorithm::TileType::Ponzu:
-//		type = 2; break;
-//	case mahjong_algorithm::TileType::Special:
-//		type = 3; break;
-//	default:
-//		throw std::runtime_error("??");
-//	}
-//	auto basetile_number = type * 9 + number - 1;
-//	BaseTile t = static_cast<BaseTile>(basetile_number);
-//	return t;
-//}
-//
-//inline std::vector<BaseTile> convert_extern_tiles_to_basetiles(std::vector<mahjong_algorithm::Tile> tiles) {
-//	std::vector<BaseTile> newtiles;
-//	for (auto tile : tiles) {
-//		newtiles.push_back(convert_extern_tile_to_basetile(tile));
-//	}
-//	return newtiles;
-//}
-
 /* Check if two containers have the same size and same corresponding value. */
 template<typename T>
-bool is_same_container(T a, T b) {
+bool is_same_container(T a, T b) 
+{
 	if (a.size() != b.size()) {
 		return false;
 	}
@@ -146,7 +55,8 @@ bool is_same_container(T a, T b) {
 }
 
 inline std::vector<Tile*>::iterator
-find_match_tile(std::vector<Tile*>& tiles, BaseTile t) {
+find_match_tile(std::vector<Tile*>& tiles, BaseTile t) 
+{
 	for (auto iter = tiles.begin();
 		iter != tiles.end();
 		++iter) {
@@ -158,7 +68,8 @@ find_match_tile(std::vector<Tile*>& tiles, BaseTile t) {
 }
 
 inline std::vector<Tile*>::iterator
-find_match_tile(std::vector<Tile*>& tiles, Tile* t) {
+find_match_tile(std::vector<Tile*>& tiles, Tile* t)
+{
 	for (auto iter = tiles.begin();
 		iter != tiles.end();
 		++iter) {
@@ -169,8 +80,7 @@ find_match_tile(std::vector<Tile*>& tiles, Tile* t) {
 	return tiles.end();
 }
 
-// 找手牌中是不是有t的重复n张牌
-inline std::vector<Tile*> get_duplicate(std::vector<Tile*> tiles, BaseTile t, unsigned int n) {
+inline std::vector<Tile*> get_n_copies(std::vector<Tile*> tiles, BaseTile t, unsigned int n) {
 
 	std::vector<Tile*> duplicate_tiles;
 	if (n > 4) { return duplicate_tiles; }
@@ -193,7 +103,8 @@ inline std::vector<Tile*> get_duplicate(std::vector<Tile*> tiles, BaseTile t, un
 }
 
 template<typename T>
-void merge_into(std::vector<T> &to, const std::vector<T> &from) {
+void merge_into(std::vector<T> &to, const std::vector<T> &from) 
+{
 	to.insert(to.end(), from.begin(), from.end());
 }
 
@@ -204,11 +115,8 @@ private:
 public:
 	Base64()
 	{
-		_base64_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"; /*这是Base64编码使用的标准字典*/
+		_base64_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	}
-	/**
-	 * 这里必须是unsigned类型，否则编码中文的时候出错
-	 */
 	inline std::string Encode(const unsigned char * str, int bytes) {
 		int num = 0, bin = 0;
 		std::string _encode_result;
@@ -264,21 +172,14 @@ public:
 		char ch;
 		while ((ch = *current++) != '\0' && length-- > 0)
 		{
-			if (ch == base64_pad) { // 当前一个字符是“=”号
-				/*
-				先说明一个概念：在解码时，4个字符为一组进行一轮字符匹配。
-				两个条件：
-					1、如果某一轮匹配的第二个是“=”且第三个字符不是“=”，说明这个带解析字符串不合法，直接返回空
-					2、如果当前“=”不是第二个字符，且后面的字符只包含空白符，则说明这个这个条件合法，可以继续。
-				*/
+			if (ch == base64_pad) { 
 				if (*current != '=' && (i % 4) == 1) {
 					return NULL;
 				}
 				continue;
 			}
 			ch = DecodeTable[ch];
-			//这个很重要，用来过滤所有不合法的字符
-			if (ch < 0) { /* a space or some other separator character, we simply skip over */
+			if (ch < 0) {
 				continue;
 			}
 			switch (i % 4)
@@ -308,35 +209,14 @@ public:
 };
 
 // from p1 to p2
-inline int get_distance(int p1, int p2) {
-	if (p1 <= p2) {
-		return p2 - p1;
-	}
-	else {
-		return p2 - p1 + 4;
-	}
+inline int get_player_distance(int p1, int p2) 
+{
+	return (p2 - p1) % 4;
 }
 
-// vector<string> merge
-inline std::string merge_strings(std::vector<std::string> strings) {
-	using std::string;
-	string final_string;
-	for (auto _string  : strings) {
-		final_string += _string;
-		final_string += " ";
-	}
-	return final_string;
-}
-
-inline Wind next_wind(Wind 风) {
-	return (Wind)(int(风) + 1);
-}
-
-inline std::string score_to_string(std::array<int, 4> scores) {
-	using namespace std;
-	stringstream ss;
-	ss << scores[0] << "|" << scores[1] << "|" << scores[2] << "|" << scores[3];
-	return ss.str();
+inline std::string score_to_string(const std::array<int, 4> &scores) 
+{
+	return fmt::format("{}|{}|{}|{}", scores[0], scores[1], scores[2], scores[3]);
 }
 
 #endif

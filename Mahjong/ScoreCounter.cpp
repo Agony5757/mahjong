@@ -10,7 +10,7 @@ using namespace std;
 if (亲) {if (自摸){score1=score_亲自摸_all;} else{score1=score_铳亲;}} \
 else {if (自摸) {score1=score_子自摸_亲; score2=score_子自摸_子;} else{score1=score_铳子;}} return;
 
-static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<Fulu> fulus, Tile* correspond_tile, BaseTile tsumo_tile, Wind 自风, Wind 场风, bool& 役满);
+static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<CallGroup> CallGroups, Tile* correspond_tile, BaseTile tsumo_tile, Wind 自风, Wind 场风, bool& 役满);
 
 int calculate_fan(vector<Yaku> yakus);
 
@@ -141,7 +141,7 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 	}	
 
 	for (auto &complete_tiles : complete_tiles_list) {
-		auto yaku_fus = get_手役_from_complete_tiles(complete_tiles, player.副露s, correspond_tile, player.hand.back()->tile, 自风, 场风, 役满);
+		auto yaku_fus = get_手役_from_complete_tiles(complete_tiles, player.call_groups, correspond_tile, player.hand.back()->tile, 自风, 场风, 役满);
 		merge_into(AllYakusAndFu, yaku_fus);
 	}
 	if (!役满) { // 所有可能性中都没有役满的话
@@ -177,9 +177,9 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 			}
 		}
 
-		/* 如果保存有一发状态 */
-		if (player.一发) {
-			场役.push_back(Yaku::一发);
+		/* 如果保存有ippatsu状态 */
+		if (player.ippatsu) {
+			场役.push_back(Yaku::ippatsu);
 		}
 
 		/*门清自摸*/
@@ -194,8 +194,8 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 			}
 		}
 
-		for (auto fulu : player.副露s) {
-			for (auto tile : fulu.tiles) {
+		for (auto CallGroup : player.call_groups) {
+			for (auto tile : CallGroup.tiles) {
 				if (tile->red_dora == true) {
 					Dora役.push_back(Yaku::赤宝牌);
 				}
@@ -215,8 +215,8 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 				}
 			}
 
-			for (auto fulu : player.副露s) {
-				for (auto tile : fulu.tiles) {
+			for (auto CallGroup : player.call_groups) {
+				for (auto tile : CallGroup.tiles) {
 					if (tile->tile == doratile) {
 						Dora役.push_back(Yaku::宝牌);
 					}
@@ -238,8 +238,8 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 					}
 				}
 
-				for (auto fulu : player.副露s) {
-					for (auto tile : fulu.tiles) {
+				for (auto CallGroup : player.call_groups) {
+					for (auto tile : CallGroup.tiles) {
 						if (tile->tile == doratile) {
 							Dora役.push_back(Yaku::里宝牌);
 						}
@@ -458,7 +458,7 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 // 第三位：表示属性 K：刻子 ， S：顺子，: 对子，|: 杠子
 // 第四位：表示位置 - 表示副露 + 表示暗杠 !@# 表示自摸 $%^表示荣和
 
-// 这个函数不判断：7对，国士无双及13面，九莲宝灯与纯正，所有宝牌役，所有场役包括天和，地和，立直，两立直，门清自摸，抢杠，海底，河底，一发，岭上
+// 这个函数不判断：7对，国士无双及13面，九莲宝灯与纯正，所有宝牌役，所有场役包括天和，地和，立直，两立直，门清自摸，抢杠，海底，河底，ippatsu，岭上
 
 static inline bool 副露(string s) {
 	if (s.size() == 3) return false;
@@ -1034,7 +1034,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 }
 
 vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
-	CompletedTiles ct, vector<Fulu> fulus, Tile *correspond_tile, BaseTile tsumo_tile, Wind 自风, Wind 场风, bool& 役满)
+	CompletedTiles ct, vector<CallGroup> CallGroups, Tile *correspond_tile, BaseTile tsumo_tile, Wind 自风, Wind 场风, bool& 役满)
 {
 	bool tsumo = false;	 // 是自摸吗
 	BaseTile last_tile;  // 最后取得的牌，既可以是荣和，也可以是自摸
@@ -1068,20 +1068,20 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
 		}
 	}
 
-	for (auto fulu : fulus) {
-		switch (fulu.type) {
-		case Fulu::Chi:
-			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "S-"); // 例如1sS- 即1s2s3s (8sS无效)
+	for (auto CallGroup : CallGroups) {
+		switch (CallGroup.type) {
+		case CallGroup::Chi:
+			raw_tile_group_string.push_back(basetile_to_string_simple(CallGroup.tiles[0]->tile) + "S-"); // 例如1sS- 即1s2s3s (8sS无效)
 			continue;
-		case Fulu::Pon:
-			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "K-"); // 例如1sK- 即1s1s1s
+		case CallGroup::Pon:
+			raw_tile_group_string.push_back(basetile_to_string_simple(CallGroup.tiles[0]->tile) + "K-"); // 例如1sK- 即1s1s1s
 			continue;
-		case Fulu::大明杠:
-		case Fulu::加杠:
-			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "|-"); // 例如3z4- 即西大明杠/加杠
+		case CallGroup::Daiminkan:
+		case CallGroup::加杠:
+			raw_tile_group_string.push_back(basetile_to_string_simple(CallGroup.tiles[0]->tile) + "|-"); // 例如3z4- 即西大明杠/加杠
 			continue;
-		case Fulu::暗杠:
-			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "|+"); // 例如4s4+ 即4s暗杠
+		case CallGroup::暗杠:
+			raw_tile_group_string.push_back(basetile_to_string_simple(CallGroup.tiles[0]->tile) + "|+"); // 例如4s4+ 即4s暗杠
 			continue;
 		}
 	}

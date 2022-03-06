@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <time.h>
+#include "fmt/core.h"
 
 // #define MAJ_DEBUG
 
@@ -25,7 +26,7 @@ enum BaseTile {
 	_1z, _2z, _3z, _4z,	_5z, _6z, _7z
 };
 
-inline std::string basetile_to_string_simple(BaseTile bt) {
+inline std::string basetile_to_string(BaseTile bt) {
 	using namespace std;
 	static vector<string> names{
 		"1m","2m","3m","4m","5m","6m","7m","8m","9m",
@@ -55,7 +56,7 @@ inline BaseTile char2_to_basetile(char number, char color, bool& red_dora) {
 	if (color == 'z') {
 		return BaseTile(_1z + num - 1);
 	}
-	throw std::runtime_error("Unknown Tile String");
+	throw std::runtime_error("Bad tile string.");
 }
 
 inline BaseTile get_dora_next(BaseTile tile) {
@@ -69,48 +70,47 @@ inline BaseTile get_dora_next(BaseTile tile) {
 	}
 }
 
-inline bool is_幺牌(BaseTile t) {
+inline bool is_1hai(BaseTile t) {
 	if (t == _1m || t == _1p || t == _1s ) {
 		return true;
 	}
 	else return false;
 }
 
-inline bool is_九牌(BaseTile t) {
+inline bool is_9hai(BaseTile t) {
 	if (t == _9m || t == _9p || t == _9s ) {
 		return true;
 	}
 	else return false;
 }
 
-inline bool is_老头牌(BaseTile t) {
-	if (is_九牌(t) || is_幺牌(t)) {
+inline bool is_19hai(BaseTile t) {
+	if (is_9hai(t) || is_1hai(t)) {
 		return true;
 	} 
 	else return false;
 }
 
-inline bool is_字牌(BaseTile t) {
+inline bool is_tsuhai(BaseTile t) {
 	if (t >= BaseTile::_1z && t<= BaseTile::_7z) {
 		return true;
 	}
 	else return false;
 }
 
-inline bool is_幺九牌(BaseTile t) {
-	if (is_老头牌(t) || is_字牌(t)) {
+inline bool is_yaochuhai(BaseTile t) {
+	if (is_19hai(t) || is_tsuhai(t)) {
 		return true;
 	}
 	else return false;
 }
 
-inline bool is_顺子(std::vector<BaseTile> tiles) {
+inline bool is_shuntsu(std::vector<BaseTile> tiles) {
 	if (tiles.size() != 3) return false;
 	std::sort(tiles.begin(), tiles.end());
 
 	if (tiles[1] - tiles[0] != 1) return false;
 	if (tiles[2] - tiles[1] != 1) return false;
-	// 必须成顺子
 	
 	if (tiles[2] == _1p) return false;
 	if (tiles[2] == _2p) return false;
@@ -121,28 +121,26 @@ inline bool is_顺子(std::vector<BaseTile> tiles) {
 	return true;
 }
 
-inline bool is_刻子(std::vector<BaseTile> tiles) {
+inline bool is_koutsu(std::vector<BaseTile> tiles) {
 	if (tiles.size() != 3) return false;
 
 	if (tiles[1] - tiles[0] != 0) return false;
 	if (tiles[2] - tiles[1] != 0) return false;
-	// 必须都相同
 	
 	return true;
 }
 
-inline bool is_杠(std::vector<BaseTile> tiles) {
+inline bool is_kantsu(std::vector<BaseTile> tiles) {
 	if (tiles.size() != 4) return false;
 
 	if (tiles[1] - tiles[0] != 0) return false;
 	if (tiles[2] - tiles[1] != 0) return false;
 	if (tiles[3] - tiles[2] != 0) return false;
-	// 必须都相同
 
 	return true;
 }
 
-inline bool is_场自风(BaseTile tile, Wind 场风) {
+inline bool is_wind_match(BaseTile tile, Wind 场风) {
 	switch (场风) {
 	case Wind::East:
 		return tile == BaseTile::_1z;
@@ -157,72 +155,21 @@ inline bool is_场自风(BaseTile tile, Wind 场风) {
 	}
 }
 
-//inline bool is_自风(BaseTile tile, Wind 自风) {
-//	switch (自风) {
-//	case Wind::East:
-//		return tile == BaseTile::_1z;
-//	case Wind::West:
-//		return tile == BaseTile::_3z;
-//	case Wind::South:
-//		return tile == BaseTile::_2z;
-//	case Wind::North:
-//		return tile == BaseTile::_4z;
-//	default:
-//		throw std::runtime_error("Unknown wind.");
-//	}
-//}
-
-inline bool is_三元牌(BaseTile tile) {
+inline bool is_567z(BaseTile tile) {
 	return (tile == BaseTile::_7z || tile == BaseTile::_6z || tile == BaseTile::_5z);
 }
 	
-inline bool is_役牌(BaseTile tile, Wind 场风, Wind 自风) {
-	if (is_场自风(tile, 场风)) {
+inline bool is_yakuhai(BaseTile tile, Wind game_wind, Wind self_wind) {
+	if (is_wind_match(tile, game_wind)) {
 		return true;
 	}
-	if (is_场自风(tile, 自风)) {
+	if (is_wind_match(tile, self_wind)) {
 		return true;
 	}
-	if (is_三元牌(tile)) {
+	if (is_567z(tile)) {
 		return true;
 	}
 	return false;
-}
-
-inline std::string basetile_to_string(BaseTile tile) {
-	std::string ret;
-	if (0 <= tile && tile <= 8) {
-		ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
-	}
-	else if (9 <= tile && tile <= 17) {
-		ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "p";
-	}
-	else if (18 <= tile && tile <= 26) {
-		ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "s";
-	}
-	else if (tile == _1z) {
-		ret = "[东";
-	}
-	else if (tile == _2z) {
-		ret = "[南";
-	}
-	else if (tile == _3z) {
-		ret = "[西";
-	}
-	else if (tile == _4z) {
-		ret = "[北";
-	}
-	else if (tile == _5z) {
-		ret = "[白";
-	}
-	else if (tile == _6z) {
-		ret = "[发";
-	}
-	else if (tile == _7z) {
-		ret = "[中";
-	}
-	else throw std::runtime_error("unknown tile");
-	return ret + ']';
 }
 
 class Tile {
@@ -252,46 +199,6 @@ public:
 		}
 		throw std::runtime_error("Error Tile.");
 	}
-	
-	/*inline std::string to_string() const {
-		std::string ret;
-		if (0 <= tile && tile <= 8) {
-			ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
-		}
-		else if (9 <= tile && tile <= 17) {
-			ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "p";
-		}
-		else if (18 <= tile && tile <= 26) {
-			ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "s";
-		}
-		else if (tile == _1z) {
-			ret = "[东";
-		}
-		else if (tile == _2z) {
-			ret = "[南";
-		}
-		else if (tile == _3z) {
-			ret = "[西";
-		}
-		else if (tile == _4z) {
-			ret = "[北";
-		}
-		else if (tile == _5z) {
-			ret = "[白";
-		}
-		else if (tile == _6z) {
-			ret = "[发";
-		}
-		else if (tile == _7z) {
-			ret = "[中";
-		}
-		else throw std::runtime_error("unknown tile");
-
-		if (red_dora) {
-			ret += '*';
-		}
-		return ret + ']';
-	}*/
 };
 
 inline std::string tiles_to_string(std::vector<Tile*> tiles) {
@@ -302,10 +209,10 @@ inline std::string tiles_to_string(std::vector<Tile*> tiles) {
 	return ss.str();
 }
 
-inline std::string 副露_to_string(Tile* head, std::vector<Tile*> fulu) {
+inline std::string 副露_to_string(Tile* head, std::vector<Tile*> CallGroup) {
 	std::stringstream ss;
 	ss << "[" << head->to_string() << "]";
-	ss << tiles_to_string(fulu);
+	ss << tiles_to_string(CallGroup);
 	return ss.str();
 }
 
@@ -324,83 +231,47 @@ inline std::string wind_to_string(Wind wind) {
 	}
 }
 
-struct Fulu {
+struct CallGroup {
 	enum Type {
 		Chi,
 		Pon,
-		大明杠,
-		加杠,
-		暗杠,
+		DaiMinKan,
+		KaKan,
+		AnKan,
 	};
 	std::vector<Tile*> tiles;
 	int take = 0;
-	// take标记的tiles中第几张牌拿的是别人的
-	// take == 0 说明 (1)23
-	// take == 1 说明 1(2)3
-	// take == 2 说明 12(3)
-	// take在type==Chi的时候才有效，其他时候不用
+	// take == 0 stands for (1)23
+	// take == 1 stands for 1(2)3
+	// take == 2 stands for 12(3)
 
 	Type type;
 	inline std::string to_string() const {
-		std::stringstream ss;
+		std::string ret;
 		switch (type) {
-		case Chi: {
+		case Chi:
+		case Pon:
+		case DaiMinKan:
 			for (int i = 0; i < 3; ++i) {
-				if (i == take) {
-					ss << "(" << tiles[i]->to_string() << ")";
-				}
-				else {
-					ss << tiles[i]->to_string();
-				}
+				if (i == take) ret += fmt::format("({})", tiles[i]->to_string());
+				else ret += tiles[i]->to_string();
 			}
-			break;
-		}
-		case Pon: {
-			for (int i = 0; i < 3; ++i) {
-				if (i == 1) {
-					ss << "(" << tiles[i]->to_string() << ")";
-				}
-				else {
-					ss << tiles[i]->to_string();
-				}
-			}
-			break;
-		}
-		case 大明杠: {
+			return ret;
+		case KaKan:
 			for (int i = 0; i < 4; ++i) {
-				if (i < 1) {
-					ss << "(" << tiles[i]->to_string() << ")";
-				}
-				else {
-					ss << tiles[i]->to_string();
-				}
+				if (i == take && i == 4) ret += fmt::format("({})", tiles[i]->to_string());
+				else ret += tiles[i]->to_string();
 			}
-			break;
-		}
-		case 加杠: {
+			return ret;
+		case AnKan:
 			for (int i = 0; i < 4; ++i) {
-				if (i < 2) {
-					ss << "(" << tiles[i]->to_string() << ")";
-				}
-				else {
-					ss << tiles[i]->to_string();
-				}
+				if (i == 0 || i == 3) ret += tiles[i]->to_string();
+				else ret += "*";
 			}
-			break;
+			return ret;
+		default:
+			throw std::runtime_error("Bad call group (fuuro) type.");
 		}
-		case 暗杠: {
-			for (int i = 0; i < 4; ++i) {
-				if (i == 0 || i == 3) {
-					ss << tiles[i]->to_string();
-				}
-				else {
-					ss << "[?]";
-				}
-			}
-			break;
-		}
-		}
-		return ss.str();
 	}
 };
 

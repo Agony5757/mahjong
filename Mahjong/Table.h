@@ -137,13 +137,13 @@ public:
 	Tile* tile = nullptr;
 	std::vector<ResponseAction> actions; // response actions
 	// bool FROM_手切摸切 = false; // global variable for river log
-	BaseAction final_action = BaseAction::pass;
+	BaseAction final_action = BaseAction::Pass;
 	
 	void from_beginning();
 
 	// Initialize the game.
 	void game_init();
-	void game_init_for_replay(std::vector<int> yama, std::vector<int> init_scores, int 立直棒, int 本场, int game_wind, int 亲家);
+	void game_init_for_replay(std::vector<int> yama, std::vector<int> init_scores, int kyoutaku, int honba, int game_wind, int oya);
 
 	void game_init_with_metadata(std::unordered_map<std::string, std::string> metadata);
 	

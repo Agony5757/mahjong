@@ -62,7 +62,7 @@ void test和牌状态4() {
 	_6z,_6z,_5s
 	};
 
-	auto ten_tiles = get听牌(tiles3);
+	auto ten_tiles = get_atari_hai(tiles3);
 	for (auto ten_tile : ten_tiles){
 		printf("%s ", basetile_to_string_simple(ten_tile).c_str());
 	}

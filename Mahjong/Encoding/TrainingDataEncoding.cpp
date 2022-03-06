@@ -28,7 +28,7 @@ namespace TrainingDataEncoding {
 				get(data, hand_offset + 5, id) = 1;
 			}
 			
-			if (can_kyushukyuhai && is_幺九牌(hand[i]->tile)) {
+			if (can_kyushukyuhai && is_yaochuhai(hand[i]->tile)) {
 				get(data, row_action + 11, id) = 1;
 			}
 		}		
@@ -60,14 +60,14 @@ namespace TrainingDataEncoding {
 		}
 	}
 
-	void encode_fulu(const vector<Fulu>& fulus, dtype* data, size_t pid)
+	void encode_CallGroup(const vector<CallGroup>& CallGroups, dtype* data, size_t pid)
 	{
 		array<dtype, n_tile_types> ntiles = { 0 };
-		for (const auto& f : fulus) {
+		for (const auto& f : CallGroups) {
 			for (int i = 0; i < f.tiles.size(); ++i) {
 				auto& t = f.tiles[i];
 				auto id = char(t->tile);
-				size_t pos = row_fulu + pid * size_fulu;
+				size_t pos = row_CallGroup + pid * size_CallGroup;
 				get(data, pos + ntiles[id], id) = 1;
 				++ntiles[id];
 
@@ -214,7 +214,7 @@ namespace TrainingDataEncoding {
 				else hand_offset = -1;
 			else hand_offset = row_hand;
 			encode_river(ps[encode_pid].river.river, i, hand_offset, data);
-			encode_fulu(ps[encode_pid].副露s, data, i);
+			encode_CallGroup(ps[encode_pid].call_groups, data, i);
 		}
 
 		encode_field(table, ps[pid], data);
