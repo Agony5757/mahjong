@@ -266,7 +266,7 @@ namespace TrainingDataEncoding {
 				break;
 			case BaseAction::立直:
 				data[41] = 1;	
-				data[45] = 1;
+				data[46] = 1;
 				break;
 			case BaseAction::自摸:
 				data[43] = 1;
@@ -285,7 +285,7 @@ namespace TrainingDataEncoding {
 		for (auto &ra : actions) {
 			switch (ra.action) {
 			case BaseAction::pass:
-				data[46] = 1;
+				data[45] = 1;
 				break;
 			case BaseAction::吃:
 				if (action_tile > ra.correspond_tiles[0]->tile)
@@ -343,7 +343,7 @@ namespace TrainingDataEncoding {
 	{
 		array<dtype, n_actions> buffer = { 0 };
 		buffer[41] = 1;
-		buffer[45] = 1;
+		buffer[46] = 1;
 		memcpy(data, buffer.data(), buffer.size());
 	}
 
