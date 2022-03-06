@@ -9,8 +9,7 @@
 #include "Player.h"
 #include <array>
 
-constexpr auto N_TILES = (34*4);
-constexpr auto INIT_SCORE = 25000;
+constexpr auto N_TILES = (34 * 4);
 
 class Table
 {
@@ -108,7 +107,6 @@ public:
 	void test_show_all_player_hand();
 	void test_show_player_info(int i_player);
 	void test_show_all_player_info();
-	void test_show_open_gamelog();
 	void test_show_full_gamelog();
 
 	inline void test_show_all() {
