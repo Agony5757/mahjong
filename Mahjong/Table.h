@@ -165,8 +165,8 @@ public:
 	inline int who_make_selection() const { return (get_phase() - Table::P1_ACTION) % 4; }
 	
 	inline Result get_result() const { return result; }	
-	inline std::vector<SelfAction> get_self_actions() const { return self_actions; }
-	inline std::vector<ResponseAction> get_response_actions() const { return response_actions; }
+	inline const std::vector<SelfAction>& get_self_actions() const { return self_actions; }
+	inline const std::vector<ResponseAction>& get_response_actions() const { return response_actions; }
 
 };
 

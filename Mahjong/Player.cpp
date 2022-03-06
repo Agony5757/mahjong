@@ -107,8 +107,8 @@ vector<SelfAction> Player::get_加杠()
 				find_match_tile(hand, fulu.tiles[0]->tile);
 			if (match_tile != hand.end()) {
 				SelfAction action;
-				action.correspond_tiles.push_back(*match_tile);
 				action.action = BaseAction::加杠;
+				action.correspond_tiles.push_back(*match_tile);
 				actions.push_back(action);
 			}
 		}
@@ -328,6 +328,7 @@ vector<ResponseAction> Player::get_荣和(Table* table, Tile* tile)
 		if (can_agari(yaku_counter(table, *this, tile, false, false, wind, table->场风).yakus)) {
 			ResponseAction action;
 			action.action = BaseAction::荣和;
+			action.correspond_tiles = { tile };
 			actions.push_back(action);
 		}
 	}
@@ -433,6 +434,7 @@ vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
 	if (is_in(听牌, tile->tile)) {
 		ResponseAction action;
 		action.action = BaseAction::抢暗杠;
+		action.correspond_tiles = { tile };
 		actions.push_back(action);
 	}
 
@@ -446,6 +448,7 @@ vector<ResponseAction> Player::get_抢杠(Tile* tile)
 	if (is_in(听牌, tile->tile)) {
 		ResponseAction action;
 		action.action = BaseAction::抢杠;
+		action.correspond_tiles = { tile };
 		actions.push_back(action);
 	}
 
@@ -602,11 +605,11 @@ void Player::play_加杠(Tile* tile)
 	remove_from_hand(tile);
 }
 
-void Player::move_from_hand_to_river(Tile* tile, int& number, bool fromhand)
+void Player::move_from_hand_to_river(Tile* tile, int& number, bool on_riichi, bool fromhand)
 {
 	remove_from_hand(tile);
 	number++;
-	river.push_back({ tile, number, riichi, true, fromhand });
+	river.push_back({ tile, number, riichi || on_riichi, true, fromhand });
 }
 
 void Player::sort_hand()

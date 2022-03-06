@@ -1,4 +1,5 @@
 ﻿#include "TrainingDataEncoding.h"
+#include "fmt/core.h"
 
 using namespace std;
 
@@ -7,6 +8,10 @@ namespace TrainingDataEncoding {
 	/* For obs encoding */
 	constexpr inline size_t locate(size_t row, size_t col)
 	{
+		if (row >= n_row || col >= n_col)
+		{
+			throw runtime_error(fmt::format("Bad access to [{},{}]", row, col));
+		}
 		return n_col * row + col;
 	}
 
@@ -122,7 +127,7 @@ namespace TrainingDataEncoding {
 				get(data, row_riichi, sa.correspond_tiles[0]->tile) = 1;
 				break;
 			case BaseAction::自摸:
-				get(data, row_tsumo, sa.correspond_tiles[0]->tile) = 1;
+				get(data, row_tsumo, action_tile) = 1;
 				break;
 			case BaseAction::九种九牌:
 				can_kyushukyuhai = true;
@@ -169,12 +174,12 @@ namespace TrainingDataEncoding {
 	{
 		if (table.get_phase() <= Table::PhaseEnum::P4_ACTION) 
 		{
-		    auto &&actions = table.get_self_actions();
+		    auto &actions = table.get_self_actions();
 			encode_self_actions_matrix(actions, action_tile, can_kyushukyuhai, data);
 		}
 		else if (table.get_phase() < Table::PhaseEnum::GAME_OVER)
 		{
-		    auto &&actions = table.get_response_actions();
+		    auto &actions = table.get_response_actions();
 			encode_response_actions_matrix(actions, action_tile, data);
 		}
 	}
@@ -226,13 +231,29 @@ namespace TrainingDataEncoding {
 			}
 		}
 	}
+
+	void encode_table_riichi_step2(const Table& table, BaseTile riichi_tile, dtype *data)
+	{
+		auto &actions = table.get_self_actions();
+		auto iter = find_if(actions.begin(), actions.end(), 
+		    [riichi_tile](SelfAction sa) 
+			{ return sa.action == BaseAction::立直 && sa.correspond_tiles[0]->tile == riichi_tile; });
+		if (iter == actions.end()) 
+		    throw runtime_error(fmt::format("Cannot riichi with {}", riichi_tile));
+
+		get(data, row_hand + 4, riichi_tile) = 1;
+		array<dtype, size_action * n_col> buffer;
+		get(buffer.data(), row_riichi - row_discard, riichi_tile) = 1;
+		memcpy(data + locate(row_action, 0), buffer.data(), buffer.size());
+	}
+
 	/* obs encoding over */
 
 	/* For action encoding */
 
 	void encode_self_actions_vector(const vector<SelfAction>& actions, dtype* data)
 	{
-		for (auto sa : actions) {
+		for (auto &sa : actions) {
 			switch (sa.action) {
 			case BaseAction::出牌:
 				data[int(sa.correspond_tiles[0]->tile)] = 1;
@@ -261,7 +282,7 @@ namespace TrainingDataEncoding {
 	
 	void encode_response_actions_vector(const vector<ResponseAction>& actions, int action_tile, dtype* data)
 	{
-		for (auto ra : actions) {
+		for (auto &ra : actions) {
 			switch (ra.action) {
 			case BaseAction::pass:
 				data[46] = 1;
@@ -300,7 +321,7 @@ namespace TrainingDataEncoding {
 		case Table::PhaseEnum::P3_ACTION:
 		case Table::PhaseEnum::P4_ACTION:
 			if (pid == table.get_phase()) {
-				vector<SelfAction>&& actions = table.get_self_actions();
+				auto &actions = table.get_self_actions();
 				encode_self_actions_vector(actions, data);
 			}
 			break;
@@ -311,10 +332,31 @@ namespace TrainingDataEncoding {
 				action_tile = ct[0]->tile;
 			}		
 			if (pid == table.get_phase() % 4) {
-				vector<ResponseAction>&& actions = table.get_response_actions();
-				encode_response_actions_matrix(actions, action_tile, data);
+				auto &actions = table.get_response_actions();
+				encode_response_actions_vector(actions, action_tile, data);
 			}
 		}
 		}
+	}
+
+	void encode_actions_vector_riichi_step2(dtype* data)
+	{
+		array<dtype, n_actions> buffer = { 0 };
+		buffer[41] = 1;
+		buffer[45] = 1;
+		memcpy(data, buffer.data(), buffer.size());
+	}
+
+	/* action encoding over */
+	
+	std::vector<BaseTile> get_riichi_tiles(const Table& table)
+	{
+		std::vector<BaseTile> bt;
+		for (auto &sa : table.get_self_actions()){
+			if (sa.action == BaseAction::立直) {
+				bt.push_back(sa.correspond_tiles[0]->tile);
+			}
+		}
+		return bt;
 	}
 }

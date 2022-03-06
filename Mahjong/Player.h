@@ -138,7 +138,7 @@ public:
 
 	// 将牌移动到牌河（一定没有人吃碰杠）
 	// remain指这张牌是不是明面上还在牌河
-	void move_from_hand_to_river(Tile* tile, int& number, bool fromhand);
+	void move_from_hand_to_river(Tile* tile, int& number, bool on_riichi, bool fromhand);
 
 	inline void set_not_remained() {
 		river.set_not_remain();

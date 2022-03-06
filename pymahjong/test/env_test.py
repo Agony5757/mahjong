@@ -81,7 +81,6 @@ def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
                                          env_test.get_oracle_obs(curr_pid).astype(np.int8)], axis=0)
                 obs_container = obs_container - obs_container  # do we need this ???
                 pm.encode_table(env_test.t, curr_pid, True, obs_container)
-
                 ag_obs = deepcopy(obs_container)
                 if True:
                     if np.any(dq_obs != ag_obs):
