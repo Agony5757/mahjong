@@ -13,7 +13,6 @@ EnvMahjong4 = env_mahjong.EnvMahjong4
 
 np.set_printoptions(threshold=np.inf)
 
-
 def col_name(col):
     if col < 6:
         return f'手牌{col}'
@@ -25,8 +24,12 @@ def col_name(col):
         return f'场{col-70}'
     elif col < 81:
         return f'最后'
+    elif col < 93:
+        return f'Action col={col-81}'
+    elif col < 110:
+        return f'Oracle Player[{(col-93)//6}] col={(col-93)%6}'
     else:
-        return "???"
+        return f'???'
 
 def encoding_test_by_random_play(num_games=100, verbose=2, error_pause=0):
 

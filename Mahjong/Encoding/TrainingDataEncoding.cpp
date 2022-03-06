@@ -15,19 +15,20 @@ namespace TrainingDataEncoding {
 		return data[locate(row, col)];
 	}
 
-	void encode_hand(const vector<Tile*> hand, int hand_offset, dtype* data)
+	void encode_hand(const vector<Tile*> hand, int hand_offset, bool can_kyushukyuhai, dtype* data)
 	{
 		array<dtype, n_tile_types> ntiles = { 0 };
 
 		for (size_t i = 0; i < hand.size(); ++i) {
 			auto id = char(hand[i]->tile);
-			get(data, row_hand + ntiles[id], id) = 1;
+			get(data, hand_offset + ntiles[id], id) = 1;
 			++ntiles[id];
 
 			if (hand[i]->red_dora) {
-				get(data, row_hand + 5, id) = 1;
+				get(data, hand_offset + 5, id) = 1;
 			}
-			if (is_幺九牌(hand[i]->tile)) {
+			
+			if (can_kyushukyuhai && is_幺九牌(hand[i]->tile)) {
 				get(data, row_action + 11, id) = 1;
 			}
 		}		
@@ -102,15 +103,16 @@ namespace TrainingDataEncoding {
 		if (action_tile >= 0) get(data, row_last, action_tile) = 1;
 	}
 	
-	void encode_self_actions_matrix(const vector<SelfAction> &self_actions, int action_tile, dtype* data)
+	void encode_self_actions_matrix(const vector<SelfAction> &self_actions, int action_tile, bool &can_kyushukyuhai, dtype* data)
 	{
+		can_kyushukyuhai = false;
+		array<dtype, n_tile_types> row_discard{0};
 		for (auto sa : self_actions) {
 			int row_offset = -1;
 			array<dtype, n_tile_types> row_data{0}; 
 			switch (sa.action) {
 			case BaseAction::出牌:
-				row_data[sa.correspond_tiles[0]->tile] = 1;
-				row_offset = 0; 
+				row_discard[sa.correspond_tiles[0]->tile] = 1;
 				break;
 			case BaseAction::暗杠:
 				row_data[sa.correspond_tiles[0]->tile] = 1;
@@ -129,12 +131,14 @@ namespace TrainingDataEncoding {
 				row_offset = 10;
 				break;
 			case BaseAction::九种九牌:
+				can_kyushukyuhai = true;
 				break;
 			default:
 				throw runtime_error("Bad SelfAction (while encoding).");
 			}
 			memcpy(data + locate(row_action + row_offset, 0), row_data.data(), sizeof(dtype) * n_col);
 		}
+		memcpy(data + locate(row_action, 0), row_discard.data(), sizeof(dtype) * n_col);
 	}
 
 	void encode_response_actions_matrix(const vector<ResponseAction> &response_actions, int action_tile, dtype *data)
@@ -174,12 +178,12 @@ namespace TrainingDataEncoding {
 		}
 	}
 	
-	void encode_action_matrix(const Table& table, int action_tile, dtype* data)
+	void encode_action_matrix(const Table& table, int action_tile, bool &can_kyushukyuhai, dtype* data)
 	{
 		if (table.get_phase() <= Table::PhaseEnum::P4_ACTION) 
 		{
 		    auto &&actions = table.get_self_actions();
-			encode_self_actions_matrix(actions, action_tile, data);
+			encode_self_actions_matrix(actions, action_tile, can_kyushukyuhai, data);
 		}
 		else if (table.get_phase() < Table::PhaseEnum::GAME_OVER)
 		{
@@ -192,20 +196,6 @@ namespace TrainingDataEncoding {
 	{
 		const auto& ps = table.players;
 		const auto& hand = ps[pid].hand;
-
-		encode_hand(hand, row_hand, data);		
-
-		for (int i = 0; i < 4; ++i) {				
-			int hand_offset = 0;
-			if (i != 0) 
-				if (use_oracle) hand_offset = row_oracle + size_hand * (i - 1);				
-				else hand_offset = -1;
-			else hand_offset = row_hand;
-			encode_river(ps[(i + pid) % 4].river.river, hand_offset, i == 0, data);
-			encode_fulu(ps[(i + pid) % 4].副露s, data, (i + pid) % 4);
-		}
-
-		encode_field(table, ps[pid], data);
 
 		int action_tile = -1;
 		switch (table.get_phase()) {
@@ -225,11 +215,28 @@ namespace TrainingDataEncoding {
 		}
 		}
 		encode_last(action_tile, data);
-		encode_action_matrix(table, action_tile, data);
+		bool can_kyushukyuhai = false;
+		/* if kyushukyuhai is available, then Kyuhais are extra recorded (row=92). */
+		encode_action_matrix(table, action_tile, can_kyushukyuhai, data);
+
+		encode_hand(hand, row_hand, can_kyushukyuhai, data);		
+
+		for (int i = 0; i < 4; ++i) {				
+			int hand_offset = 0;
+			if (i != 0) 
+				if (use_oracle) hand_offset = row_oracle + size_hand * (i - 1);				
+				else hand_offset = -1;
+			else hand_offset = row_hand;
+			encode_river(ps[(i + pid) % 4].river.river, i, hand_offset, data);
+			encode_fulu(ps[(i + pid) % 4].副露s, data, (i + pid) % 4);
+		}
+
+		encode_field(table, ps[pid], data);
+
 		if (use_oracle) {
 			for (int i = 1; i < 4; ++i) {
 				int other_pid = (pid + i) % 4;
-				encode_hand(ps[other_pid].hand, row_oracle + size_hand * (i - 1), data);
+				encode_hand(ps[other_pid].hand, row_oracle + size_hand * (i - 1), false, data);
 			}
 		}
 	}
