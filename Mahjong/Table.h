@@ -138,9 +138,8 @@ public:
 	SelfAction selected_action;
 	Tile* tile = nullptr;
 	std::vector<ResponseAction> actions; // response actions
-
-	bool is_from_hand = false; // global variable for river log
-	BaseAction final_action = BaseAction::Pass;
+	// bool FROM_手切摸切 = false; // global variable for river log
+	BaseAction final_action = BaseAction::pass;
 	
 	void from_beginning();
 

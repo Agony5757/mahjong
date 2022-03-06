@@ -64,6 +64,10 @@ public:
 	inline void push_back(RiverTile rt) {
 		river.push_back(rt);
 	}
+
+	inline void set_not_remain() {
+		river.back().remain = false;
+	}
 };
 
 class Player {
@@ -134,15 +138,15 @@ public:
 
 	// 将牌移动到牌河（一定没有人吃碰杠）
 	// remain指这张牌是不是明面上还在牌河
-	void move_from_hand_to_river(Tile* tile, int& number, bool remain, bool fromhand);
+	void move_from_hand_to_river(Tile* tile, int& number, bool fromhand);
 
-	inline void move_from_hand_to_river_log_only(Tile* tile, int& number, bool fromhand) {
-		return move_from_hand_to_river(tile, number, false, fromhand);
+	inline void set_not_remained() {
+		river.set_not_remain();
 	}
 
-	inline void move_from_hand_to_river_really(Tile* tile, int& number, bool fromhand) {
+	/*inline void move_from_hand_to_river_really(Tile* tile, int& number, bool fromhand) {
 		return move_from_hand_to_river(tile, number, true, fromhand);
-	}
+	}*/
 
 	void sort_hand();
 	void test_show_hand();
