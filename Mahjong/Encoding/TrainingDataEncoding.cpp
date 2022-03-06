@@ -174,12 +174,12 @@ namespace TrainingDataEncoding {
 	{
 		if (table.get_phase() <= Table::PhaseEnum::P4_ACTION) 
 		{
-		    auto &actions = table.get_self_actions();
+		    const auto &actions = table.get_self_actions();
 			encode_self_actions_matrix(actions, action_tile, can_kyushukyuhai, data);
 		}
 		else if (table.get_phase() < Table::PhaseEnum::GAME_OVER)
 		{
-		    auto &actions = table.get_response_actions();
+		    const auto &actions = table.get_response_actions();
 			encode_response_actions_matrix(actions, action_tile, data);
 		}
 	}
@@ -234,7 +234,7 @@ namespace TrainingDataEncoding {
 
 	void encode_table_riichi_step2(const Table& table, BaseTile riichi_tile, dtype *data)
 	{
-		auto &actions = table.get_self_actions();
+		const auto &actions = table.get_self_actions();
 		auto iter = find_if(actions.begin(), actions.end(), 
 		    [riichi_tile](SelfAction sa) 
 			{ return sa.action == BaseAction::立直 && sa.correspond_tiles[0]->tile == riichi_tile; });
@@ -321,18 +321,18 @@ namespace TrainingDataEncoding {
 		case Table::PhaseEnum::P3_ACTION:
 		case Table::PhaseEnum::P4_ACTION:
 			if (pid == table.get_phase()) {
-				auto &actions = table.get_self_actions();
+				const auto &actions = table.get_self_actions();
 				encode_self_actions_vector(actions, data);
 			}
 			break;
 		default: {	
 			int action_tile = -1;
-			auto& ct = table.selected_action.correspond_tiles;
+			const auto& ct = table.selected_action.correspond_tiles;
 			if (ct.size() > 0) {
 				action_tile = ct[0]->tile;
 			}		
 			if (pid == table.get_phase() % 4) {
-				auto &actions = table.get_response_actions();
+				const auto &actions = table.get_response_actions();
 				encode_response_actions_vector(actions, action_tile, data);
 			}
 		}
@@ -352,7 +352,7 @@ namespace TrainingDataEncoding {
 	std::vector<BaseTile> get_riichi_tiles(const Table& table)
 	{
 		std::vector<BaseTile> bt;
-		for (auto &sa : table.get_self_actions()){
+		for (const auto &sa : table.get_self_actions()){
 			if (sa.action == BaseAction::立直) {
 				bt.push_back(sa.correspond_tiles[0]->tile);
 			}
