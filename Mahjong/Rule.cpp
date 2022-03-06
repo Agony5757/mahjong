@@ -171,7 +171,7 @@ static bool check_color_count(vector<BaseTile> curTiles) {
 	return true;
 }
 
-bool TileSplitter::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
+bool TileSplitter::has_one_completed_tiles(const vector<BaseTile>& curTiles)
 {
 	if (curTiles.size() == 0) {
 		return true;
@@ -205,7 +205,7 @@ bool TileSplitter::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
 				completed_tiles.head = tmp_group;
 
 				// 根据当前状态递归
-				bool ret = hasOneCompletedTiles(tmpTiles);
+				bool ret = has_one_completed_tiles(tmpTiles);
 				if (ret) { return true; }
 
 				// 恢复系统状态
@@ -226,7 +226,7 @@ bool TileSplitter::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
 			// 设置临时状态
 			completed_tiles.body.push_back(tmp_group);
 			// 根据当前状态递归
-			bool ret = hasOneCompletedTiles(tmpTiles);
+			bool ret = has_one_completed_tiles(tmpTiles);
 			if (ret) { return true; }
 			// 恢复状态
 			completed_tiles.body.pop_back();
@@ -249,7 +249,7 @@ bool TileSplitter::hasOneCompletedTiles(const vector<BaseTile>& curTiles)
 			// 设置临时状态
 			completed_tiles.body.push_back(tmp_group);
 			// 根据当前状态递归
-			bool ret = hasOneCompletedTiles(tmpTiles);
+			bool ret = has_one_completed_tiles(tmpTiles);
 			if (ret) { return true; }
 			// 恢复状态
 			completed_tiles.body.pop_back();
@@ -280,49 +280,8 @@ bool has_completed_tiles(std::vector<BaseTile> tiles)
 	if (tiles.size() % 3 != 2) throw runtime_error("Not Enough Tiles");
 	auto& inst = TileSplitter::GetInstance();
 	inst.reset();
-	return inst.hasOneCompletedTiles(tiles);
+	return inst.has_one_completed_tiles(tiles);
 }
-//
-//TileGroup convert_extern_tilegroup_to_internal(mahjong_algorithm::TileGroup tilegroup)
-//{
-//	TileGroup tg;
-//	tg.tiles = convert_extern_tiles_to_basetiles(tilegroup.getTilesList());
-//	switch (tilegroup.getTileGroupType()) {
-//	case mahjong_algorithm::TileGroupType::Toitsu:
-//		tg.type = TileGroup::Type::Toitsu;
-//		return tg;
-//	case mahjong_algorithm::TileGroupType::Shuntsu:
-//		tg.type = TileGroup::Type::Shuntsu;
-//		return tg;
-//	case mahjong_algorithm::TileGroupType::Ankou:
-//		tg.type = TileGroup::Type::Koutsu;
-//		return tg;
-//	default:
-//		throw runtime_error("Unhandled TileGroupType");		
-//	}
-//}
-//
-//CompletedTiles convert_extern_completed_tiles_to_internal(mahjong_algorithm::CompletedTiles completed_tiles)
-//{
-//	CompletedTiles ct;
-//	ct.head = convert_extern_tilegroup_to_internal(completed_tiles.head);
-//	for (auto body : completed_tiles.body) {
-//		ct.body.push_back(convert_extern_tilegroup_to_internal(body));
-//	}
-//	return ct;
-//}
-//
-//std::vector<CompletedTiles> convert_extern_completed_tiles_to_internal(
-//	std::vector<mahjong_algorithm::CompletedTiles> completed_tiles)
-//{
-//	std::vector<CompletedTiles> internal_completed_tiles;
-//	for_each(completed_tiles.begin(), completed_tiles.end(),
-//		[&internal_completed_tiles](mahjong_algorithm::CompletedTiles& ct) 
-//		{internal_completed_tiles.push_back(
-//		convert_extern_completed_tiles_to_internal(ct)); }
-//	);
-//	return internal_completed_tiles;
-//}
 
 bool is_ordinary_shape(std::vector<BaseTile> tiles) {
 
@@ -590,113 +549,3 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 	}
 	return false;
 }
-
-
-//
-//std::vector<Yaku> get_立直_双立直(bool double_riichi, bool riichi, bool ippatsu)
-//{
-//	vector<Yaku> yaku;
-//	if (double_riichi) {
-//		yaku.push_back(Yaku::两立直); 
-//	}
-//	else if (riichi) {
-//		yaku.push_back(Yaku::立直);
-//	}
-//	if (ippatsu) {
-//		yaku.push_back(Yaku::ippatsu);
-//	}
-//	return yaku;
-//}
-//
-//vector<Yaku> get_平和(CompletedTiles complete_tiles, bool Menzen, BaseTile get_tile, 
-//	Wind 场风, Wind 自风)
-//{
-//	vector<Yaku> yaku;
-//	// cout << "Warning: 平和 is not considered." << endl;
-//	complete_tiles.sort_body();
-//	if (complete_tiles.body[0].type != TileGroup::Toitsu) {
-//		throw runtime_error("First group is not Toitsu.");
-//	}
-//	if (!Menzen) return yaku;
-//	
-//	if (!all_of(complete_tiles.body.begin() + 1, complete_tiles.body.end(),
-//		[](TileGroup &s) {return (s.type == TileGroup::Shuntsu); })
-//	) {
-//		return yaku;
-//	}
-//
-//	if (!any_of(complete_tiles.body.begin()+1, complete_tiles.body.end(),
-//		[get_tile](TileGroup &s) { 
-//		// get_tile存在于s.tiles中
-//		// 并且s.tiles除去这张牌，是23，34，。。。78中的一个
-//		// 因为是顺子，所以肯定不是字牌
-//		// 因此和这两张牌都不是老头牌，以及这两张牌差为1等价
-//		auto iter = find(s.tiles.begin(), s.tiles.end(), get_tile);
-//		if (iter == s.tiles.end()) { return false; }
-//		else {
-//			s.tiles.erase(iter);
-//			sort(s.tiles.begin(), s.tiles.end());
-//			if (is_老头牌(s.tiles[0]) || is_老头牌(s.tiles[1])
-//				||
-//				abs(s.tiles[0] - s.tiles[1]) != 1
-//				) {
-//				return false;
-//			}
-//			else return true;
-//		}
-//	}))
-//		return yaku;
-//
-//	if (is_役牌(get_tile, 场风, 自风))
-//		return yaku;
-//
-//	yaku.push_back(Yaku::平和);
-//
-//	return yaku;
-//}
-//
-//std::vector<Yaku> get_门前自摸(bool Menzen, bool 自摸)
-//{
-//	vector<Yaku> yaku;
-//	if (Menzen && 自摸) {
-//		yaku.push_back(Yaku::门前清自摸和);
-//	}
-//	return yaku;
-//}
-//
-//std::vector<Yaku> get_四暗刻_三暗刻(CompletedTiles complete_tiles)
-//{
-//	vector<Yaku> yaku;
-//	cout << "Warning: 四暗刻 is not considered." << endl;
-//	return yaku;
-//}
-//
-//std::vector<Yaku> get_yaku_tsumo(Table* table, Player * player)
-//{
-//	auto Menzen = player->Menzen;
-//	auto riichi = player->riichi;
-//	auto double_riichi = player->double_riichi;
-//	bool 自摸 = true;
-//	bool ippatsu = player->ippatsu;
-//
-//	vector<Yaku> yakus;
-//	merge_into(yakus, get_门前自摸(Menzen, 自摸));
-//	merge_into(yakus, get_立直_双立直(double_riichi, riichi, ippatsu));
-//
-//	return yakus;
-//}
-//
-//std::vector<Yaku> get_yaku_ron(Table* table, Player * player, Tile* get_tile)
-//{
-//	auto Menzen = player->Menzen;
-//	auto riichi = player->riichi;
-//	auto double_riichi = player->double_riichi;
-//	bool 自摸 = true;
-//	bool ippatsu = player->ippatsu;
-//
-//	vector<Yaku> yakus;
-//	merge_into(yakus, get_立直_双立直(double_riichi, riichi, ippatsu));
-//
-//	return yakus;
-//}
-//

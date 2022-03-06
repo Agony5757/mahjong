@@ -62,11 +62,9 @@ public:
 	void init_wind();
 	void draw(int i_player);
 	void draw(int i_player, int n_tiles);
-	void draw_rinshan(int i_player);
 	void draw_tenhou_style();
-
 	void draw_normal(int i_player);
-	void 发岭上牌(int i_player);
+	void draw_rinshan(int i_player);
 
 	void next_turn(int nextturn);
 
@@ -79,7 +77,7 @@ public:
 		亲家 = 1 << 5,
 		REMAIN_TILE = 1 << 6,
 	};
-	std::string to_string(int option = YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE) const;
+	std::string to_string() const;
 
 	inline bool after_chipon() { return last_action == BaseAction::Chi || last_action == BaseAction::Pon; }
 	inline bool after_daiminkan() {	return last_action == BaseAction::Kan; }
@@ -93,7 +91,7 @@ public:
 	std::vector<SelfAction> generate_riichi_self_actions();
 
 	// 根据turn打出的tile，可以做出的决定
-	std::vector<ResponseAction> generate_response_actions(int player, Tile* tile, bool);
+	std::vector<ResponseAction> generate_response_actions(int player, Tile* tile, bool is_next);
 
 	// 根据turn打出的tile，可以做出的抢杠决定
 	std::vector<ResponseAction> generate_chanankan_response_actions(int player, Tile* tile);

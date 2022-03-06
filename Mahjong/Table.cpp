@@ -414,57 +414,39 @@ void Table::draw_normal(int i_player)
 	draw(i_player);
 }
 
-void Table::发岭上牌(int i_player)
-{
-	draw(i_player);
-	gamelog.log_draw(i_player, players[i_player].hand.back());
-}
-
 string Table::to_string() const
 {
 	stringstream ss;
-	if (true) {
-		ss << "Yama:";
-		if (yama.size() < 14) {
-			ss << "Less than 14" << endl;
-			return ss.str();
-		}
+	ss << "Yama:";
+	if (yama.size() < 14) {
+		ss << "Less than 14?\n";
+	}
+	else {
 		for (int i = 0; i < 14; ++i) {
 			ss << yama[i]->to_string() << " ";
 		}
-		ss << "(王牌区)| ";
+		ss << "(WanPai)| ";
 		for (int i = 14; i < yama.size(); ++i) {
 			ss << yama[i]->to_string() << " ";
 		}
-		ss << endl;
+		ss << "\n";
 	}
-	if (true) {
-		ss << "宝牌指示牌为:";
-		for (int i = 0; i < n_active_dora; ++i) {
-			ss << dora_indicator[i]->to_string() << " ";
-		}
-		ss << endl;
+	
+	ss << "Dora indicator:";
+	for (int i = 0; i < n_active_dora; ++i) {
+		ss << dora_indicator[i]->to_string() << " ";
 	}
+	ss << "\n";
 
-	if (option & ToStringOption::REMAIN_TILE) {
-		ss << "余" << get_remain_tile() << "张牌" << endl;
-	}
-	if (option & ToStringOption::PLAYER) {
-		for (int i = 0; i < 4; ++i)
-		ss << "Player" << i << " : "
-			<< endl << players[i].to_string();
-		ss << endl;
-	}
-	if (option & ToStringOption::亲家) {
-		ss << "亲家: Player " << oya << endl;
-	}
-	if (option & ToStringOption::N_本场) {
-		ss << honba << "本场";
-	}
-	if (option & ToStringOption::N_立直棒) {
-		ss << honba << "立直棒";
-	}
-	ss << endl;
+	ss << "Remain " << get_remain_tile() << " Tiles" << endl;
+
+	for (int i = 0; i < 4; ++i)
+	ss << "Player" << i << " : \n" << players[i].to_string();
+	ss << "\n";
+
+	ss << "Oya: Player " << oya << endl;	
+	ss << honba << "Honba ,";
+	ss << kyoutaku << " Kyoutaku";
 	return ss.str();
 }
 
@@ -505,7 +487,7 @@ vector<SelfAction> Table::generate_riichi_self_actions()
 }
 
 vector<ResponseAction> Table::generate_response_actions(
-	int i, Tile* tile, bool is下家)
+	int i, Tile* tile, bool is_next)
 {
 	FunctionProfiler;
 	vector<ResponseAction> actions;
@@ -526,7 +508,7 @@ vector<ResponseAction> Table::generate_response_actions(
 		if (get_remain_kan_tile() > 0)
 			merge_into(actions, the_player.get_kan(tile));
 
-		if (is下家) {
+		if (is_next) {
 			merge_into(actions, the_player.get_chi(tile));
 		}
 	}
@@ -608,7 +590,7 @@ void Table::make_selection(int selection)
 			// 大部分情况都是手切, 除了上一步动作为 出牌 加杠 暗杠
 			// 并且判定抉择弃牌是不是最后一张牌
 
-			is_from_hand = DiscardFromHand;
+			bool is_from_hand = DiscardFromHand;
 			if (last_action == BaseAction::Discard || 
 			    last_action == BaseAction::KaKan || 
 				last_action == BaseAction::AnKan) {
@@ -616,7 +598,7 @@ void Table::make_selection(int selection)
 				if (tile == players[turn].hand.back())
 					is_from_hand = DiscardFromTsumo;
 			}
-			players[turn].execute_discard(tile, river_counter, FROM_手切摸切);
+			players[turn].execute_discard(tile, river_counter, is_from_hand);
 
 			phase = P1_RESPONSE;
 			if (0 == turn) {
@@ -626,10 +608,10 @@ void Table::make_selection(int selection)
 			}
 			else {
 				// 对于所有其他人
-				bool is下家 = false;
+				bool is_next = false;
 				if (0 == (turn + 1) % 4)
-					is下家 = true;
-				response_actions = generate_response_actions(0, tile, is下家);
+					is_next = true;
+				response_actions = generate_response_actions(0, tile, is_next);
 			}			
 			return;
 		}
@@ -735,7 +717,7 @@ void Table::make_selection(int selection)
 		case BaseAction::Pass:
 
 			// 杠，打出牌之后且其他人pass
-			if (after_杠()) { n_active_dora++; }
+			if (after_kan()) { n_active_dora++; }
 
 			if (selected_action.action == BaseAction::Riichi) {
 				// 立直成功
@@ -762,7 +744,7 @@ void Table::make_selection(int selection)
 		case BaseAction::Kan:
 
 			// 明杠，打出牌之后且其他人吃碰
-			if (after_杠()) { n_active_dora++; }
+			if (after_kan()) { n_active_dora++; }
 			if (selected_action.action == BaseAction::Riichi) {
 				// 立直成功
 				if (players[turn].first_round) {
@@ -776,7 +758,7 @@ void Table::make_selection(int selection)
 
 			players[turn].set_not_remained();
 			
-			players[response].Menzen = false;
+			players[response].menzen = false;
 			players[response].execute_naki(
 				actions[response].correspond_tiles, tile);
 
@@ -918,7 +900,7 @@ void Table::make_selection(int selection)
 			return;
 		}
 		players[turn].execute_ankan(selected_action.correspond_tiles[0]->tile);
-		last_action = BaseAction::暗杠;
+		last_action = BaseAction::AnKan;
 		// 立即翻宝牌指示牌
 		n_active_dora++;
 

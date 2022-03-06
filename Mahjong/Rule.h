@@ -111,21 +111,21 @@ inline bool operator!=(const CompletedTiles& c1, const CompletedTiles& c2) {
 	return false;
 }
 
-class 基本和牌型
+class TileSplitter
 {
 public:
-	static 基本和牌型& GetInstance();
+	static TileSplitter& GetInstance();
 	void reset();
 
 	//std::vector<CompletedTiles> testGetYaku(const Player& p, const Tile& agariTile, bool isTsumo);
 
-	std::vector<CompletedTiles> getAllCompletedTiles(const std::vector<BaseTile>& curTiles);
-	bool hasOneCompletedTiles(const std::vector<BaseTile>& curTiles);
+	std::vector<CompletedTiles> get_all_completed_tiles(const std::vector<BaseTile>& curTiles);
+	bool has_one_completed_tiles(const std::vector<BaseTile>& curTiles);
 
 private:
-	基本和牌型() = default;
-	基本和牌型(const 基本和牌型& other) = delete;
-	~基本和牌型() = default;
+	TileSplitter() = default;
+	TileSplitter(const TileSplitter& other) = delete;
+	~TileSplitter() = default;
 
 	CompletedTiles completed_tiles;
 	bool has_head = false;
