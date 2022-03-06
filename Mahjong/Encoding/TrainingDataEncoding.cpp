@@ -186,7 +186,7 @@ namespace TrainingDataEncoding {
 		}
 	}
 
-	void encode_table(const Table& table, int pid, dtype* data, bool use_oracle)
+	void encode_table(const Table& table, int pid, bool use_oracle, dtype* data)
 	{
 		const auto& ps = table.players;
 		const auto& hand = ps[pid].hand;
