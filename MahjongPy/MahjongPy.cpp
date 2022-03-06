@@ -347,6 +347,7 @@ PYBIND11_MODULE(MahjongPy, m)
 		;
 
 	m.def("encode_table", &encode_table);
+	m.def("encode_action", &encode_action);
 }
 
 #ifdef __GNUC__
