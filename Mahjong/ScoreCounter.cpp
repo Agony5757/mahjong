@@ -119,14 +119,6 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 		auto iter = unique(complete_tiles_list.begin(), complete_tiles_list.end());
 		complete_tiles_list.erase(iter, complete_tiles_list.end());
 	}
-#ifdef MAJ_DEBUG
-	if (MAJ_DEBUG_SIG) {
-		cout << "MAJ_DEBUG: Removed Duplicate CompletedTiles" << endl;
-		for (auto ct : complete_tiles_list) {
-			cout << ct.to_string() << endl;
-		}
-	}
-#endif
 	// 接下来统计七对子
 	if (is_7toitsu_shape(convert_tiles_to_base_tiles(tiles))) {
 		// 即使是役满这里也要纳入考虑，因为存在大七星
@@ -1144,35 +1136,9 @@ vector<pair<vector<Yaku>, int>> get_yaku_from_complete_tiles(
 
 	// 消去tile_group_strings中完全相同的元素
 
-#ifdef MAJ_DEBUG
-	bool MAJ_DEBUG_SIG = false;
-	if (tile_group_strings.size() >= 2) {
-		MAJ_DEBUG_SIG = true;
-		cout << "MAJ_DEBUG: Start Remove Duplicate" << endl;
-		for (auto tgs : tile_group_strings) {
-			for (auto tg : tgs) {
-				cout << tg << " ";
-			}
-			cout << endl;
-		}
-	}
-#endif
-
 	sort(tile_group_strings.begin(), tile_group_strings.end());
 	auto iter = unique(tile_group_strings.begin(), tile_group_strings.end());
 	tile_group_strings.erase(iter, tile_group_strings.end());
-
-#ifdef MAJ_DEBUG
-	if (MAJ_DEBUG_SIG) {
-		cout << "MAJ_DEBUG: Already Remove Duplicate" << endl;
-		for (auto tgs : tile_group_strings) {
-			for (auto tg : tgs) {
-				cout << tg << " ";
-			}
-			cout << endl;
-		}
-	}
-#endif
 
 	for (auto tile_group : tile_group_strings) {
 		auto yaku_fu = get_yaku_from_complete_tiles(tile_group, self_wind, game_wind);
