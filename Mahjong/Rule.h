@@ -6,6 +6,8 @@
 #include "Yaku.h"
 #include <functional>
 
+namespace_mahjong
+
 /* Converter & TileGroup Data Structure */
 
 struct TileGroup {
@@ -172,5 +174,7 @@ bool can_tsumo(std::vector<Tile*> hands);
 
 bool is纯九莲和牌型(std::vector<BaseTile> tiles);
 bool is九莲和牌型(std::vector<BaseTile> tiles);
+
+namespace_mahjong_end
 
 #endif

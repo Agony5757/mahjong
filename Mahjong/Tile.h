@@ -12,7 +12,11 @@
 #include <stdlib.h>
 #include <time.h>
 
-// #define MAJ_DEBUG
+#define namespace_mahjong namespace mahjong {
+#define namespace_mahjong_end }
+#define using_mahjong using namespace mahjong
+
+namespace_mahjong
 
 enum Wind {
 	East, South, West, North
@@ -415,5 +419,7 @@ struct Fulu {
 		return ss.str();
 	}
 };
+
+namespace_mahjong_end
 
 #endif

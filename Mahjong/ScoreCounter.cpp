@@ -4,6 +4,7 @@
 #include "Rule.h"
 #include "macro.h"
 
+namespace_mahjong
 using namespace std;
 
 #define REGISTER_SCORE(亲, 自摸, score_铳亲, score_亲自摸_all, score_铳子, score_子自摸_亲, score_子自摸_子) \
@@ -1215,3 +1216,6 @@ int calculate_fan(vector<Yaku> yakus)
 	}
 
 }
+
+namespace_mahjong_end
+

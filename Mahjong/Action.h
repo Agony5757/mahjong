@@ -3,6 +3,8 @@
 
 #include "Tile.h"
 
+namespace_mahjong
+
 enum class BaseAction : uint8_t {
 	// response begin
 	pass,
@@ -50,5 +52,7 @@ struct ResponseAction : public Action
 	ResponseAction(BaseAction, std::vector<Tile*>);
     bool operator==(const ResponseAction& other);
 };
+
+namespace_mahjong_end
 
 #endif

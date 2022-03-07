@@ -6,6 +6,8 @@
 #include "GameResult.h"
 #include "macro.h"
 
+namespace_mahjong
+
 enum class LogAction {
 	暗杠,
 	碰,
@@ -95,5 +97,7 @@ public:
 	void logGameOver(Result result);
 	std::string to_string();
 };
+
+namespace_mahjong_end
 
 #endif

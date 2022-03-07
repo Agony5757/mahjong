@@ -6,6 +6,8 @@
 #include "macro.h"
 #include "Rule.h"
 
+namespace_mahjong
+
 // Forward Decl
 class Table;
 
@@ -151,5 +153,7 @@ public:
 	void sort_hand();
 	void test_show_hand();
 };
+
+namespace_mahjong_end
 
 #endif

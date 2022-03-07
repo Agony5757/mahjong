@@ -6,6 +6,7 @@
 #include <random>
 #include <cstring>
 
+namespace_mahjong
 using namespace std;
 
 vector<BaseTile> Table::get_dora() const
@@ -1003,3 +1004,4 @@ void Table::make_selection(int selection)
 
 	}
 }
+namespace_mahjong_end

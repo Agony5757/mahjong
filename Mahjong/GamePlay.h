@@ -4,6 +4,8 @@
 #include "Table.h"
 #include <array>
 
+namespace_mahjong
+
 class PaipuReplayer
 {
 public:
@@ -22,5 +24,7 @@ public:
 	Result get_result() const;	
 	~PaipuReplayer() {  } 
 };
+
+namespace_mahjong_end
 
 #endif

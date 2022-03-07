@@ -7,6 +7,8 @@
 #include "ScoreCounter.h"
 #include <array>
 
+namespace_mahjong
+
 enum class ResultType {
 	荣和终局,
 	自摸终局,
@@ -79,5 +81,7 @@ Result 荣和结算(Table* table, Tile* ,std::vector<int> response_player, bool 
 
 Result 抢暗杠结算(Table* table, Tile*, std::vector<int> response_player);
 Result 抢杠结算(Table* table, Tile*, std::vector<int> response_player);
+
+namespace_mahjong_end
 
 #endif

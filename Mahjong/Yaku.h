@@ -3,6 +3,11 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <sstream>
+#include "Tile.h"
+
+namespace_mahjong
+
 enum class Yaku {	
 
 	// 特指无役
@@ -200,7 +205,6 @@ inline std::string yaku_to_string(Yaku yaku) {
 	return yaku_name[(int)yaku];
 }
 
-#include <sstream>
 inline std::string yakus_to_string(std::vector<Yaku> yakus) {
 	std::stringstream ss;
 	ss << "|";
@@ -209,5 +213,7 @@ inline std::string yakus_to_string(std::vector<Yaku> yakus) {
 	}
 	return ss.str();
 }
+
+namespace_mahjong_end
 
 #endif

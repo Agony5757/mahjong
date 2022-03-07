@@ -13,6 +13,8 @@
 #include "GamePlay.h"
 #include "tenhou.h"
 #include "EncodingPy.h"
+
+using_mahjong;
 using namespace std;
 using namespace pybind11::literals;
 namespace py = pybind11;

@@ -1,5 +1,6 @@
 ﻿#include "Action.h"
 
+namespace_mahjong
 using namespace std;
 
 Action::Action(BaseAction action, vector<Tile*> tiles)
@@ -75,3 +76,5 @@ string Action::to_string() const
 		throw runtime_error("Invalid BaseAction");
 	}
 }
+
+namespace_mahjong_end

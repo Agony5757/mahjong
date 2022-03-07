@@ -3,6 +3,7 @@
 #include "EncodingPy.h"
 
 using namespace std;
+using_mahjong;
 namespace enc = TrainingDataEncoding;
 
 void encode_table(const Table& table, int pid, bool use_oracle, pybind11::array_t<enc::dtype> arr)

@@ -4,6 +4,7 @@
 #include "macro.h"
 #include "Rule.h"
 
+namespace_mahjong
 using namespace std;
 
 static Result 中途流局结算(Table *table) {
@@ -325,3 +326,5 @@ Result 抢杠结算(Table * table, Tile* agari_tile, std::vector<int> response_p
 {
 	return 荣和结算(table, agari_tile, response_player, true, false);
 }
+
+namespace_mahjong_end

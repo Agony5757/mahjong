@@ -1,6 +1,7 @@
 ﻿#include "Player.h"
 #include "Table.h"
 
+namespace_mahjong
 using namespace std;
 
 Player::Player() 
@@ -621,3 +622,5 @@ void Player::test_show_hand()
 {
 	cout << hand_to_string();
 }
+
+namespace_mahjong_end

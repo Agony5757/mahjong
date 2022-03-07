@@ -9,6 +9,8 @@
 #include "Player.h"
 #include <array>
 
+namespace_mahjong
+
 constexpr auto N_TILES = (34 * 4);
 
 class Table
@@ -169,5 +171,7 @@ public:
 	inline std::vector<ResponseAction> get_response_actions() const { return response_actions; }
 
 };
+
+namespace_mahjong_end
 
 #endif

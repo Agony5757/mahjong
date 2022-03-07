@@ -1,6 +1,7 @@
 ﻿#include "GamePlay.h"
 #include "macro.h"
 
+namespace_mahjong
 using namespace std;
 
 void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家)
@@ -146,3 +147,5 @@ Result PaipuReplayer::get_result() const
 {
 	return table.get_result();
 }
+
+namespace_mahjong_end

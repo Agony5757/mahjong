@@ -1,6 +1,8 @@
 ﻿#include "Rule.h"
 #include "macro.h"
 #include "Table.h"
+
+namespace_mahjong
 using namespace std;
 
 static const BaseTile shuntsu_bad_head[] = { _8m, _9m, _8p, _9p, _8s, _9s, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
@@ -282,47 +284,6 @@ bool has_completed_tiles(std::vector<BaseTile> tiles)
 	inst.reset();
 	return inst.hasOneCompletedTiles(tiles);
 }
-//
-//TileGroup convert_extern_tilegroup_to_internal(mahjong_algorithm::TileGroup tilegroup)
-//{
-//	TileGroup tg;
-//	tg.tiles = convert_extern_tiles_to_basetiles(tilegroup.getTilesList());
-//	switch (tilegroup.getTileGroupType()) {
-//	case mahjong_algorithm::TileGroupType::Toitsu:
-//		tg.type = TileGroup::Type::Toitsu;
-//		return tg;
-//	case mahjong_algorithm::TileGroupType::Shuntsu:
-//		tg.type = TileGroup::Type::Shuntsu;
-//		return tg;
-//	case mahjong_algorithm::TileGroupType::Ankou:
-//		tg.type = TileGroup::Type::Koutsu;
-//		return tg;
-//	default:
-//		throw runtime_error("Unhandled TileGroupType");		
-//	}
-//}
-//
-//CompletedTiles convert_extern_completed_tiles_to_internal(mahjong_algorithm::CompletedTiles completed_tiles)
-//{
-//	CompletedTiles ct;
-//	ct.head = convert_extern_tilegroup_to_internal(completed_tiles.head);
-//	for (auto body : completed_tiles.body) {
-//		ct.body.push_back(convert_extern_tilegroup_to_internal(body));
-//	}
-//	return ct;
-//}
-//
-//std::vector<CompletedTiles> convert_extern_completed_tiles_to_internal(
-//	std::vector<mahjong_algorithm::CompletedTiles> completed_tiles)
-//{
-//	std::vector<CompletedTiles> internal_completed_tiles;
-//	for_each(completed_tiles.begin(), completed_tiles.end(),
-//		[&internal_completed_tiles](mahjong_algorithm::CompletedTiles& ct) 
-//		{internal_completed_tiles.push_back(
-//		convert_extern_completed_tiles_to_internal(ct)); }
-//	);
-//	return internal_completed_tiles;
-//}
 
 bool isCommon和牌型(std::vector<BaseTile> tiles) {
 
@@ -591,6 +552,7 @@ bool is九莲和牌型(std::vector<BaseTile> tiles)
 	return false;
 }
 
+namespace_mahjong_end
 
 //
 //std::vector<Yaku> get_立直_双立直(bool double_riichi, bool riichi, bool 一发)

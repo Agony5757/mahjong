@@ -2,6 +2,7 @@
 #include "Table.h"
 #include <sstream>
 
+namespace_mahjong
 using namespace std;
 
 BaseGameLog::BaseGameLog(int p1, int p2, LogAction action, Tile* tile,
@@ -162,3 +163,5 @@ void GameLog::logGameOver(Result _result)
 {
 	result = _result;
 }
+
+namespace_mahjong_end

@@ -4,6 +4,8 @@
 #include <vector>
 #include "Table.h"
 
+namespace_mahjong
+
 namespace TrainingDataEncoding {
 
 	using dtype = int8_t;
@@ -50,4 +52,5 @@ namespace TrainingDataEncoding {
 	std::vector<BaseTile> get_riichi_tiles(const Table& table);
 };
 
+namespace_mahjong_end
 #endif

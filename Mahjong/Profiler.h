@@ -6,7 +6,12 @@
 #include <vector>
 #include <stdexcept>
 #include <algorithm>
+#include "Tile.h"
 #include "fmt/core.h"
+
+#define Profiling
+
+namespace_mahjong
 
 constexpr double nanosec = 1;
 constexpr double microsec = nanosec / 1e3;
@@ -197,4 +202,7 @@ struct profiler {
 
 };
 #define FunctionProfiler volatile profiler _profilehelper_(__FUNCTION__)
+
+namespace_mahjong_end
+
 #endif
