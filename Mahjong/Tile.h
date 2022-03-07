@@ -161,21 +161,6 @@ inline bool is_场自风(BaseTile tile, Wind 场风) {
 	}
 }
 
-//inline bool is_自风(BaseTile tile, Wind 自风) {
-//	switch (自风) {
-//	case Wind::East:
-//		return tile == BaseTile::_1z;
-//	case Wind::West:
-//		return tile == BaseTile::_3z;
-//	case Wind::South:
-//		return tile == BaseTile::_2z;
-//	case Wind::North:
-//		return tile == BaseTile::_4z;
-//	default:
-//		throw std::runtime_error("Unknown wind.");
-//	}
-//}
-
 inline bool is_三元牌(BaseTile tile) {
 	return (tile == BaseTile::_7z || tile == BaseTile::_6z || tile == BaseTile::_5z);
 }
@@ -297,18 +282,6 @@ public:
 		return ret + ']';
 	}
 };
-
-inline bool tile_comparator(Tile* t2, Tile* t1) {
-	if (t1->tile > t2->tile) {
-		return true;
-	}
-	else if (t1->tile < t2->tile) {
-		return false;
-	}
-	else {
-		return t1 > t2;
-	}
-}
 
 inline std::string tiles_to_string(std::vector<Tile*> tiles) {
 	std::stringstream ss;

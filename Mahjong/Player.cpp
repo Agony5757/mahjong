@@ -615,7 +615,7 @@ void Player::move_from_hand_to_river(Tile* tile, int& number, bool on_riichi, bo
 
 void Player::sort_hand()
 {
-	sort(hand.begin(), hand.end(), tile_comparator);
+	sort(hand.begin(), hand.end());
 }
 
 void Player::test_show_hand()
