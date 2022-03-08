@@ -241,9 +241,9 @@ namespace TrainingDataEncoding {
 			throw runtime_error(fmt::format("Cannot riichi with {}", riichi_tile));
 
 		get(data, row_hand + 4, riichi_tile) = 1;
-		array<dtype, size_action * n_col> buffer;
+		array<dtype, size_action * n_col> buffer = { 0 };
 		get(buffer.data(), row_riichi - row_discard, riichi_tile) = 1;
-		memcpy(data + locate(row_action, 0), buffer.data(), buffer.size());
+		memcpy(data + locate(row_action, 0), buffer.data(), buffer.size() * sizeof(dtype));
 	}
 
 	/* obs encoding over */
