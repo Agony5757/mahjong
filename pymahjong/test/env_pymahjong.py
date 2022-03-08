@@ -9,7 +9,7 @@ class MahjongEnv(gym.Env):
 
     PLAYER_OBS_DIM = 93
     ORACLE_OBS_DIM = 18
-    ACTION_DIM = 37
+    ACTION_DIM = 47
     MAHJONG_TILE_TYPES = 34
     INIT_POINTS = 25000
 
@@ -30,6 +30,7 @@ class MahjongEnv(gym.Env):
     PASS_RESPONSE = 45
     PASS_RIICHI = 46
 
+    # corresponding to self.t.get_phase()
     Phases = ("P1_ACTION", "P2_ACTION", "P3_ACTION", "P4_ACTION", "P1_RESPONSE", "P2_RESPONSE", "P3_RESPONSE",
               "P4_RESPONSE", "P1_抢杠RESPONSE", "P2_抢杠RESPONSE", "P3_抢杠RESPONSE", "P4_抢杠RESPONSE",
               "P1_抢暗杠RESPONSE", "P2_抢暗杠RESPONSE", " P3_抢暗杠RESPONSE", " P4_抢暗杠RESPONSE", "GAME_OVER",
@@ -39,11 +40,14 @@ class MahjongEnv(gym.Env):
         self.t = pm.Table()
         self.game_count = 0
 
-        self.observation_space = Box(low=0, high=1, shape=[self.PLAYER_OBS_DIM, self.MAHJONG_TILE_TYPES])
-        self.full_observation_space = Box(low=0, high=1, shape=[self.PLAYER_OBS_DIM + self.ORACLE_OBS_DIM, self.MAHJONG_TILE_TYPES])
-        self.oracle_observation_space = Box(low=0, high=1, shape=[self.ORACLE_OBS_DIM, self.MAHJONG_TILE_TYPES])
+        self.observation_space = Box(dtype=bool, low=0, high=1,
+                                     shape=[self.PLAYER_OBS_DIM, self.MAHJONG_TILE_TYPES])
+        self.oracle_observation_space = Box(dtype=bool, low=0, high=1,
+                                            shape=[self.ORACLE_OBS_DIM, self.MAHJONG_TILE_TYPES])
+        self.full_observation_space = Box(dtype=bool, low=0, high=1,
+                                          shape=[self.PLAYER_OBS_DIM + self.ORACLE_OBS_DIM, self.MAHJONG_TILE_TYPES])
 
-        self.action_space = Discrete(47)
+        self.action_space = Discrete(self.ACTION_DIM)
 
         self.obs_container = np.zeros([self.PLAYER_OBS_DIM + self.ORACLE_OBS_DIM, self.MAHJONG_TILE_TYPES], dtype=np.int8)
         self.act_container = np.zeros([self.ACTION_DIM], dtype=np.int8)
@@ -68,6 +72,19 @@ class MahjongEnv(gym.Env):
             else:
                 self.t.make_selection(0)
 
+    def _get_num_aval_actions(self):
+
+        phase = self.t.get_phase()
+
+        if phase < 4:
+            aval_actions = self.t.get_self_actions()
+        elif phase < 16:
+            aval_actions = self.t.get_response_actions()
+        else:
+            aval_actions = [-1]
+
+        return len(aval_actions)
+
     def reset(self, oya=None, game_wind=None):
         if oya is None:
             oya = self.game_count % 4  # Each player alternatively be the "Oya" (parent)
@@ -82,6 +99,9 @@ class MahjongEnv(gym.Env):
         self.t = pm.Table()
         self.t.game_init_with_metadata({"oya": str(oya), "wind": game_wind})
 
+        self.riichi_stage2 = False
+        self.riichi_tile_id = None
+
         self.game_count += 1
 
         self._proceed()
@@ -93,48 +113,79 @@ class MahjongEnv(gym.Env):
         # Use .is_over() to know whether this game has finished
         # Use get_obs(player_id) or get_full_obs(player_id) or get_oracle_obs(player_id) to get observation
         # For rewards, after the game is over, one may use .get_payoffs
+        if not self.riichi_stage2:
+            self.act_container.fill(0)
+            pm.encode_action(self.t, self.get_curr_player_id(), self.act_container)  # no need zeros
 
-        pm.encode_action(self.t, self.get_curr_player_id(), self.act_container)  # no need zeros
+            if self.act_container[action] == 0:
+                raise ValueError("Not an action in available actions! (use get_valid_actions(player_id))")
 
-        if self.act_container[action] == 0:
-            raise ValueError("Not an action in available actions! (use get_valid_actions(player_id))")
+            # ------- IF riichi is possible -------------
+            # riichi is divided to 2 steps: first choosing a tile to discard, then decide if to riichi (if possible)
+            if self.act_container[self.RIICHI]:
+                riichi_tiles = pm.get_riichi_tiles(self.t)
+                riichi_tiles_id = set()
+                for riichi_tile in riichi_tiles:
+                    riichi_tiles_id.add(int(riichi_tile))
+                if action in riichi_tiles_id:
+                    self.riichi_stage2 = True
+                    self.riichi_tile_id = action
 
-        # action_no = TODO
-        # TODO: !!!!!!!!!!!!!!
-        # print(np.count_nonzero(self.act_container))
-        self.t.make_selection(np.random.randint(2))
+            # not involving riichi
+            if not self.riichi_stage2:
+                # TODO pm_action
+                pm_action = np.random.randint(self._get_num_aval_actions())
+                self.t.make_selection(pm_action)
+
+        else:  # riichi step 2
+            assert action in (self.RIICHI, self.PASS_RIICHI)
+            # TODO pm_action
+            pm_action = np.random.randint(self._get_num_aval_actions())
+            self.t.make_selection(pm_action)
+            self.riichi_stage2 = False
+            self.riichi_tile_id = None
 
         self._proceed()
 
-    def step_riichi_stage2(self):
-        pass
-
+    def _get_obs_from_table(self):
+        player_id = self.get_curr_player_id()
+        self.obs_container.fill(0)  # passing zeros array to C++
+        pm.encode_table(self.t, player_id, True, self.obs_container)
+        if self.riichi_stage2:
+            pm.encode_table_riichi_step2(self.t, self.riichi_tile_id , self.obs_container)
 
     def get_obs(self, player_id: int):
         self._check_player(player_id)
-        self.obs_container = self.obs_container - self.obs_container  # passing zeros array to C++
-        pm.encode_table(self.t, player_id, True, self.obs_container)
-        return self.obs_container[:self.PLAYER_OBS_DIM]
+        self._get_obs_from_table()
+        return self.obs_container[:self.PLAYER_OBS_DIM].astype(bool)
 
     def get_oracle_obs(self, player_id: int):
         self._check_player(player_id)
-        self.obs_container = self.obs_container - self.obs_container  # passing zeros array to C++
-        pm.encode_table(self.t, player_id, True, self.obs_container)
-        return self.obs_container[-self.ORACLE_OBS_DIM:]
+        self._get_obs_from_table()
+        return self.obs_container[-self.ORACLE_OBS_DIM:].astype(bool)
 
     def get_full_obs(self, player_id: int):
         self._check_player(player_id)
-        self.obs_container = self.obs_container - self.obs_container  # passing zeros array to C++
-        pm.encode_table(self.t, player_id, True, self.obs_container)
-        return deepcopy(self.obs_container)
+        self._get_obs_from_table()
+        return self.obs_container.copy().astype(bool)
 
     def get_valid_actions(self, player_id: int, nhot=True):
         self._check_player(player_id)
-        pm.encode_action(self.t, player_id, self.act_container)  # no need zeros
-        if nhot:
-            return deepcopy(self.act_container)
+        if not self.riichi_stage2:
+            self.act_container.fill(0)
+            pm.encode_action(self.t, player_id, self.act_container)  # no need zeros
+            act_container = self.act_container.copy().astype(bool)
+            act_container[self.RIICHI] = 0
+            act_container[self.PASS_RIICHI] = 0
         else:
-            return np.argwhere(self.act_container).reshape([-1])
+            act_container = np.zeros([self.ACTION_DIM], dtype=bool)
+            act_container[self.RIICHI] = 1
+            act_container[self.PASS_RIICHI] = 1
+
+        if nhot:
+            return act_container
+        else:
+            return np.argwhere(act_container).reshape([-1])
 
     def get_payoffs(self):
         payoffs = np.zeros([4], dtype=np.float32)
@@ -155,4 +206,12 @@ class MahjongEnv(gym.Env):
             raise SystemError
 
     def render(self, mode='human'):
-        raise NotImplementedError
+        print("-----------------------------------")
+        print("[Player 0 (this agent)]")
+        print(self.t.players[0].to_string())
+        print("[Player 1 (the first opponent counterclockwise)]")
+        print(self.t.players[1].to_string())
+        print("[Player 2 (the second opponent counterclockwise)]")
+        print(self.t.players[2].to_string())
+        print("[Player 3 (the third opponent counterclockwise)]")
+        print(self.t.players[3].to_string())
