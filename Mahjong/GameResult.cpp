@@ -153,11 +153,15 @@ Result 荒牌流局结算(Table * table)
 		// 统计罚符
 		// 开始统计四人听牌的状态	
 		int 听牌人数 = 0;
-		bool 听牌[4];
+		bool 听牌[4] = {false, false, false, false};
 
 		for (int i = 0; i < 4; ++i) {
 			if (get听牌(convert_tiles_to_base_tiles(table->players[i].hand)).size() > 0) {
 				听牌[i] = true;
+				听牌人数++;
+			}
+			else {
+				听牌[i] = false;
 			}
 		}
 		// cout << "Warning: 空听 is not considered" << endl;
