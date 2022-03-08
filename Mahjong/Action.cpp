@@ -24,7 +24,7 @@ SelfAction::SelfAction(BaseAction action, vector<Tile*> tiles)
 	: Action(action, tiles)
 { }
 
-bool SelfAction::operator==(const SelfAction& other)
+bool SelfAction::operator==(const SelfAction& other) const
 {	
 	if (other.action == this->action && other.correspond_tiles == correspond_tiles)
 	    return true;
@@ -35,7 +35,7 @@ ResponseAction::ResponseAction(BaseAction action, vector<Tile*> tiles)
 	: Action(action, tiles)
 { }
 
-bool ResponseAction::operator==(const ResponseAction& other)
+bool ResponseAction::operator==(const ResponseAction& other) const
 {
 	if (other.action == this->action && other.correspond_tiles == correspond_tiles)
 	    return true;

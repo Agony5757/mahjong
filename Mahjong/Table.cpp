@@ -560,7 +560,7 @@ vector<SelfAction> Table::GetSelfActions()
 		merge_into(actions, the_player.get_立直());
 
 	sort(actions.begin(), actions.end());
-	unique(actions.begin(), actions.end(), action_unique_pred);
+	//actions.erase(unique(actions.begin(), actions.end(), action_unique_pred<SelfAction>));
 
 	return actions;
 }
@@ -576,7 +576,7 @@ vector<SelfAction> Table::GetRiichiSelfActions()
 	merge_into(actions, the_player.get_自摸(this));
 
 	sort(actions.begin(), actions.end());
-	unique(actions.begin(), actions.end(), action_unique_pred);
+	//actions.erase(unique(actions.begin(), actions.end(), action_unique_pred<SelfAction>));
 	return actions;
 }
 
@@ -608,7 +608,7 @@ vector<ResponseAction> Table::GetResponseActions(
 	}
 
 	sort(actions.begin(), actions.end());
-	unique(actions.begin(), actions.end(), action_unique_pred);
+	//actions.erase(unique(actions.begin(), actions.end(), action_unique_pred<ResponseAction>));
 	return actions;
 }
 
@@ -640,6 +640,32 @@ vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
 	merge_into(actions, the_player.get_抢杠(tile));
 
 	return actions;
+}
+
+void Table::make_selection_from_action_tile(BaseAction action_type, vector<Tile*> tiles)
+{
+	if (phase == GAME_OVER) { return; }
+	else if (phase <= P4_ACTION) {
+		int idx = get_action_index(self_actions, action_type, tiles);
+		make_selection(idx);
+	}
+	else {
+		int idx = get_action_index(response_actions, action_type, tiles);
+		make_selection(idx);
+	}
+}
+
+void Table::make_selection_from_action_basetile(BaseAction action_type, vector<BaseTile> tiles, bool use_red_dora)
+{
+	if (phase == GAME_OVER) { return; }
+	else if (phase <= P4_ACTION) {
+		int idx = get_action_index(self_actions, action_type, tiles, use_red_dora);
+		make_selection(idx);
+	}
+	else {
+		int idx = get_action_index(response_actions, action_type, tiles, use_red_dora);
+		make_selection(idx);
+	}
 }
 
 void Table::make_selection(int selection)

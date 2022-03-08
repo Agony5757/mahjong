@@ -266,7 +266,7 @@ vector<SelfAction> Player::get_九种九牌()
 	static auto get_九牌 = [](const vector<Tile*> &hand) {		
 		vector<Tile*> 九牌collection;
 		for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
-			auto iter = find_match_tile(hand, basetile);
+			auto iter = find_match_tile(hand, BaseTile(i));
 			if (iter != hand.end()) {
 				九牌collection.push_back(*iter);
 			}

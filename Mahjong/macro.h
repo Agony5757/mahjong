@@ -67,6 +67,18 @@ find_match_tile(std::vector<Tile*>& tiles, BaseTile t) {
 	return tiles.end();
 }
 
+inline std::vector<Tile*>::const_iterator
+find_match_tile(const std::vector<Tile*>& tiles, BaseTile t) {
+	for (auto iter = tiles.begin();
+		iter != tiles.end();
+		++iter) {
+		if ((*iter)->tile == t) {
+			return iter;
+		}
+	}	
+	return tiles.end();
+}
+
 inline std::vector<Tile*>::iterator
 find_match_tile(std::vector<Tile*>& tiles, Tile* t) {
 	for (auto iter = tiles.begin();

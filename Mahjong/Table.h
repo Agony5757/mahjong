@@ -152,6 +152,19 @@ public:
 	// Get the phase of the game
 	inline int get_phase() const { return (int)phase; }
 
+	// Make a selection from tiles
+	void make_selection_from_action_tile(BaseAction action, std::vector<Tile*> tiles);
+	void make_selection_from_action_basetile(BaseAction action, std::vector<BaseTile> tiles, bool use_red_dora);
+	inline void make_selection_from_action_basetile_int(BaseAction action, std::vector<int> tiles, bool use_red_dora)
+	{
+		std::vector<BaseTile> tiles_basetile;
+		tiles_basetile.resize(tiles.size());
+		for (size_t i = 0; i<tiles_basetile.size();++i){
+			tiles_basetile[i] = BaseTile(tiles[i]);
+		}
+		make_selection_from_action_basetile(action, tiles_basetile, use_red_dora);
+	}
+
 	// Make a selection and game moves on.
 	void make_selection(int selection);
 
