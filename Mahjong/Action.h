@@ -77,65 +77,66 @@ struct SelfAction : public Action
 {
 	SelfAction() = default;
 	SelfAction(BaseAction, std::vector<Tile*>);
-    bool operator==(const SelfAction& other);
+    bool operator==(const SelfAction& other) const;
 };
-
-template<typename ActionType>
-int get_action_index(const std::vector<ActionType> &actions, BaseAction action_type, std::vector<BaseTile> correspond_tiles)
-{
-	// assume actions vector is sorted.
-	int red_dora_match = -1;
-	int idx = -1;
-
-	switch (action_type) {
-		case BaseAction::出牌:
-		case BaseAction::立直:
-			for (auto iter = actions.rbegin(); iter != actions.rend(); ++iter) {
-				if (iter->action == action_type &&
-					iter->correspond_tiles[0].tile == correspond_tiles[0])
-				{
-					// 倒序索引会优先打5保留0
-					return actions.size() - 1 - (iter - actions.rbegin());
-				}
-			}
-			break;
-		case BaseAction::九种九牌:
-			// 九种九牌就不看牌了
-			for (auto iter = actions.begin(); iter != actions.end(); ++iter) {
-				if (iter->action == action_type &&
-					iter->correspond_tiles[0].tile == correspond_tiles[0])
-				{
-					// 倒序索引会优先打5保留0
-					return iter - actions.rbegin();
-				}
-			}
-			break;
-		default: // 其他情况正序索引即可
-			for (auto iter = actions.begin(); iter != actions.end(); ++iter) {
-				if (iter->action == action_type &&
-					iter->correspond_tiles.size() == correspond_tiles.size())
-				{
-					bool match = true;
-					for (size_t i = 0; i< iter->correspond_tiles.size();++i){
-						if (iter->correspond_tiles[i].tile != correspond_tiles[i]){
-							match = false;
-							break;
-						}
-					}
-					if (match) return iter - actions.rbegin();
-				}
-			}
-			break;
-	}
-	throw std::runtime_error("Cannot locate action.");
-}
 
 struct ResponseAction : public Action
 {
 	ResponseAction() = default;
 	ResponseAction(BaseAction, std::vector<Tile*>);
-    bool operator==(const ResponseAction& other);
+    bool operator==(const ResponseAction& other) const;
 };
+
+
+template<typename ActionType>
+int get_action_index(const std::vector<ActionType> &actions, BaseAction action_type, std::vector<Tile*> correspond_tiles)
+{
+	auto iter = std::find(actions.begin(), actions.end(), ActionType{action_type, correspond_tiles});
+	if (iter == actions.end()) throw std::runtime_error("Cannot locate action.");
+	else return iter - actions.begin();
+}
+
+template<typename ActionType>
+int get_action_index(const std::vector<ActionType> &actions, BaseAction action_type, std::vector<BaseTile> correspond_tiles, bool use_red_dora)
+{
+	// assume actions vector is sorted.
+
+	if (use_red_dora) {
+		// 带有红宝牌的操作一定会先于不带的出现
+		for (auto iter = actions.begin(); iter != actions.end(); ++iter) {
+			if (iter->action == action_type &&
+				iter->correspond_tiles.size() == correspond_tiles.size())
+			{
+				bool match = true;
+				for (size_t i = 0; i< iter->correspond_tiles.size();++i){
+					if (iter->correspond_tiles[i]->tile != correspond_tiles[i]){
+						match = false;
+						break;
+					}
+				}
+				if (match) return iter - actions.begin();
+			}
+		}		
+	}
+	else {
+		// 不用红宝牌的话就倒序找第一个
+		for (auto iter = actions.rbegin(); iter != actions.rend(); ++iter) {
+			if (iter->action == action_type &&
+				iter->correspond_tiles.size() == correspond_tiles.size())
+			{
+				bool match = true;
+				for (size_t i = 0; i< iter->correspond_tiles.size();++i){
+					if (iter->correspond_tiles[i]->tile != correspond_tiles[i]){
+						match = false;
+						break;
+					}
+				}
+				if (match) return actions.size() - 1 - (iter - actions.rbegin());
+			}
+		}	
+	}
+	throw std::runtime_error("Cannot locate action.");
+}
 
 namespace_mahjong_end
 

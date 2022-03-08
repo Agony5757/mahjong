@@ -172,6 +172,8 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("game_init_with_metadata", &Table::game_init_with_metadata)
 		.def("get_phase", &Table::get_phase)
 		.def("make_selection", &Table::make_selection)
+		.def("make_selection_from_action_tile", &Table::make_selection_from_action_tile)
+		.def("make_selection_from_action_basetile", &Table::make_selection_from_action_basetile_int)
 		.def("get_info", &Table::get_info, py::return_value_policy::reference)
 		.def("get_selected_base_action", &Table::get_selected_base_action)
 		.def("who_make_selection", &Table::who_make_selection)
@@ -353,6 +355,17 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 	m.def("encode_action", &encode_action);
 	m.def("encode_action_riichi_step2", &encode_action_riichi_step2);
 	m.def("get_riichi_tiles", &TrainingDataEncoding::get_riichi_tiles);
+
+	auto get_self_action_index = 
+	[](const std::vector<SelfAction> &actions, BaseAction action_type, std::vector<BaseTile> correspond_tiles, bool use_red_dora)
+		{ return get_action_index(actions, action_type, correspond_tiles, use_red_dora); };
+		
+	auto get_response_action_index = 
+	[](const std::vector<ResponseAction> &actions, BaseAction action_type, std::vector<BaseTile> correspond_tiles, bool use_red_dora)
+		{ return get_action_index(actions, action_type, correspond_tiles, use_red_dora); };
+
+	m.def("get_self_action_index", get_self_action_index);
+	m.def("get_response_action_index", get_response_action_index);
 }
 
 #ifdef __GNUC__
