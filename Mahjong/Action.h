@@ -104,11 +104,21 @@ int get_action_index(const std::vector<ActionType> &actions, BaseAction action_t
 	// assume actions vector is sorted.
 	if (action_type == BaseAction::九种九牌) {
 		for (int i = 0; i < actions.size(); ++i) {
-			if (actions[i].action == BaseAction::九种九牌)
+			if (actions[i].action == action_type)
 				return i;
 		}
 		throw std::runtime_error("Cannot locate action.");
 	}
+
+	if (action_type == BaseAction::荣和 || action_type == BaseAction::抢杠 || action_type == BaseAction::抢暗杠) {
+		for (int i = 0; i < actions.size(); ++i) {
+			if (actions[i].action == BaseAction::荣和 || actions[i].action == BaseAction::抢杠 || actions[i].action == BaseAction::抢暗杠)
+				return i;
+		}
+		throw std::runtime_error("Cannot locate action.");
+	}
+
+
 	if (use_red_dora) {
 		// 带有红宝牌的操作一定会先于不带的出现
 		for (auto iter = actions.begin(); iter != actions.end(); ++iter) {
