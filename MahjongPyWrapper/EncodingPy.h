@@ -13,6 +13,4 @@ void encode_action(const mahjong::Table& table, int pid, pybind11::array_t<mahjo
 
 void encode_action_riichi_step2(pybind11::array_t<mahjong::TrainingDataEncoding::dtype> arr);
 
-
-
 #endif

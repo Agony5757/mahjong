@@ -500,8 +500,22 @@ class PaipuReplay:
                 double_ron = False
                 if child.tag == "RYUUKYOKU":
                     self.log("本局结束: 结果是流局")     
+                    if replayer.get_phase() != int(mp.PhaseEnum.GAME_OVER):
+                        raise ActionException('牌局未结束', paipu, game_order, honba)
+
+                    result = replayer.get_result()
+                    result_score = result.score
+                    self.log(score_changes1, score_changes2, scores, result_score)
+                    self.log(result.to_string())
+                    for i in range(4):
+                        if score_changes[i] + scores[i] == result_score[i]:
+                            continue
+                        else:
+                            raise ScoreException(f'Expect: {score_changes}+{scores} Now: {result_score}', paipu, game_order, honba)
+                    
+                    self.log('OK!')
                                    
-                if child.tag == "AGARI":
+                elif child.tag == "AGARI":
                     who_agari = []
                     if child_no + 1 < len(root) and root[child_no + 1].tag == "AGARI":
                         double_ron = True
@@ -572,7 +586,7 @@ class PaipuReplay:
                     self.log(score_changes1, score_changes2, scores, result_score)
                     self.log(result.to_string())
                     for i in range(4):
-                        if -400 <= (score_changes[i] + scores[i] - result_score[i]) <= 400 :
+                        if score_changes[i] + scores[i] == result_score[i]:
                             continue
                         else:
                             raise ScoreException(f'Expect: {score_changes}+{scores} Now: {result_score}', paipu, game_order, honba)

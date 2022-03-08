@@ -1,4 +1,5 @@
 ﻿#include "Action.h"
+#include <tuple>
 
 namespace_mahjong
 using namespace std;
@@ -7,11 +8,16 @@ Action::Action(BaseAction action, vector<Tile*> tiles)
 	:action(action), correspond_tiles(tiles)
 { }
 
-bool Action::operator==(const Action& other)
+bool Action::operator==(const Action& other) const
 {
 	if (other.action == this->action && other.correspond_tiles == correspond_tiles)
 	    return true;
 	else return false;
+}
+
+bool Action::operator<(const Action& other) const
+{
+	return tie(action, correspond_tiles) < tie(other.action, other.correspond_tiles);
 }
 
 SelfAction::SelfAction(BaseAction action, vector<Tile*> tiles)

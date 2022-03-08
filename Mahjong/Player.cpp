@@ -243,17 +243,17 @@ vector<SelfAction> Player::get_立直()
 	return actions;
 }
 
-static int 九种九牌counter(vector<Tile*> hand) {
-	int counter = 0;
-	for (int tile = BaseTile::_1m; tile <= BaseTile::_7z; ++tile) {
-		auto basetile = static_cast<BaseTile>(tile);
-		if (is_幺九牌(basetile)) {
-			if (find_match_tile(hand, basetile) != hand.end())
-				counter++;
-		}
-	}
-	return counter;
-}
+// static int 九种九牌counter(vector<Tile*> hand) {
+// 	int counter = 0;
+// 	for (int tile = BaseTile::_1m; tile <= BaseTile::_7z; ++tile) {
+// 		auto basetile = static_cast<BaseTile>(tile);
+// 		if (is_幺九牌(basetile)) {
+// 			if (find_match_tile(hand, basetile) != hand.end())
+// 				counter++;
+// 		}
+// 	}
+// 	return counter;
+// }
 
 vector<SelfAction> Player::get_九种九牌()
 {
@@ -263,10 +263,23 @@ vector<SelfAction> Player::get_九种九牌()
 	// 考虑到第一巡可以有人暗杠，但是自己不行
 	if (hand.size() != 14) return actions;
 
-	if (九种九牌counter(hand) >= 9) {
+	static auto get_九牌 = [](const vector<Tile*> &hand) {		
+		vector<Tile*> 九牌collection;
+		for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
+			auto iter = find_match_tile(hand, basetile);
+			if (iter != hand.end()) {
+				九牌collection.push_back(*iter);
+			}
+		}
+		return 九牌collection;
+	};
+
+	auto 九牌collection = get_九牌(hand);
+	if (九牌collection.size() >= 9) {
 		SelfAction action;
 		action.action = BaseAction::九种九牌;
-		actions.push_back(action);
+		action.correspond_tiles = 九牌collection;
+		actions.push_back(action);	
 	}
 	return actions;
 }

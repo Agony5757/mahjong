@@ -543,20 +543,24 @@ vector<SelfAction> Table::GetSelfActions()
 	FunctionProfiler;
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
-
+	
+	merge_into(actions, the_player.get_九种九牌());	
+	merge_into(actions, the_player.get_打牌(after_chipon()));
+	
 	// 吃/碰后，且已经4杠的场合，不能继续杠
 	if (!after_chipon() && get_remain_kan_tile() > 0) {
 		merge_into(actions, the_player.get_暗杠());
 		merge_into(actions, the_player.get_加杠());
 	}
-	merge_into(actions, the_player.get_打牌(after_chipon()));
-	merge_into(actions, the_player.get_九种九牌());
 	merge_into(actions, the_player.get_自摸(this));
 
 	if (players[turn].score >= 1000 && get_remain_tile() >= 4)
 		// 有1000点才能立直，否则不行
 		// 牌河有4张以下牌，则不能立直
 		merge_into(actions, the_player.get_立直());
+
+	sort(actions.begin(), actions.end());
+	unique(actions.begin(), actions.end(), action_unique_pred);
 
 	return actions;
 }
@@ -571,6 +575,8 @@ vector<SelfAction> Table::GetRiichiSelfActions()
 	merge_into(actions, the_player.riichi_get_打牌());
 	merge_into(actions, the_player.get_自摸(this));
 
+	sort(actions.begin(), actions.end());
+	unique(actions.begin(), actions.end(), action_unique_pred);
 	return actions;
 }
 
@@ -601,6 +607,8 @@ vector<ResponseAction> Table::GetResponseActions(
 		}
 	}
 
+	sort(actions.begin(), actions.end());
+	unique(actions.begin(), actions.end(), action_unique_pred);
 	return actions;
 }
 
