@@ -57,16 +57,16 @@ struct Action
 template<typename ActionType>
 bool action_unique_pred(const ActionType& action1, const ActionType& action2)
 {
-	static_assert(is_base_v<ActionType, Action>, "Bad ActionType.");
-	if (action1 != action2) 
+	static_assert(std::is_base_of<Action, ActionType>::value, "Bad ActionType.");
+	if (action1.action != action2.action) 
 		return false;
 	if (action1.correspond_tiles.size() != action2.correspond_tiles.size())
 		return false;
 	for (size_t i = 0; i < action1.correspond_tiles.size(); ++i) {
-		if (action1.correspond_tiles[i].red_dora ^ action2.correspond_tiles[i].red_dora) {
+		if (action1.correspond_tiles[i]->red_dora ^ action2.correspond_tiles[i]->red_dora) {
 			return false;
 		}
-		if (action1.correspond_tiles[i].tile != action2.correspond_tiles[i].tile) {
+		if (action1.correspond_tiles[i]->tile != action2.correspond_tiles[i]->tile) {
 			return false;
 		}
 	}
@@ -81,7 +81,7 @@ struct SelfAction : public Action
 };
 
 template<typename ActionType>
-int get_action_index(const std::vector<ActionType> &actions, BaseAction action_type, vector<BaseTile> correspond_tiles)
+int get_action_index(const std::vector<ActionType> &actions, BaseAction action_type, std::vector<BaseTile> correspond_tiles)
 {
 	// assume actions vector is sorted.
 	int red_dora_match = -1;
@@ -90,28 +90,28 @@ int get_action_index(const std::vector<ActionType> &actions, BaseAction action_t
 	switch (action_type) {
 		case BaseAction::出牌:
 		case BaseAction::立直:
-			for (auto iter = actions.rbegin(); iter != action.rend(); ++iter) {
+			for (auto iter = actions.rbegin(); iter != actions.rend(); ++iter) {
 				if (iter->action == action_type &&
 					iter->correspond_tiles[0].tile == correspond_tiles[0])
 				{
 					// 倒序索引会优先打5保留0
-					return actions.size() - 1 - (iter - action.rbegin());
+					return actions.size() - 1 - (iter - actions.rbegin());
 				}
 			}
 			break;
 		case BaseAction::九种九牌:
 			// 九种九牌就不看牌了
-			for (auto iter = actions.begin(); iter != action.end(); ++iter) {
+			for (auto iter = actions.begin(); iter != actions.end(); ++iter) {
 				if (iter->action == action_type &&
 					iter->correspond_tiles[0].tile == correspond_tiles[0])
 				{
 					// 倒序索引会优先打5保留0
-					return iter - action.rbegin();
+					return iter - actions.rbegin();
 				}
 			}
 			break;
 		default: // 其他情况正序索引即可
-			for (auto iter = actions.begin(); iter != action.end(); ++iter) {
+			for (auto iter = actions.begin(); iter != actions.end(); ++iter) {
 				if (iter->action == action_type &&
 					iter->correspond_tiles.size() == correspond_tiles.size())
 				{
@@ -122,7 +122,7 @@ int get_action_index(const std::vector<ActionType> &actions, BaseAction action_t
 							break;
 						}
 					}
-					if (match) return iter - action.rbegin();
+					if (match) return iter - actions.rbegin();
 				}
 			}
 			break;

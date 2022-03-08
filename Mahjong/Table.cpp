@@ -560,7 +560,7 @@ vector<SelfAction> Table::GetSelfActions()
 		merge_into(actions, the_player.get_立直());
 
 	sort(actions.begin(), actions.end());
-	unique(actions.begin(), actions.end(), action_unique_pred);
+	//actions.erase(unique(actions.begin(), actions.end(), action_unique_pred<SelfAction>));
 
 	return actions;
 }
@@ -576,7 +576,7 @@ vector<SelfAction> Table::GetRiichiSelfActions()
 	merge_into(actions, the_player.get_自摸(this));
 
 	sort(actions.begin(), actions.end());
-	unique(actions.begin(), actions.end(), action_unique_pred);
+	//actions.erase(unique(actions.begin(), actions.end(), action_unique_pred<SelfAction>));
 	return actions;
 }
 
@@ -608,7 +608,7 @@ vector<ResponseAction> Table::GetResponseActions(
 	}
 
 	sort(actions.begin(), actions.end());
-	unique(actions.begin(), actions.end(), action_unique_pred);
+	//actions.erase(unique(actions.begin(), actions.end(), action_unique_pred<ResponseAction>));
 	return actions;
 }
 

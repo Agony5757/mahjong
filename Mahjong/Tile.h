@@ -9,6 +9,7 @@
 #include <sstream>
 #include <exception>
 #include <algorithm>
+#include <type_traits>
 #include <stdlib.h>
 #include <time.h>
 
