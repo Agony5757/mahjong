@@ -4,13 +4,19 @@ import numpy as np
 import torch
 
 
-def play_mahjong(agent, num_games=100):
+def play_mahjong(agent, num_games=100, verbose=1):
 
     env = env_pymahjong.MahjongEnv()
 
     start_time = time.time()
     game = 0
     success_games = 0
+
+    stat = {}
+    stat["agari_games"] = np.zeros([4], dtype=np.float32)
+    stat["tsumo_games"] = np.zeros([4], dtype=np.float32)
+    stat["agari_points"] = np.zeros([4], dtype=np.float32)
+    stat["houjyuu_games"] = np.zeros([4], dtype=np.float32)
 
     while game < num_games:
 
@@ -39,13 +45,33 @@ def play_mahjong(agent, num_games=100):
 
             env.step(a)
 
-        # if np.sum(env.get_payoffs() < 0) == 2 and np.sum(env.get_payoffs() > 0) == 2:
+        # ----------------------- get result ---------------------------------
 
-        print("Game {}, result: {}".format(game, env.t.get_result().to_string()))
+        payoffs = env.get_payoffs()
+        if verbose >= 2:
+            print("Game {}, result: {}".format(game, payoffs))
+
+        for winner in env.t.get_result().winner:
+            stat["agari_points"][winner] += payoffs[winner]
+            stat["agari_games"][winner] += 1
+
+        if len(env.t.get_result().loser) == 1:
+            stat["houjyuu_games"][env.t.get_result().loser] += 1
+        else:
+            stat["tsumo_games"][env.t.get_result().winner] += 1
 
         success_games += 1
         game += 1
+
+        if verbose >= 1 and game % 100 == 0:
+            print("------------------------ {} games statistics -----------------------".format(success_games))
+            print("win rate:                    ", np.array2string(100 * stat["agari_games"] / success_games, precision=2, separator="  "))
+            print("tsumo rate:                  ", np.array2string(100 * stat["tsumo_games"] / stat["agari_games"], precision=2, separator="  "))
+            print("houjyuu rate:                ", np.array2string(100 * stat["houjyuu_games"] / success_games, precision=2, separator="  "))
+            print("average agari points (x100): ", np.array2string(0.01 * stat["agari_points"] / stat["agari_games"], precision=2, separator="  "))
+            # print("----------------------------------------------------------------------")
         # except:
+        #     game += 1
         #     continue
 
     print("Total {} game, {} without error, takes {} s".format(num_games, success_games, time.time() - start_time))
@@ -56,4 +82,4 @@ if __name__ == "__main__":
     agent = torch.load("./mahjong_VLOG_CQL_0.model", map_location='cpu')
     agent.device = torch.device('cpu')
     # agent = "random"
-    play_mahjong(agent, num_games=10000)
+    play_mahjong(agent, num_games=100000, verbose=1)

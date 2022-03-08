@@ -219,6 +219,8 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("result_type", &Result::result_type)
 		.def_readonly("results", &Result::results)
 		.def_readonly("score", &Result::score)
+		.def_readonly("winner", &Result::winner)
+		.def_readonly("loser", &Result::loser)
 		.def("to_string", &Result::to_string)
 		;	
 

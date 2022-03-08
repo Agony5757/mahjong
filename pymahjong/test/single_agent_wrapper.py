@@ -7,16 +7,24 @@ import random
 class SingleAgentMahjongEnv(gym.Env):
     THIS_AGENT_ID = 0
     # The agent is the player 0 in MahjongEnv (while Oya may be others)
+
     def __init__(self, opponent_agent="vlog-bc"):
 
         super(SingleAgentMahjongEnv, self).__init__()
 
         assert opponent_agent in ["random", "vlog-bc", "vlog-cql"]
 
+        if not torch.cuda.is_available():
+            device = torch.device("cpu")
+        else:
+            device = torch.device("cuda")
+
         if opponent_agent =="vlog-cql":
-            self.opponent_agent = torch.load("./models/mahjong_VLOG_CQL_0.model")
+            self.opponent_agent = torch.load("./models/mahjong_VLOG_CQL_0.model", map_location=device)
+            self.opponent_agent.device = device
         elif opponent_agent == "vlog-bc":
-            self.opponent_agent = torch.load("./models/mahjong_VLOG_BC_0.model")
+            self.opponent_agent = torch.load("./models/mahjong_VLOG_BC_0.model", map_location=device)
+            self.opponent_agent.device = device
         else:
             self.opponent_agent = "random"
 
@@ -76,4 +84,12 @@ class SingleAgentMahjongEnv(gym.Env):
         return self.env.get_full_obs(self.THIS_AGENT_ID)
 
     def render(self, mode='human'):
-        self.env.render()
+        print("-----------------------------------")
+        print("[Player 0 (this agent)]")
+        print(self.env.t.players[0].to_string())
+        print("[Player 1 (the first opponent counterclockwise)]")
+        print(self.env.t.players[1].to_string())
+        print("[Player 2 (the second opponent counterclockwise)]")
+        print(self.env.t.players[2].to_string())
+        print("[Player 3 (the third opponent counterclockwise)]")
+        print(self.env.t.players[3].to_string())
