@@ -36,6 +36,12 @@ class MahjongEnv(gym.Env):
               "P1_抢暗杠RESPONSE", "P2_抢暗杠RESPONSE", " P3_抢暗杠RESPONSE", " P4_抢暗杠RESPONSE", "GAME_OVER",
               "P1_DRAW, P2_DRAW, P3_DRAW, P4_DRAW")
 
+    # pymahjhong.BaseAction
+    ACTION_TYPES = [pm.BaseAction.Play] * 34 + [pm.BaseAction.Chi] * 3 + [pm.BaseAction.Pon] \
+                   + [pm.BaseAction.AnKan] + [pm.BaseAction.Kan] + [pm.BaseAction.KaKan] \
+                   + [pm.BaseAction.Riichi] + [pm.BaseAction.Ron] + [pm.BaseAction.Tsumo] \
+                   + [pm.BaseAction.KyuShuKyuHai] + [pm.BaseAction.Pass] * 2
+
     def __init__(self, printing=True, reward_unit=100):
         self.t = pm.Table()
         self.game_count = 0
@@ -100,7 +106,7 @@ class MahjongEnv(gym.Env):
         self.t.game_init_with_metadata({"oya": str(oya), "wind": game_wind})
 
         self.riichi_stage2 = False
-        self.riichi_tile_id = None
+        self.may_riichi_tile_id = None
 
         self.game_count += 1
 
@@ -115,7 +121,8 @@ class MahjongEnv(gym.Env):
         # For rewards, after the game is over, one may use .get_payoffs
         if not self.riichi_stage2:
             self.act_container.fill(0)
-            pm.encode_action(self.t, self.get_curr_player_id(), self.act_container)  # no need zeros
+            curr_pid = self.get_curr_player_id()
+            pm.encode_action(self.t, curr_pid, self.act_container)  # no need zeros
 
             if self.act_container[action] == 0:
                 raise ValueError("Not an action in available actions! (use get_valid_actions(player_id))")
@@ -129,21 +136,69 @@ class MahjongEnv(gym.Env):
                     riichi_tiles_id.add(int(riichi_tile))
                 if action in riichi_tiles_id:
                     self.riichi_stage2 = True
-                    self.riichi_tile_id = action
+                    self.may_riichi_tile_id = action
 
             # not involving riichi
             if not self.riichi_stage2:
-                # TODO pm_action
-                pm_action = np.random.randint(self._get_num_aval_actions())
-                self.t.make_selection(pm_action)
+                action_type = self.ACTION_TYPES[action]
+
+                if action < 34:
+                    corresponding_tiles = [action]
+
+                elif action in (self.CHILEFT, self.CHIMIDDLE, self.CHIRIGHT):
+                    chi_tile_id = int(self.t.get_selected_action_tile().tile)
+                    if action == self.CHILEFT:
+                        corresponding_tiles = [chi_tile_id + 1, chi_tile_id + 2]
+                    elif action == self.CHIMIDDLE:
+                        corresponding_tiles = [chi_tile_id - 1, chi_tile_id + 1]
+                    elif action == self.CHIRIGHT:
+                        corresponding_tiles = [chi_tile_id - 2, chi_tile_id - 1]
+
+                elif action == self.PON:
+                    pon_tile_id = int(self.t.get_selected_action_tile().tile)
+                    corresponding_tiles = [pon_tile_id, pon_tile_id]
+
+                elif action == self.MINKAN:
+                    kan_tile_id = int(self.t.get_selected_action_tile().tile)
+                    corresponding_tiles = [kan_tile_id] * 3
+
+                # Here we have an approximation, it a player has multiple options to KaKan or AnKan,
+                # the player will random select one if action == ANKAN or KAKAN
+                # However, this case should be very rare in normal play
+
+                elif action == self.ANKAN:
+                    kan_tile_id = np.random.choice(np.argwhere(self.get_obs(curr_pid)[3]).flatten())
+                    corresponding_tiles = [kan_tile_id] * 4
+
+                elif action == self.KAKAN:
+                    obs = self.get_obs(curr_pid)
+                    kan_tile_id = np.random.choice(
+                        np.argwhere(np.sum(obs[:4], axis=0) + np.sum(obs[6:10], axis=0) > 4).flatten())
+                    corresponding_tiles = [kan_tile_id]
+
+                elif action == self.RON:
+                    # TODO: Chan-Kan, Chan-An-Kan
+                    corresponding_tiles = [int(self.t.get_selected_action_tile().tile)]
+                    warnings.warn("ChanKan and ChanAnKan need consider!!!!!!!!!!")
+
+                elif action in (self.TSUMO, self.PUSH, self.PASS_RESPONSE):
+                    corresponding_tiles = []
+
+                else:
+                    raise SystemError("This should not happen, please report to the authors")
+
+                self.t.make_selection_from_action_basetile(action_type, corresponding_tiles, use_red_dora=action>=34)
 
         else:  # riichi step 2
             assert action in (self.RIICHI, self.PASS_RIICHI)
-            # TODO pm_action
-            pm_action = np.random.randint(self._get_num_aval_actions())
-            self.t.make_selection(pm_action)
+            if action == self.RIICHI:
+                action_type = pm.BaseAction.Riichi
+            else:
+                action_type = pm.BaseAction.Play
+
+            self.t.make_selection_from_action_basetile(action_type, [self.may_riichi_tile_id], use_red_dora=False)
             self.riichi_stage2 = False
-            self.riichi_tile_id = None
+            self.may_riichi_tile_id = None
 
         self._proceed()
 
@@ -152,7 +207,7 @@ class MahjongEnv(gym.Env):
         self.obs_container.fill(0)  # passing zeros array to C++
         pm.encode_table(self.t, player_id, True, self.obs_container)
         if self.riichi_stage2:
-            pm.encode_table_riichi_step2(self.t, self.riichi_tile_id , self.obs_container)
+            pm.encode_table_riichi_step2(self.t, self.may_riichi_tile_id , self.obs_container)
 
     def get_obs(self, player_id: int):
         self._check_player(player_id)

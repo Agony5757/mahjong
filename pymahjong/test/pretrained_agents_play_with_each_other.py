@@ -38,7 +38,10 @@ def play_mahjong(agent, num_games=100):
 
             env.step(a)
 
+        # if np.sum(env.get_payoffs() < 0) == 2 and np.sum(env.get_payoffs() > 0) == 2:
+
         print("Game {}, result: {}".format(game, env.get_payoffs()))
+
         success_games += 1
         game += 1
         # except:
