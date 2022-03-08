@@ -5,6 +5,8 @@ import warnings
 from copy import deepcopy
 from gym.spaces import Discrete, Box
 
+np.set_printoptions(threshold=np.inf)  # TODO
+
 class MahjongEnv(gym.Env):
 
     PLAYER_OBS_DIM = 93
@@ -37,7 +39,7 @@ class MahjongEnv(gym.Env):
               "P1_DRAW, P2_DRAW, P3_DRAW, P4_DRAW")
 
     # pymahjhong.BaseAction
-    ACTION_TYPES = [pm.BaseAction.Play] * 34 + [pm.BaseAction.Chi] * 3 + [pm.BaseAction.Pon] \
+    ACTION_TYPES = [pm.BaseAction.Play] * MAHJONG_TILE_TYPES + [pm.BaseAction.Chi] * 3 + [pm.BaseAction.Pon] \
                    + [pm.BaseAction.AnKan] + [pm.BaseAction.Kan] + [pm.BaseAction.KaKan] \
                    + [pm.BaseAction.Riichi] + [pm.BaseAction.Ron] + [pm.BaseAction.Tsumo] \
                    + [pm.BaseAction.KyuShuKyuHai] + [pm.BaseAction.Pass] * 2
@@ -142,7 +144,7 @@ class MahjongEnv(gym.Env):
             if not self.riichi_stage2:
                 action_type = self.ACTION_TYPES[action]
 
-                if action < 34:
+                if action < self.MAHJONG_TILE_TYPES:
                     corresponding_tiles = [action]
 
                 elif action in (self.CHILEFT, self.CHIMIDDLE, self.CHIRIGHT):
@@ -173,13 +175,12 @@ class MahjongEnv(gym.Env):
                 elif action == self.KAKAN:
                     obs = self.get_obs(curr_pid)
                     kan_tile_id = np.random.choice(
-                        np.argwhere(np.sum(obs[:4], axis=0) + np.sum(obs[6:10], axis=0) > 4).flatten())
+                        np.argwhere((np.sum(obs[:4], axis=0) == 1) * (np.sum(obs[6:10], axis=0) == 3)).flatten())
                     corresponding_tiles = [kan_tile_id]
 
                 elif action == self.RON:
-                    # TODO: Chan-Kan, Chan-An-Kan
-                    corresponding_tiles = [int(self.t.get_selected_action_tile().tile)]
-                    warnings.warn("ChanKan and ChanAnKan need consider!!!!!!!!!!")
+                    # include Chan-Kan, Chan-An-Kan
+                    corresponding_tiles = []
 
                 elif action in (self.TSUMO, self.PUSH, self.PASS_RESPONSE):
                     corresponding_tiles = []
@@ -187,7 +188,16 @@ class MahjongEnv(gym.Env):
                 else:
                     raise SystemError("This should not happen, please report to the authors")
 
-                self.t.make_selection_from_action_basetile(action_type, corresponding_tiles, use_red_dora=action>=34)
+                try:
+                    self.t.make_selection_from_action_basetile(action_type, corresponding_tiles,
+                                                               action >= self.MAHJONG_TILE_TYPES)
+                except:
+                    # TODO:
+                    print(action_type, corresponding_tiles)
+                    obs = self.get_obs(curr_pid)
+                    print(obs.astype(int))
+                    self.render()
+                    exit()
 
         else:  # riichi step 2
             assert action in (self.RIICHI, self.PASS_RIICHI)
@@ -196,7 +206,7 @@ class MahjongEnv(gym.Env):
             else:
                 action_type = pm.BaseAction.Play
 
-            self.t.make_selection_from_action_basetile(action_type, [self.may_riichi_tile_id], use_red_dora=False)
+            self.t.make_selection_from_action_basetile(action_type, [self.may_riichi_tile_id], False)
             self.riichi_stage2 = False
             self.may_riichi_tile_id = None
 
@@ -207,7 +217,7 @@ class MahjongEnv(gym.Env):
         self.obs_container.fill(0)  # passing zeros array to C++
         pm.encode_table(self.t, player_id, True, self.obs_container)
         if self.riichi_stage2:
-            pm.encode_table_riichi_step2(self.t, self.may_riichi_tile_id , self.obs_container)
+            pm.encode_table_riichi_step2(self.t, self.may_riichi_tile_id, self.obs_container)
 
     def get_obs(self, player_id: int):
         self._check_player(player_id)
@@ -262,11 +272,11 @@ class MahjongEnv(gym.Env):
 
     def render(self, mode='human'):
         print("-----------------------------------")
-        print("[Player 0 (this agent)]")
+        print("[Player 0 ]")
         print(self.t.players[0].to_string())
-        print("[Player 1 (the first opponent counterclockwise)]")
+        print("[Player 1 ]")
         print(self.t.players[1].to_string())
-        print("[Player 2 (the second opponent counterclockwise)]")
+        print("[Player 2 ]")
         print(self.t.players[2].to_string())
-        print("[Player 3 (the third opponent counterclockwise)]")
+        print("[Player 3 ]")
         print(self.t.players[3].to_string())
