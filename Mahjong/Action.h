@@ -99,8 +99,16 @@ int get_action_index(const std::vector<ActionType> &actions, BaseAction action_t
 template<typename ActionType>
 int get_action_index(const std::vector<ActionType> &actions, BaseAction action_type, std::vector<BaseTile> correspond_tiles, bool use_red_dora)
 {
-	// assume actions vector is sorted.
+	static_assert(std::is_base_of<Action, ActionType>::value, "Bad ActionType.");
 
+	// assume actions vector is sorted.
+	if (action_type == BaseAction::九种九牌) {
+		for (int i = 0; i < actions.size(); ++i) {
+			if (actions[i].action == BaseAction::九种九牌)
+				return i;
+		}
+		throw std::runtime_error("Cannot locate action.");
+	}
 	if (use_red_dora) {
 		// 带有红宝牌的操作一定会先于不带的出现
 		for (auto iter = actions.begin(); iter != actions.end(); ++iter) {
@@ -108,15 +116,15 @@ int get_action_index(const std::vector<ActionType> &actions, BaseAction action_t
 				iter->correspond_tiles.size() == correspond_tiles.size())
 			{
 				bool match = true;
-				for (size_t i = 0; i< iter->correspond_tiles.size();++i){
-					if (iter->correspond_tiles[i]->tile != correspond_tiles[i]){
+				for (size_t i = 0; i < iter->correspond_tiles.size();++i) {
+					if (iter->correspond_tiles[i]->tile != correspond_tiles[i]) {
 						match = false;
 						break;
 					}
 				}
 				if (match) return iter - actions.begin();
 			}
-		}		
+		}
 	}
 	else {
 		// 不用红宝牌的话就倒序找第一个
@@ -125,15 +133,15 @@ int get_action_index(const std::vector<ActionType> &actions, BaseAction action_t
 				iter->correspond_tiles.size() == correspond_tiles.size())
 			{
 				bool match = true;
-				for (size_t i = 0; i< iter->correspond_tiles.size();++i){
-					if (iter->correspond_tiles[i]->tile != correspond_tiles[i]){
+				for (size_t i = 0; i < iter->correspond_tiles.size();++i) {
+					if (iter->correspond_tiles[i]->tile != correspond_tiles[i]) {
 						match = false;
 						break;
 					}
 				}
 				if (match) return actions.size() - 1 - (iter - actions.rbegin());
 			}
-		}	
+		}
 	}
 	throw std::runtime_error("Cannot locate action.");
 }
