@@ -594,6 +594,9 @@ class EnvMahjong4(gym.Env):
                 riichi = False
             results = self.step_play(action, player_id, riichi)
 
+        while not self.is_over() and len(self.get_valid_actions(nhot=False)) == 1:
+            self.t.make_selection(0)
+
         # print("step time taken:", time.time() - step_start_time)
 
         return results
@@ -1166,5 +1169,14 @@ class EnvMahjong4(gym.Env):
             return self.t.who_make_selection(), "play"
 
     def render(self, mode='human'):
-        print(self.t.get_selected_base_action.action)
+        print("Recent action: ", self.t.get_selected_base_action(), self.t.get_selected_base_action())
+        print("-----------------------------------")
+        print("[Player 0]")
+        print(self.t.players[0].to_string())
+        print("[Player 1]")
+        print(self.t.players[1].to_string())
+        print("[Player 2]")
+        print(self.t.players[2].to_string())
+        print("[Player 3]")
+        print(self.t.players[3].to_string())
 

@@ -63,7 +63,7 @@ class MahjongEnv(gym.Env):
     def _check_player(self, player_id):
         if not player_id == self.t.who_make_selection():
             raise ValueError("You are trying to obtain information from a player who is not making decision !!!! \
-                (current player ID is {}, you are trying to get information of player {}".format(
+                (current acting player ID is {}, you are trying to get information of player {}".format(
                     self.t.who_make_selection(), player_id))
 
     def _proceed(self):
@@ -114,13 +114,18 @@ class MahjongEnv(gym.Env):
 
         self._proceed()
 
-    def step(self, action: int):
+    def step(self, player_id: int, action: int):
         # Different from single-agent gym env, one should not get the information needed here,
         # because the next player to act may be different from the current player.
         # Instead, one should get the information need as follows:
         # Use .is_over() to know whether this game has finished
         # Use get_obs(player_id) or get_full_obs(player_id) or get_oracle_obs(player_id) to get observation
         # For rewards, after the game is over, one may use .get_payoffs
+
+        if not player_id == self.get_curr_player_id():
+            raise ValueError("current acting player ID is {}, but you are trying to ask player {} to act !!".format(
+                self.get_curr_player_id(), player_id))
+
         if not self.riichi_stage2:
             self.act_container.fill(0)
             curr_pid = self.get_curr_player_id()
@@ -234,11 +239,10 @@ class MahjongEnv(gym.Env):
         self._get_obs_from_table()
         return self.obs_container.copy().astype(bool)
 
-    def get_valid_actions(self, player_id: int, nhot=True):
-        self._check_player(player_id)
+    def get_valid_actions(self, nhot=True):
         if not self.riichi_stage2:
             self.act_container.fill(0)
-            pm.encode_action(self.t, player_id, self.act_container)  # no need zeros
+            pm.encode_action(self.t, self.get_curr_player_id(), self.act_container)
             act_container = self.act_container.copy().astype(bool)
             act_container[self.RIICHI] = 0
             act_container[self.PASS_RIICHI] = 0
@@ -271,12 +275,12 @@ class MahjongEnv(gym.Env):
             raise SystemError
 
     def render(self, mode='human'):
-        print("-----------------------------------")
-        print("[Player 0 ]")
+        print("----------- current player: {} -----------------".format(self.get_curr_player_id()))
+        print("[Player 0]")
         print(self.t.players[0].to_string())
-        print("[Player 1 ]")
+        print("[Player 1]")
         print(self.t.players[1].to_string())
-        print("[Player 2 ]")
+        print("[Player 2]")
         print(self.t.players[2].to_string())
-        print("[Player 3 ]")
+        print("[Player 3]")
         print(self.t.players[3].to_string())
