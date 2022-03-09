@@ -345,6 +345,10 @@ vector<ResponseAction> Player::get_荣和(Table* table, Tile* tile)
 			action.correspond_tiles = { tile };
 			actions.push_back(action);
 		}
+		else {
+			// 如果无役，则进入同巡振听阶段
+			同巡振听 = true;
+		}
 	}
 
 	return actions;

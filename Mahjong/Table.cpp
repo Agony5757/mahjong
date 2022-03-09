@@ -267,15 +267,20 @@ void Table::next_turn(int nextturn)
 	}
 	if (selected_base_action == BaseAction::暗杠) {
 		player.update_听牌();
+		player.remove_听牌(selected_action.correspond_tiles[0]->tile);
+		player.update_舍牌振听();
 	}
 	if (selected_base_action == BaseAction::加杠) {
 		player.update_听牌();
 		player.remove_听牌(selected_action.correspond_tiles[0]->tile);
+		player.update_舍牌振听();
 	}
 
-	// 更新完毕，正式切换turn
+	// 更新完毕，正式切换turn，解除他的同巡振听
 	turn = nextturn;
 	phase = PhaseEnum(turn);
+	players[turn].同巡振听 = false; 
+
 }
 
 void Table::from_beginning()
@@ -674,7 +679,7 @@ void Table::make_selection(int selection)
 	FunctionProfiler;
 #endif
 	// 这个地方控制了游戏流转
-	
+
 	// 分为两种情况，如果是ACTION阶段
 	switch (phase) {
 	case GAME_OVER:
@@ -687,7 +692,7 @@ void Table::make_selection(int selection)
 		if (self_actions.size() == 0) {
 			throw runtime_error("Empty Selection Lists.");
 		}
-		
+
 		selected_action = self_actions[selection];
 		switch (selected_action.action) {
 		case BaseAction::九种九牌:
@@ -713,8 +718,8 @@ void Table::make_selection(int selection)
 			// 并且判定抉择弃牌是不是最后一张牌
 
 			bool FROM_手切摸切 = FROM_手切;
-			if (last_action == BaseAction::出牌 || 
-			    last_action == BaseAction::加杠 || 
+			if (last_action == BaseAction::出牌 ||
+				last_action == BaseAction::加杠 ||
 				last_action == BaseAction::暗杠) {
 				// tile是不是最后一张
 				if (tile == players[turn].hand.back())
@@ -734,11 +739,11 @@ void Table::make_selection(int selection)
 				if (0 == (turn + 1) % 4)
 					is下家 = true;
 				response_actions = GetResponseActions(0, tile, is下家);
-			}			
+			}
 			return;
 		}
 		case BaseAction::暗杠:
-		{	
+		{
 			tile = selected_action.correspond_tiles[0];
 
 			// 第一巡消除
@@ -787,7 +792,16 @@ void Table::make_selection(int selection)
 		// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase
 
 		if (response_actions.size() == 0) {
-			throw runtime_error("Empty Selection Lists.");	
+			throw runtime_error("Empty Selection Lists.");
+		}
+
+		// 立直振听判断
+		int i = phase - P1_RESPONSE;
+		if (i != turn &&
+			players[i].is_riichi() &&
+			response_actions[selection].action == BaseAction::pass)
+		{
+			players[phase - P1_RESPONSE].立直振听 = true;
 		}
 
 		actions.push_back(response_actions[selection]);
@@ -795,20 +809,20 @@ void Table::make_selection(int selection)
 		if (response_actions[selection].action > final_action)
 			final_action = response_actions[selection].action;
 
-		phase = PhaseEnum(phase + 1);
-		int i = phase - P1_RESPONSE;
+		i++; // for next player				
 		if (i == turn) {
 			ResponseAction ra;
 			ra.action = BaseAction::pass;
 			response_actions = { ra };
 		}
 		else {
-			// 对于所有其他人
+			// 对于所有其他人			
 			bool is下家 = false;
 			if (i == (turn + 1) % 4)
 				is下家 = true;
 			response_actions = GetResponseActions(i, tile, is下家);
 		}
+		phase = PhaseEnum(phase + 1);
 		return;
 	}
 	case P4_RESPONSE: {
@@ -822,6 +836,14 @@ void Table::make_selection(int selection)
 		// 从actions中获得优先级
 		if (response_actions[selection].action > final_action)
 			final_action = response_actions[selection].action;
+
+		// 立直振听判断
+		if (3 != turn &&
+			players[3].is_riichi() &&
+			response_actions[selection].action == BaseAction::pass)
+		{
+			players[3].立直振听 = true;
+		}
 
 		// 选择优先级，并且进行response结算
 		vector<int> response_player;
@@ -851,14 +873,14 @@ void Table::make_selection(int selection)
 				n立直棒++;
 				players[turn].score -= 1000;
 				players[turn].一发 = true;
-			} 			
+			}
 
 			// 什么都不做。将action对应的牌从手牌移动到牌河里面	
 			// players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
 
 			// 消除第一巡
 			players[turn].first_round = false;
-			next_turn((turn + 1) % 4);			
+			next_turn((turn + 1) % 4);
 			last_action = selected_action.action;
 			break;
 		case BaseAction::吃:
@@ -879,7 +901,7 @@ void Table::make_selection(int selection)
 			}
 
 			players[turn].set_not_remained();
-			
+
 			players[response].门清 = false;
 			players[response].move_from_hand_to_fulu(
 				actions[response].correspond_tiles, tile);
@@ -907,7 +929,7 @@ void Table::make_selection(int selection)
 		from_beginning();
 		return;
 	}
-	
+
 	case P1_抢杠RESPONSE:
 		actions.resize(0);
 		final_action = BaseAction::pass;
@@ -924,8 +946,16 @@ void Table::make_selection(int selection)
 		if (response_actions[selection].action > final_action)
 			final_action = response_actions[selection].action;
 
-		phase = PhaseEnum(phase + 1);
+		// 立直振听判断
 		int i = phase - P1_抢杠RESPONSE;
+		if (i != turn &&
+			players[i].is_riichi() &&
+			response_actions[selection].action == BaseAction::pass)
+		{
+			players[i].立直振听 = true;
+		}
+
+		i++; // for next player
 		if (i == turn) {
 			ResponseAction ra;
 			ra.action = BaseAction::pass;
@@ -934,17 +964,24 @@ void Table::make_selection(int selection)
 		else {
 			response_actions = Get抢杠(i, tile);
 		}
+		phase = PhaseEnum(phase + 1);
 		return;
 	}
 	case P4_抢杠RESPONSE: {
 		// 做出选择		
-		
+
 		if (response_actions.size() == 0) {
 			throw runtime_error("Empty Selection Lists.");
 		}
 
 		actions.push_back(response_actions[selection]);
-
+		// 立直振听判断
+		if (3 != turn &&
+			players[3].is_riichi() &&
+			response_actions[selection].action == BaseAction::pass)
+		{
+			players[3].立直振听 = true;
+		}
 		// 选择优先级，并且进行response结算
 		vector<int> response_player;
 		for (int i = 0; i < 4; ++i) {
@@ -986,9 +1023,16 @@ void Table::make_selection(int selection)
 		// 从actions中获得优先级
 		if (response_actions[selection].action > final_action)
 			final_action = response_actions[selection].action;
+		// 立直振听判断
+		int i = phase - P1_抢杠RESPONSE;
+		if (i != turn &&
+			players[i].is_riichi() &&
+			response_actions[selection].action == BaseAction::pass)
+		{
+			players[i].立直振听 = true;
+		}
 
-		phase = PhaseEnum(phase + 1);
-		int i = phase - P1_抢暗杠RESPONSE;
+		i++; // for next player
 		if (i == turn) {
 			ResponseAction ra;
 			ra.action = BaseAction::pass;
@@ -997,6 +1041,7 @@ void Table::make_selection(int selection)
 		else {
 			response_actions = Get抢暗杠(i, tile);
 		}
+		phase = PhaseEnum(phase + 1);
 		return;
 	}
 	case P4_抢暗杠RESPONSE: {
@@ -1007,7 +1052,13 @@ void Table::make_selection(int selection)
 		}
 
 		actions.push_back(response_actions[selection]);
-
+		// 立直振听判断
+		if (3 != turn &&
+			players[3].is_riichi() &&
+			response_actions[selection].action == BaseAction::pass)
+		{
+			players[3].立直振听 = true;
+		}
 		// 选择优先级，并且进行response结算
 		vector<int> response_player;
 		for (int i = 0; i < 4; ++i) {
