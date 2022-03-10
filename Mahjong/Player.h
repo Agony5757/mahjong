@@ -105,6 +105,11 @@ public:
 	void update_舍牌振听();
 	void remove_听牌(BaseTile t);
 
+	inline void 见逃() {
+		if (riichi) 立直振听 = true;
+		else 同巡振听 = true;
+	}
+
 	// Generate SelfAction
 	std::vector<SelfAction> get_加杠(); // 能否杠的过滤统一交给Table
 	std::vector<SelfAction> get_暗杠(); // 能否杠的过滤统一交给Table

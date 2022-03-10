@@ -9,6 +9,19 @@
 namespace_mahjong
 using namespace std;
 
+static bool check_见逃(const vector<ResponseAction>& responses, int selection)
+{
+	for (int i = 0; i < responses.size();++i) {
+		if (responses[i].action == BaseAction::荣和 ||
+			responses[i].action == BaseAction::抢杠 ||
+			responses[i].action == BaseAction::抢暗杠) {
+		
+			if (selection != i) return true;
+		}
+	}
+	return false;
+}
+
 vector<BaseTile> Table::get_dora() const
 {
 	vector<BaseTile> doratiles;
@@ -852,14 +865,10 @@ void Table::make_selection(int selection)
 			throw runtime_error("Empty Selection Lists.");
 		}
 
-		// 立直振听判断
+		// 见逃判断
 		int i = phase - P1_RESPONSE;
-		if (i != turn &&
-			players[i].is_riichi() &&
-			response_actions.size() > 1 &&
-			response_actions[selection].action == BaseAction::pass)
-		{
-			players[phase - P1_RESPONSE].立直振听 = true;
+		if (check_见逃(response_actions, selection)) {
+			players[i].见逃();
 		}
 
 		actions.push_back(response_actions[selection]);
@@ -895,13 +904,10 @@ void Table::make_selection(int selection)
 		if (response_actions[selection].action > final_action)
 			final_action = response_actions[selection].action;
 
-		// 立直振听判断
-		if (3 != turn &&
-			players[3].is_riichi() &&
-			response_actions.size() > 1 &&
-			response_actions[selection].action == BaseAction::pass)
-		{
-			players[3].立直振听 = true;
+		// 见逃判断
+		int i = phase - P1_RESPONSE;
+		if (check_见逃(response_actions, selection)) {
+			players[i].见逃();
 		}
 
 		// 选择优先级，并且进行response结算
@@ -1005,14 +1011,10 @@ void Table::make_selection(int selection)
 		if (response_actions[selection].action > final_action)
 			final_action = response_actions[selection].action;
 
-		// 立直振听判断
+		// 见逃判断
 		int i = phase - P1_抢杠RESPONSE;
-		if (i != turn &&
-			players[i].is_riichi() &&
-			response_actions.size() > 1 &&
-			response_actions[selection].action == BaseAction::pass)
-		{
-			players[i].立直振听 = true;
+		if (check_见逃(response_actions, selection)) {
+			players[i].见逃();
 		}
 
 		i++; // for next player
@@ -1035,14 +1037,13 @@ void Table::make_selection(int selection)
 		}
 
 		actions.push_back(response_actions[selection]);
-		// 立直振听判断
-		if (3 != turn &&
-			players[3].is_riichi() &&
-			response_actions.size() > 1 &&
-			response_actions[selection].action == BaseAction::pass)
-		{
-			players[3].立直振听 = true;
+
+		// 见逃判断
+		int i = phase - P1_抢杠RESPONSE;
+		if (check_见逃(response_actions, selection)) {
+			players[i].见逃();
 		}
+
 		// 选择优先级，并且进行response结算
 		vector<int> response_player;
 		for (int i = 0; i < 4; ++i) {
@@ -1084,14 +1085,11 @@ void Table::make_selection(int selection)
 		// 从actions中获得优先级
 		if (response_actions[selection].action > final_action)
 			final_action = response_actions[selection].action;
-		// 立直振听判断
+
+		// 见逃判断
 		int i = phase - P1_抢暗杠RESPONSE;
-		if (i != turn &&
-			players[i].is_riichi() &&
-			response_actions.size() > 1 &&
-			response_actions[selection].action == BaseAction::pass)
-		{
-			players[i].立直振听 = true;
+		if (check_见逃(response_actions, selection)) {
+			players[i].见逃();
 		}
 
 		i++; // for next player
@@ -1114,14 +1112,13 @@ void Table::make_selection(int selection)
 		}
 
 		actions.push_back(response_actions[selection]);
-		// 立直振听判断
-		if (3 != turn &&
-			players[3].is_riichi() &&
-			response_actions.size() > 1 &&
-			response_actions[selection].action == BaseAction::pass)
-		{
-			players[3].立直振听 = true;
+
+		// 见逃判断
+		int i = phase - P1_抢暗杠RESPONSE;
+		if (check_见逃(response_actions, selection)) {
+			players[i].见逃();
 		}
+
 		// 选择优先级，并且进行response结算
 		vector<int> response_player;
 		for (int i = 0; i < 4; ++i) {
