@@ -20,7 +20,7 @@ public:
 	bool make_selection_from_action(BaseAction action, std::vector<int> correspond_tiles);
 	int get_selection_from_action(BaseAction action, std::vector<int> correspond_tiles);
 	int get_phase() const;
-	inline void set_log(bool is_write) { write_log = is_write; }
+	inline void set_write_log(bool is_write) { write_log = is_write; }
 	Result get_result() const;	
 	~PaipuReplayer() {  } 
 };

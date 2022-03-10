@@ -6,17 +6,10 @@ using namespace std;
 
 void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家)
 {	
+	table.set_write_log(write_log);
 	table.game_init_for_replay(yama, init_scores, 立直棒, 本场, 场风, 亲家);
 
-	if (write_log) {
-		auto vec2str = [](vector<int> vec)
-		{
-			string str = "{";
-			for (auto t : vec) { str += to_string(t); str += ","; }
-			str += "}";
-			return str;
-		};
-
+	/*if (write_log) {
 		FILE* fp = fopen("replay.log", "w+");
 		fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
 			vec2str(yama).c_str(),
@@ -24,7 +17,7 @@ void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直�
 			立直棒, 本场, 场风, 亲家);
 
 		fclose(fp);
-	}
+	}*/
 }
 
 vector<SelfAction> PaipuReplayer::get_self_actions() const
@@ -48,11 +41,11 @@ bool PaipuReplayer::make_selection(int selection)
 	//     if (selection >= get_response_actions().size())
 	// 		return false; 		
 
-	if (write_log) {
+	/*if (write_log) {
 		FILE* fp = fopen("replay.log", "a+");
 		fprintf(fp, "table.make_selection(%d);\n", selection);
 		fclose(fp);
-	}
+	}*/
 	table.make_selection(selection);
 	return true;
 }

@@ -347,7 +347,7 @@ class PaipuReplay:
                 # 利用PaiPuReplayer进行重放
                 replayer = mp.PaipuReplayer()
                 if self.write_log:
-                    replayer.set_log(True)
+                    replayer.set_write_log(True)
                 #self.log(f'Replayer.init: {yama} {scores} {riichi_sticks} {honba} {game_order // 4} {oya_id}')
                 replayer.init(yama, scores, riichi_sticks, honba, game_order // 4, oya_id)
                 #self.log('Init over.')

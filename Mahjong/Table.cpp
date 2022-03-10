@@ -46,7 +46,18 @@ void Table::init_red_dora_3()
 void Table::shuffle_tiles()
 {
 	static std::default_random_engine rd(time(nullptr));
+
+	if (use_seed) {
+		rd.seed(seed);
+	}
 	std::shuffle(牌山.begin(), 牌山.end(), rd);
+
+	if (write_log) {
+		yama_log.reserve(N_TILES);
+		for (auto t : 牌山) {
+			yama_log.push_back(t->id);
+		}
+	}
 }
 
 void Table::init_yama()
@@ -111,6 +122,23 @@ void Table::init_before_playing()
 		players[i].sort_hand();
 		players[i].update_听牌();
 	}
+
+	if (write_log) {
+		auto init_score = {
+			players[0].score,
+			players[1].score,
+			players[2].score,
+			players[3].score,
+		};
+		FILE* fp = fopen("replay.log", "w+");
+		fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
+			vec2str(yama_log).c_str(),
+			vec2str(init_score).c_str(),
+			N_立直棒, N_本场, 场风, 亲家);
+
+		fclose(fp);
+	}
+
 	from_beginning();
 }
 
@@ -121,11 +149,13 @@ void Table::game_init() {
 	shuffle_tiles();
 	init_dora();
 
-	// 每人发13张牌
-	for (int i = 0; i < 4; ++i){
-		deal_tile((i + 庄家) % 4, 13); // 从庄
-		players[i].sort_hand();
-	}
+	//// 每人发13张牌
+	//for (int i = 0; i < 4; ++i){
+	//	deal_tile((i + 庄家) % 4, 13); // 从庄
+	//	players[i].sort_hand();
+	//}
+
+	deal_tenhou_style();
 	init_before_playing();
 }
 
@@ -222,19 +252,23 @@ void Table::game_init_with_metadata(unordered_map<string, string> metadata)
 				deal_tile(i % 4, 13);
 			}
 		}
-		if (val == "from_0") {
+		else if (val == "from_0") {
 			deal_tile(0, 13);
 			deal_tile(1, 13);
 			deal_tile(2, 13);
 			deal_tile(3, 13);
 		}
+		else if (val == "tenhou") {
+			deal_tenhou_style();
+		}
 		else throw runtime_error("Cannot Read Option: deal");
 	}
 	else {
-		deal_tile(0, 13);
+		/*deal_tile(0, 13);
 		deal_tile(1, 13);
 		deal_tile(2, 13);
-		deal_tile(3, 13);
+		deal_tile(3, 13);*/
+		deal_tenhou_style();
 	}
 
 	init_before_playing();
@@ -679,7 +713,11 @@ void Table::make_selection(int selection)
 	FunctionProfiler;
 #endif
 	// 这个地方控制了游戏流转
-
+	if (write_log) {
+		FILE* fp = fopen("game.log", "a+");
+		fprintf(fp, "\nmake_selection(%d);", selection);
+		fclose(fp);
+	}
 	// 分为两种情况，如果是ACTION阶段
 	switch (phase) {
 	case GAME_OVER:

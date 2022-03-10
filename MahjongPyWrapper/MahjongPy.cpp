@@ -182,6 +182,8 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("get_result", &Table::get_result)
 		.def("get_self_actions", &Table::get_self_actions)
 		.def("get_response_actions", &Table::get_response_actions)
+		.def("set_write_log", &Table::set_write_log)
+		.def("set_seed", &Table::set_seed)
 
 		// 成员变量们
 		.def_readonly("dora_spec", &Table::dora_spec)
@@ -343,7 +345,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("get_selection_from_action", &PaipuReplayer::get_selection_from_action)
 		.def("get_phase", &PaipuReplayer::get_phase)
 		.def("get_result", &PaipuReplayer::get_result)
-		.def("set_log", &PaipuReplayer::set_log)
+		.def("set_log", &PaipuReplayer::set_write_log)
 		;
 
 	py::class_<TenhouShuffle>(m, "TenhouShuffle")

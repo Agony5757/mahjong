@@ -39,6 +39,12 @@ public:
 	int n立直棒 = 0;
 	GameLog fullGameLog;
 
+	bool write_log = false;
+	std::string write_log_filename = "game.log";
+	std::vector<int> yama_log;
+	bool use_seed = false;
+	int seed = 0;
+
 public:
 	Table() = default;
 
@@ -71,6 +77,14 @@ public:
 	void 发岭上牌(int i_player);
 
 	void next_turn(int nextturn);
+
+	inline void set_write_log(bool write) { write_log = write; }
+	inline void set_seed(int new_seed) 
+	{ 
+		seed = new_seed; 
+		use_seed = true; 
+	}
+	// inline int get_seed() { return seed; }
 
 	enum ToStringOption : int {
 		YAMA = 1 << 0,
