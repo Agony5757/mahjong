@@ -130,7 +130,7 @@ void Table::init_before_playing()
 			players[2].score,
 			players[3].score,
 		};
-		FILE* fp = fopen("replay.log", "w+");
+		FILE* fp = fopen(write_log_filename.c_str(), "w+");
 		fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
 			vec2str(yama_log).c_str(),
 			vec2str(init_score).c_str(),
@@ -714,7 +714,7 @@ void Table::make_selection(int selection)
 #endif
 	// 这个地方控制了游戏流转
 	if (write_log) {
-		FILE* fp = fopen("game.log", "a+");
+		FILE* fp = fopen(write_log_filename.c_str(), "a+");
 		fprintf(fp, "\nmake_selection(%d);", selection);
 		fclose(fp);
 	}

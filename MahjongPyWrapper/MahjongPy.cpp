@@ -345,7 +345,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("get_selection_from_action", &PaipuReplayer::get_selection_from_action)
 		.def("get_phase", &PaipuReplayer::get_phase)
 		.def("get_result", &PaipuReplayer::get_result)
-		.def("set_log", &PaipuReplayer::set_write_log)
+		.def("set_write_log", &PaipuReplayer::set_write_log)
 		;
 
 	py::class_<TenhouShuffle>(m, "TenhouShuffle")

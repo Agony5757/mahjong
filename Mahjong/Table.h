@@ -40,7 +40,7 @@ public:
 	GameLog fullGameLog;
 
 	bool write_log = false;
-	std::string write_log_filename = "game.log";
+	std::string write_log_filename = "replay.log";
 	std::vector<int> yama_log;
 	bool use_seed = false;
 	int seed = 0;
