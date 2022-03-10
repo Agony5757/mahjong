@@ -681,30 +681,38 @@ vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
 	return actions;
 }
 
-void Table::make_selection_from_action_tile(BaseAction action_type, vector<Tile*> tiles)
+int Table::get_selection_from_action_tile(BaseAction action_type, const vector<Tile*> &tiles) const
 {
-	if (phase == GAME_OVER) { return; }
+	if (phase == GAME_OVER) { return -1; }
 	else if (phase <= P4_ACTION) {
-		int idx = get_action_index(self_actions, action_type, tiles);
-		make_selection(idx);
+		return get_action_index(self_actions, action_type, tiles);
 	}
 	else {
-		int idx = get_action_index(response_actions, action_type, tiles);
-		make_selection(idx);
+		return get_action_index(response_actions, action_type, tiles);
 	}
 }
 
-void Table::make_selection_from_action_basetile(BaseAction action_type, vector<BaseTile> tiles, bool use_red_dora)
+void Table::make_selection_from_action_tile(BaseAction action_type, const vector<Tile*>& tiles)
 {
-	if (phase == GAME_OVER) { return; }
+	int idx = get_selection_from_action_tile(action_type, tiles);
+	make_selection(idx);
+}
+
+int Table::get_selection_from_action_basetile(BaseAction action_type, const vector<BaseTile>& tiles, bool use_red_dora) const
+{
+	if (phase == GAME_OVER) { return -1; }
 	else if (phase <= P4_ACTION) {
-		int idx = get_action_index(self_actions, action_type, tiles, use_red_dora);
-		make_selection(idx);
+		return get_action_index(self_actions, action_type, tiles, use_red_dora);
 	}
 	else {
-		int idx = get_action_index(response_actions, action_type, tiles, use_red_dora);
-		make_selection(idx);
+		return get_action_index(response_actions, action_type, tiles, use_red_dora);
 	}
+}
+
+void Table::make_selection_from_action_basetile(BaseAction action_type, const vector<BaseTile> &tiles, bool use_red_dora)
+{
+	int idx = get_selection_from_action_basetile(action_type, tiles, use_red_dora);
+	make_selection(idx);
 }
 
 void Table::make_selection(int selection)

@@ -167,9 +167,11 @@ public:
 	inline int get_phase() const { return (int)phase; }
 
 	// Make a selection from tiles
-	void make_selection_from_action_tile(BaseAction action, std::vector<Tile*> tiles);
-	void make_selection_from_action_basetile(BaseAction action, std::vector<BaseTile> tiles, bool use_red_dora);
-	inline void make_selection_from_action_basetile_int(BaseAction action, std::vector<int> tiles, bool use_red_dora)
+	int get_selection_from_action_tile(BaseAction action_type, const std::vector<Tile*> &tiles) const;
+	void make_selection_from_action_tile(BaseAction action, const std::vector<Tile*>& tiles);
+	int get_selection_from_action_basetile(BaseAction action_type, const std::vector<BaseTile>& tiles, bool use_red_dora) const;
+	void make_selection_from_action_basetile(BaseAction action, const std::vector<BaseTile> &tiles, bool use_red_dora);
+	inline void make_selection_from_action_basetile_int(BaseAction action, const std::vector<int> &tiles, bool use_red_dora)
 	{
 		std::vector<BaseTile> tiles_basetile;
 		tiles_basetile.resize(tiles.size());
