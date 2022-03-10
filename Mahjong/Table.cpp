@@ -133,8 +133,8 @@ void Table::init_before_playing()
 		FILE* fp = fopen(write_log_filename.c_str(), "w+");
 		fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
 			vec2str(yama_log).c_str(),
-			vec2str(init_score).c_str(),
-			N_立直棒, N_本场, 场风, 亲家);
+			vec2str(init_score).c_str(),			
+			n立直棒, n本场, 场风, 庄家);
 
 		fclose(fp);
 	}
@@ -169,6 +169,7 @@ void Table::game_init_for_replay(std::vector<int> yama, std::vector<int> init_sc
 	init_tiles();
 	init_red_dora_3();
 	import_yama(yama);
+	yama_log = yama;
 	init_dora();
 	deal_tenhou_style();
 
@@ -731,7 +732,7 @@ void Table::make_selection(int selection)
 	// 这个地方控制了游戏流转
 	if (write_log) {
 		FILE* fp = fopen(write_log_filename.c_str(), "a+");
-		fprintf(fp, "\nmake_selection(%d);", selection);
+		fprintf(fp, "\ntable.make_selection(%d);", selection);
 		fclose(fp);
 	}
 	// 分为两种情况，如果是ACTION阶段
