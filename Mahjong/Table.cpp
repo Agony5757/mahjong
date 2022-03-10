@@ -133,7 +133,7 @@ void Table::init_before_playing()
 		FILE* fp = fopen(write_log_filename.c_str(), "w+");
 		fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
 			vec2str(yama_log).c_str(),
-			vec2str(init_score).c_str(),
+			vec2str(init_score).c_str(),			
 			n立直棒, n本场, 场风, 庄家);
 
 		fclose(fp);
@@ -169,6 +169,7 @@ void Table::game_init_for_replay(std::vector<int> yama, std::vector<int> init_sc
 	init_tiles();
 	init_red_dora_3();
 	import_yama(yama);
+	yama_log = yama;
 	init_dora();
 	deal_tenhou_style();
 
