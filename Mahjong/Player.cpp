@@ -262,10 +262,9 @@ vector<SelfAction> Player::get_九种九牌()
 
 	// 考虑到第一巡可以有人暗杠，但是自己不行
 	if (hand.size() != 14) return actions;
-
-	constexpr BaseTile 幺九牌list[] = {_1m, _9m, _1p, _9p, _1s, _9s, _1z, _2z, _3z, _4z, _5z, _6z, _7z};
-
-	static auto get_九牌 = [&幺九牌list](const vector<Tile*> &hand) {		
+	
+	static auto get_九牌 = [](const vector<Tile*> &hand) {		
+		constexpr BaseTile 幺九牌list[] = {_1m, _9m, _1p, _9p, _1s, _9s, _1z, _2z, _3z, _4z, _5z, _6z, _7z};
 		vector<Tile*> 九牌collection;
 		for (auto tile : 幺九牌list) {
 			auto iter = find_match_tile(hand, tile);
