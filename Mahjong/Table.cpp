@@ -526,6 +526,7 @@ void Table::发牌(int i_player)
 
 void Table::发岭上牌(int i_player)
 {
+	dora_spec++; // 先翻dora
 	deal_tile(i_player);
 	fullGameLog.log摸牌(i_player, players[i_player].hand.back());
 }
@@ -919,7 +920,7 @@ void Table::make_selection(int selection)
 		case BaseAction::pass:
 
 			// 杠，打出牌之后且其他人pass
-			if (after_杠()) { dora_spec++; }
+			// if (after_杠()) { dora_spec++; }
 
 			if (selected_action.action == BaseAction::立直) {
 				// 立直成功
@@ -945,7 +946,7 @@ void Table::make_selection(int selection)
 		case BaseAction::杠:
 
 			// 明杠，打出牌之后且其他人吃碰
-			if (after_杠()) { dora_spec++; }
+			// if (after_杠()) { dora_spec++; }
 			if (selected_action.action == BaseAction::立直) {
 				// 立直成功
 				if (players[turn].first_round) {
@@ -1136,7 +1137,7 @@ void Table::make_selection(int selection)
 		players[turn].play_暗杠(selected_action.correspond_tiles[0]->tile);
 		last_action = BaseAction::暗杠;
 		// 立即翻宝牌指示牌
-		dora_spec++;
+		// dora_spec++;
 
 		// 这是暗杠，消除所有人第一巡和一发
 		for (int i = 0; i < 4; ++i) {
