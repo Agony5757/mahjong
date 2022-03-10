@@ -400,7 +400,7 @@ class PaipuReplay:
                         replayer.make_selection(0)
                         replayer.make_selection(0)
                         replayer.make_selection(0)
-
+                        
             elif child.tag[0] in ["D", "E", "F", "G"] and child.attrib == {}:  # 打牌
                 player_id = "DEFG".find(child.tag[0])
                 discarded_tile = int(child.tag[1:])
@@ -499,6 +499,17 @@ class PaipuReplay:
                 score_changes2 = None
                 double_ron = False
                 if child.tag == "RYUUKYOKU":
+                    if child.get('type') == 'yao9':
+                        self.log("九种九牌！")
+                        replayer.make_selection(14)
+                    elif child.get('type') == 'ron3':
+                        self.log('三家和牌！')   
+                        continue                
+                    else:
+                        replayer.make_selection(0)
+                        replayer.make_selection(0)
+                        replayer.make_selection(0)
+                        replayer.make_selection(0)
                     self.log("本局结束: 结果是流局")     
                     if replayer.get_phase() != int(mp.PhaseEnum.GAME_OVER):
                         raise ActionException('牌局未结束', paipu, game_order, honba)
@@ -707,6 +718,7 @@ def paipu_replay_1(filename):
     replayer.logger = logger(fp = 'stdout')
     try:
         replayer.paipu_replay_1(filename)
+        print(replayer.log_cache)
     except Exception as e:
         print(replayer.log_cache)
         print(e)

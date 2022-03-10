@@ -263,10 +263,12 @@ vector<SelfAction> Player::get_九种九牌()
 	// 考虑到第一巡可以有人暗杠，但是自己不行
 	if (hand.size() != 14) return actions;
 
-	static auto get_九牌 = [](const vector<Tile*> &hand) {		
+	constexpr BaseTile 幺九牌list[] = {_1m, _9m, _1p, _9p, _1s, _9s, _1z, _2z, _3z, _4z, _5z, _6z, _7z};
+
+	static auto get_九牌 = [&幺九牌list](const vector<Tile*> &hand) {		
 		vector<Tile*> 九牌collection;
-		for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
-			auto iter = find_match_tile(hand, BaseTile(i));
+		for (auto tile : 幺九牌list) {
+			auto iter = find_match_tile(hand, tile);
 			if (iter != hand.end()) {
 				九牌collection.push_back(*iter);
 			}
@@ -450,10 +452,15 @@ vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
 	if (!is_幺九牌(tile->tile)) { return {}; }
 
 	if (is_in(听牌, tile->tile)) {
-		ResponseAction action;
-		action.action = BaseAction::抢暗杠;
-		action.correspond_tiles = { tile };
-		actions.push_back(action);
+		auto copyhand = hand;
+		copyhand.push_back(tile);
+		if (is国士无双和牌型(convert_tiles_to_base_tiles(copyhand)))
+		{
+			ResponseAction action;
+			action.action = BaseAction::抢暗杠;
+			action.correspond_tiles = { tile };
+			actions.push_back(action);
+		}
 	}
 
 	return actions;

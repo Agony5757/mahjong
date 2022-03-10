@@ -90,7 +90,7 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 					}
 				}
 			}
-			if (mpsz一色 >= 0 && mpsz一色 <= 2) break;//不满足基本条件直接跳出 
+			if (mpsz一色 < 0 && mpsz一色 > 2) break;//不满足基本条件直接跳出 
 			
 			if (is纯九莲和牌型(convert_tiles_to_base_tiles(tiles))) {
 				vector<Yaku> yakus;
@@ -332,7 +332,7 @@ void CounterResult::calculate_score(bool 亲, bool 自摸)
 			REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
 		}
 		else if (fu == 30) {
-			REGISTER_SCORE(亲, 自摸, 12000, 3900, 7700, 3900, 2000);
+			REGISTER_SCORE(亲, 自摸, 11600, 3900, 7700, 3900, 2000);
 		}
 		else if (fu == 25) {
 			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
@@ -515,6 +515,7 @@ static inline vector<string> remove_4(const vector<string> &strs) {
 	vector<string> retstr(strs);
 	for (auto &ret : retstr) {
 		if (ret.size() == 4) ret.pop_back();
+		if (ret[2] == '|') ret[2] = 'K';
 	}
 	return retstr;
 }

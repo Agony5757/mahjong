@@ -1083,7 +1083,7 @@ void Table::make_selection(int selection)
 		if (response_actions[selection].action > final_action)
 			final_action = response_actions[selection].action;
 		// 立直振听判断
-		int i = phase - P1_抢杠RESPONSE;
+		int i = phase - P1_抢暗杠RESPONSE;
 		if (i != turn &&
 			players[i].is_riichi() &&
 			response_actions.size() > 1 &&
