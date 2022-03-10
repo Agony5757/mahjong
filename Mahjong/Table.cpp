@@ -134,7 +134,7 @@ void Table::init_before_playing()
 		fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
 			vec2str(yama_log).c_str(),
 			vec2str(init_score).c_str(),
-			N_立直棒, N_本场, 场风, 亲家);
+			n立直棒, n本场, 场风, 庄家);
 
 		fclose(fp);
 	}
@@ -731,7 +731,7 @@ void Table::make_selection(int selection)
 	// 这个地方控制了游戏流转
 	if (write_log) {
 		FILE* fp = fopen(write_log_filename.c_str(), "a+");
-		fprintf(fp, "\nmake_selection(%d);", selection);
+		fprintf(fp, "\ntable.make_selection(%d);", selection);
 		fclose(fp);
 	}
 	// 分为两种情况，如果是ACTION阶段
@@ -853,6 +853,7 @@ void Table::make_selection(int selection)
 		int i = phase - P1_RESPONSE;
 		if (i != turn &&
 			players[i].is_riichi() &&
+			response_actions.size() > 1 &&
 			response_actions[selection].action == BaseAction::pass)
 		{
 			players[phase - P1_RESPONSE].立直振听 = true;
@@ -894,6 +895,7 @@ void Table::make_selection(int selection)
 		// 立直振听判断
 		if (3 != turn &&
 			players[3].is_riichi() &&
+			response_actions.size() > 1 &&
 			response_actions[selection].action == BaseAction::pass)
 		{
 			players[3].立直振听 = true;
@@ -1004,6 +1006,7 @@ void Table::make_selection(int selection)
 		int i = phase - P1_抢杠RESPONSE;
 		if (i != turn &&
 			players[i].is_riichi() &&
+			response_actions.size() > 1 &&
 			response_actions[selection].action == BaseAction::pass)
 		{
 			players[i].立直振听 = true;
@@ -1032,6 +1035,7 @@ void Table::make_selection(int selection)
 		// 立直振听判断
 		if (3 != turn &&
 			players[3].is_riichi() &&
+			response_actions.size() > 1 &&
 			response_actions[selection].action == BaseAction::pass)
 		{
 			players[3].立直振听 = true;
@@ -1081,6 +1085,7 @@ void Table::make_selection(int selection)
 		int i = phase - P1_抢杠RESPONSE;
 		if (i != turn &&
 			players[i].is_riichi() &&
+			response_actions.size() > 1 &&
 			response_actions[selection].action == BaseAction::pass)
 		{
 			players[i].立直振听 = true;
@@ -1109,6 +1114,7 @@ void Table::make_selection(int selection)
 		// 立直振听判断
 		if (3 != turn &&
 			players[3].is_riichi() &&
+			response_actions.size() > 1 &&
 			response_actions[selection].action == BaseAction::pass)
 		{
 			players[3].立直振听 = true;
