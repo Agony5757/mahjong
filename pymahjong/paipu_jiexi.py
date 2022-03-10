@@ -516,13 +516,15 @@ class PaipuReplay:
 
                     result = replayer.get_result()
                     result_score = result.score
+                    target_score = [score_changes[i] + scores[i] for i in range(4)]                    
+                    result_score_change = [result_score[i] - scores[i] for i in range(4)]    
                     self.log(score_changes1, score_changes2, scores, result_score)
                     self.log(result.to_string())
                     for i in range(4):
                         if score_changes[i] + scores[i] == result_score[i]:
                             continue
                         else:
-                            raise ScoreException(f'Expect: {score_changes}+{scores} Now: {result_score}', paipu, game_order, honba)
+                            raise ScoreException(f'Now: {result_score}({result_score_change}) Expect: {target_score}({score_changes}) Original: {scores}', paipu, game_order, honba)
                     
                     self.log('OK!')
                                    
@@ -594,13 +596,15 @@ class PaipuReplay:
 
                     result = replayer.get_result()
                     result_score = result.score
+                    target_score = [score_changes[i] + scores[i] for i in range(4)]                    
+                    result_score_change = [result_score[i] - scores[i] for i in range(4)]    
                     self.log(score_changes1, score_changes2, scores, result_score)
                     self.log(result.to_string())
                     for i in range(4):
                         if score_changes[i] + scores[i] == result_score[i]:
                             continue
                         else:
-                            raise ScoreException(f'Expect: {score_changes}+{scores} Now: {result_score}', paipu, game_order, honba)
+                            raise ScoreException(f'Now: {result_score}({result_score_change}) Expect: {target_score}({score_changes}) Original: {scores}', paipu, game_order, honba)
                     
                     self.log('OK!')
 

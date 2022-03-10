@@ -489,6 +489,7 @@ void Table::deal_tile(int i_player)
 /* 如果还有2/4张岭上牌，则摸倒数第2张（因为最后一张压在下面）*/
 void Table::deal_tile_岭上(int i_player)
 {
+	dora_spec++; // 先翻dora
 	int n_kan = get_remain_kan_tile();
 	auto iter = 牌山.begin();
 	if (n_kan % 2 == 0) ++iter;
