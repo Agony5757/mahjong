@@ -38,7 +38,7 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 	vector<Yaku> Dora役;
 
 	/* 天地和的条件是，在第一巡，且没人鸣牌*/
-	if (player.first_round) {
+	if (player.first_round && tsumo) {
 		if (table->庄家 == table->turn) {
 			场役.push_back(Yaku::天和);
 			役满 = true;
