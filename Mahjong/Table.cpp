@@ -695,7 +695,11 @@ int Table::get_selection_from_action_tile(BaseAction action_type, const vector<T
 void Table::make_selection_from_action_tile(BaseAction action_type, const vector<Tile*>& tiles)
 {
 	int idx = get_selection_from_action_tile(action_type, tiles);
-	make_selection(idx);
+	if (idx >= 0)
+		make_selection(idx);
+	else {
+		throw std::runtime_error(fmt::format("Cannot locate action with action = {}", action_type));
+	}
 }
 
 int Table::get_selection_from_action_basetile(BaseAction action_type, const vector<BaseTile>& tiles, bool use_red_dora) const
@@ -712,7 +716,11 @@ int Table::get_selection_from_action_basetile(BaseAction action_type, const vect
 void Table::make_selection_from_action_basetile(BaseAction action_type, const vector<BaseTile> &tiles, bool use_red_dora)
 {
 	int idx = get_selection_from_action_basetile(action_type, tiles, use_red_dora);
-	make_selection(idx);
+	if (idx >= 0)
+		make_selection(idx);
+	else {
+		throw std::runtime_error(fmt::format("Cannot locate action with action = {}", action_type));
+	}
 }
 
 void Table::make_selection(int selection)

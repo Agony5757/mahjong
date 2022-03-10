@@ -94,19 +94,19 @@ int get_action_index(const std::vector<ActionType> &actions, BaseAction action_t
 {
 
 	if (action_type == BaseAction::九种九牌 ||
-	    action_type == BaseAction::荣和 || 
-		action_type == BaseAction::抢杠 || 
+		action_type == BaseAction::荣和 ||
+		action_type == BaseAction::抢杠 ||
 		action_type == BaseAction::抢暗杠) {
 		for (int i = 0; i < actions.size(); ++i) {
 			if (actions[i].action == action_type)
 				return i;
 		}
-		throw std::runtime_error(fmt::format("Cannot locate action with action = {}", action_type));
+		return -1;
 	}
 	else {	
 		auto iter = std::find(actions.begin(), actions.end(), ActionType{action_type, correspond_tiles});
-		if (iter == actions.end()) 
-			throw std::runtime_error(fmt::format("Cannot locate action with action = {}", action_type));
+		if (iter == actions.end())
+			return -1;
 		else 
 			return iter - actions.begin();
 	}	
@@ -126,7 +126,7 @@ int get_action_index(const std::vector<ActionType> &actions, BaseAction action_t
 			if (actions[i].action == action_type)
 				return i;
 		}
-		throw std::runtime_error(fmt::format("Cannot locate action with action = {}", action_type));
+		return -1;
 	}
 
 	if (use_red_dora) {
@@ -163,7 +163,7 @@ int get_action_index(const std::vector<ActionType> &actions, BaseAction action_t
 			}
 		}
 	}
-	throw std::runtime_error(fmt::format("Cannot locate action with action = {}", action_type));
+	return -1;
 }
 
 namespace_mahjong_end

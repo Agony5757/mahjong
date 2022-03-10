@@ -171,14 +171,23 @@ public:
 	void make_selection_from_action_tile(BaseAction action, const std::vector<Tile*>& tiles);
 	int get_selection_from_action_basetile(BaseAction action_type, const std::vector<BaseTile>& tiles, bool use_red_dora) const;
 	void make_selection_from_action_basetile(BaseAction action, const std::vector<BaseTile> &tiles, bool use_red_dora);
-	inline void make_selection_from_action_basetile_int(BaseAction action, const std::vector<int> &tiles, bool use_red_dora)
+	inline int get_selection_from_action_basetile_int(BaseAction action, const std::vector<int> &tiles, bool use_red_dora)
 	{
 		std::vector<BaseTile> tiles_basetile;
 		tiles_basetile.resize(tiles.size());
 		for (size_t i = 0; i<tiles_basetile.size();++i){
 			tiles_basetile[i] = BaseTile(tiles[i]);
 		}
-		make_selection_from_action_basetile(action, tiles_basetile, use_red_dora);
+		return get_selection_from_action_basetile(action, tiles_basetile, use_red_dora);
+	}
+	inline void make_selection_from_action_basetile_int(BaseAction action, const std::vector<int>& tiles, bool use_red_dora)
+	{
+		int idx = get_selection_from_action_basetile_int(action, tiles, use_red_dora);
+		if (idx >= 0)
+			make_selection(idx);
+		else {
+			throw std::runtime_error(fmt::format("Cannot locate action with action = {}", action));
+		}
 	}
 
 	// Make a selection and game moves on.

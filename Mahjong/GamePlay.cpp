@@ -51,87 +51,19 @@ bool PaipuReplayer::make_selection(int selection)
 }
 
 bool PaipuReplayer::make_selection_from_action(BaseAction action, vector<int> correspond_tiles)
-{	
-	vector<Tile*> correspond_tiles_1;
-	for (int i : correspond_tiles) {
-		correspond_tiles_1.push_back(&table.tiles[i]);
-	}
-	table.make_selection_from_action_tile(action, correspond_tiles_1);
-	return true;
-	// if (get_phase() <= Table::P4_ACTION)
-	// {
-	// 	auto& actions = table.self_actions;
-	// 	SelfAction action_obj(action, correspond_tiles_1);
-	// 	auto iter = find(actions.begin(), actions.end(), action_obj);	
-
-	// 	if (iter == actions.end())
-	// 	{
-	// 		// 出错
-	// 		return false;
-	// 	}
-	// 	else
-	// 	{		
-	// 		int idx = iter - actions.begin();		
-	// 		return make_selection(idx);			
-	// 	}
-	// }
-	// else
-	// {
-	// 	auto& actions = table.response_actions;
-	// 	ResponseAction action_obj(action, correspond_tiles_1);
-
-	// 	auto iter = find(actions.begin(), actions.end(), action_obj);
-	// 	if (iter == actions.end())
-	// 	{
-	// 		// 出错
-	// 		return false;
-	// 	}
-	// 	else
-	// 	{
-	// 		return make_selection(iter - actions.begin());
-	// 	}
-	// }
+{
+	int idx = get_selection_from_action(action, correspond_tiles);
+	return make_selection(idx);
 }
 
-// int PaipuReplayer::get_selection_from_action(BaseAction action, vector<int> correspond_tiles)
-// {	
-// 	vector<Tile*> correspond_tiles_1;
-// 	for (int i : correspond_tiles) {
-// 		correspond_tiles_1.push_back(&table.tiles[i]);
-// 	}
-// 	if (get_phase() <= Table::P4_ACTION)
-// 	{
-// 		auto& actions = table.self_actions;
-// 		SelfAction action_obj(action, correspond_tiles_1);
-// 		auto iter = find(actions.begin(), actions.end(), action_obj);	
-	
-// 		if (iter == actions.end())
-// 		{
-// 			// 出错
-// 			return -1;
-// 		}
-// 		else
-// 		{		
-// 			return iter - actions.begin();				
-// 		}
-// 	}
-// 	else
-// 	{
-// 		auto& actions = table.response_actions;
-// 		ResponseAction action_obj(action, correspond_tiles_1);
-
-// 		auto iter = find(actions.begin(), actions.end(), action_obj);
-// 		if (iter == actions.end())
-// 		{
-// 			// 出错
-// 			return -1;
-// 		}
-// 		else
-// 		{		
-// 			return iter - actions.begin();				
-// 		}
-// 	}
-// }
+ int PaipuReplayer::get_selection_from_action(BaseAction action, vector<int> correspond_tiles)
+ {
+	 vector<Tile*> correspond_tiles_1;
+	 for (int i : correspond_tiles) {
+		 correspond_tiles_1.push_back(&table.tiles[i]);
+	 }
+	 return table.get_selection_from_action_tile(action, correspond_tiles_1);
+ }
 
 int PaipuReplayer::get_phase() const
 {
