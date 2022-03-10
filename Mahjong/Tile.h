@@ -325,40 +325,19 @@ struct Fulu {
 	std::vector<Tile*> tiles;
 	int take = 0;
 	// take标记的tiles中第几张牌拿的是别人的
-	// take == 0 说明 (1)23
-	// take == 1 说明 1(2)3
-	// take == 2 说明 12(3)
-	// take在type==Chi的时候才有效，其他时候不用
+	// take == 0 说明 (1)23  or 碰上家
+	// take == 1 说明 1(2)3  or 碰对家
+	// take == 2 说明 12(3)  or 碰下家
 
 	Type type;
 	inline std::string to_string() const {
 		std::stringstream ss;
 		switch (type) {
-		case Chi: {
-			for (int i = 0; i < 3; ++i) {
-				if (i == take) {
-					ss << "(" << tiles[i]->to_string() << ")";
-				}
-				else {
-					ss << tiles[i]->to_string();
-				}
-			}
-			break;
-		}
-		case Pon: {
-			for (int i = 0; i < 3; ++i) {
-				if (i == 1) {
-					ss << "(" << tiles[i]->to_string() << ")";
-				}
-				else {
-					ss << tiles[i]->to_string();
-				}
-			}
-			break;
-		}
+		case Chi:
+		case Pon:
 		case 大明杠: {
-			for (int i = 0; i < 4; ++i) {
-				if (i < 1) {
+			for (int i = 0; i < tiles.size(); ++i) {
+				if (i == take) {
 					ss << "(" << tiles[i]->to_string() << ")";
 				}
 				else {
@@ -369,7 +348,7 @@ struct Fulu {
 		}
 		case 加杠: {
 			for (int i = 0; i < 4; ++i) {
-				if (i < 2) {
+				if (i == take || i == 3) {
 					ss << "(" << tiles[i]->to_string() << ")";
 				}
 				else {

@@ -134,7 +134,7 @@ public:
 	std::vector<SelfAction> riichi_get_暗杠();
 	std::vector<SelfAction> riichi_get_打牌();
 
-	void move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile);
+	void move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile, int relative_position);
 	void remove_from_hand(Tile* tile);
 
 	// 将所有的BaseTile值为tile的四个牌移动到副露区

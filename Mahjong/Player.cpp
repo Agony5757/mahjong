@@ -524,7 +524,7 @@ vector<SelfAction> Player::riichi_get_打牌()
 	return actions;
 }
 
-void Player::move_from_hand_to_fulu(vector<Tile*> tiles, Tile* tile)
+void Player::move_from_hand_to_fulu(vector<Tile*> tiles, Tile* tile, int relative_position)
 {
 	Fulu fulu;
 	if (is_刻子({ tiles[0]->tile, tiles[1]->tile, tile->tile })
@@ -532,7 +532,16 @@ void Player::move_from_hand_to_fulu(vector<Tile*> tiles, Tile* tile)
 		// 碰的情况
 		// 创建对象
 		fulu.type = Fulu::Pon;
-		fulu.take = 0;
+		switch (relative_position) {
+		case 1: // 下家
+			fulu.take = 2; break;
+		case 2: // 对家
+			fulu.take = 1; break;
+		case 3: // 上家
+			fulu.take = 0; break;
+		default:
+			throw runtime_error("Bad Position in Fulu (Pon/Kan).");
+		}
 		fulu.tiles = { tiles[0], tiles[1], tile };
 
 		// 加入
@@ -576,7 +585,16 @@ void Player::move_from_hand_to_fulu(vector<Tile*> tiles, Tile* tile)
 		// 杠的情况
 		// 创建对象
 		fulu.type = Fulu::大明杠;
-		fulu.take = 0;
+		switch (relative_position) {
+		case 1: // 下家
+			fulu.take = 2; break;
+		case 2: // 对家
+			fulu.take = 1; break;
+		case 3: // 上家
+			fulu.take = 0; break;
+		default:
+			throw runtime_error("Bad Position in Fulu (Pon/Kan).");
+		}
 		fulu.tiles = { tiles[0], tiles[1], tiles[2], tile };
 
 		// 加入

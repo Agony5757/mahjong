@@ -38,12 +38,12 @@ struct Action
 	/* 关于corresponding_tile的约定
 	pass: empty (size=0)
 	吃/碰: 手牌中2张牌 (size=2)
-	杠: 手牌中2张牌 (size=3)
+	杠: 手牌中3张牌 (size=3)
 	荣/抢杠/抢暗杠: 荣到的那1张牌 (size=1)
 
 	暗杠: 手牌中的4张牌 (size=4)
 	加杠: 手牌中的1张牌 (size=1)
-	出牌/立直: 手牌中的1张牌 (size=2)	
+	出牌/立直: 手牌中的1张牌 (size=1)	
 	自摸: empty (size=0)
 	九种九牌: 能推的N种九牌，每种各一张 (size>=9)
 

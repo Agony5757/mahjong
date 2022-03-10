@@ -206,7 +206,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("get_ura_dora", &Table::get_ura_dora)
 		.def("get_remain_kan_tile", &Table::get_remain_kan_tile)
 		.def("get_remain_tile", &Table::get_remain_tile)
-		.def("to_string", &Table::to_string)
+		.def("to_string", static_cast<std::string(Table::*)() const>(&Table::to_string))
 		;
 
 	m.def("TableToString", [](const Table& table, int mode) {return py::bytes(table.to_string(mode)); });

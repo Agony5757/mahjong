@@ -969,7 +969,7 @@ void Table::make_selection(int selection)
 
 			players[response].门清 = false;
 			players[response].move_from_hand_to_fulu(
-				actions[response].correspond_tiles, tile);
+				actions[response].correspond_tiles, tile, turn - response);
 
 			// 这是鸣牌，消除所有人第一巡和一发
 			for (int i = 0; i < 4; ++i) {

@@ -95,7 +95,12 @@ public:
 		亲家 = 1 << 5,
 		REMAIN_TILE = 1 << 6,
 	};
-	std::string to_string(int option = YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE) const;
+	[[deprecated("ToStringOption be removed in future")]] std::string to_string(int option) const;
+	
+	inline std::string to_string() const 
+	{ 
+		return to_string(YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE); 
+	}
 
 	inline bool after_chipon() { return last_action == BaseAction::吃 || last_action == BaseAction::碰; }
 	inline bool after_daiminkan() {	return last_action == BaseAction::杠; }
@@ -160,7 +165,6 @@ public:
 	// Initialize the game.
 	void game_init();
 	void game_init_for_replay(std::vector<int> yama, std::vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家);
-
 	void game_init_with_metadata(std::unordered_map<std::string, std::string> metadata);
 	
 	// Get the phase of the game
