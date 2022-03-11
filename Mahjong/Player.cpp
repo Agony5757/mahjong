@@ -534,10 +534,13 @@ void Player::move_from_hand_to_fulu(vector<Tile*> tiles, Tile* tile, int relativ
 		fulu.type = Fulu::Pon;
 		switch (relative_position) {
 		case 1: // 下家
+		case -3:
 			fulu.take = 2; break;
 		case 2: // 对家
+		case -2:
 			fulu.take = 1; break;
 		case 3: // 上家
+		case -1:
 			fulu.take = 0; break;
 		default:
 			throw runtime_error("Bad Position in Fulu (Pon/Kan).");
@@ -585,12 +588,15 @@ void Player::move_from_hand_to_fulu(vector<Tile*> tiles, Tile* tile, int relativ
 		// 杠的情况
 		// 创建对象
 		fulu.type = Fulu::大明杠;
-		switch (relative_position) {
+		switch (relative_position % 4) {
 		case 1: // 下家
+		case -3:
 			fulu.take = 2; break;
 		case 2: // 对家
+		case -2:
 			fulu.take = 1; break;
 		case 3: // 上家
+		case -1:
 			fulu.take = 0; break;
 		default:
 			throw runtime_error("Bad Position in Fulu (Pon/Kan).");

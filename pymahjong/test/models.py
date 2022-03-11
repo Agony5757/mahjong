@@ -331,7 +331,7 @@ class VLOG(nn.Module):
             elif self.algorithm == 'ddqn':
                 q = self.f_s2q(self.h_t).detach().cpu()
                 if action_mask is not None:
-                    q = q * action_mask - INFINITY * (1 - action_mask)
+                    q = q.clamp(-INFINITY, INFINITY) * action_mask - 2 * INFINITY * (1 - action_mask)
 
                 if greedy:
                     a = torch.argmax(q, dim=-1)

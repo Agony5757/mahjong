@@ -188,7 +188,7 @@ class DiscreteActionPolicyNetwork(nn.Module):
                 a = np.argmax(pi_np, axis=-1)
             else:
                 a = np.random.choice(action_mask.shape[-1], 1, p=action_mask.numpy().reshape([-1]) / action_mask.numpy().sum())
-                warnings.warn("No preferred action, select action {}".format(a[0]))
+                # warnings.warn("No preferred action, select action {}".format(a[0]))
         else:
             size_a = pi_np.shape[-1]
             a = np.zeros_like(pi_np[:, 0], dtype=np.float32)

@@ -3,7 +3,7 @@ import env_pymahjong
 import numpy as np
 import torch
 import pymahjong as pm
-import env_mahjong
+import os
 
 def play_mahjong(agent, num_games=100, verbose=1):
 
@@ -62,9 +62,9 @@ def play_mahjong(agent, num_games=100, verbose=1):
             stat["agari_games"][winner] += 1
             stat["houjyuu_games"][loser] += 1
 
-            print("--------------player {} 放炮给 player {}-----------------".format(loser, winner))
-            print(env.t.get_result().to_string())
-            env.render()
+            # print("--------------player {} 放炮给 player {}-----------------".format(loser, winner))
+            # print(env.t.get_result().to_string())
+            # env.render()
 
         if env.t.get_result().result_type == pm.ResultType.TsumoAgari:
             winner = np.argmax(payoffs)
@@ -75,7 +75,7 @@ def play_mahjong(agent, num_games=100, verbose=1):
         success_games += 1
         game += 1
 
-        if verbose >= 1 and game % 10 == 1:
+        if verbose >= 1 and game % 100 == 1:
             print("------------------------ {} games statistics -----------------------".format(success_games))
             print("win rate:                    ", np.array2string(100 * stat["agari_games"] / success_games, precision=2, separator="  "))
             print("tsumo rate:                  ", np.array2string(100 * stat["tsumo_games"] / stat["agari_games"], precision=2, separator="  "))
@@ -84,6 +84,7 @@ def play_mahjong(agent, num_games=100, verbose=1):
             # print("----------------------------------------------------------------------")
         # except:
         #     game += 1
+        #     time.sleep(0.1)
         #     continue
 
     print("Total {} game, {} without error, takes {} s".format(num_games, success_games, time.time() - start_time))
@@ -91,7 +92,8 @@ def play_mahjong(agent, num_games=100, verbose=1):
 
 if __name__ == "__main__":
 
-    agent = torch.load("./mahjong_VLOG_CQL_0.model", map_location='cpu')
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
+    agent = torch.load(os.path.join(scriptdir, "mahjong_VLOG_BC.model"), map_location='cpu')
     agent.device = torch.device('cpu')
     # agent = "random"
     play_mahjong(agent, num_games=100000, verbose=1)

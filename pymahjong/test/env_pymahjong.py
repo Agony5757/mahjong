@@ -193,16 +193,16 @@ class MahjongEnv(gym.Env):
                 else:
                     raise SystemError("This should not happen, please report to the authors")
 
-                try:
-                    self.t.make_selection_from_action_basetile(action_type, corresponding_tiles,
-                                                               action >= self.MAHJONG_TILE_TYPES)
-                except:
-                    # TODO:
-                    print(action_type, corresponding_tiles)
-                    obs = self.get_obs(curr_pid)
-                    print(obs.astype(int))
-                    self.render()
-                    exit()
+                # try:
+                self.t.make_selection_from_action_basetile(action_type, corresponding_tiles,
+                                                           action >= self.MAHJONG_TILE_TYPES)
+                # except:
+                #     # TODO:
+                #     print(action_type, corresponding_tiles)
+                #     obs = self.get_obs(curr_pid)
+                #     print(obs.astype(int))
+                #     self.render()
+                #     exit()
 
         else:  # riichi step 2
             assert action in (self.RIICHI, self.PASS_RIICHI)
