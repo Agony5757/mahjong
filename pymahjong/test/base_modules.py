@@ -191,7 +191,7 @@ class DiscreteActionPolicyNetwork(nn.Module):
                 # warnings.warn("No preferred action, select action {}".format(a[0]))
         else:
             size_a = pi_np.shape[-1]
-            a = np.zeros_like(pi_np[:, 0], dtype=np.float32)
+            a = np.zeros_like(pi_np[:, 0], dtype=np.int)
             for i in range(pi_np.shape[0]):
                 a[i] = np.random.choice(size_a, p=pi_np[i, :] / pi_np[i, :].sum())
         return a

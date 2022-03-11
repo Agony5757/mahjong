@@ -2,10 +2,15 @@ import gym
 import numpy as np
 import pymahjong as pm
 import warnings
-from copy import deepcopy
+import random
 from gym.spaces import Discrete, Box
+try:
+    import torch
+except:
+    pass
 
 np.set_printoptions(threshold=np.inf)  # TODO
+
 
 class MahjongEnv(gym.Env):
 
@@ -193,16 +198,26 @@ class MahjongEnv(gym.Env):
                 else:
                     raise SystemError("This should not happen, please report to the authors")
 
-                # try:
-                self.t.make_selection_from_action_basetile(action_type, corresponding_tiles,
-                                                           action >= self.MAHJONG_TILE_TYPES)
-                # except:
-                #     # TODO:
-                #     print(action_type, corresponding_tiles)
-                #     obs = self.get_obs(curr_pid)
-                #     print(obs.astype(int))
-                #     self.render()
-                #     exit()
+                try:
+                    if action == self.RON:  # normal ron-agari, chan-kan or chan-an-kan
+                        for ron_type in [pm.BaseAction.Ron, pm.BaseAction.ChanKan, pm.BaseAction.ChanAnKan]:
+                            try:
+                                self.t.make_selection_from_action_basetile(
+                                    ron_type, corresponding_tiles, action >= self.MAHJONG_TILE_TYPES)
+                            except:
+                                pass
+                    else:
+                        self.t.make_selection_from_action_basetile(
+                            action_type, corresponding_tiles, action >= self.MAHJONG_TILE_TYPES)
+
+                except Exception as inst:
+                    print("-------------- execption in make_selection_from_action_basetile ------------------")
+                    print(inst)
+                    print(action_type, corresponding_tiles)
+                    obs = self.get_obs(curr_pid)
+                    print(obs.astype(int))
+                    self.render()
+                    raise SystemError
 
         else:  # riichi step 2
             assert action in (self.RIICHI, self.PASS_RIICHI)
@@ -217,8 +232,7 @@ class MahjongEnv(gym.Env):
 
         self._proceed()
 
-    def _get_obs_from_table(self):
-        player_id = self.get_curr_player_id()
+    def _get_obs_from_table(self, player_id):
         self.obs_container.fill(0)  # passing zeros array to C++
         pm.encode_table(self.t, player_id, True, self.obs_container)
         if self.riichi_stage2:
@@ -226,17 +240,17 @@ class MahjongEnv(gym.Env):
 
     def get_obs(self, player_id: int):
         self._check_player(player_id)
-        self._get_obs_from_table()
+        self._get_obs_from_table(player_id)
         return self.obs_container[:self.PLAYER_OBS_DIM].astype(bool)
 
     def get_oracle_obs(self, player_id: int):
         self._check_player(player_id)
-        self._get_obs_from_table()
+        self._get_obs_from_table(player_id)
         return self.obs_container[-self.ORACLE_OBS_DIM:].astype(bool)
 
     def get_full_obs(self, player_id: int):
         self._check_player(player_id)
-        self._get_obs_from_table()
+        self._get_obs_from_table(player_id)
         return self.obs_container.copy().astype(bool)
 
     def get_valid_actions(self, nhot=True):
@@ -284,3 +298,98 @@ class MahjongEnv(gym.Env):
         print(self.t.players[2].to_string())
         print("[Player 3]")
         print(self.t.players[3].to_string())
+
+
+class SingleAgentMahjongEnv(gym.Env):
+    THIS_AGENT_ID = 0
+    # The agent is the player 0 in MahjongEnv (while Oya may be others)
+
+    def __init__(self, opponent_agent="vlog-bc"):
+
+        super(SingleAgentMahjongEnv, self).__init__()
+
+        assert opponent_agent in ["random", "vlog-bc", "vlog-cql"]
+
+        if not torch.cuda.is_available():
+            device = torch.device("cpu")
+        else:
+            device = torch.device("cuda")
+
+        if opponent_agent =="vlog-cql":
+            self.opponent_agent = torch.load("./mahjong_VLOG_CQL.model", map_location=device)
+            self.opponent_agent.device = device
+        elif opponent_agent == "vlog-bc":
+            self.opponent_agent = torch.load("./mahjong_VLOG_BC.model", map_location=device)
+            self.opponent_agent.device = device
+        else:
+            self.opponent_agent = "random"
+
+        self.env = MahjongEnv()
+
+        self.observation_space = self.env.observation_space
+        self.oracle_observation_space = self.env.oracle_observation_space
+        self.full_observation_space = self.env.full_observation_space
+        self.action_space = self.env.action_space
+
+    def _proceed_until_agent_turn(self):
+        while (not self.env.is_over()) and self.env.get_curr_player_id() != self.THIS_AGENT_ID:
+            if self.opponent_agent == "random":
+                aval_actions = self.env.get_valid_actions(nhot=False)
+                self.env.step(self.env.get_curr_player_id(), np.random.choice(aval_actions))
+            else:
+                action_mask =  self.env.get_valid_actions(nhot=True)
+                obs = self.env.get_obs(self.env.get_curr_player_id())
+                action = self.opponent_agent.select(obs, None, action_mask=action_mask, greedy=True)
+                self.env.step(self.env.get_curr_player_id(), action)
+
+    def reset(self, oya=None, game_wind=None):
+        if oya is None:
+            oya = np.random.randint(4)
+        if game_wind is None:
+            game_wind = "east"
+
+        self.env.reset(oya=oya, game_wind=game_wind)
+        self._proceed_until_agent_turn()
+
+        if self.env.is_over():
+            return np.zeros(shape=self.observation_space.shape, dtype=self.observation_space.dtype)
+        else:
+            return self.get_obs()
+
+    def step(self, action):
+        assert self.env.get_curr_player_id() == self.THIS_AGENT_ID
+
+        self.env.step(0, action)
+        self._proceed_until_agent_turn()
+
+        if self.env.is_over():
+            r = self.env.get_payoffs()[self.THIS_AGENT_ID]
+            done = True
+        else:
+            r = 0
+            done = False
+
+        return self.env.get_obs(self.THIS_AGENT_ID), r, done, {}
+
+    def get_obs(self):
+        return self.env.get_obs(self.THIS_AGENT_ID)
+
+    def get_oracle_obs(self):
+        return self.env.get_oracle_obs(self.THIS_AGENT_ID)
+
+    def get_full_obs(self):
+        return self.env.get_full_obs(self.THIS_AGENT_ID)
+
+    def get_valid_actions(self):
+        return self.env.get_valid_actions(nhot=False)
+
+    def render(self, mode='human'):
+        print("-----------------------------------")
+        print("[Player 0 (this agent)]")
+        print(self.env.t.players[0].to_string())
+        print("[Player 1 (the first opponent counterclockwise)]")
+        print(self.env.t.players[1].to_string())
+        print("[Player 2 (the second opponent counterclockwise)]")
+        print(self.env.t.players[2].to_string())
+        print("[Player 3 (the third opponent counterclockwise)]")
+        print(self.env.t.players[3].to_string())

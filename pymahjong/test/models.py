@@ -278,7 +278,7 @@ class VLOG(nn.Module):
         # held for future RNN implementation
         pass
 
-    def select(self, x, o, action_mask=None, greedy=False, need_other_info=False, use_posterior=False):
+    def select(self, x, o, action_mask=None, greedy=True, need_other_info=False, use_posterior=False):
 
         with torch.no_grad():
 
@@ -287,7 +287,9 @@ class VLOG(nn.Module):
                     action_mask.astype(np.float32).reshape([1, self.action_size]))
 
             x = torch.from_numpy(x.astype(np.float32).reshape([1, *list(x.shape)])).to(device=self.device)
-            o = torch.from_numpy(o.astype(np.float32).reshape([1, *list(o.shape)])).to(device=self.device)
+
+            if o is not None:
+                o = torch.from_numpy(o.astype(np.float32).reshape([1, *list(o.shape)])).to(device=self.device)
 
             if self.type == "suphx":
                 x = torch.cat([x, 0 * o], dim=1)
@@ -344,11 +346,11 @@ class VLOG(nn.Module):
                         else:
                             valid_action_ind = np.nonzero(action_mask.cpu().numpy().reshape([-1]))
                             valid_actions = np.arange(self.action_size)[valid_action_ind]
-                            a = valid_actions[np.random.randint(len(valid_actions))]
+                            a = int(valid_actions[np.random.randint(len(valid_actions))])
                     else:
                         a = torch.argmax(q, dim=-1)
                         if np.prod(a.shape) == 1:
-                            a = a.item()  # discrete action
+                            a = int(a.item())  # discrete action
 
             self.a_tm1 = torch.from_numpy(np.array([a]).reshape([-1])).to(device=self.device)
 
