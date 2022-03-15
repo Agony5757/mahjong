@@ -1,7 +1,6 @@
 import time
 import pymahjong
 import numpy as np
-import torch
 
 
 def test(num_games=100):
@@ -30,7 +29,7 @@ def test(num_games=100):
 
                 # oracle_obs = env.get_oracle_obs(curr_player_id)
                 # full_obs = env.get_full_obs(curr_player_id)
-                # full_obs = concat([executor_obs, oracle_obs], axis=0)
+                # full_obs = np.concatenate([executor_obs, oracle_obs], axis=0)
 
                 # --------- make decision -------------
 

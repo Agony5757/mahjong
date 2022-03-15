@@ -99,7 +99,7 @@ class MahjongEnv(gym.Env):
 
         return len(aval_actions)
 
-    def reset(self, oya=None, game_wind=None):
+    def reset(self, oya=None, game_wind=None, seed=None):
         if oya is None:
             oya = self.game_count % 4  # Each player alternatively be the "Oya" (parent)
         else:
@@ -111,8 +111,11 @@ class MahjongEnv(gym.Env):
             assert game_wind in ["east", "south", "west", "north"]
 
         self.t = pm.Table()
-        self.t.game_init_with_metadata({"oya": str(oya), "wind": game_wind})
 
+        if seed is not None:
+            self.t.seed = seed
+
+        self.t.game_init_with_metadata({"oya": str(oya), "wind": game_wind})
         self.riichi_stage2 = False
         self.may_riichi_tile_id = None
 
@@ -254,7 +257,7 @@ class MahjongEnv(gym.Env):
         self._get_obs_from_table(player_id)
         return self.obs_container.copy().astype(bool)
 
-    def get_valid_actions(self, nhot=True):
+    def get_valid_actions(self, nhot=False):
         if not self.riichi_stage2:
             self.act_container.fill(0)
             pm.encode_action(self.t, self.get_curr_player_id(), self.act_container)
@@ -343,8 +346,8 @@ class SingleAgentMahjongEnv(gym.Env):
                 action = self.opponent_agent.select(obs, action_mask=action_mask, greedy=True)
                 self.env.step(self.env.get_curr_player_id(), action)
 
-    def reset(self, oya=None, game_wind=None):
-        self.env.reset(oya=oya, game_wind=game_wind)
+    def reset(self, oya=None, game_wind=None, seed=None):
+        self.env.reset(oya=oya, game_wind=game_wind, seed=seed)
         self._proceed_until_agent_turn()
 
         if self.env.is_over():
