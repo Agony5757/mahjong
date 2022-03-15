@@ -68,7 +68,7 @@ Note: In a Mahjong game, it is possible the game is over before a certain player
 ### pretrained opponents agent
 We provide two pretrained models for the 3 opponents (see the paper https://openreview.net/forum?id=pjqqxepwoMy) in the single-agent version environment.
 
-To use the pretrained models, you need to have [PyTorch](https://pytorch.org/) installed. You can download the models from https://openreview.net/forum?id=pjqqxepwoMy ("Supplementary material") and put the .model files at the same directory as your python script. The pretrained model should automatically enable CUDA if your PyTorch supports CUDA.
+To use the pretrained models, you need to have [PyTorch](https://pytorch.org/) installed. You can download the models from [this link](https://1drv.ms/u/s!AuxZyB8UeEtsgpNScPpUjF1c09gaZQ?e=j4lS05) and put the .model files at the same directory as your python script. The pretrained model should automatically enable CUDA if your PyTorch supports CUDA.
 
 Variational Latent Oracle Guiding + Conservative Q-learning
 ```
