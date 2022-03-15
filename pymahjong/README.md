@@ -42,24 +42,25 @@ To know what actions are allowed, see the example code below.
 
 ```
 import pymahjong
+import numpy as np
 
-env = pymahjong.SingleAgentMahjongEnv(opponent_agent="random")  # the 3 opponents play randomly
+env = pymahjong.SingleAgentMahjongEnv(opponent_agent="vlog-bc")  # the 3 opponents play randomly
 
 obs = env.reset()  # get the obsevation at the first step of a game
 
 while True:
     valid_actions = env.get_valid_actions()  # e.g., [0, 3, 4, 20, 21]
-  
+
     a = np.random.choice(valid_actions)  # make decision among valid actions
-  
+
     obs, reward, done, _ = env.step(a)  # reward is zero unless the game is over (done = True).
-    
+
     # oracle_obs = env.get_oracle_obs()  # if you need oracle observation
     # full_obs = env.get_oracle_obs()  # full_obs = concat((obs, oracle_obs), axis=0)
-  
-    if done:
-        break
 
+    if done:
+        print("agent payoff = {}".format(reward))
+        break
 ```
 
 Note: In a Mahjong game, it is possible the game is over before a certain player start to act (if others satisfy the game-over condition). In this case, the single-agent version envrionment will simply reset the game. Therefore, the agent always has at least 1 decision step in a game (episode).
@@ -135,17 +136,15 @@ where "env.get_payoffs()" returns a list of payoffs of the four players.
 ```
 import pymahjong
 import numpy as np
-
 env = pymahjong.MahjongEnv()
 
 num_games = 100
 
-while game < num_games:
+for game in range(num_games):
 
     env.reset()
 
     while not env.is_over():
-
         curr_player_id = env.get_curr_player_id()
 
         # --------- get decision information -------------
