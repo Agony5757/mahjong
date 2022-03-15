@@ -95,8 +95,8 @@ public:
 		亲家 = 1 << 5,
 		REMAIN_TILE = 1 << 6,
 	};
-	[[deprecated("ToStringOption be removed in future")]] std::string to_string(int option) const;
-	
+
+	std::string to_string(int option) const;	
 	inline std::string to_string() const 
 	{ 
 		return to_string(YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE); 
