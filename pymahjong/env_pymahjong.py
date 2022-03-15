@@ -1,9 +1,10 @@
 import gym
 import numpy as np
-import pymahjong as pm
 import warnings
-import random
 from gym.spaces import Discrete, Box
+
+import pymahjong as pm
+
 try:
     import torch
 except:
@@ -304,7 +305,7 @@ class SingleAgentMahjongEnv(gym.Env):
     THIS_AGENT_ID = 0
     # The agent is the player 0 in MahjongEnv (while Oya may be others)
 
-    def __init__(self, opponent_agent="vlog-cql"):
+    def __init__(self, opponent_agent="random"):
 
         super(SingleAgentMahjongEnv, self).__init__()
 
@@ -316,12 +317,10 @@ class SingleAgentMahjongEnv(gym.Env):
             device = torch.device("cuda")
 
         if opponent_agent =="vlog-cql":
-            scriptdir = os.path.dirname(os.path.realpath(__file__))
-            self.opponent_agent = torch.load(os.path.join(scriptdir, "mahjong_VLOG_CQL.model"), map_location=device)
+            self.opponent_agent = torch.load("mahjong_VLOG_CQL.model", map_location=device)
             self.opponent_agent.device = device
         elif opponent_agent == "vlog-bc":
-            scriptdir = os.path.dirname(os.path.realpath(__file__))
-            self.opponent_agent = torch.load(os.path.join(scriptdir, "mahjong_VLOG_BC.model"), map_location=device)
+            self.opponent_agent = torch.load("mahjong_VLOG_BC.model", map_location=device)
             self.opponent_agent.device = device
         else:
             self.opponent_agent = "random"
@@ -345,11 +344,6 @@ class SingleAgentMahjongEnv(gym.Env):
                 self.env.step(self.env.get_curr_player_id(), action)
 
     def reset(self, oya=None, game_wind=None):
-        if oya is None:
-            oya = np.random.randint(4)
-        if game_wind is None:
-            game_wind = "east"
-
         self.env.reset(oya=oya, game_wind=game_wind)
         self._proceed_until_agent_turn()
 
@@ -396,3 +390,6 @@ class SingleAgentMahjongEnv(gym.Env):
         print(self.env.t.players[2].to_string())
         print("[Player 3 (the third opponent counterclockwise)]")
         print(self.env.t.players[3].to_string())
+
+
+

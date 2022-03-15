@@ -9,7 +9,6 @@ import time
 import torch.nn.functional as F
 import torch.distributions as dis
 from gym.spaces import Box, Discrete
-from base_modules import *
 
 torch.set_default_dtype(torch.float32)
 
@@ -35,27 +34,12 @@ class VLOG(nn.Module):
 
             x = torch.from_numpy(x.astype(np.float32).reshape([1, *list(x.shape)])).to(device=self.device)
 
-            if (not use_posterior) or self.use_prior_only:
-                x = self.encoder(x)
-                e = self.forward_fnn(x)
-                if self.z_stochastic_size > 0:
-                    muz = self.f_h2muzp(e)
-                    logsigz = self.f_h2logsigzp(e)
-                    dist = dis.normal.Normal(muz, torch.exp(logsigz))
-                    z = dist.sample()
-                else:
-                    z = self.f_h2zp(e)
-
-            else:
-                x = self.encoder_oracle(x)
-                e = self.oracle_fnn(x)
-                if self.z_stochastic_size > 0:
-                    muz = self.f_hb2muzq(e)
-                    logsigz = self.f_hb2logsigzq(e)
-                    dist = dis.normal.Normal(muz, torch.exp(logsigz))
-                    z = dist.sample()
-                else:
-                    z = self.f_hb2zq(e)
+            x = self.encoder(x)
+            e = self.forward_fnn(x)
+            muz = self.f_h2muzp(e)
+            logsigz = self.f_h2logsigzp(e)
+            dist = dis.normal.Normal(muz, torch.exp(logsigz))
+            z = dist.sample()
 
             self.h_t = z
             self.zp_tm1 = z
