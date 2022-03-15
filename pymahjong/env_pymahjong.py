@@ -2,15 +2,14 @@ import gym
 import numpy as np
 import warnings
 from gym.spaces import Discrete, Box
-
-import pymahjong as pm
+import MahjongPyWrapper as pm
 
 try:
     import torch
 except:
     pass
 
-np.set_printoptions(threshold=np.inf)  # TODO
+np.set_printoptions(threshold=np.inf)
 
 
 class MahjongEnv(gym.Env):
@@ -50,7 +49,7 @@ class MahjongEnv(gym.Env):
                    + [pm.BaseAction.Riichi] + [pm.BaseAction.Ron] + [pm.BaseAction.Tsumo] \
                    + [pm.BaseAction.KyuShuKyuHai] + [pm.BaseAction.Pass] * 2
 
-    def __init__(self, printing=True, reward_unit=100):
+    def __init__(self):
         self.t = pm.Table()
         self.game_count = 0
 
@@ -111,7 +110,6 @@ class MahjongEnv(gym.Env):
             assert game_wind in ["east", "south", "west", "north"]
 
         self.t = pm.Table()
-
         if seed is not None:
             self.t.seed = seed
 
@@ -351,7 +349,7 @@ class SingleAgentMahjongEnv(gym.Env):
         self._proceed_until_agent_turn()
 
         if self.env.is_over():
-            # a trick: if espisode length == 0 for the current player, ignore this game and re-start a new game
+            # if espisode length == 0 for the current player, ignore this game and re-start a new game
             return self.reset()
         else:
             return self.get_obs()

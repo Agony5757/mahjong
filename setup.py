@@ -35,15 +35,15 @@ class CMakeBuild(build_ext):
 
 setup(
     name = "pymahjong",
-    version = "0.1.2",
+    version = "1.0.0",
     author = "Agony",
     author_email = "chenzhaoyun@iai.ustc.edu.cn",
-    description= "An essential Japanese riichi mahjong environment.",
+    description= "A Japanese Mahjong environment for decision AI research.",
     long_description = readme,
     long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension('pymahjong', '.')],
     cmdclass=dict(build_ext=CMakeBuild),
     # package_data = {"pymahjong": ["MahjongPy.so", "MahjongPy.pyd", "MahjongPy.dylib"]},
     packages = ['pymahjong'],
-    install_requires=['eventlet', 'gym', 'mahjong']
+    install_requires=['numpy', 'gym']
 )

@@ -1,11 +1,11 @@
 import time
-import pymahjong
 import numpy as np
+from .env_pymahjong import MahjongEnv, SingleAgentMahjongEnv
 
 
 def test(num_games=100):
 
-    env = pymahjong.MahjongEnv()
+    env = MahjongEnv()
 
     start_time = time.time()
     game = 0
@@ -56,9 +56,9 @@ def test(num_games=100):
     print("Total {} random-play games, {} games without error, takes {} s".format(num_games, success_games, time.time() - start_time))
 
 
-def test_with_pretrained(opponent_agent, num_games=100):
+def test_with_pretrained(opponent_agent="vlog-bc", num_games=100):
 
-    env = pymahjong.SingleAgentMahjongEnv(opponent_agent)
+    env = SingleAgentMahjongEnv(opponent_agent)
 
     start_time = time.time()
     success_games = 0
@@ -93,9 +93,3 @@ def test_with_pretrained(opponent_agent, num_games=100):
             continue
 
     print("Total {} random-play games with pretrained VLOG models as opponents, {} games without error, takes {} s".format(num_games, success_games, time.time() - start_time))
-
-
-if __name__ == "__main__":
-    test()
-    test_with_pretrained("vlog-bc")
-    test_with_pretrained("vlog-cql")
