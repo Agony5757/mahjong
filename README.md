@@ -3,12 +3,9 @@
 
 Simulator of Japanese Riichi Mahjong (https://en.wikipedia.org/wiki/Japanese_Mahjong) written in C++.
 
-We provide python APIs for decision AI research (the users do not need to know how Mahjong works), please see https://github.com/Agony5757/mahjong/tree/master/pymahjong#readme for more details.
 
-## install 
-```
-pip install pymahjong
-```
+# See [here](https://github.com/Agony5757/mahjong/tree/master/pymahjong) for the Python APIs for e.g., decision AI research.
+
 
 ## Citation
 ```
@@ -22,4 +19,3 @@ url={https://openreview.net/forum?id=pjqqxepwoMy}
 }
 ```
 
-# APIs of the C++ programs
