@@ -44,7 +44,7 @@ To know what actions are allowed, see the example code below.
 import pymahjong
 import numpy as np
 
-env = pymahjong.SingleAgentMahjongEnv(opponent_agent="vlog-bc")  # the 3 opponents play randomly
+env = pymahjong.SingleAgentMahjongEnv(opponent_agent="random")  # the 3 opponents play randomly
 
 obs = env.reset()  # get the obsevation at the first step of a game
 
@@ -66,7 +66,7 @@ while True:
 Note: In a Mahjong game, it is possible the game is over before a certain player start to act (if others satisfy the game-over condition). In this case, the single-agent version envrionment will simply reset the game. Therefore, the agent always has at least 1 decision step in a game (episode).
 
 ### pretrained opponents agent
-We provide two pretrained models for the 3 opponents (see the paper https://openreview.net/forum?id=pjqqxepwoMy) in the single-agent version environment.
+We provide two pretrained models as the opponents (see the paper https://openreview.net/forum?id=pjqqxepwoMy) in the single-agent version environment.
 
 To use the pretrained models, you need to have [PyTorch](https://pytorch.org/) installed. You can download the models from [this link](https://1drv.ms/u/s!AuxZyB8UeEtsgpNScPpUjF1c09gaZQ?e=j4lS05) and put the .model files at the same directory as your python script. The pretrained model should automatically enable CUDA if your PyTorch supports CUDA.
 
