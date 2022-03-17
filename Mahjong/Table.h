@@ -7,6 +7,7 @@
 #include "GameResult.h"
 #include "macro.h"
 #include "Player.h"
+#include "fmt/os.h"
 #include <array>
 
 namespace_mahjong
@@ -34,14 +35,18 @@ public:
 	int turn = 0;
 	BaseAction last_action = BaseAction::出牌;
 	Wind 场风 = Wind::East;
-	int 庄家 = 0; // 庄家
+	int 庄家 = 0;
 	int n本场 = 0;
 	int n立直棒 = 0;
 	GameLog fullGameLog;
 
+	/* For debug */
 	bool write_log = false;
-	std::string write_log_filename = "replay.log";
 	std::vector<int> yama_log;
+	std::string log_buffer_prefix;
+	std::vector<int> selection_log;
+
+	/* Set seed (set_seed) before init*/
 	bool use_seed = false;
 	int seed = 0;
 
@@ -85,6 +90,22 @@ public:
 		use_seed = true; 
 	}
 	// inline int get_seed() { return seed; }
+	inline std::string get_debug_replay()
+	{
+		std::string ret;
+		ret += fmt::format("{}", log_buffer_prefix);
+		for (auto selection : selection_log) {
+			ret += fmt::format("table.make_selection({});\n", selection);
+		}
+		return ret;
+	}
+	inline void print_debug_replay()
+	{
+		fmt::print("{}", log_buffer_prefix);
+		for (auto selection : selection_log) {
+			fmt::print("table.make_selection({});\n", selection);
+		}
+	}
 
 	enum ToStringOption : int {
 		YAMA = 1 << 0,

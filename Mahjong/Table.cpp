@@ -143,13 +143,9 @@ void Table::init_before_playing()
 			players[2].score,
 			players[3].score,
 		};
-		FILE* fp = fopen(write_log_filename.c_str(), "w+");
-		fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
-			vec2str(yama_log).c_str(),
-			vec2str(init_score).c_str(),			
-			n立直棒, n本场, 场风, 庄家);
-
-		fclose(fp);
+		log_buffer_prefix = fmt::format("Table table;\ntable.game_init_for_replay({}, {}, {}, {}, {}, {});\n",
+			vec2str(yama_log), vec2str(init_score),	n立直棒, n本场, 场风, 庄家);
+		selection_log.reserve(512); // avoid reallocation
 	}
 
 	from_beginning();
@@ -746,9 +742,10 @@ void Table::make_selection(int selection)
 #endif
 	// 这个地方控制了游戏流转
 	if (write_log) {
-		FILE* fp = fopen(write_log_filename.c_str(), "a+");
+		/*FILE* fp = fopen(write_log_filename.c_str(), "a+");
 		fprintf(fp, "\ntable.make_selection(%d);", selection);
-		fclose(fp);
+		fclose(fp);*/
+		selection_log.push_back(selection);
 	}
 	// 分为两种情况，如果是ACTION阶段
 	switch (phase) {
