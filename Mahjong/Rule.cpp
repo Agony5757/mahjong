@@ -291,7 +291,7 @@ bool isCommon和牌型(std::vector<BaseTile> tiles) {
 	sort(tiles.begin(), tiles.end());
 	if (tiles.size() % 3 != 2) return false;
 	
-	// auto basetiles = convert_tiles_to_base_tiles(tiles);
+	// auto basetiles = convert_tiles_to_basetiles(tiles);
 	return has_completed_tiles(tiles);
 }
 
@@ -475,7 +475,7 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清)
 	for (int i = 0; i < hands.size(); ++i) {
 		std::vector<Tile*> copy_hand(hands.begin(), hands.end());
 		copy_hand.erase(copy_hand.begin() + i);
-		auto s = convert_tiles_to_base_tiles(copy_hand);
+		auto s = convert_tiles_to_basetiles(copy_hand);
 		auto tenhai = get听牌(s);
 		if (tenhai.size() != 0) {
 			play_tiles.push_back(hands[i]);
@@ -487,14 +487,14 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清)
 bool can_ron(std::vector<Tile*> hands, Tile *get_tile)
 {
 	hands.push_back(get_tile);
-	if (is和牌(convert_tiles_to_base_tiles(hands)))
+	if (is和牌(convert_tiles_to_basetiles(hands)))
 		return true;
 	return false;
 }
 
 bool can_tsumo(std::vector<Tile*> hands)
 {
-	if (is和牌(convert_tiles_to_base_tiles(hands)))
+	if (is和牌(convert_tiles_to_basetiles(hands)))
 		return true;
 	return false;
 }

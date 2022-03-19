@@ -15,30 +15,30 @@ constexpr bool FROM_摸切 = false;
 constexpr bool FROM_手切 = true;
 
 template<typename ContainerType, typename ElemType>
-bool is_in(const ContainerType &container, const ElemType &elem){
-	if (std::find(std::begin(container), std::end(container), elem) != std::end(container)) {
+bool is_in(const ContainerType &container, const ElemType &elem)
+{
+	if (std::find(std::begin(container), std::end(container), elem) != std::end(container))
 		return true;
-	}
-	else return false;
+	else 
+		return false;
 }
 
 template<typename T>
-void erase_n(std::vector<T>& vec, const T& to_erase, size_t count) {
-	for (size_t i = 0; i < count; ++i) {		
-		vec.erase(find(vec.begin(), vec.end(), to_erase));
-	}
+void erase_n(std::vector<T>& vec, const T& to_erase, size_t count) 
+{
+	for (size_t i = 0; i < count; ++i) vec.erase(find(vec.begin(), vec.end(), to_erase));
 }
 
-template<class _InIt,
-	class _Fn> inline
-	_Fn for_all(_InIt &_Capacitor, _Fn _Func)
+template<class _InIt, class _Fn>
+_Fn for_all(_InIt &_Capacitor, _Fn _Func)
 {	
 	return std::for_each(_Capacitor.begin(), _Capacitor.end(), _Func);
 }
 
-inline std::vector<BaseTile> convert_tiles_to_base_tiles(const std::vector<Tile*> &tile) {
+inline std::vector<BaseTile> convert_tiles_to_basetiles(const std::vector<Tile*> &tile) {
 	std::vector<BaseTile> bts;
-	std::for_each(tile.begin(), tile.end(), [&bts](Tile* t) {bts.push_back(t->tile); });
+	bts.reserve(tile.size());
+	std::for_each(tile.begin(), tile.end(), [&bts](Tile* t) { bts.push_back(t->tile); });
 	std::sort(bts.begin(), bts.end());
 	return bts;
 }
@@ -46,50 +46,34 @@ inline std::vector<BaseTile> convert_tiles_to_base_tiles(const std::vector<Tile*
 /* Check if two containers have the same size and same corresponding value. */
 template<typename T>
 bool is_same_container(T a, T b) {
-	if (a.size() != b.size()) {
+	if (a.size() != b.size())
 		return false;
-	}
+
 	for (size_t i = 0; i < a.size(); ++i) {
-		if (a[i] != b[i])
-			return false;
+		if (a[i] != b[i]) return false;
 	}
 	return true;
 }
 
 inline std::vector<Tile*>::iterator
 find_match_tile(std::vector<Tile*>& tiles, BaseTile t) {
-	for (auto iter = tiles.begin();
-		iter != tiles.end();
-		++iter) {
-		if ((*iter)->tile == t) {
-			return iter;
-		}
-	}	
+	for (auto iter = tiles.begin();	iter != tiles.end(); ++iter)
+		if ((*iter)->tile == t) return iter;
+	
 	return tiles.end();
 }
 
 inline std::vector<Tile*>::const_iterator
 find_match_tile(const std::vector<Tile*>& tiles, BaseTile t) {
-	for (auto iter = tiles.begin();
-		iter != tiles.end();
-		++iter) {
-		if ((*iter)->tile == t) {
-			return iter;
-		}
-	}	
+	for (auto iter = tiles.begin();	iter != tiles.end(); ++iter)
+		if ((*iter)->tile == t) return iter;
+	
 	return tiles.end();
 }
 
 inline std::vector<Tile*>::iterator
 find_match_tile(std::vector<Tile*>& tiles, Tile* t) {
-	for (auto iter = tiles.begin();
-		iter != tiles.end();
-		++iter) {
-		if ((*iter) == t) {
-			return iter;
-		}
-	}
-	return tiles.end();
+	return std::find(tiles.begin(), tiles.end(), t);
 }
 
 // 找手牌中是不是有t的重复n张牌
@@ -241,33 +225,37 @@ inline int get_distance(int p1, int p2) {
 }
 
 // vector<string> merge
-inline std::string merge_strings(std::vector<std::string> strings) {
-	using std::string;
-	string final_string;
-	for (auto _string  : strings) {
-		final_string += _string;
-		final_string += " ";
-	}
-	return final_string;
-}
+//inline std::string merge_strings(std::vector<std::string> strings) {
+//
+//	return fmt::format("{}", fmt::join(strings, " "));
+//	/*using std::string;
+//	string final_string;
+//	for (auto _string  : strings) {
+//		final_string += _string;
+//		final_string += " ";
+//	}
+//	return final_string;*/
+//}
 
 inline Wind next_wind(Wind 风) {
-	return (Wind)(int(风) + 1);
+	return (Wind)((int(风) + 1) % 4);
 }
 
-inline std::string score_to_string(std::array<int, 4> scores) {
-	using namespace std;
+inline std::string score_to_string(const std::array<int, 4> &scores) {
+	return fmt::format("{}", fmt::join(scores, "|"));
+	/*using namespace std;
 	stringstream ss;
 	ss << scores[0] << "|" << scores[1] << "|" << scores[2] << "|" << scores[3];
-	return ss.str();
+	return ss.str();*/
 }
 
-inline std::string vec2str(std::vector<int> vec)
+inline std::string vec2str(const std::vector<int> &vec)
 {
-	std::string str = "{";
+	/*std::string str = "{";
 	for (auto t : vec) { str += std::to_string(t); str += ","; }
 	str += "}";
-	return str;
+	return str;*/
+	return fmt::format("{{{}}}", fmt::join(vec, ","));
 };
 
 namespace_mahjong_end

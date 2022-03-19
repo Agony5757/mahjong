@@ -32,7 +32,7 @@ enum BaseTile {
 	_1z, _2z, _3z, _4z,	_5z, _6z, _7z
 };
 
-inline std::string basetile_to_string(BaseTile bt) {
+inline const char* basetile_to_string(BaseTile bt) {
 	static const char* names[] = {
 		"1m","2m","3m","4m","5m","6m","7m","8m","9m",
 		"1p","2p","3p","4p","5p","6p","7p","8p","9p",

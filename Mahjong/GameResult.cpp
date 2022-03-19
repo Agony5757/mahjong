@@ -156,7 +156,7 @@ Result 荒牌流局结算(Table * table)
 		bool 听牌[4] = {false, false, false, false};
 
 		for (int i = 0; i < 4; ++i) {
-			if (get听牌(convert_tiles_to_base_tiles(table->players[i].hand)).size() > 0) {
+			if (get听牌(convert_tiles_to_basetiles(table->players[i].hand)).size() > 0) {
 				听牌[i] = true;
 				听牌人数++;
 			}

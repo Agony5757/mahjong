@@ -69,8 +69,7 @@ string Player::tenpai_to_string() const
 
 void Player::update_听牌()
 {
-	vector<BaseTile> bt = convert_tiles_to_base_tiles(hand);
-	听牌 = get听牌(bt);
+	听牌 = get听牌(convert_tiles_to_basetiles(hand));
 }
 
 void Player::update_舍牌振听()
@@ -375,7 +374,7 @@ vector<ResponseAction> Player::get_Chi(Tile* tile)
 		if (t2 - t1 == 2) {
 			// 坎张
 			BaseTile ban_tile = BaseTile(t1 + 1);
-			auto copyhand = convert_tiles_to_base_tiles(hand);
+			auto copyhand = convert_tiles_to_basetiles(hand);
 			erase_n(copyhand, t1, 1);
 			erase_n(copyhand, t2, 1);
 			if (all_of(copyhand.begin(), copyhand.end(), 
@@ -392,7 +391,7 @@ vector<ResponseAction> Player::get_Chi(Tile* tile)
 			if (t2 != _9m && t2 != _9p && t2 != _9s) {
 				ban_tiles.push_back(BaseTile(t2 + 1));
 			}
-			auto copyhand = convert_tiles_to_base_tiles(hand);
+			auto copyhand = convert_tiles_to_basetiles(hand);
 			erase_n(copyhand, t1, 1);
 			erase_n(copyhand, t2, 1);
 			
@@ -453,7 +452,7 @@ vector<ResponseAction> Player::get_抢暗杠(Tile* tile)
 	if (is_in(听牌, tile->tile)) {
 		auto copyhand = hand;
 		copyhand.push_back(tile);
-		if (is国士无双和牌型(convert_tiles_to_base_tiles(copyhand)))
+		if (is国士无双和牌型(convert_tiles_to_basetiles(copyhand)))
 		{
 			ResponseAction action;
 			action.action = BaseAction::抢暗杠;
@@ -499,7 +498,7 @@ vector<SelfAction> Player::riichi_get_暗杠()
 						else return false;
 					}), copyhand.end());
 
-			auto final_听牌 = get听牌(convert_tiles_to_base_tiles(copyhand));
+			auto final_听牌 = get听牌(convert_tiles_to_basetiles(copyhand));
 
 			if (is_same_container(final_听牌, original_听牌)) {
 				SelfAction action;
