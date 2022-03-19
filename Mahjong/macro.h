@@ -33,12 +33,13 @@ template<class _InIt,
 	class _Fn> inline
 	_Fn for_all(_InIt &_Capacitor, _Fn _Func)
 {	
-	return for_each(_Capacitor.begin(), _Capacitor.end(), _Func);
+	return std::for_each(_Capacitor.begin(), _Capacitor.end(), _Func);
 }
 
-inline std::vector<BaseTile> convert_tiles_to_base_tiles(std::vector<Tile*> tile) {
+inline std::vector<BaseTile> convert_tiles_to_base_tiles(const std::vector<Tile*> &tile) {
 	std::vector<BaseTile> bts;
-	for_each(tile.begin(), tile.end(), [&bts](Tile* t) {bts.push_back(t->tile); });
+	std::for_each(tile.begin(), tile.end(), [&bts](Tile* t) {bts.push_back(t->tile); });
+	std::sort(bts.begin(), bts.end());
 	return bts;
 }
 

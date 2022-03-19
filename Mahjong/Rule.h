@@ -18,7 +18,7 @@ struct TileGroup {
 	};
 	Type type;
 	std::vector<BaseTile> tiles;
-	inline std::string to_string() {
+	inline std::string to_string() const {
 		std::stringstream ss;
 		ss << "[";
 		for (auto tile : tiles) {
@@ -35,7 +35,7 @@ struct TileGroup {
 		return nullptr;
 	}
 	inline void sort_tiles() {
-		sort(tiles.begin(), tiles.end());
+		std::sort(tiles.begin(), tiles.end());
 	}
 	inline void set_tiles(std::vector<BaseTile> ts) {
 		tiles = ts;		
@@ -73,7 +73,7 @@ struct CompletedTiles {
 	inline std::string to_string() {
 		std::stringstream ss;
 		ss << head.to_string() << " ";
-		for_each(body.begin(), body.end(),
+		std::for_each(body.begin(), body.end(),
 			[&ss](TileGroup &group) {ss << group.to_string() << " "; });
 		ss << std::endl;
 		return ss.str();
