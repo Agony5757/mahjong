@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <stdlib.h>
 #include <time.h>
+#include "fmt/core.h"
+#include "fmt/ranges.h"
 
 #define namespace_mahjong namespace mahjong {
 #define namespace_mahjong_end }
@@ -30,9 +32,8 @@ enum BaseTile {
 	_1z, _2z, _3z, _4z,	_5z, _6z, _7z
 };
 
-inline std::string basetile_to_string_simple(BaseTile bt) {
-	using namespace std;
-	static vector<string> names{
+inline std::string basetile_to_string(BaseTile bt) {
+	static const char* names[] = {
 		"1m","2m","3m","4m","5m","6m","7m","8m","9m",
 		"1p","2p","3p","4p","5p","6p","7p","8p","9p",
 		"1s","2s","3s","4s","5s","6s","7s","8s","9s",	
@@ -179,112 +180,32 @@ inline bool is_役牌(BaseTile tile, Wind 场风, Wind 自风) {
 	return false;
 }
 
-inline std::string basetile_to_string(BaseTile tile) {
-	std::string ret;
-	if (0 <= tile && tile <= 8) {
-		ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
-	}
-	else if (9 <= tile && tile <= 17) {
-		ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "p";
-	}
-	else if (18 <= tile && tile <= 26) {
-		ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "s";
-	}
-	else if (tile == _1z) {
-		ret = "[东";
-	}
-	else if (tile == _2z) {
-		ret = "[南";
-	}
-	else if (tile == _3z) {
-		ret = "[西";
-	}
-	else if (tile == _4z) {
-		ret = "[北";
-	}
-	else if (tile == _5z) {
-		ret = "[白";
-	}
-	else if (tile == _6z) {
-		ret = "[发";
-	}
-	else if (tile == _7z) {
-		ret = "[中";
-	}
-	else throw std::runtime_error("unknown tile");
-	return ret + ']';
-}
-
 class Tile {
 public:
 	BaseTile tile;
 	bool red_dora;
 	int id;
 
-	inline std::string to_simple_string() const {
-		std::stringstream ss;
+	inline std::string to_string() const {
 		int number = tile % 9 + 1;
 		if (red_dora)
 			number = 0;
 		switch (tile / 9) {
 		case 0:
-			ss << number << "m";
-			return ss.str();
+			return fmt::format("{}m", number);
 		case 1:
-			ss << number << "p";
-			return ss.str();
+			return fmt::format("{}p", number);
 		case 2:
-			ss << number << "s";
-			return ss.str();
+			return fmt::format("{}s", number);
 		case 3:
-			ss << number << "z";
-			return ss.str();
+			return fmt::format("{}z", number);
+		default:
+			throw std::runtime_error("Error Tile object.");
 		}
-		throw std::runtime_error("Error Tile.");
-	}
-
-	inline std::string to_string() const {
-		std::string ret;
-		if (0 <= tile && tile <= 8) {
-			ret = "[" + std::to_string(static_cast<int>(tile) + 1) + "m";
-		}
-		else if (9 <= tile && tile <= 17) {
-			ret = "[" + std::to_string(static_cast<int>(tile) - 8) + "p";
-		}
-		else if (18 <= tile && tile <= 26) {
-			ret = "[" + std::to_string(static_cast<int>(tile) - 17) + "s";
-		}
-		else if (tile == _1z) {
-			ret = "[东";
-		}
-		else if (tile == _2z) {
-			ret = "[南";
-		}
-		else if (tile == _3z) {
-			ret = "[西";
-		}
-		else if (tile == _4z) {
-			ret = "[北";
-		}
-		else if (tile == _5z) {
-			ret = "[白";
-		}
-		else if (tile == _6z) {
-			ret = "[发";
-		}
-		else if (tile == _7z) {
-			ret = "[中";
-		}
-		else throw std::runtime_error("unknown tile");
-
-		if (red_dora) {
-			ret += '*';
-		}
-		return ret + ']';
 	}
 };
 
-inline std::string tiles_to_string(std::vector<Tile*> tiles) {
+inline std::string tiles_to_string(const std::vector<Tile*> &tiles) {
 	std::stringstream ss;
 	for (auto tile : tiles) {
 		ss << tile->to_string();

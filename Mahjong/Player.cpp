@@ -17,7 +17,7 @@ string Player::hand_to_string() const
 	stringstream ss;
 
 	for (auto hand_tile : hand) {
-		ss << hand_tile->to_simple_string() << " ";
+		ss << hand_tile->to_string() << " ";
 	}
 	return ss.str();
 }
@@ -62,7 +62,7 @@ string Player::tenpai_to_string() const
 	string s = "";
 	for (int i = 0; i < 听牌.size(); ++i)
 	{
-		s += basetile_to_string_simple(听牌[i]);
+		s += basetile_to_string(听牌[i]);
 	}
 	return s;
 }

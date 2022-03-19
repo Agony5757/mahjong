@@ -91,7 +91,7 @@ void Table::init_dora()
 string Table::export_yama() {
 	stringstream ss;
 	for (int i = N_TILES - 1; i >= 0; --i) {
-		ss << tiles[i].to_simple_string();
+		ss << tiles[i].to_string();
 	}
 	return ss.str();
 }
@@ -413,80 +413,15 @@ void Table::from_beginning()
 	vector<SelfAction> actions;
 	if (players[turn].is_riichi())
 	{
-		self_actions = GetRiichiSelfActions();
+		self_actions = _generate_riichi_self_actions();
 	}
 	else
 	{
 		volatile profiler _("SelfActions");
-		self_actions = GetSelfActions();
+		self_actions = _generate_self_actions();
 	}
 
 	phase = (PhaseEnum)turn;
-}
-
-void Table::test_show_yama_with_王牌()
-{
-	cout << "牌山:";
-	if (牌山.size() < 14) {
-		cout << "牌不足14张" << endl;
-		return;
-	}
-	for (int i = 0; i < 14; ++i) {
-		cout << 牌山[i]->to_string() << " ";
-	}
-	cout << "(王牌区)| ";
-	for (int i = 14; i < 牌山.size(); ++i) {
-		cout << 牌山[i]->to_string() << " ";
-	}
-	cout << endl;
-	cout << "宝牌指示牌为:";
-	for (int i = 0; i < dora_spec; ++i) {
-		cout << 宝牌指示牌[i]->to_string() << " ";
-	}
-	cout << endl;
-}
-
-void Table::test_show_yama()
-{
-	cout << "牌山:";
-	for (int i = 0; i < 牌山.size(); ++i) {
-		cout << 牌山[i]->to_string() << " ";
-	}
-	cout << "共" << 牌山.size() << "张牌";
-	cout << endl;
-}
-
-void Table::test_show_player_hand(int i_player)
-{
-	players[i_player].test_show_hand();
-}
-
-void Table::test_show_all_player_hand()
-{
-	for (int i = 0; i < 4; ++i) {
-		cout << "Player" << i << " : "
-			<< players[i].hand_to_string()
-			<< endl;
-	}
-	cout << endl;
-}
-
-void Table::test_show_player_info(int i_player)
-{
-	cout << "Player" << i_player << " : "
-		<< endl << players[i_player].to_string();
-}
-
-void Table::test_show_all_player_info()
-{
-	for (int i = 0; i < 4; ++i)
-		test_show_player_info(i);
-}
-
-void Table::test_show_full_gamelog()
-{
-	cout << "Full GameLog:" << endl;
-	cout << fullGameLog.to_string();
 }
 
 void Table::deal_tile(int i_player)
@@ -541,55 +476,41 @@ void Table::发岭上牌(int i_player)
 	fullGameLog.log摸牌(i_player, players[i_player].hand.back());
 }
 
-string Table::to_string(int option) const
+string Table::to_string() const
 {
 	stringstream ss;
-	if (option & ToStringOption::YAMA) {
-		ss << "牌山:";
-		if (牌山.size() < 14) {
-			ss << "牌不足14张" << endl;
-			return ss.str();
-		}
-		for (int i = 0; i < 14; ++i) {
-			ss << 牌山[i]->to_string() << " ";
-		}
-		ss << "(王牌区)| ";
-		for (int i = 14; i < 牌山.size(); ++i) {
-			ss << 牌山[i]->to_string() << " ";
-		}
-		ss << endl;
+	ss << "牌山:";
+	if (牌山.size() < 14) {
+		ss << "牌不足14张" << endl;
+		return ss.str();
 	}
-	if (option & ToStringOption::DORA) {
-		ss << "宝牌指示牌为:";
-		for (int i = 0; i < dora_spec; ++i) {
-			ss << 宝牌指示牌[i]->to_string() << " ";
-		}
-		ss << endl;
+	for (int i = 0; i < 14; ++i) {
+		ss << 牌山[i]->to_string() << " ";
 	}
+	ss << "(王牌区)| ";
+	for (int i = 14; i < 牌山.size(); ++i) {
+		ss << 牌山[i]->to_string() << " ";
+	}
+	ss << endl;
 
-	if (option & ToStringOption::REMAIN_TILE) {
-		ss << "余" << get_remain_tile() << "张牌" << endl;
+	ss << "宝牌指示牌为:";
+	for (int i = 0; i < dora_spec; ++i) {
+		ss << 宝牌指示牌[i]->to_string() << " ";
 	}
-	if (option & ToStringOption::PLAYER) {
-		for (int i = 0; i < 4; ++i)
+	ss << endl;
+	ss << "余" << get_remain_tile() << "张牌" << endl;
+	for (int i = 0; i < 4; ++i)
 		ss << "Player" << i << " : "
-			<< endl << players[i].to_string();
-		ss << endl;
-	}
-	if (option & ToStringOption::亲家) {
-		ss << "亲家: Player " << 庄家 << endl;
-	}
-	if (option & ToStringOption::N_本场) {
-		ss << n本场 << "本场";
-	}
-	if (option & ToStringOption::N_立直棒) {
-		ss << n本场 << "立直棒";
-	}
+		<< endl << players[i].to_string();
+	ss << endl;
+	ss << "亲家: Player " << 庄家 << endl;
+	ss << n本场 << "本场";
+	ss << n本场 << "立直棒";
 	ss << endl;
 	return ss.str();
 }
 
-vector<SelfAction> Table::GetSelfActions()
+vector<SelfAction> Table::_generate_self_actions()
 {
 	FunctionProfiler;
 	vector<SelfAction> actions;
@@ -616,7 +537,7 @@ vector<SelfAction> Table::GetSelfActions()
 	return actions;
 }
 
-vector<SelfAction> Table::GetRiichiSelfActions()
+vector<SelfAction> Table::_generate_riichi_self_actions()
 {
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
@@ -631,7 +552,7 @@ vector<SelfAction> Table::GetRiichiSelfActions()
 	return actions;
 }
 
-vector<ResponseAction> Table::GetResponseActions(
+vector<ResponseAction> Table::_generate_response_actions(
 	int i, Tile* tile, bool is下家)
 {
 	FunctionProfiler;
@@ -663,7 +584,7 @@ vector<ResponseAction> Table::GetResponseActions(
 	return actions;
 }
 
-vector<ResponseAction> Table::Get抢暗杠(int i, Tile * tile)
+vector<ResponseAction> Table::_generate_抢暗杠_self_actions(int i, Tile * tile)
 {
 	vector<ResponseAction> actions;
 
@@ -678,7 +599,7 @@ vector<ResponseAction> Table::Get抢暗杠(int i, Tile * tile)
 	return actions;
 }
 
-vector<ResponseAction> Table::Get抢杠(int i, Tile * tile)
+vector<ResponseAction> Table::_generate_抢杠_self_actions(int i, Tile * tile)
 {
 	vector<ResponseAction> actions;
 
@@ -805,7 +726,7 @@ void Table::make_selection(int selection)
 				bool is下家 = false;
 				if (0 == (turn + 1) % 4)
 					is下家 = true;
-				response_actions = GetResponseActions(0, tile, is下家);
+				response_actions = _generate_response_actions(0, tile, is下家);
 			}
 			return;
 		}
@@ -823,7 +744,7 @@ void Table::make_selection(int selection)
 				response_actions = { ra };
 			}
 			else {
-				response_actions = Get抢暗杠(0, tile);
+				response_actions = _generate_抢暗杠_self_actions(0, tile);
 			}
 
 			return;
@@ -842,7 +763,7 @@ void Table::make_selection(int selection)
 				response_actions = { ra };
 			}
 			else {
-				response_actions = Get抢杠(0, tile);
+				response_actions = _generate_抢杠_self_actions(0, tile);
 			}
 			return;
 		}
@@ -884,7 +805,7 @@ void Table::make_selection(int selection)
 			bool is下家 = false;
 			if (i == (turn + 1) % 4)
 				is下家 = true;
-			response_actions = GetResponseActions(i, tile, is下家);
+			response_actions = _generate_response_actions(i, tile, is下家);
 		}
 		phase = PhaseEnum(phase + 1);
 		return;
@@ -1021,7 +942,7 @@ void Table::make_selection(int selection)
 			response_actions = { ra };
 		}
 		else {
-			response_actions = Get抢杠(i, tile);
+			response_actions = _generate_抢杠_self_actions(i, tile);
 		}
 		phase = PhaseEnum(phase + 1);
 		return;
@@ -1096,7 +1017,7 @@ void Table::make_selection(int selection)
 			response_actions = { ra };
 		}
 		else {
-			response_actions = Get抢暗杠(i, tile);
+			response_actions = _generate_抢暗杠_self_actions(i, tile);
 		}
 		phase = PhaseEnum(phase + 1);
 		return;

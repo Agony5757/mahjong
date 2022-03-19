@@ -46,12 +46,9 @@ string Action::to_string() const
 {
 	switch (action) {
 	case BaseAction::暗杠:
-		return "暗杠" + correspond_tiles[0]->to_string() 
-					  + correspond_tiles[1]->to_string() 
-					  + correspond_tiles[2]->to_string() 
-					  + correspond_tiles[3]->to_string();
+		return fmt::format("暗杠{}", correspond_tiles[0]->to_string());
 	case BaseAction::加杠:
-		return "加杠";
+		return fmt::format("加杠{}", correspond_tiles[0]->to_string());
 	case BaseAction::出牌:
 		return "出牌" + correspond_tiles[0]->to_string();
 	case BaseAction::立直:

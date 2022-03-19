@@ -11,6 +11,153 @@ using namespace std;
 if (亲) {if (自摸){score1=score_亲自摸_all;} else{score1=score_铳亲;}} \
 else {if (自摸) {score1=score_子自摸_亲; score2=score_子自摸_子;} else{score1=score_铳子;}} return;
 
+void CounterResult::calculate_score(bool 亲, bool 自摸)
+{
+	if (fan == 6 * 13) {
+		// 6倍 役满
+		REGISTER_SCORE(亲, 自摸, 48000 * 6, 16000 * 6, 32000 * 6, 16000 * 6, 8000 * 6);
+	}
+	else if (fan == 5 * 13) {
+		// 5倍 役满
+		REGISTER_SCORE(亲, 自摸, 48000 * 5, 16000 * 5, 32000 * 5, 16000 * 5, 8000 * 5);
+	}
+	else if (fan == 4 * 13) {
+		// 4倍 役满		
+		REGISTER_SCORE(亲, 自摸, 48000 * 4, 16000 * 4, 32000 * 4, 16000 * 4, 8000 * 4);
+	}
+	else if (fan == 3 * 13) {
+		// 3倍 役满
+		REGISTER_SCORE(亲, 自摸, 48000 * 3, 16000 * 3, 32000 * 3, 16000 * 3, 8000 * 3);
+	}
+	else if (fan == 2 * 13) {
+		// 2倍 役满
+		REGISTER_SCORE(亲, 自摸, 48000 * 2, 16000 * 2, 32000 * 2, 16000 * 2, 8000 * 2);
+	}
+	else if (fan >= 13) {
+		// 役满
+		REGISTER_SCORE(亲, 自摸, 48000, 16000, 32000, 16000, 8000);
+	}
+	else if (fan >= 11) {
+		REGISTER_SCORE(亲, 自摸, 36000, 12000, 24000, 12000, 6000);
+	}
+	else if (fan >= 8) {
+		REGISTER_SCORE(亲, 自摸, 24000, 8000, 16000, 8000, 4000);
+	}
+	else if (fan >= 6) {
+		REGISTER_SCORE(亲, 自摸, 18000, 6000, 12000, 6000, 3000);
+	}
+	else if (fan == 5) {
+		REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
+	}
+	else if (fan == 4) {
+		// 40符以上满贯
+		if (fu >= 40) {
+			REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
+		}
+		else if (fu == 30) {
+			REGISTER_SCORE(亲, 自摸, 11600, 3900, 7700, 3900, 2000);
+		}
+		else if (fu == 25) {
+			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
+		}
+		else if (fu == 20) {
+			REGISTER_SCORE(亲, 自摸, 7700, 2600, 5200, 2600, 1300);
+		}
+	}
+	else if (fan == 3) {
+		// 70符以上满贯
+		if (fu >= 70) {
+			REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
+		}
+		else if (fu == 60) {
+			REGISTER_SCORE(亲, 自摸, 11600, 3900, 7700, 3900, 2000);
+		}
+		else if (fu == 50) {
+			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
+		}
+		else if (fu == 40) {
+			REGISTER_SCORE(亲, 自摸, 7700, 2600, 5200, 2600, 1300);
+		}
+		else if (fu == 30) {
+			REGISTER_SCORE(亲, 自摸, 5800, 2000, 3900, 2000, 1000);
+		}
+		else if (fu == 25) {
+			REGISTER_SCORE(亲, 自摸, 4800, 1600, 3200, 1600, 800);
+		}
+		else if (fu == 20) {
+			REGISTER_SCORE(亲, 自摸, 3900, 1300, 2600, 1300, 700);
+		}
+	}
+	else if (fan == 2) {
+		if (fu >= 110) {
+			REGISTER_SCORE(亲, 自摸, 10600, 3600, 7100, 3600, 1800);
+		}
+		else if (fu == 100) {
+			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
+		}
+		else if (fu == 90) {
+			REGISTER_SCORE(亲, 自摸, 8700, 2900, 5800, 2900, 1500);
+		}
+		else if (fu == 80) {
+			REGISTER_SCORE(亲, 自摸, 7700, 2600, 5200, 2600, 1300);
+		}
+		else if (fu == 70) {
+			REGISTER_SCORE(亲, 自摸, 6800, 2300, 4500, 2300, 1200);
+		}
+		else if (fu == 60) {
+			REGISTER_SCORE(亲, 自摸, 5800, 2000, 3900, 2000, 1000);
+		}
+		else if (fu == 50) {
+			REGISTER_SCORE(亲, 自摸, 4800, 1600, 3200, 1600, 800);
+		}
+		else if (fu == 40) {
+			REGISTER_SCORE(亲, 自摸, 3900, 1300, 2600, 1300, 700);
+		}
+		else if (fu == 30) {
+			REGISTER_SCORE(亲, 自摸, 2900, 1000, 2000, 1000, 500);
+		}
+		else if (fu == 25) {
+			REGISTER_SCORE(亲, 自摸, 2400, -1, 1600, -1, -1);
+		}
+		else if (fu == 20) {
+			REGISTER_SCORE(亲, 自摸, 2000, 700, 1300, 700, 400);
+		}
+	}
+	else if (fan == 1) {
+		if (fu >= 110) {
+			REGISTER_SCORE(亲, 自摸, 5300, -1, 3600, -1, -1);
+		}
+		else if (fu == 100) {
+			REGISTER_SCORE(亲, 自摸, 4800, 1600, 3200, 1600, 800);
+		}
+		else if (fu == 90) {
+			REGISTER_SCORE(亲, 自摸, 4400, 1500, 2900, 1500, 800);
+		}
+		else if (fu == 80) {
+			REGISTER_SCORE(亲, 自摸, 3900, 1300, 2600, 1300, 700);
+		}
+		else if (fu == 70) {
+			REGISTER_SCORE(亲, 自摸, 3400, 1200, 2300, 1200, 600);
+		}
+		else if (fu == 60) {
+			REGISTER_SCORE(亲, 自摸, 2900, 1000, 2000, 1000, 500);
+		}
+		else if (fu == 50) {
+			REGISTER_SCORE(亲, 自摸, 2400, 800, 1600, 800, 400);
+		}
+		else if (fu == 40) {
+			REGISTER_SCORE(亲, 自摸, 2000, 700, 1300, 700, 400);
+		}
+		else if (fu == 30) {
+			REGISTER_SCORE(亲, 自摸, 1500, 500, 1000, 500, 300);
+		}
+		else if (fu == 20) {
+			REGISTER_SCORE(亲, 自摸, 1000, -1, -1, -1, -1);
+		}
+	}
+	throw runtime_error(fmt::format("Error fan & fu cases. {} fan {} fu.", fan, fu));
+}
+
 static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(CompletedTiles ct, vector<Fulu> fulus, Tile* correspond_tile, BaseTile tsumo_tile, Wind 自风, Wind 场风, bool& 役满);
 
 int calculate_fan(vector<Yaku> yakus);
@@ -120,14 +267,7 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 		auto iter = unique(complete_tiles_list.begin(), complete_tiles_list.end());
 		complete_tiles_list.erase(iter, complete_tiles_list.end());
 	}
-#ifdef MAJ_DEBUG
-	if (MAJ_DEBUG_SIG) {
-		cout << "MAJ_DEBUG: Removed Duplicate CompletedTiles" << endl;
-		for (auto ct : complete_tiles_list) {
-			cout << ct.to_string() << endl;
-		}
-	}
-#endif
+
 	// 接下来统计七对子
 	if (is七对和牌型(convert_tiles_to_base_tiles(tiles))) {
 		// 即使是役满这里也要纳入考虑，因为存在大七星
@@ -288,155 +428,6 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 	return final_result;
 }
 
-void CounterResult::calculate_score(bool 亲, bool 自摸)
-{
-	if (fan == 6 * 13) {
-		// 6倍 役满
-		REGISTER_SCORE(亲, 自摸, 48000 * 6, 16000 * 6, 32000 * 6, 16000 * 6, 8000 * 6);
-	}
-	else if (fan == 5 * 13) {
-		// 5倍 役满
-		REGISTER_SCORE(亲, 自摸, 48000 * 5, 16000 * 5, 32000 * 5, 16000 * 5, 8000 * 5);
-	}
-	else if (fan == 4 * 13) {
-		// 4倍 役满		
-		REGISTER_SCORE(亲, 自摸, 48000 * 4, 16000 * 4, 32000 * 4, 16000 * 4, 8000 * 4);
-	}
-	else if (fan == 3 * 13) {
-		// 3倍 役满
-		REGISTER_SCORE(亲, 自摸, 48000 * 3, 16000 * 3, 32000 * 3, 16000 * 3, 8000 * 3);
-	}
-	else if (fan == 2 * 13) {
-		// 2倍 役满
-		REGISTER_SCORE(亲, 自摸, 48000 * 2, 16000 * 2, 32000 * 2, 16000 * 2, 8000 * 2);
-	}
-	else if (fan >= 13) {
-		// 役满
-		REGISTER_SCORE(亲, 自摸, 48000, 16000, 32000, 16000, 8000);
-	}
-	else if (fan >= 11) {
-		REGISTER_SCORE(亲, 自摸, 36000, 12000, 24000, 12000, 6000);
-	}
-	else if (fan >= 8) {
-		REGISTER_SCORE(亲, 自摸, 24000, 8000 , 16000, 8000, 4000);
-	}
-	else if (fan >= 6) {
-		REGISTER_SCORE(亲, 自摸, 18000, 6000 , 12000, 6000, 3000);
-	}
-	else if (fan == 5) {
-		REGISTER_SCORE(亲, 自摸, 12000, 4000 , 8000, 4000, 2000);
-	}
-	else if (fan == 4) {
-		// 40符以上满贯
-		if (fu >= 40) {
-			REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
-		}
-		else if (fu == 30) {
-			REGISTER_SCORE(亲, 自摸, 11600, 3900, 7700, 3900, 2000);
-		}
-		else if (fu == 25) {
-			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
-		}
-		else if (fu == 20) {
-			REGISTER_SCORE(亲, 自摸, 7700, 2600, 5200, 2600, 1300);
-		}
-	}
-	else if (fan == 3) {
-		// 70符以上满贯
-		if (fu >= 70) {
-			REGISTER_SCORE(亲, 自摸, 12000, 4000, 8000, 4000, 2000);
-		}
-		else if (fu == 60) {
-			REGISTER_SCORE(亲, 自摸, 11600, 3900, 7700, 3900, 2000);
-		}
-		else if (fu == 50) {
-			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
-		}
-		else if (fu == 40) {
-			REGISTER_SCORE(亲, 自摸, 7700, 2600, 5200, 2600, 1300);
-		}
-		else if (fu == 30) {
-			REGISTER_SCORE(亲, 自摸, 5800, 2000, 3900, 2000, 1000);
-		}
-		else if (fu == 25) {
-			REGISTER_SCORE(亲, 自摸, 4800, 1600, 3200, 1600, 800);
-		}
-		else if (fu == 20) {
-			REGISTER_SCORE(亲, 自摸, 3900, 1300, 2600, 1300, 700);
-		}
-	}
-	else if (fan == 2) {
-		if (fu >= 110) {
-			REGISTER_SCORE(亲, 自摸, 10600, 3600, 7100, 3600, 1800);
-		}
-		else if (fu == 100) {
-			REGISTER_SCORE(亲, 自摸, 9600, 3200, 6400, 3200, 1600);
-		}
-		else if (fu == 90) {
-			REGISTER_SCORE(亲, 自摸, 8700, 2900, 5800, 2900, 1500);
-		}
-		else if (fu == 80) {
-			REGISTER_SCORE(亲, 自摸, 7700, 2600, 5200, 2600, 1300);
-		}
-		else if (fu == 70) {
-			REGISTER_SCORE(亲, 自摸, 6800, 2300, 4500, 2300, 1200);
-		}
-		else if (fu == 60) {
-			REGISTER_SCORE(亲, 自摸, 5800, 2000, 3900, 2000, 1000);
-		}
-		else if (fu == 50) {
-			REGISTER_SCORE(亲, 自摸, 4800, 1600, 3200, 1600, 800);
-		}
-		else if (fu == 40) {
-			REGISTER_SCORE(亲, 自摸, 3900, 1300, 2600, 1300, 700);
-		}
-		else if (fu == 30) {
-			REGISTER_SCORE(亲, 自摸, 2900, 1000, 2000, 1000, 500);
-		}
-		else if (fu == 25) {
-			REGISTER_SCORE(亲, 自摸, 2400, -1, 1600, -1, -1);
-		}
-		else if (fu == 20) {
-			REGISTER_SCORE(亲, 自摸, 2000, 700, 1300, 700, 400);
-		}
-	}
-	else if (fan == 1) {
-		if (fu >= 110) {
-			REGISTER_SCORE(亲, 自摸, 5300, -1, 3600, -1, -1);
-		}
-		else if (fu == 100) {
-			REGISTER_SCORE(亲, 自摸, 4800, 1600, 3200, 1600, 800);
-		}
-		else if (fu == 90) {
-			REGISTER_SCORE(亲, 自摸, 4400, 1500, 2900, 1500, 800);
-		}
-		else if (fu == 80) {
-			REGISTER_SCORE(亲, 自摸, 3900, 1300, 2600, 1300, 700);
-		}
-		else if (fu == 70) {
-			REGISTER_SCORE(亲, 自摸, 3400, 1200, 2300, 1200, 600);
-		}
-		else if (fu == 60) {
-			REGISTER_SCORE(亲, 自摸, 2900, 1000, 2000, 1000, 500);
-		}
-		else if (fu == 50) {
-			REGISTER_SCORE(亲, 自摸, 2400, 800, 1600, 800, 400);
-		}
-		else if (fu == 40) {
-			REGISTER_SCORE(亲, 自摸, 2000, 700, 1300, 700, 400);
-		}
-		else if (fu == 30) {
-			REGISTER_SCORE(亲, 自摸, 1500, 500, 1000, 500, 300);
-		}
-		else if (fu == 20) {
-			REGISTER_SCORE(亲, 自摸, 1000, -1, -1, -1, -1);
-		}
-	}
-	stringstream ss;
-	ss << "Error fan & fu cases." << fan << " fan, " << fu << " fu." << endl;
-	throw runtime_error(ss.str().c_str());	
-}
-
 //1pK -> 1p 1p 1p
 //1pS -> 1p 2p 3p
 //1zK -> 1z 1z 1z
@@ -528,16 +519,7 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(
 	vector<Yaku> yakus;
 	yakus.reserve(16); // 随便分配一些空间以免后期重新分配
 	int fu = 20;
-
-#ifdef MAJ_DEBUG
-	{
-		cout << "DEBUG_MODE: TILE_GROUP_STRING" << endl;
-		for (auto tgs : tile_group_string)
-			cout << tgs << " ";
-		cout << endl;
-	}
-#endif
-
+	
 	// 判断单骑
 	bool 单骑 = any_of(tile_group_string.begin(), tile_group_string.end(), [](const string &s) {
 		if (s.size() == 3) return false;
@@ -1060,40 +1042,40 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
 	std::vector<std::string> raw_tile_group_string;
 
 	if (ct.head.tiles.size() != 0)
-		raw_tile_group_string.push_back(basetile_to_string_simple(ct.head.tiles[0]) + ":"); //例如1z2
+		raw_tile_group_string.push_back(basetile_to_string(ct.head.tiles[0]) + ":"); //例如1z2
 	else if (ct.body.size() != 7)
 		throw runtime_error("Unknown CompletedTiles Setting. No Head and Not 7-toitsu");
 	else // 七对的情况（即没有雀头，BODY_SIZE正好为7）
 	{
 		for (int i = 0; i < 7; ++i) {
-			raw_tile_group_string.push_back(basetile_to_string_simple(ct.body[i].tiles[0]) + ":");
+			raw_tile_group_string.push_back(basetile_to_string(ct.body[i].tiles[0]) + ":");
 		}
 	}
 
 	for (auto fulu : fulus) {
 		switch (fulu.type) {
 		case Fulu::Chi:
-			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "S-"); // 例如1sS- 即1s2s3s (8sS无效)
+			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "S-"); // 例如1sS- 即1s2s3s (8sS无效)
 			continue;
 		case Fulu::Pon:
-			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "K-"); // 例如1sK- 即1s1s1s
+			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "K-"); // 例如1sK- 即1s1s1s
 			continue;
 		case Fulu::大明杠:
 		case Fulu::加杠:
-			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "|-"); // 例如3z4- 即西大明杠/加杠
+			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "|-"); // 例如3z4- 即西大明杠/加杠
 			continue;
 		case Fulu::暗杠:
-			raw_tile_group_string.push_back(basetile_to_string_simple(fulu.tiles[0]->tile) + "|+"); // 例如4s4+ 即4s暗杠
+			raw_tile_group_string.push_back(basetile_to_string(fulu.tiles[0]->tile) + "|+"); // 例如4s4+ 即4s暗杠
 			continue;
 		}
 	}
 	for (auto tilegroup : ct.body) {
 		switch (tilegroup.type) {
 		case TileGroup::Shuntsu:
-			raw_tile_group_string.push_back(basetile_to_string_simple(tilegroup.tiles[0]) + "S"); //例如1sS
+			raw_tile_group_string.push_back(basetile_to_string(tilegroup.tiles[0]) + "S"); //例如1sS
 			continue;
 		case TileGroup::Koutsu:
-			raw_tile_group_string.push_back(basetile_to_string_simple(tilegroup.tiles[0]) + "K"); // 例如1sK
+			raw_tile_group_string.push_back(basetile_to_string(tilegroup.tiles[0]) + "K"); // 例如1sK
 			continue;
 		default:
 			continue;
@@ -1101,7 +1083,7 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
 	}
 
 	// last_tile是否存在于tile_group中
-	string last_tile_string = basetile_to_string_simple(last_tile);
+	string last_tile_string = basetile_to_string(last_tile);
 	for (auto &tile_group : raw_tile_group_string) {
 		auto attr = tile_group.back(); // 最后一个字符表示它的性质
 		if (attr == '-' || attr == '+') {
@@ -1146,35 +1128,9 @@ vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
 
 	// 消去tile_group_strings中完全相同的元素
 
-#ifdef MAJ_DEBUG
-	bool MAJ_DEBUG_SIG = false;
-	if (tile_group_strings.size() >= 2) {
-		MAJ_DEBUG_SIG = true;
-		cout << "MAJ_DEBUG: Start Remove Duplicate" << endl;
-		for (auto tgs : tile_group_strings) {
-			for (auto tg : tgs) {
-				cout << tg << " ";
-			}
-			cout << endl;
-		}
-	}
-#endif
-
 	sort(tile_group_strings.begin(), tile_group_strings.end());
 	auto iter = unique(tile_group_strings.begin(), tile_group_strings.end());
 	tile_group_strings.erase(iter, tile_group_strings.end());
-
-#ifdef MAJ_DEBUG
-	if (MAJ_DEBUG_SIG) {
-		cout << "MAJ_DEBUG: Already Remove Duplicate" << endl;
-		for (auto tgs : tile_group_strings) {
-			for (auto tg : tgs) {
-				cout << tg << " ";
-			}
-			cout << endl;
-		}
-	}
-#endif
 
 	for (auto tile_group : tile_group_strings) {
 		auto yaku_fu = get_手役_from_complete_tiles_固定位置(tile_group, 自风, 场风);

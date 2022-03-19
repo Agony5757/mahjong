@@ -100,8 +100,8 @@ enum class Yaku {
 	双倍役满,
 };
 
-inline bool can_agari(std::vector<Yaku> yakus) {
-	return !all_of(yakus.begin(), yakus.end(), [](Yaku yaku) {
+inline bool can_agari(const std::vector<Yaku> &yakus) {
+	return !all_of(yakus.begin(), yakus.end(), [](const Yaku &yaku) {
 		if (yaku == Yaku::None) return true;
 		if (yaku == Yaku::宝牌) return true;
 		if (yaku == Yaku::赤宝牌) return true;
@@ -112,7 +112,7 @@ inline bool can_agari(std::vector<Yaku> yakus) {
 }
 
 inline std::string yaku_to_string(Yaku yaku) {
-	static std::vector<std::string> yaku_name = {
+	static const char* yaku_name[] = {
 		// 特指无役
 		"无役",
 

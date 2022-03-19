@@ -14,13 +14,13 @@ struct CounterResult {
 	std::vector<Yaku> yakus;
 	
 	// 分数的cases
-	int score1;
-	int score2; // 自摸时用。score1=亲，score2=子
+	int score1 = 0;
+	int score2 = 0; // 自摸时用。score1=亲，score2=子
 
 	void calculate_score(bool 亲, bool 自摸);
 	
-	int fan;
-	int fu;
+	int fan = 0;
+	int fu = 0;
 };
 
 class Table;
