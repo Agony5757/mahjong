@@ -1,18 +1,18 @@
-language: python
+language: generic
 os: linux
 dist: focal
 
 git:
   depth: false
-  
-python:
-  - "3.9"
 
 addons:
   apt:
     packages: &common_packages  
       - clang
       - cmake
+
+before_install: 
+  - python 
 
 # command to install dependencies
 install:
