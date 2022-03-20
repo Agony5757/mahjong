@@ -385,7 +385,7 @@ bool 纯绿牌(const string &s) {
 		[&s](const char* green) {return tile_group_match(s, green); });
 }
 
-/* 用于记符，所有幺九字刻，不包括杠子 */
+/* 用于处理全带，不包括杠子 */
 bool 带幺九字(const string &s) {
 	return 带字牌(s) || 带幺九(s);
 }
@@ -766,6 +766,9 @@ static pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(vecto
 	if (num_杠子 == 3) yakus.push_back(Yaku::三杠子);
 	if (混老头)	yakus.push_back(Yaku::混老头);
 	
+	if (断幺九)
+		yakus.push_back(Yaku::断幺九);
+
 	if (纯全带幺九) {
 		if (门清) yakus.push_back(Yaku::纯全带幺九);
 		else yakus.push_back(Yaku::纯全带幺九副露版);
@@ -813,7 +816,6 @@ static pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(vecto
 		if (字牌刻子[3]) yakus.push_back(Yaku::自风_北);
 
 	if (平和) yakus.push_back(Yaku::平和);
-
 
 	// 计算符数
 
@@ -968,7 +970,6 @@ static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
 	return yaku_fus;
 }
 
-
 CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风)
 {
 	// 首先 假设进入到这个counter阶段的，至少满足了和牌条件的牌型
@@ -993,7 +994,7 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 	vector<Yaku> 天地和;
 	vector<Yaku> 场役;
 	vector<Yaku> Dora役;
-	vector<pair<vector<Yaku>, int>> all_手役; // 所有手役可能性
+	vector<pair<vector<Yaku>, int>> &all_手役 = all_yaku_fu_cases; // 所有手役可能性
 
 	/* 天地和的条件是，在第一巡，且没人鸣牌*/
 	if (player.first_round && tsumo) {
@@ -1027,7 +1028,8 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 					sort(tiles.begin(), tiles.end());
 					if (is_same_container(raw, convert_tiles_to_basetiles(tiles)))
 						国士13 = true;
-					else 国士13 = false;
+					else 
+						国士 = true;
 				}
 				役满 = true;
 				break; // 等同于jump出去，因为国/九莲肯定牌型不同，不需要继续判断九莲了
@@ -1097,7 +1099,7 @@ CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, 
 		// 接下来
 
 		for (auto &complete_tiles : complete_tiles_list) {
-			auto &&yaku_fus = get_手役_from_complete_tiles(complete_tiles, player.副露s, correspond_tile, player.hand.back()->tile, 自风, 场风, 门清, 役满);
+			auto yaku_fus = get_手役_from_complete_tiles(complete_tiles, player.副露s, correspond_tile, player.hand.back()->tile, 自风, 场风, 门清, 役满);
 			merge_into(all_手役, yaku_fus);
 		}
 	}

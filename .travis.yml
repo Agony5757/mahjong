@@ -10,6 +10,7 @@ addons:
     packages: &common_packages  
       - clang
       - cmake
+      - p7zip
 
 before_install: 
   - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
@@ -20,5 +21,10 @@ before_install:
 install:
   - python setup.py install
 # command to run tests
+
+before_script:
+  - wget https://github.com/Agony5757/mahjong/releases/download/v1.0/paipuxmls.7z
+  - 7z x paipuxmls.7z
+
 script: 
-  - python -c "import pymahjong;pymahjong.test()"
+  - python -c "import pymahjong as pm;pm.paipu_replay(mode='debug')"
