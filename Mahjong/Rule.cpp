@@ -287,11 +287,11 @@ bool has_completed_tiles(std::vector<BaseTile> tiles)
 
 bool isCommon和牌型(std::vector<BaseTile> tiles) {
 
-	FunctionProfiler;
+	profiler _("Rule.cpp/isCommonAgari");
 	sort(tiles.begin(), tiles.end());
 	if (tiles.size() % 3 != 2) return false;
 	
-	// auto basetiles = convert_tiles_to_base_tiles(tiles);
+	// auto basetiles = convert_tiles_to_basetiles(tiles);
 	return has_completed_tiles(tiles);
 }
 
@@ -311,7 +311,7 @@ std::vector<BaseTile> isCommon听牌型(std::vector<BaseTile> tiles)
 
 bool is七对和牌型(std::vector<BaseTile> tiles)
 {
-	FunctionProfiler;
+	profiler _("Rule.cpp/isChitoiAgari");;
 	if (tiles.size() != 14) return false;
 	sort(tiles.begin(), tiles.end());
 	if (tiles[0] == tiles[1]
@@ -358,7 +358,8 @@ std::vector<BaseTile> is七对听牌型(std::vector<BaseTile> tiles)
 
 bool is国士无双和牌型(std::vector<BaseTile> tiles)
 {
-	FunctionProfiler;
+
+	profiler _("Rule.cpp/isKokushiAgari");;
 	vector<BaseTile> raw
 	{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
 
@@ -405,7 +406,7 @@ std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles)
 
 vector<BaseTile> get听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
 {
-	FunctionProfiler;
+	profiler _("Rule.cpp/getAtariHai");;
 	vector<BaseTile> 听牌;
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		if (except_tiles.size() > 0) {
@@ -430,7 +431,7 @@ vector<BaseTile> get听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles
 
 bool is听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
 {
-	FunctionProfiler;
+	profiler _("Rule.cpp/isTenpai");
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		if (except_tiles.size() > 0) {
 			if (is_in(except_tiles, static_cast<BaseTile>(i))) {
@@ -475,7 +476,7 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清)
 	for (int i = 0; i < hands.size(); ++i) {
 		std::vector<Tile*> copy_hand(hands.begin(), hands.end());
 		copy_hand.erase(copy_hand.begin() + i);
-		auto s = convert_tiles_to_base_tiles(copy_hand);
+		auto s = convert_tiles_to_basetiles(copy_hand);
 		auto tenhai = get听牌(s);
 		if (tenhai.size() != 0) {
 			play_tiles.push_back(hands[i]);
@@ -487,14 +488,14 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清)
 bool can_ron(std::vector<Tile*> hands, Tile *get_tile)
 {
 	hands.push_back(get_tile);
-	if (is和牌(convert_tiles_to_base_tiles(hands)))
+	if (is和牌(convert_tiles_to_basetiles(hands)))
 		return true;
 	return false;
 }
 
 bool can_tsumo(std::vector<Tile*> hands)
 {
-	if (is和牌(convert_tiles_to_base_tiles(hands)))
+	if (is和牌(convert_tiles_to_basetiles(hands)))
 		return true;
 	return false;
 }

@@ -101,7 +101,7 @@ struct profiler {
         else {
             current_identifier = function_identifier;
         }
-        auto iter = profiles.find(function_identifier);
+        auto iter = profiles.find(current_identifier);
         if (iter == profiles.end()) {
             current_profile = new profile();
             profiles.insert({ current_identifier, current_profile });

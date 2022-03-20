@@ -1,7 +1,7 @@
 
 # Japanese Riichi Mahjong
 
-[![CMake](https://github.com/Agony5757/mahjong/actions/workflows/cmake.yml/badge.svg?branch=master)](https://github.com/Agony5757/mahjong/actions/workflows/cmake.yml)
+[![Build Status](https://app.travis-ci.com/Agony5757/mahjong.svg?branch=develop)](https://app.travis-ci.com/Agony5757/mahjong)
 
 Simulator of Japanese Riichi Mahjong (https://en.wikipedia.org/wiki/Japanese_Mahjong) written in C++.
 

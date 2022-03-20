@@ -56,8 +56,39 @@ void test_tenhou_game()
 	cout << table.get_phase() << endl;
 }
 
+void test_random_play(int games = 1000)
+{
+	std::default_random_engine reng;
+	std::uniform_real_distribution<float> ud(0, 1);
+
+	static auto random_action = [&reng, &ud](auto actions) {
+		return size_t(ud(reng) * actions.size());
+	};
+	timer t;
+	for (int i = 0; i < games; ++i) {
+		Table t;
+		t.game_init();
+		do {
+			int selection;
+			if (t.is_self_acting()) {
+				auto& actions = t.get_self_actions();
+				selection = random_action(actions);
+			}
+			else {
+				auto& actions = t.get_response_actions();
+				selection = random_action(actions);
+			}
+			t.make_selection(selection);
+		} while (!t.is_over());
+	}
+	double time = t.get(sec);
+	fmt::print("{} random plays passed, duration = {:3f} s ({:3f} s avg.)", games, time, time / games);
+	fmt::print("{}", profiler::get_all_profiles_v2());
+}
+
 int main() {	
+	test_random_play();
 	// test_tenhou_yama();
-	test_tenhou_game();
+	// test_tenhou_game();
 	return 0;
 }

@@ -1,0 +1,30 @@
+language: generic
+os: linux
+dist: focal
+
+git:
+  depth: false
+
+addons:
+  apt:
+    packages: &common_packages  
+      - clang
+      - cmake
+      - p7zip-full
+
+before_install: 
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - sudo chmod +x miniconda.sh && ./miniconda.sh -b -p ~/anaconda3 
+  - ~/anaconda3/bin/conda init && source ~/.bashrc
+
+# command to install dependencies
+install:
+  - python setup.py install
+# command to run tests
+
+before_script:
+  - wget https://github.com/Agony5757/mahjong/releases/download/v1.0/paipuxmls.7z
+  - 7z x paipuxmls.7z
+
+script: 
+  - python -c "import pymahjong as pm;pm.paipu_replay(mode='debug')"

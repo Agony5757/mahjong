@@ -3,16 +3,16 @@
 #pragma GCC diagnostic ignored "-Wunused-value"
 #endif
 
-#include "pybind11/pybind11.h"
-#include "pybind11/stl.h"
-#include "pybind11/complex.h"
-#include "pybind11/functional.h"
-#include "pybind11/operators.h"
 #include "Table.h"
 #include "ScoreCounter.h"
 #include "GamePlay.h"
 #include "tenhou.h"
 #include "EncodingPy.h"
+#include "pybind11/pybind11.h"
+#include "pybind11/stl.h"
+#include "pybind11/complex.h"
+#include "pybind11/functional.h"
+#include "pybind11/operators.h"
 
 using_mahjong;
 using namespace std;
@@ -84,7 +84,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("red_dora", &Tile::red_dora)
 		.def_readonly("id", &Tile::id)
 		.def("to_string", &Tile::to_string)
-		.def("to_simple_string", &Tile::to_simple_string)
+		// .def("to_simple_string", &Tile::to_string)
 		;
 
 	m.def("TileToString", [](const Tile *tile) {return py::bytes(tile->to_string()); });
@@ -211,7 +211,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("to_string", static_cast<std::string(Table::*)() const>(&Table::to_string))
 		;
 
-	m.def("TableToString", [](const Table& table, int mode) {return py::bytes(table.to_string(mode)); });
+	m.def("TableToString", [](const Table& table) {return py::bytes(table.to_string()); });
 
 	py::enum_<ResultType>(m, "ResultType")
 		.value("RonAgari", ResultType::荣和终局)

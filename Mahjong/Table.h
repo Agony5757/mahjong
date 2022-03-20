@@ -107,21 +107,7 @@ public:
 		}
 	}
 
-	enum ToStringOption : int {
-		YAMA = 1 << 0,
-		PLAYER = 1 << 1,
-		DORA = 1 << 2,
-		N_立直棒 = 1 << 3,
-		N_本场 = 1 << 4,
-		亲家 = 1 << 5,
-		REMAIN_TILE = 1 << 6,
-	};
-
-	std::string to_string(int option) const;	
-	inline std::string to_string() const 
-	{ 
-		return to_string(YAMA | PLAYER | DORA | N_立直棒 | N_本场 | 亲家 | REMAIN_TILE); 
-	}
+	std::string to_string() const;
 
 	inline bool after_chipon() { return last_action == BaseAction::吃 || last_action == BaseAction::碰; }
 	inline bool after_daiminkan() {	return last_action == BaseAction::杠; }
@@ -131,32 +117,18 @@ public:
 	std::array<int, 4> get_scores();
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
-	std::vector<SelfAction> GetSelfActions();
-	std::vector<SelfAction> GetRiichiSelfActions();
+	std::vector<SelfAction> _generate_self_actions();
+	std::vector<SelfAction> _generate_riichi_self_actions();
 
 	// 根据turn打出的tile，可以做出的决定
-	std::vector<ResponseAction> GetResponseActions(int player, Tile* tile, bool);
+	std::vector<ResponseAction> _generate_response_actions(int player, Tile* tile, bool);
 
 	// 根据turn打出的tile，可以做出的抢杠决定
-	std::vector<ResponseAction> Get抢暗杠(int player, Tile* tile);
+	std::vector<ResponseAction> _generate_抢暗杠_self_actions(int player, Tile* tile);
 
 	// 根据turn打出的tile，可以做出的抢杠决定
-	std::vector<ResponseAction> Get抢杠(int player, Tile* tile);
+	std::vector<ResponseAction> _generate_抢杠_self_actions(int player, Tile* tile);
 
-	void test_show_yama_with_王牌();
-	void test_show_yama();
-	void test_show_player_hand(int i_player);
-	void test_show_all_player_hand();
-	void test_show_player_info(int i_player);
-	void test_show_all_player_info();
-	void test_show_full_gamelog();
-
-	inline void test_show_all() {
-		test_show_yama_with_王牌();
-		test_show_all_player_info();		
-		std::cout << "轮到Player" << turn << std::endl;
-	}
-		
 public:
 	// ---------------------Manual Mode------------------------------
 	// The following part is for the manual instead of the automatic.
@@ -228,10 +200,12 @@ public:
 
 	// Tell that who has to make the selection.
 	inline int who_make_selection() const { return (get_phase() - Table::P1_ACTION) % 4; }
-	
+	inline bool is_self_acting() const { return get_phase() <= Table::P4_ACTION; }
+	inline bool is_over() const { return get_phase() == Table::GAME_OVER; }
+
 	inline Result get_result() const { return result; }	
-	inline std::vector<SelfAction> get_self_actions() const { return self_actions; }
-	inline std::vector<ResponseAction> get_response_actions() const { return response_actions; }
+	inline const std::vector<SelfAction>& get_self_actions() const { return self_actions; }
+	inline const std::vector<ResponseAction>& get_response_actions() const { return response_actions; }	
 
 };
 
