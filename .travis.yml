@@ -1,16 +1,22 @@
-language: cpp
+language: python
 os: linux
 dist: focal
+
+git:
+  depth: false
+  
+python:
+  - "3.9"
+
 addons:
   apt:
-    packages: &common_packages
-      - python3.9-dev
+    packages: &common_packages  
       - clang
       - cmake
 
 # command to install dependencies
 install:
-  - sudo python3.9 setup.py install
+  - python setup.py install
 # command to run tests
 script: 
   - python -c "import pymahjong;pymahjong.test()"
