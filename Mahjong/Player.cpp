@@ -194,7 +194,7 @@ static bool is食替(Player* player, BaseTile t)
 
 vector<SelfAction> Player::get_打牌(bool after_chipon)
 {
-	FunctionProfiler;
+	profiler _("Player.cpp/get_discard");
 	vector<SelfAction> actions;
 	for (auto tile : hand) {
 		// 检查食替情况,不可打出

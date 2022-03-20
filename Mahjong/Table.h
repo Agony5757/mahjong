@@ -200,10 +200,12 @@ public:
 
 	// Tell that who has to make the selection.
 	inline int who_make_selection() const { return (get_phase() - Table::P1_ACTION) % 4; }
-	
+	inline bool is_self_acting() const { return get_phase() <= Table::P4_ACTION; }
+	inline bool is_over() const { return get_phase() == Table::GAME_OVER; }
+
 	inline Result get_result() const { return result; }	
 	inline const std::vector<SelfAction>& get_self_actions() const { return self_actions; }
-	inline const std::vector<ResponseAction>& get_response_actions() const { return response_actions; }
+	inline const std::vector<ResponseAction>& get_response_actions() const { return response_actions; }	
 
 };
 

@@ -233,14 +233,14 @@ string make_tilegroup(BaseTile t, char mark)
 {
 	string ret;	ret.reserve(4);
 	const char* tile_str = basetile_to_string(t);
-	ret[0] = tile_str[0]; ret[1] = tile_str[1];
-	ret[2] = mark;
+	ret.push_back(tile_str[0]); ret.push_back(tile_str[1]);
+	ret.push_back(mark);
 	return ret;
 };
 
 string make_tilegroup(BaseTile t, char mark1, char mark2)
 {
-	string ret;	ret.reserve(4);
+	string ret;	ret.resize(4);
 	const char* tile_str = basetile_to_string(t);
 	ret[0] = tile_str[0]; ret[1] = tile_str[1];
 	ret[2] = mark1; ret[3] = mark2;
@@ -257,6 +257,7 @@ string make_minkan(BaseTile t)			{ return make_tilegroup(t, mark_kantsu, mark_mi
 
 static std::vector<std::vector<std::string>> generate_tile_group_strings(const CompletedTiles &ct, const vector<Fulu> &fulus, bool tsumo, BaseTile last_tile)
 {
+	profiler _("ScoreCounter.cpp/generate_tgs");
 	std::vector<std::vector<std::string>> tile_group_strings;
 	std::vector<std::string> raw_tile_group_string; // without consider where is the agari tile.	  
 
@@ -405,7 +406,6 @@ int is役牌对子(string s, Wind 自风, Wind 场风) {
 /* 移除副露、胡牌等信息，创建复制 */
 vector<string> remove_4(const vector<string> &strs) {
 	vector<string> retstr(strs);
-	retstr.reserve(strs.size());
 
 	for (auto &ret : retstr) {
 		if (ret.size() == 4) ret.pop_back();
@@ -416,7 +416,6 @@ vector<string> remove_4(const vector<string> &strs) {
 
 pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置_役满(const vector<string> &tile_group_string, Wind 自风, Wind 场风, bool &役满) {
 	vector<Yaku> yakus;
-	yakus.reserve(4); // 随便分配一些空间以免后期重新分配
 	
 	// 统计Z一色
 	bool 字一色 = all_of(tile_group_string.begin(), tile_group_string.end(), [](const string& s) {
@@ -962,7 +961,7 @@ static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
 		auto yaku_fu = get_手役_from_complete_tiles_固定位置_役满(tile_group, 自风, 场风, 役满);
 
 		if (!役满) {
-			auto yaku_fu = get_手役_from_complete_tiles_固定位置(tile_group, 自风, 场风, 门清);
+			yaku_fu = get_手役_from_complete_tiles_固定位置(tile_group, 自风, 场风, 门清);
 		}
 		yaku_fus.push_back(yaku_fu);
 	}

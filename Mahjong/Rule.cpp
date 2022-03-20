@@ -287,7 +287,7 @@ bool has_completed_tiles(std::vector<BaseTile> tiles)
 
 bool isCommon和牌型(std::vector<BaseTile> tiles) {
 
-	FunctionProfiler;
+	profiler _("Rule.cpp/isCommonAgari");
 	sort(tiles.begin(), tiles.end());
 	if (tiles.size() % 3 != 2) return false;
 	
@@ -311,7 +311,7 @@ std::vector<BaseTile> isCommon听牌型(std::vector<BaseTile> tiles)
 
 bool is七对和牌型(std::vector<BaseTile> tiles)
 {
-	FunctionProfiler;
+	profiler _("Rule.cpp/isChitoiAgari");;
 	if (tiles.size() != 14) return false;
 	sort(tiles.begin(), tiles.end());
 	if (tiles[0] == tiles[1]
@@ -358,7 +358,8 @@ std::vector<BaseTile> is七对听牌型(std::vector<BaseTile> tiles)
 
 bool is国士无双和牌型(std::vector<BaseTile> tiles)
 {
-	FunctionProfiler;
+
+	profiler _("Rule.cpp/isKokushiAgari");;
 	vector<BaseTile> raw
 	{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
 
@@ -405,7 +406,7 @@ std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles)
 
 vector<BaseTile> get听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
 {
-	FunctionProfiler;
+	profiler _("Rule.cpp/getAtariHai");;
 	vector<BaseTile> 听牌;
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		if (except_tiles.size() > 0) {
@@ -430,7 +431,7 @@ vector<BaseTile> get听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles
 
 bool is听牌(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
 {
-	FunctionProfiler;
+	profiler _("Rule.cpp/isTenpai");
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
 		if (except_tiles.size() > 0) {
 			if (is_in(except_tiles, static_cast<BaseTile>(i))) {

@@ -329,10 +329,7 @@ void Table::next_turn(int nextturn)
 
 void Table::from_beginning()
 {
-#ifdef Profiling
-	FunctionProfiler;
-#endif
-
+	profiler _("Table.cpp/from_beginning");
 	const static auto 四风连打牌 = [](array<Player, 4>& players) {
 		BaseTile t0 = players[0].river[0].tile->tile;
 		BaseTile t1 = players[1].river[0].tile->tile;
@@ -417,7 +414,6 @@ void Table::from_beginning()
 	}
 	else
 	{
-		volatile profiler _("SelfActions");
 		self_actions = _generate_self_actions();
 	}
 
@@ -512,7 +508,7 @@ string Table::to_string() const
 
 vector<SelfAction> Table::_generate_self_actions()
 {
-	FunctionProfiler;
+	profiler _("Table.cpp/_generate_self_actions");
 	vector<SelfAction> actions;
 	auto& the_player = players[turn];
 	
@@ -555,7 +551,7 @@ vector<SelfAction> Table::_generate_riichi_self_actions()
 vector<ResponseAction> Table::_generate_response_actions(
 	int i, Tile* tile, bool is下家)
 {
-	FunctionProfiler;
+	profiler _("Table.cpp/_generate_response_actions");
 	vector<ResponseAction> actions;
 	
 	// first: pass action
@@ -658,9 +654,7 @@ void Table::make_selection_from_action_basetile(BaseAction action_type, const ve
 
 void Table::make_selection(int selection)
 {
-#ifdef Profiling
-	FunctionProfiler;
-#endif
+	profiler _("Table.cpp/make_selection");
 	// 这个地方控制了游戏流转
 	if (write_log) {
 		/*FILE* fp = fopen(write_log_filename.c_str(), "a+");
