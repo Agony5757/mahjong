@@ -12,8 +12,10 @@ addons:
       - cmake
 
 before_install: 
-  - python 
-
+  - wget https://repo.anaconda.com/archive/Anaconda3-2021.11-Linux-x86_64.sh -O anaconda.sh
+  - sudo chmod +x anaconda.sh && ./anaconda.sh -b -p ~/anaconda3 
+  - ~/anaconda3/bin/conda init && source ~/.bashrc
+  
 # command to install dependencies
 install:
   - python setup.py install
