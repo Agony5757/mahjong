@@ -1,7 +1,7 @@
 
 # Japanese Riichi Mahjong
 
-[![Build Status](https://app.travis-ci.com/Agony5757/mahjong.svg?branch=develop)](https://app.travis-ci.com/Agony5757/mahjong)
+[![Build Status](https://app.travis-ci.com/Agony5757/mahjong.svg?branch=master)](https://app.travis-ci.com/Agony5757/mahjong)
 
 Simulator of Japanese Riichi Mahjong (https://en.wikipedia.org/wiki/Japanese_Mahjong) written in C++.
 
