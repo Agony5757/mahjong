@@ -9,7 +9,7 @@ addons:
 
 # command to install dependencies
 install:
-  - python setup.py install
+  - sudo python3.9 setup.py install
 # command to run tests
 script: 
   - python -c "import pymahjong;pymahjong.test()"
