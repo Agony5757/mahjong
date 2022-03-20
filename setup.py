@@ -33,6 +33,26 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', ext.sourcedir, *cmake_args], cwd=self.build_temp)
         subprocess.check_call(['cmake', '--build', os.path.join(ext.sourcedir, self.build_temp), '--target', 'MahjongPyWrapper'], cwd=self.build_temp)
 
+CLASSIFIERS = """\
+Development Status :: 5 - Production/Stable
+Intended Audience :: Science/Research
+Intended Audience :: Developers
+License :: OSI Approved :: Apache Software License
+Programming Language :: C++
+Programming Language :: Python
+Programming Language :: Python :: 3
+Programming Language :: Python :: 3.6
+Programming Language :: Python :: 3.7
+Programming Language :: Python :: 3.8
+Programming Language :: Python :: 3.9
+Programming Language :: Python :: 3.10
+Programming Language :: Python :: 3 :: Only
+Topic :: Scientific/Engineering :: Artificial Intelligence
+Operating System :: Microsoft :: Windows
+Operating System :: POSIX
+Operating System :: Unix
+"""
+
 setup(
     name = "pymahjong",
     version = "1.0.0",
@@ -43,7 +63,11 @@ setup(
     long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension('pymahjong', '.')],
     cmdclass=dict(build_ext=CMakeBuild),
-    # package_data = {"pymahjong": ["MahjongPy.so", "MahjongPy.pyd", "MahjongPy.dylib"]},
+    project_urls={
+        "Source Code": "https://github.com/Agony5757/pymahjong",
+    },
+    classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
     packages = ['pymahjong'],
-    install_requires=['numpy', 'gym']
+    install_requires=['numpy', 'gym'],
+    python_requires='>=3.6',
 )
