@@ -4,8 +4,9 @@ dist: focal
 addons:
   apt:
     packages: &common_packages
-      - clang
       - python3.9-dev
+      - clang
+      - cmake
 
 # command to install dependencies
 install:
