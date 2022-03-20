@@ -1,6 +1,6 @@
 language: cpp
 os: linux
-dist: bionic
+dist: focal
 addons:
   apt:
     packages: &common_packages
