@@ -27,4 +27,4 @@ before_script:
   - 7z x paipuxmls.7z
 
 script: 
-  - python -c "import pymahjong as pm;pm.paipu_replay(mode='debug')"
+  - python -c "import pymahjong as pm;pm.test();pm.paipu_replay(mode='debug')"
