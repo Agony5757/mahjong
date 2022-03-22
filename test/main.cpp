@@ -59,6 +59,7 @@ void test_tenhou_game()
 void test_random_play(int games = 1000)
 {
 	std::default_random_engine reng;
+	reng.seed(time(nullptr));
 	std::uniform_real_distribution<float> ud(0, 1);
 
 	static auto random_action = [&reng, &ud](auto actions) {

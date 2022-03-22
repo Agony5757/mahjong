@@ -56,14 +56,14 @@ bool PaipuReplayer::make_selection_from_action(BaseAction action, vector<int> co
 	return make_selection(idx);
 }
 
- int PaipuReplayer::get_selection_from_action(BaseAction action, vector<int> correspond_tiles)
- {
-	 vector<Tile*> correspond_tiles_1;
-	 for (int i : correspond_tiles) {
-		 correspond_tiles_1.push_back(&table.tiles[i]);
-	 }
-	 return table.get_selection_from_action_tile(action, correspond_tiles_1);
- }
+int PaipuReplayer::get_selection_from_action(BaseAction action, vector<int> correspond_tiles)
+{
+	vector<Tile*> correspond_tiles_1;
+	for (int i : correspond_tiles) {
+		correspond_tiles_1.push_back(&table.tiles[i]);
+	}
+	return table.get_selection_from_action_tile(action, correspond_tiles_1);
+}
 
 int PaipuReplayer::get_phase() const
 {

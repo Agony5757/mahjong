@@ -172,7 +172,7 @@ public:
 	{
 		std::vector<BaseTile> tiles_basetile;
 		tiles_basetile.resize(tiles.size());
-		for (size_t i = 0; i<tiles_basetile.size();++i){
+		for (size_t i = 0; i < tiles_basetile.size();++i){
 			tiles_basetile[i] = BaseTile(tiles[i]);
 		}
 		return get_selection_from_action_basetile(action, tiles_basetile, use_red_dora);
