@@ -113,8 +113,8 @@ class MahjongEnv(gym.Env):
         if seed is not None:
             self.t.seed = seed
 		
-		if debug_mode is not None:
-			self.t.set_debug_mode(debug_mode)
+        if debug_mode is not None:
+		    self.t.set_debug_mode(debug_mode)
 
         self.t.game_init_with_metadata({"oya": str(oya), "wind": game_wind})
         self.riichi_stage2 = False
