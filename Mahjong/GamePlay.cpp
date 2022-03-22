@@ -21,15 +21,15 @@ void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直�
 	}*/
 }
 
-// vector<SelfAction> PaipuReplayer::get_self_actions() const
-// {
-// 	return table.self_actions;
-// }
+vector<SelfAction> PaipuReplayer::get_self_actions() const
+{
+	return table.self_actions;
+}
 
-// vector<ResponseAction> PaipuReplayer::get_response_actions() const
-// {
-// 	return table.response_actions;
-// }
+vector<ResponseAction> PaipuReplayer::get_response_actions() const
+{
+	return table.response_actions;
+}
 
 bool PaipuReplayer::make_selection(int selection)
 {	

@@ -237,9 +237,8 @@ public:
 	inline bool is_over() const { return get_phase() == Table::GAME_OVER; }
 
 	inline Result get_result() const { return result; }	
-	inline std::vector<SelfAction> get_self_actions() { return self_actions; }
-	inline std::vector<ResponseAction> get_response_actions() { return response_actions; }	
-
+	inline std::vector<SelfAction> get_self_actions() const { return self_actions; }
+	inline std::vector<ResponseAction> get_response_actions() const { return response_actions; }
 };
 
 namespace_mahjong_end
