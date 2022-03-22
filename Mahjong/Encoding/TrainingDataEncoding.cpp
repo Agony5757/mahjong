@@ -67,7 +67,7 @@ namespace TrainingDataEncoding {
 	void encode_fulu(const vector<Fulu>& fulus, dtype* data, size_t pid)
 	{
 		array<dtype, n_tile_types> ntiles = { 0 };
-		for (const auto& f : fulus) {
+		for (auto& f : fulus) {
 			for (int i = 0; i < f.tiles.size(); ++i) {
 				auto& t = f.tiles[i];
 				auto id = char(t->tile);
@@ -173,20 +173,20 @@ namespace TrainingDataEncoding {
 	{
 		if (table.get_phase() <= Table::PhaseEnum::P4_ACTION)
 		{
-			const auto &actions = table.get_self_actions();
+			auto &actions = table.self_actions;
 			encode_self_actions_matrix(actions, action_tile, can_kyushukyuhai, data);
 		}
 		else if (table.get_phase() < Table::PhaseEnum::GAME_OVER)
 		{
-			const auto &actions = table.get_response_actions();
+			auto &actions = table.response_actions;
 			encode_response_actions_matrix(actions, action_tile, data);
 		}
 	}
 
 	void encode_table(const Table& table, int pid, bool use_oracle, dtype* data)
 	{
-		const auto& ps = table.players;
-		const auto& hand = ps[pid].hand;
+		auto& ps = table.players;
+		auto& hand = ps[pid].hand;
 
 		int action_tile = -1;
 		if (table.get_phase() <= int(Table::PhaseEnum::P4_ACTION)) {
@@ -233,7 +233,7 @@ namespace TrainingDataEncoding {
 
 	void encode_table_riichi_step2(const Table& table, BaseTile riichi_tile, dtype *data)
 	{
-		const auto &actions = table.get_self_actions();
+		auto &actions = table.self_actions;
 		auto iter = find_if(actions.begin(), actions.end(),
 			[riichi_tile](SelfAction sa)
 		{ return sa.action == BaseAction::立直 && sa.correspond_tiles[0]->tile == riichi_tile; });
@@ -311,8 +311,8 @@ namespace TrainingDataEncoding {
 
 	void encode_actions_vector(const Table& table, int pid, dtype* data)
 	{
-		const auto& ps = table.players;
-		const auto& hand = ps[pid].hand;
+		auto& ps = table.players;
+		auto& hand = ps[pid].hand;
 
 		switch (table.get_phase()) {
 		case Table::PhaseEnum::P1_ACTION:
@@ -320,18 +320,18 @@ namespace TrainingDataEncoding {
 		case Table::PhaseEnum::P3_ACTION:
 		case Table::PhaseEnum::P4_ACTION:
 			if (pid == table.get_phase()) {
-				const auto &actions = table.get_self_actions();
+				auto &actions = table.self_actions;
 				encode_self_actions_vector(actions, data);
 			}
 			break;
 		default: {
 			int action_tile = -1;
-			const auto& ct = table.selected_action.correspond_tiles;
+			auto& ct = table.selected_action.correspond_tiles;
 			if (ct.size() > 0) {
 				action_tile = ct[0]->tile;
 			}
 			if (pid == table.get_phase() % 4) {
-				const auto &actions = table.get_response_actions();
+				auto &actions = table.response_actions;
 				encode_response_actions_vector(actions, action_tile, data);
 			}
 		}
@@ -351,7 +351,7 @@ namespace TrainingDataEncoding {
 	std::vector<BaseTile> get_riichi_tiles(const Table& table)
 	{
 		std::vector<BaseTile> bt;
-		for (const auto &sa : table.get_self_actions()) {
+		for (auto &sa : table.self_actions) {
 			if (sa.action == BaseAction::立直) {
 				bt.push_back(sa.correspond_tiles[0]->tile);
 			}

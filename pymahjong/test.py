@@ -15,20 +15,16 @@ def test(num_games=100):
 
         try:
 
-            env.reset(oya=game % 4, game_wind="east", debug_mode=2)
+            env.reset(oya=game % 4, game_wind="east", debug_mode=1)
 
             while not env.is_over():
 
                 curr_player_id = env.get_curr_player_id()
-                print(f"curr_player_id = {curr_player_id}")
 
                 # --------- get decision information -------------
 
                 valid_actions_mask = env.get_valid_actions(nhot=True)
-                print(f"valid_actions_mask = {valid_actions_mask}")
-
                 executor_obs = env.get_obs(curr_player_id)
-                print(f"executor_obs = {executor_obs}")
 
                 # oracle_obs = env.get_oracle_obs(curr_player_id)
                 # full_obs = env.get_full_obs(curr_player_id)
@@ -36,11 +32,10 @@ def test(num_games=100):
 
                 # --------- make decision -------------
 
-                a = np.random.choice(np.argwhere(valid_actions_mask).reshape([-1]))
-                print(f"Selection is {a}.")
+                a = np.random.choice(np.argwhere(
+                    valid_actions_mask).reshape([-1]))
 
                 env.step(curr_player_id, a)
-                print(f"Step finish.")
 
             # ----------------------- get result ---------------------------------
 
@@ -53,12 +48,16 @@ def test(num_games=100):
         except Exception as inst:
             game += 1
             time.sleep(0.1)
-            print("-------------- execption in game {} -------------------------".format(game))
+            print(
+                "-------------- execption in game {} -------------------------".format(game))
             print(inst)
             env.render()
+            print("-------------- replayable log -------------------------------")
+            env.t.print_debug_replay()
             continue
 
-    print("Total {} random-play games, {} games without error, takes {} s".format(num_games, success_games, time.time() - start_time))
+    print("Total {} random-play games, {} games without error, takes {} s".format(
+        num_games, success_games, time.time() - start_time))
 
 
 def test_with_pretrained(opponent_agent="vlog-bc", num_games=100):
@@ -92,9 +91,11 @@ def test_with_pretrained(opponent_agent="vlog-bc", num_games=100):
         except Exception as inst:
             game += 1
             time.sleep(0.1)
-            print("-------------- execption in game {} -------------------------".format(game))
+            print(
+                "-------------- execption in game {} -------------------------".format(game))
             print(inst)
             env.render()
             continue
 
-    print("Total {} random-play games with pretrained VLOG models as opponents, {} games without error, takes {} s".format(num_games, success_games, time.time() - start_time))
+    print("Total {} random-play games with pretrained VLOG models as opponents, {} games without error, takes {} s".format(
+        num_games, success_games, time.time() - start_time))
