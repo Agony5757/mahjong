@@ -20,12 +20,15 @@ def test(num_games=100):
             while not env.is_over():
 
                 curr_player_id = env.get_curr_player_id()
+                print(f"curr_player_id = {curr_player_id}")
 
                 # --------- get decision information -------------
 
                 valid_actions_mask = env.get_valid_actions(nhot=True)
+                print(f"valid_actions_mask = {valid_actions_mask}")
 
                 executor_obs = env.get_obs(curr_player_id)
+                print(f"executor_obs = {executor_obs}")
 
                 # oracle_obs = env.get_oracle_obs(curr_player_id)
                 # full_obs = env.get_full_obs(curr_player_id)
@@ -34,8 +37,10 @@ def test(num_games=100):
                 # --------- make decision -------------
 
                 a = np.random.choice(np.argwhere(valid_actions_mask).reshape([-1]))
+                print(f"Selection is {a}.")
 
                 env.step(curr_player_id, a)
+                print(f"Step finish.")
 
             # ----------------------- get result ---------------------------------
 
