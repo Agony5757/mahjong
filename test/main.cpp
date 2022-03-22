@@ -58,6 +58,8 @@ void test_tenhou_game()
 
 void test_random_play(int games = 1000)
 {
+	namespace enc = TrainingDataEncoding;
+
 	std::default_random_engine reng;
 	reng.seed(time(nullptr));
 	std::uniform_real_distribution<float> ud(0, 1);
@@ -66,10 +68,22 @@ void test_random_play(int games = 1000)
 		return size_t(ud(reng) * actions.size());
 	};
 	timer t;
+	
 	for (int i = 0; i < games; ++i) {
 		Table t;
 		t.game_init();
+		std::array<enc::dtype, enc::n_row * enc::n_col> mat_buffer;
+		std::array<enc::dtype, enc::n_row * enc::n_col> mat_oracle_buffer;
+		std::array<enc::dtype, enc::n_actions> vec_buffer;
+
 		do {
+			mat_buffer.fill(0);
+			mat_oracle_buffer.fill(0);
+			vec_buffer.fill(0);
+			enc::encode_table(t, t.who_make_selection(), false, mat_buffer.data());
+			enc::encode_table(t, t.who_make_selection(), true, mat_oracle_buffer.data());
+			enc::encode_actions_vector(t, t.who_make_selection(), vec_buffer.data());
+
 			int selection;
 			if (t.is_self_acting()) {
 				auto& actions = t.get_self_actions();
@@ -91,5 +105,6 @@ int main() {
 	test_random_play();
 	// test_tenhou_yama();
 	// test_tenhou_game();
+	getchar();
 	return 0;
 }
