@@ -6,7 +6,8 @@ using namespace std;
 
 void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家)
 {	
-	table.set_write_log(write_log);
+	if (write_log)
+		table.set_debug_mode(Table::debug_buffer);
 	table.game_init_for_replay(yama, init_scores, 立直棒, 本场, 场风, 亲家);
 
 	/*if (write_log) {

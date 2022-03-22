@@ -41,7 +41,7 @@ public:
 	GameLog fullGameLog;
 
 	/* For debug */
-	bool write_log = false;
+	int write_log_mode;
 	std::vector<int> yama_log;
 	std::string log_buffer_prefix;
 	std::vector<int> selection_log;
@@ -83,7 +83,18 @@ public:
 
 	void next_turn(int nextturn);
 
-	inline void set_write_log(bool write) { write_log = write; }
+	/* debug mode 
+	   0: no debug
+	   1: debug by write buffer
+	   2: debug by write stdout	
+	*/
+	static const int debug_close = 0;
+	static const int debug_buffer = 1;
+	static const int debug_stdout = 2;
+	inline void set_debug_mode(int debug_mode) 
+	{
+		write_log_mode = debug_mode; 
+	}
 	inline void set_seed(int new_seed) 
 	{ 
 		seed = new_seed; 
@@ -105,6 +116,28 @@ public:
 		for (auto selection : selection_log) {
 			fmt::print("table.make_selection({});\n", selection);
 		}
+	}
+	inline void debug_replay_init()
+	{
+		if (write_log_mode) {
+			auto init_score = {
+				players[0].score,
+				players[1].score,
+				players[2].score,
+				players[3].score,
+			};
+			log_buffer_prefix = fmt::format("Table table;\ntable.game_init_for_replay({}, {}, {}, {}, {}, {});\n",
+				vec2str(yama_log), vec2str(init_score), n立直棒, n本场, 场风, 庄家);
+			selection_log.reserve(512); // avoid reallocation
+			if (write_log_mode == debug_stdout)
+				fmt::print("{}", log_buffer_prefix);
+		}
+	}
+	inline void debug_selection_record(int selection)
+	{
+		selection_log.push_back(selection);
+		if (write_log_mode == debug_stdout)
+			fmt::print("table.make_selection({})", selection);
 	}
 
 	std::string to_string() const;

@@ -65,7 +65,7 @@ void Table::shuffle_tiles()
 	}
 	std::shuffle(牌山.begin(), 牌山.end(), rd);
 
-	if (write_log) {
+	if (write_log_mode) {
 		yama_log.reserve(N_TILES);
 		for (auto t : 牌山) {
 			yama_log.push_back(t->id);
@@ -136,17 +136,7 @@ void Table::init_before_playing()
 		players[i].update_听牌();
 	}
 
-	if (write_log) {
-		auto init_score = {
-			players[0].score,
-			players[1].score,
-			players[2].score,
-			players[3].score,
-		};
-		log_buffer_prefix = fmt::format("Table table;\ntable.game_init_for_replay({}, {}, {}, {}, {}, {});\n",
-			vec2str(yama_log), vec2str(init_score),	n立直棒, n本场, 场风, 庄家);
-		selection_log.reserve(512); // avoid reallocation
-	}
+	debug_replay_init();
 
 	from_beginning();
 }
@@ -656,12 +646,7 @@ void Table::make_selection(int selection)
 {
 	profiler _("Table.cpp/make_selection");
 	// 这个地方控制了游戏流转
-	if (write_log) {
-		/*FILE* fp = fopen(write_log_filename.c_str(), "a+");
-		fprintf(fp, "\ntable.make_selection(%d);", selection);
-		fclose(fp);*/
-		selection_log.push_back(selection);
-	}
+	debug_selection_record(selection);
 	// 分为两种情况，如果是ACTION阶段
 	switch (phase) {
 	case GAME_OVER:

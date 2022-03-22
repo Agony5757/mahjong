@@ -15,7 +15,7 @@ def test(num_games=100):
 
         try:
 
-            env.reset(oya=game % 4, game_wind="east")
+            env.reset(oya=game % 4, game_wind="east", debug_mode=2)
 
             while not env.is_over():
 

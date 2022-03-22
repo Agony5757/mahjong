@@ -56,7 +56,7 @@ void test_tenhou_game()
 	cout << table.get_phase() << endl;
 }
 
-void test_random_play(int games = 1000)
+void test_random_play(int games = 10)
 {
 	namespace enc = TrainingDataEncoding;
 
@@ -71,6 +71,7 @@ void test_random_play(int games = 1000)
 	
 	for (int i = 0; i < games; ++i) {
 		Table t;
+		t.set_debug_mode(Table::debug_stdout);
 		t.game_init();
 		std::array<enc::dtype, enc::n_row * enc::n_col> mat_buffer;
 		std::array<enc::dtype, enc::n_row * enc::n_col> mat_oracle_buffer;
