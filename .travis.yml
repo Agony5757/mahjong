@@ -23,7 +23,7 @@ install:
 # command to run tests
 
 before_script:
-  - wget https://github.com/Agony5757/mahjong/releases/download/v1.0/paipuxmls.7z
+  - wget https://github.com/Agony5757/mahjong/releases/download/v1.0.0/paipuxmls.7z
   - 7z x paipuxmls.7z
 
 script: 
