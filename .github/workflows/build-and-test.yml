@@ -1,0 +1,39 @@
+name: Build-and-test
+
+on:
+  push:
+    branches: 
+      - master
+      - develop
+  pull_request:
+    branches:
+      - master
+      - develop
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+#     - name: Install Anaconda
+#       run: wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && sudo chmod +x miniconda.sh && sudo ./miniconda.sh -b -p ~/anaconda3 && sudo ~/anaconda3/bin/conda init && sudo source ~/.bashrc
+        
+    - name: Install cmake, clang and p7zip
+      run: sudo apt install -y clang cmake p7zip-full
+        
+    - name: Build
+      # Build your program with the given configuration
+      run: sudo python setup.py install
+      
+    - name: Test
+      run: wget https://github.com/Agony5757/mahjong/releases/download/v1.0.0/paipuxmls.7z && 7z x paipuxmls.7z && python -c "import pymahjong as pm;pm.test();pm.paipu_replay(mode='debug')"
+        
