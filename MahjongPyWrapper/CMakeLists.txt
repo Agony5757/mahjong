@@ -17,4 +17,3 @@ elseif(WIN32)
 endif(UNIX)
 
 target_link_libraries(${LIB_MahjongPy} MahjongCore ${PYTHON_LIBRARIES} fmt tenhou_shuffle)
-

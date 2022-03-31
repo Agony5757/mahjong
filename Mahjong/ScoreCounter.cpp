@@ -970,7 +970,7 @@ static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
 	return yaku_fus;
 }
 
-CounterResult yaku_counter(Table *table, Player &player, Tile *correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风)
+CounterResult yaku_counter(const Table *table, const Player &player, Tile *correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风)
 {
 	// 首先 假设进入到这个counter阶段的，至少满足了和牌条件的牌型
 	// 以及，是否有某种役是不确定的
