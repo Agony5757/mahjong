@@ -71,18 +71,15 @@ Note: In a Mahjong game, it is possible the game is over before a certain player
 ### pretrained opponents agent
 We provide two pretrained models as the opponents (see the paper https://openreview.net/forum?id=pjqqxepwoMy) in the single-agent version environment.
 
-To use the pretrained models, you need to have [PyTorch](https://pytorch.org/) installed. You can download the models from [this link](https://1drv.ms/u/s!AuxZyB8UeEtsgpNScPpUjF1c09gaZQ?e=j4lS05) and put the .model files at the same directory as your python script. The pretrained model should automatically enable CUDA if your PyTorch supports CUDA.
+To use the pretrained models, you need to have [PyTorch](https://pytorch.org/) installed. You can [download the models from the GitHub release](https://github.com/Agony5757/mahjong/releases/tag/v1.0.0). The pretrained model should automatically enable CUDA if your PyTorch supports CUDA.
 
-Variational Latent Oracle Guiding + Conservative Q-learning
+- `mahjong_VLOG_CQL.pth`: Variational Latent Oracle Guiding + Conservative Q-learning
+- `mahjong_VLOG_BC.pth`:  Variational Latent Oracle Guiding + Behavior Cloning
 ```
-env = pymahjong.SingleAgentMahjongEnv(opponent_agent="vlog-cql")
-```
-
-Variational Latent Oracle Guiding + Behavior Cloning
-```
-env = pymahjong.SingleAgentMahjongEnv(opponent_agent="vlog-bc")
+env = pymahjong.SingleAgentMahjongEnv(opponent_agent=path_to_the_model_file)
 ```
 
+The two models perform similarly against each other according to our test. However, the BC model plays with a much more defensive style than the CQL model.   
 
 
 ## Multi-agent version

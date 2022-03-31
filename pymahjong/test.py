@@ -60,8 +60,8 @@ def test(num_games=100):
         num_games, success_games, time.time() - start_time))
 
 
-def test_with_pretrained(opponent_agent="vlog-bc", num_games=100):
-
+def test_with_pretrained(opponent_agent, num_games=100):
+    
     env = SingleAgentMahjongEnv(opponent_agent)
 
     start_time = time.time()
