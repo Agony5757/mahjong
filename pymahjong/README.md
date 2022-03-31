@@ -1,6 +1,9 @@
 # pymahjong
 
-pymahjong is an python environment for decision-AI study, based on Japanese Mahjong. The environment was introduced in the research article "Variational Oracle Guiding for Reinforcement Learning" (https://openreview.net/forum?id=pjqqxepwoMy) by Dongqi Han, Tadashi Kozuno, Xufang Luo, Zhao-Yun Chen, Kenji Doya, Yuqing Yang and Dongsheng Li.
+pymahjong is an python environment for decision-AI study, based on Japanese Mahjong. Even you are not familier with [Mahjong](https://en.wikipedia.org/wiki/Mahjong), you can easily used pymahjong as a benchmarking task to test your AI (while there is a few differences, see the examples below). In particular, pymahjong is a suitable benchmark for oracle guiding (using the oracle information (oppenents' private hand) to facilitate learning of a decision AI).
+
+
+The environment was introduced in the research article "Variational Oracle Guiding for Reinforcement Learning" (https://openreview.net/forum?id=pjqqxepwoMy) by Dongqi Han, Tadashi Kozuno, Xufang Luo, Zhao-Yun Chen, Kenji Doya, Yuqing Yang and Dongsheng Li.
 
 
 we provide a **multi-agent** and a **single-agent** versions of Mahjong envrionments.
@@ -56,7 +59,7 @@ while True:
     obs, reward, done, _ = env.step(a)  # reward is zero unless the game is over (done = True).
 
     # oracle_obs = env.get_oracle_obs()  # if you need oracle observation
-    # full_obs = env.get_oracle_obs()  # full_obs = concat((obs, oracle_obs), axis=0)
+    # full_obs = env.get_full_obs()  # full_obs = concat((obs, oracle_obs), axis=0)
 
     if done:
         print("agent payoff = {}".format(reward))

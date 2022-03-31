@@ -6,7 +6,8 @@ using namespace std;
 
 void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家)
 {	
-	table.set_write_log(write_log);
+	if (write_log)
+		table.set_debug_mode(Table::debug_buffer);
 	table.game_init_for_replay(yama, init_scores, 立直棒, 本场, 场风, 亲家);
 
 	/*if (write_log) {
@@ -22,12 +23,12 @@ void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直�
 
 vector<SelfAction> PaipuReplayer::get_self_actions() const
 {
-	return table.get_self_actions();
+	return table.self_actions;
 }
 
 vector<ResponseAction> PaipuReplayer::get_response_actions() const
 {
-	return table.get_response_actions();
+	return table.response_actions;
 }
 
 bool PaipuReplayer::make_selection(int selection)
@@ -56,14 +57,14 @@ bool PaipuReplayer::make_selection_from_action(BaseAction action, vector<int> co
 	return make_selection(idx);
 }
 
- int PaipuReplayer::get_selection_from_action(BaseAction action, vector<int> correspond_tiles)
- {
-	 vector<Tile*> correspond_tiles_1;
-	 for (int i : correspond_tiles) {
-		 correspond_tiles_1.push_back(&table.tiles[i]);
-	 }
-	 return table.get_selection_from_action_tile(action, correspond_tiles_1);
- }
+int PaipuReplayer::get_selection_from_action(BaseAction action, vector<int> correspond_tiles)
+{
+	vector<Tile*> correspond_tiles_1;
+	for (int i : correspond_tiles) {
+		correspond_tiles_1.push_back(&table.tiles[i]);
+	}
+	return table.get_selection_from_action_tile(action, correspond_tiles_1);
+}
 
 int PaipuReplayer::get_phase() const
 {

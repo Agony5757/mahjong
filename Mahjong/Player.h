@@ -95,8 +95,10 @@ public:
 
 	Player();
 	Player(int init_score);
-	inline bool is_riichi() const { return riichi || double_riichi; }
-	inline bool is振听() const { return 同巡振听 || 舍牌振听 || 立直振听; }
+	inline bool is_riichi() { return riichi || double_riichi; }
+	inline bool is振听() { return 同巡振听 || 舍牌振听 || 立直振听; }
+	inline std::vector<Fulu> get_fuuros() { return 副露s; }
+	inline River get_river() { return river; 
 	std::string hand_to_string() const;
 	std::string river_to_string() const;
 	std::string to_string() const;
