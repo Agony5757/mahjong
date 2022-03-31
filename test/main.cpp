@@ -87,11 +87,11 @@ void test_random_play(int games = 10)
 
 			int selection;
 			if (t.is_self_acting()) {
-				auto& actions = t.get_self_actions();
+				auto actions = t.get_self_actions();
 				selection = random_action(actions);
 			}
 			else {
-				auto& actions = t.get_response_actions();
+				auto actions = t.get_response_actions();
 				selection = random_action(actions);
 			}
 			t.make_selection(selection);

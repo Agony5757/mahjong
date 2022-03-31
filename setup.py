@@ -2,6 +2,7 @@ from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
 import os
 import subprocess
+import sys
 
 with open("README.md") as fp:
     readme = fp.read()
@@ -27,8 +28,12 @@ class CMakeBuild(build_ext):
         install_prefix = os.path.abspath(os.path.dirname(extdir))
         print(install_prefix)
         cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}'.format(install_prefix),
+                      '-DCMAKE_C_COMPILER=clang',
                       '-DCMAKE_CXX_COMPILER=clang++',
                       '-DCMAKE_BUILD_TYPE=Release']
+        if sys.platform == 'win32':
+            cmake_args += ['-G MinGW Makefiles']
+
         print(self.build_temp)
         subprocess.check_call(['cmake', ext.sourcedir, *cmake_args], cwd=self.build_temp)
         subprocess.check_call(['cmake', '--build', os.path.join(ext.sourcedir, self.build_temp), '--target', 'MahjongPyWrapper'], cwd=self.build_temp)
