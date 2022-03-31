@@ -5,6 +5,7 @@
 #include "Tile.h"
 #include "macro.h"
 #include "Rule.h"
+#include "RoundToWin.h"
 
 namespace_mahjong
 
@@ -59,7 +60,7 @@ public:
 		return river[n];
 	}
 
-	inline size_t size() {
+	inline size_t size() const {
 		return river.size();
 	}
 
@@ -94,8 +95,8 @@ public:
 
 	Player();
 	Player(int init_score);
-	inline bool is_riichi() { return riichi || double_riichi; }
-	inline bool is振听() { return 同巡振听 || 舍牌振听 || 立直振听; }
+	inline bool is_riichi() const { return riichi || double_riichi; }
+	inline bool is振听()  const { return 同巡振听 || 舍牌振听 || 立直振听; }
 	inline std::vector<Fulu> get_fuuros() { return 副露s; }
 	inline River get_river() { return river; }
 	std::string hand_to_string() const;
@@ -111,14 +112,14 @@ public:
 		if (riichi) 立直振听 = true;
 		else 同巡振听 = true;
 	}
-
+	int get_normal向胡数() const;
 	// Generate SelfAction
-	std::vector<SelfAction> get_加杠(); // 能否杠的过滤统一交给Table
-	std::vector<SelfAction> get_暗杠(); // 能否杠的过滤统一交给Table
-	std::vector<SelfAction> get_打牌(bool after_chipon);
-	std::vector<SelfAction> get_自摸(Table* table);
-	std::vector<SelfAction> get_立直();
-	std::vector<SelfAction> get_九种九牌();
+	std::vector<SelfAction> get_加杠() const ; // 能否杠的过滤统一交给Table
+	std::vector<SelfAction> get_暗杠() const ; // 能否杠的过滤统一交给Table
+	std::vector<SelfAction> get_打牌(bool after_chipon) const;
+	std::vector<SelfAction> get_自摸(const Table* table) const ;
+	std::vector<SelfAction> get_立直() const;
+	std::vector<SelfAction> get_九种九牌() const;
 
 	// Generate ResponseAction
 	std::vector<ResponseAction> get_荣和(Table*, Tile* tile);

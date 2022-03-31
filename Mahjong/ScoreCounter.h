@@ -28,7 +28,7 @@ class Tile;
 
 // turn 判定役的玩家
 // correspond_tile (自摸为nullptr，荣和为荣和牌）
-CounterResult yaku_counter(Table *table, Player &player, Tile* correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风);
+CounterResult yaku_counter(const Table *table, const Player &player, Tile* correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风);
 
 //CounterResult yaku_counter_v2(Table *table, Player &player, Tile* correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风);
 

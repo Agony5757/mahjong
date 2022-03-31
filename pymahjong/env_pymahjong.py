@@ -4,11 +4,6 @@ import warnings
 from gym.spaces import Discrete, Box
 import MahjongPyWrapper as pm
 
-try:
-    import torch
-except:
-    pass
-
 np.set_printoptions(threshold=np.inf)
 
 
@@ -313,21 +308,38 @@ class SingleAgentMahjongEnv(gym.Env):
 
         super(SingleAgentMahjongEnv, self).__init__()
 
-        assert opponent_agent in ["random", "vlog-bc", "vlog-cql"]
-
-        if not torch.cuda.is_available():
-            device = torch.device("cpu")
-        else:
-            device = torch.device("cuda")
-
-        if opponent_agent =="vlog-cql":
-            self.opponent_agent = torch.load("mahjong_VLOG_CQL.model", map_location=device)
-            self.opponent_agent.device = device
-        elif opponent_agent == "vlog-bc":
-            self.opponent_agent = torch.load("mahjong_VLOG_BC.model", map_location=device)
-            self.opponent_agent.device = device
-        else:
+        if opponent_agent == "random":
             self.opponent_agent = "random"
+        else:
+            try:
+                import torch
+                from .models import VLOGMahjong
+                state_dict = torch.load(opponent_agent, map_location="cpu")
+                if "f_s2q.network_modules.0.weight" in state_dict:
+                    alg = "ddqn"
+                elif "f_s2pi0.network_modules.0.weight" in state_dict:
+                    alg = "bc"
+                else:
+                    raise Exception("Unknown model")
+                self.opponent_agent = VLOGMahjong(algorithm=alg)
+
+                keys = list(state_dict.keys())
+                for key in keys:
+                    if key not in list(self.opponent_agent.state_dict().keys()):
+                        state_dict.pop(key)
+                self.opponent_agent.load_state_dict(state_dict)
+
+                if torch.cuda.is_available():
+                    device = torch.device("cuda")
+                    self.opponent_agent.device = device
+                    self.opponent_agent.to(device=device)
+                    print("----- CUDA detected, using CUDA for inference. -----")
+                
+                self.opponent_agent.eval()  # not necessary now, but remained for future
+                
+            except Exception as e:
+                print(e)
+                raise FileNotFoundError("opponent_agent should be 'random' or the path of a pre-trained model (You can download the pre-trained model from pymahjong github release: https://github.com/Agony5757/mahjong/releases ")
 
         self.env = MahjongEnv()
 

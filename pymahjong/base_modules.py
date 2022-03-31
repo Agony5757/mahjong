@@ -43,6 +43,30 @@ class MahjongNet(nn.Module):
         return phi
 
 
+def make_cnn(resolution, n_channels):
+    if resolution == "10x10":
+        # -------- MinAtar ---------
+        cnn_module_list = nn.ModuleList()
+        cnn_module_list.append(nn.Conv2d(n_channels, 16, 3, 1, 0))
+        cnn_module_list.append(nn.ReLU())
+        cnn_module_list.append(nn.Conv2d(16, 32, 3, 1, 0))
+        cnn_module_list.append(nn.ReLU())
+        cnn_module_list.append(nn.Conv2d(32, 128, 4, 2, 0))
+        cnn_module_list.append(nn.ReLU())
+        cnn_module_list.append(nn.Conv2d(128, 256, 2, 1, 0))
+        cnn_module_list.append(nn.ReLU())
+        cnn_module_list.append(nn.Flatten())
+        phi_size = 256
+
+    elif resolution == "34":
+        # -------- for Mahjong ---------
+        mahjong_net = MahjongNet(n_channels)
+        phi_size = mahjong_net.phi_size
+        return mahjong_net, phi_size
+
+    return nn.Sequential(*cnn_module_list), phi_size
+
+
 class DiscreteActionQNetwork(nn.Module):
     def __init__(self, input_size, output_size, hidden_layers=None, dueling=False, act_fn=nn.ReLU):
         super(DiscreteActionQNetwork, self).__init__()

@@ -25,6 +25,8 @@ find_package(PythonInterp 3 REQUIRED)
 find_package(PythonLibs 3 REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/resource/syanten.dat ${CMAKE_CURRENT_BINARY_DIR}/resource/syanten.dat COPYONLY)
+
 add_subdirectory(ThirdParty EXCLUDE_FROM_ALL)
 add_subdirectory(Mahjong)
 add_subdirectory(MahjongPyWrapper)
