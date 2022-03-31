@@ -96,7 +96,12 @@ void Player::remove_听牌(BaseTile t)
 	// Player::get_except_tiles()
 }
 
-vector<SelfAction> Player::get_加杠()
+int Player::get_normal向胡数()const {
+	auto &inst = Syanten::instance();
+    return inst.normal_round_to_win(hand, 副露s.size());
+}
+
+vector<SelfAction> Player::get_加杠() const 
 {
 	vector<SelfAction> actions;
 	//if (after_chipon == true) return actions;
@@ -116,7 +121,7 @@ vector<SelfAction> Player::get_加杠()
 	return actions;
 }
 
-vector<SelfAction> Player::get_暗杠()
+vector<SelfAction> Player::get_暗杠() const
 {
 	vector<SelfAction> actions;
 
@@ -133,7 +138,7 @@ vector<SelfAction> Player::get_暗杠()
 	return actions;
 }
 
-static bool is食替(Player* player, BaseTile t)
+static bool is食替(const Player* player, BaseTile t)
  {
 	// 拿出最后一个副露
 	auto last_fulu = player->副露s.back();
@@ -192,7 +197,7 @@ static bool is食替(Player* player, BaseTile t)
 		throw runtime_error("最后一手既不是吃又不是碰，不考虑食替");
 }
 
-vector<SelfAction> Player::get_打牌(bool after_chipon)
+vector<SelfAction> Player::get_打牌(bool after_chipon) const
 {
 	profiler _("Player.cpp/get_discard");
 	vector<SelfAction> actions;
@@ -210,7 +215,7 @@ vector<SelfAction> Player::get_打牌(bool after_chipon)
 	return actions;
 }
 
-vector<SelfAction> Player::get_自摸(Table* table)
+vector<SelfAction> Player::get_自摸(const Table* table) const
 {
 	vector<SelfAction> actions;
 
@@ -227,7 +232,7 @@ vector<SelfAction> Player::get_自摸(Table* table)
 	return actions;
 }
 
-vector<SelfAction> Player::get_立直()
+vector<SelfAction> Player::get_立直() const
 {
 	vector<SelfAction> actions;
 
@@ -254,7 +259,7 @@ vector<SelfAction> Player::get_立直()
 // 	return counter;
 // }
 
-vector<SelfAction> Player::get_九种九牌()
+vector<SelfAction> Player::get_九种九牌() const
 {
 	vector<SelfAction> actions;
 	if (!first_round) return actions;
