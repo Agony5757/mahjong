@@ -96,11 +96,10 @@ void Player::remove_听牌(BaseTile t)
 	// Player::get_except_tiles()
 }
 
-#ifdef SYANTEN
 int Player::get_normal向胡数()const {
-    return syanten::normalRoundToWin(hand, 副露s.size());
+	auto &inst = Syanten::instance();
+    return inst.normal_round_to_win(hand, 副露s.size());
 }
-#endif
 
 vector<SelfAction> Player::get_加杠() const 
 {

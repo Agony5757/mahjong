@@ -73,11 +73,9 @@ void test_random_play(int games = 1000)
 			if (t.is_self_acting()) {
 				auto& actions = t.get_self_actions();
 				Player& p = t.players[t.who_make_selection()];
-#ifdef SYANTEN
 				p.sort_hand();
 				std::cout << p.hand_to_string() << std::endl;
 				std::cout << p.get_normal向胡数() << std::endl;
-#endif
 				selection = random_action(actions);
 			}
 			else {

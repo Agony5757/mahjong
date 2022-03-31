@@ -110,10 +110,7 @@ public:
 		if (riichi) 立直振听 = true;
 		else 同巡振听 = true;
 	}
-
-#ifdef SYANTEN
 	int get_normal向胡数() const;
-#endif
 	// Generate SelfAction
 	std::vector<SelfAction> get_加杠() const ; // 能否杠的过滤统一交给Table
 	std::vector<SelfAction> get_暗杠() const ; // 能否杠的过滤统一交给Table
