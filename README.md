@@ -8,10 +8,11 @@
 |master|[![Build Status](https://app.travis-ci.com/Agony5757/mahjong.svg?branch=master)](https://app.travis-ci.com/Agony5757/mahjong)|[![Build-and-test](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml/badge.svg?branch=master)](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml)|
 |develop|[![Build Status](https://app.travis-ci.com/Agony5757/mahjong.svg?branch=develop)](https://app.travis-ci.com/Agony5757/mahjong)|[![Build-and-test](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml/badge.svg?branch=develop)](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml)|
 
-Simulator of Japanese Riichi Mahjong (https://en.wikipedia.org/wiki/Japanese_Mahjong) written in C++.
+Simulator of Japanese Riichi Mahjong (https://en.wikipedia.org/wiki/Japanese_Mahjong) written in C++. [关于C++部分的说明（中文版）](https://github.com/Agony5757/mahjong/blob/master/%E8%AF%BB%E6%88%91.md)
 
 
 # See [here](https://github.com/Agony5757/mahjong/tree/master/pymahjong) for the Python APIs for e.g., decision AI research.
+
 
 
 ## Citation
