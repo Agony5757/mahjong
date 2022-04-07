@@ -63,7 +63,6 @@ class CMakeBuild(build_ext):
         # from Python.
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
-            f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
         build_args = []
@@ -90,8 +89,7 @@ class CMakeBuild(build_ext):
                     pass
 
             cmake_args += [
-                '-DCMAKE_CXX_COMPILER=clang++',
-                '-DCMAKE_C_COMPILER=clang'          
+                '-DCMAKE_CXX_COMPILER=clang++' 
             ]
 
         else:
@@ -133,12 +131,16 @@ class CMakeBuild(build_ext):
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
+        print(cmake_args)
         subprocess.check_call(
             ["cmake", ext.sourcedir] + cmake_args, cwd=self.build_temp
         )
+        print(build_args)
+        
         subprocess.check_call(
             ["cmake", "--build", "."] + build_args, cwd=self.build_temp
         )
+
 
         
 setup(
@@ -157,5 +159,6 @@ setup(
     classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
     packages = ['pymahjong'],
     install_requires=['numpy', 'gym'],
+    zip_safe = False,
     python_requires='>=3.6',    
 )
