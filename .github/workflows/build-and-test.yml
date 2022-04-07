@@ -35,5 +35,5 @@ jobs:
       run: ~/anaconda3/bin/python setup.py install
       
     - name: Test
-      run: ~/anaconda3/bin/python -c "import pymahjong as pm;pm.test()" && wget https://github.com/Agony5757/mahjong/releases/download/v1.0.0/paipuxmls.7z && 7z x paipuxmls.7z && ~/anaconda3/bin/python -c "import pymahjong as pm;pm.paipu_replay(mode='debug')"
+      run: cd .. && ~/anaconda3/bin/python -c "import pymahjong as pm;pm.test()" && wget https://github.com/Agony5757/mahjong/releases/download/v1.0.0/paipuxmls.7z && 7z x paipuxmls.7z && ~/anaconda3/bin/python -c "import pymahjong as pm;pm.paipu_replay(mode='debug')"
         
