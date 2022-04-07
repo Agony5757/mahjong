@@ -89,6 +89,11 @@ class CMakeBuild(build_ext):
                 except ImportError:
                     pass
 
+            cmake_args += [
+                '-DCMAKE_CXX_COMPILER=clang++',
+                '-DCMAKE_C_COMPILER=clang'          
+            ]
+
         else:
 
             # Single config generators are handled "normally"
