@@ -60,7 +60,7 @@ Operating System :: Unix
 
 setup(
     name = "pymahjong",
-    version = "1.0.1",
+    version = "1.0.2",
     author = "Agony",
     author_email = "chenzhaoyun@iai.ustc.edu.cn",
     description= "A Japanese Mahjong environment for decision AI research.",
