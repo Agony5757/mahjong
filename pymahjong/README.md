@@ -71,7 +71,7 @@ Note: In a Mahjong game, it is possible the game is over before a certain player
 ### pretrained opponents agent
 We provide two pretrained models as the opponents (see the paper https://openreview.net/forum?id=pjqqxepwoMy) in the single-agent version environment.
 
-To use the pretrained models, you need to have [PyTorch](https://pytorch.org/) installed. You can [download the models from the GitHub release](https://github.com/Agony5757/mahjong/releases/tag/v1.0.0). The pretrained model should automatically enable CUDA if your PyTorch supports CUDA.
+To use the pretrained models, you need to have [PyTorch](https://pytorch.org/) installed. You can [download the models from the GitHub release](https://github.com/Agony5757/mahjong/releases/tag/v1.0.2). The pretrained model should automatically enable CUDA if your PyTorch supports CUDA.
 
 - `mahjong_VLOG_CQL.pth`: Variational Latent Oracle Guiding + Conservative Q-learning
 - `mahjong_VLOG_BC.pth`:  Variational Latent Oracle Guiding + Behavior Cloning
@@ -183,6 +183,30 @@ env.reset(oya=1, game_wind="south", seed=1234)
 
 ## Rendering
 Currently we do not have a GUI, one may roughly check the game status by "env.render()" which prints the status of the Mahjong table in a simple way. If you would like to kindly help us for GUI, please contact us!
+
+
+## Offline dataset
+
+Please [download from the release](https://github.com/Agony5757/mahjong/releases/tag/v1.0.2)
+
+The data after unzipping are in .mat format, which can be loaded in Python using scipy
+
+```
+import scipy
+data = scipy.io.loadmat("xxx.mat")
+```
+
+The data is a Python dictionary contains the human demonstrations from [Tenhou.net](https://tenhou.net/mjlog.html) (6 dan+ players). The data of multiple games are concatenated together, with the done signal (Data["D"]) to indicate the end of an episode.
+
+- data["X"] : executor observation
+- data["O"] : additional oracle observation (oracle observation is np.concatenate([data["X"], data["O"]], axis=-2))
+- data["A"] : Action selected
+- data["M"] : Valid actions (=1 means the corresponding action is valid at that step)
+- data["R"] : Reward
+- data["D"] : Done signal
+- data["V"] : =0 if this step is the terminated step of an episode (i.e. the status after a game comes to a result, and observations at this step were recorded); otherwise = 1.
+
+Each batch of data corresponds to 0.5 million steps, or around 30,000+ games.
 
 
 ## Citation
