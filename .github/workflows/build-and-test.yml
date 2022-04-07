@@ -35,5 +35,5 @@ jobs:
       run: sudo python setup.py install
       
     - name: Test
-      run: wget https://github.com/Agony5757/mahjong/releases/download/v1.0.0/paipuxmls.7z && 7z x paipuxmls.7z && python -c "import pymahjong as pm;pm.test();pm.paipu_replay(mode='debug')"
+      run: sudo python -c "import pymahjong as pm;pm.test()" && "wget https://github.com/Agony5757/mahjong/releases/download/v1.0.0/paipuxmls.7z && 7z x paipuxmls.7z && sudo python -c "import pymahjong as pm;pm.paipu_replay(mode='debug')"
         
