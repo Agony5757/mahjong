@@ -3,10 +3,10 @@
 
 [![PyPI version](https://badge.fury.io/py/pymahjong.svg)](https://badge.fury.io/py/pymahjong)
 
-|Branch| Github Actions |
-|:----:|:----:|
-|master|[![Build-and-test](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml/badge.svg?branch=master)](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml)|
-|develop|[![Build-and-test](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml/badge.svg?branch=develop)](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml)|
+|Branch| Build | Code Analysis |
+|:----:|:----:|:----:|
+|master|[![Build-and-test](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml/badge.svg?branch=master)](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml)|[![Microsoft C++ Code Analysis](https://github.com/Agony5757/mahjong/actions/workflows/msvc.yml/badge.svg?branch=master)](https://github.com/Agony5757/mahjong/actions/workflows/msvc.yml)|
+|develop|[![Build-and-test](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml/badge.svg?branch=develop)](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml)|[![Microsoft C++ Code Analysis](https://github.com/Agony5757/mahjong/actions/workflows/msvc.yml/badge.svg?branch=develop)](https://github.com/Agony5757/mahjong/actions/workflows/msvc.yml)|
 
 Simulator of Japanese Riichi Mahjong (https://en.wikipedia.org/wiki/Japanese_Mahjong) written in C++. [关于C++部分的说明（中文版）](https://github.com/Agony5757/mahjong/blob/master/%E8%AF%BB%E6%88%91.md)
 
