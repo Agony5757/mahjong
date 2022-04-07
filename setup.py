@@ -69,7 +69,7 @@ setup(
     ext_modules=[CMakeExtension('pymahjong', '.')],
     cmdclass=dict(build_ext=CMakeBuild),
     project_urls={
-        "Source Code": "https://github.com/Agony5757/pymahjong",
+        "Source Code": "https://github.com/Agony5757/mahjong",
     },
     classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
     packages = ['pymahjong'],
