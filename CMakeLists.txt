@@ -29,5 +29,5 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/resource/syanten.dat ${CMAKE_CURRENT_
 
 add_subdirectory(ThirdParty EXCLUDE_FROM_ALL)
 add_subdirectory(Mahjong)
-add_subdirectory(MahjongPyWrapper)
+add_subdirectory(Pybinder)
 add_subdirectory(test)
