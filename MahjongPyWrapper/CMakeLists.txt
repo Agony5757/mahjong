@@ -3,17 +3,9 @@ project(MahjongPyWrapper)
 
 set(LIB_MahjongPy ${PROJECT_NAME})
 file(GLOB_RECURSE MahjongPy_SRC_CPP *.cpp)
-add_library(${LIB_MahjongPy} SHARED ${MahjongPy_SRC_CPP})
-if (UNIX)
-    if (APPLE)
-        set_target_properties(${LIB_MahjongPy} PROPERTIES SUFFIX ".so")
-    endif(APPLE)
-    set_target_properties(${LIB_MahjongPy} PROPERTIES PREFIX "")
-elseif(WIN32)
-    if (NOT MSVC)
-        set_target_properties(${LIB_MahjongPy} PROPERTIES PREFIX "")
-    endif()
-    set_target_properties(${LIB_MahjongPy} PROPERTIES SUFFIX ".pyd")
-endif(UNIX)
 
-target_link_libraries(${LIB_MahjongPy} MahjongCore ${PYTHON_LIBRARIES} fmt tenhou_shuffle)
+pybind11_add_module(${PROJECT_NAME} ${MahjongPy_SRC_CPP})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE MahjongCore ${PYTHON_LIBRARIES} fmt tenhou_shuffle)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
