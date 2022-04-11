@@ -934,11 +934,7 @@ pair<vector<Yaku>, int> ScoreCounter::get_max_手役(
 		}
 		else {
 			const auto &yaku_fu = get_手役(tile_group, 自风, 场风, 门清);
-			int fan = calculate_fan(yaku_fu.first);
-			if (fan > max_fan) {
-				max_yaku_fus = yaku_fu;
-				max_fan = fan;
-			}
+			max_yaku_fus = max(max_yaku_fus, yaku_fu);
 		}
 
 	}
