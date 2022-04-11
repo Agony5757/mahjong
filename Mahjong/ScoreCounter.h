@@ -77,8 +77,7 @@ constexpr char mark_tsumo_3rd = '#';
 constexpr char mark_ron_1st = '$';
 constexpr char mark_ron_2nd = '%';
 constexpr char mark_ron_3rd = '^';
-constexpr char* green_types[] = { "2sK", "3sK", "4sK", "2sS", "6sK", "8sK", "6zK",
-		"2s:", "3s:", "4s:", "6s:", "8s:", "6z:" };
+
 
 //constexpr static BaseTile raw[] = { _1m, _9m, _1s, _9s, _1p, _9p,
 //     _1z, _2z, _3z, _4z, _5z, _6z, _7z };
