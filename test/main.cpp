@@ -71,7 +71,7 @@ void test_random_play(int games = 10)
 	
 	for (int i = 0; i < games; ++i) {
 		Table t;
-		t.set_debug_mode(Table::debug_stdout);
+		t.set_debug_mode(Table::debug_close);
 		t.game_init();
 		std::array<enc::dtype, enc::n_row * enc::n_col> mat_buffer;
 		std::array<enc::dtype, enc::n_row * enc::n_col> mat_oracle_buffer;
@@ -103,7 +103,7 @@ void test_random_play(int games = 10)
 }
 
 int main() {	
-	test_random_play();
+	test_random_play(100000);
 	// test_tenhou_yama();
 	// test_tenhou_game();
 	getchar();

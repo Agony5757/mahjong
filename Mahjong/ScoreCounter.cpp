@@ -928,7 +928,7 @@ pair<vector<Yaku>, int> ScoreCounter::get_max_手役(
 		if (役满) {
 			int fan = calculate_fan(yakus);
 			if (fan > max_fan) {
-				max_yaku_fus = { yakus, 0 };
+				max_yaku_fus = { yakus, 20 };
 				max_fan = fan;
 			}			
 		}
@@ -971,13 +971,13 @@ bool ScoreCounter::get_国士() {
 		if (is国士无双和牌型(basetiles)) {
 			// 判定13面
 			{
-				auto copytiles = tiles;
-				copytiles.pop_back();
+				auto copybasetiles = basetiles;
+				copybasetiles.pop_back();
 				const static std::vector<BaseTile> raw
 				{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
 
-				sort(tiles.begin(), tiles.end());
-				if (is_same_container(raw, convert_tiles_to_basetiles(tiles)))
+				sort(copybasetiles.begin(), copybasetiles.end());
+				if (is_same_container(raw, basetiles))
 				{
 					最大手役_番符.first.push_back(Yaku::国士无双十三面);
 					国士13 = true;
@@ -1189,7 +1189,7 @@ CounterResult ScoreCounter::yaku_counter()
 
 	if (!国士 && !国士13 && !九莲 && !九莲纯)	{
 		/* 并非以上情况的手役判断 */
-		
+		sort(basetiles.begin(), basetiles.end());
 		// 对牌进行拆解 （已经unique）
 		auto&& complete_tiles_list = get_completed_tiles(basetiles);
 
@@ -1240,6 +1240,9 @@ CounterResult ScoreCounter::yaku_counter()
 ScoreCounter::ScoreCounter(const Table* t, const Player* p, Tile* win, bool 抢杠_, bool 抢暗杠_)
 	: 抢杠(抢杠_), 抢暗杠(抢暗杠_), 门清(p->门清)
 {
+	table = t;
+	player = p;
+	win_tile = win;
 	tiles = p->hand;
 	if (win_tile == nullptr)
 		tsumo = true;

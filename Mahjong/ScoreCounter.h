@@ -94,7 +94,7 @@ public:
 	std::vector<Yaku> 场役;
 	std::vector<Yaku> Dora役;
 	// int 最大手役番 = 0;
-	std::pair<std::vector<Yaku>, int> 最大手役_番符;
+	std::pair<std::vector<Yaku>, int> 最大手役_番符 = { {}, 20 };
 
 	const Table* table = nullptr;
 	const Player* player = nullptr;
