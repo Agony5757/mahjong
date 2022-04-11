@@ -7,7 +7,7 @@
 namespace_mahjong
 using namespace std;
 
-static Result 中途流局结算(Table *table) {
+static Result 中途流局结算(const Table* table) {
 	Result result;
 	result.result_type = ResultType::中途流局;
 	for (int i = 0; i < 4; ++i)
@@ -20,22 +20,22 @@ static Result 中途流局结算(Table *table) {
 	return result;
 }
 
-Result 九种九牌流局结算(Table *table)
+Result 九种九牌流局结算(const Table* table)
 {
 	return 中途流局结算(table);
 }
 
-Result 四风连打流局结算(Table *table)
+Result 四风连打流局结算(const Table* table)
 {
 	return 中途流局结算(table);
 }
 
-Result 四立直流局结算(Table *table)
+Result 四立直流局结算(const Table* table)
 {
 	return 中途流局结算(table);
 }
 
-Result 四杠流局结算(Table *table)
+Result 四杠流局结算(const Table* table)
 {
 	return 中途流局结算(table);
 }
@@ -51,7 +51,7 @@ bool is流局满贯(River r) {
 	});
 }
 
-Result 荒牌流局结算(Table * table)
+Result 荒牌流局结算(const Table* table)
 {
 	//cout << "Warning: 罚符 is not considered" << endl;
 	//cout << "Warning: 流局满贯 is not considered" << endl;
@@ -204,7 +204,7 @@ Result 荒牌流局结算(Table * table)
 	return result;
 }
 
-Result 自摸结算(Table * table)
+Result 自摸结算(const Table *table)
 {
 	Result result;
 	result.result_type = ResultType::自摸终局;
@@ -214,8 +214,8 @@ Result 自摸结算(Table * table)
 
 	// 三人输
 	for (int i = 0; i < 4; ++i) if (i != winner) result.loser.push_back(i);
-
-	auto yakus = yaku_counter(table, table->players[winner], nullptr, false, false, table->players[winner].wind, table->场风);
+	ScoreCounter sc(table, &table->players[winner], nullptr, false, false);
+	auto yakus = sc.yaku_counter();
 	bool is亲 = false;
 	if (table->turn == table->庄家)
 		is亲 = true;
@@ -274,7 +274,7 @@ Result 自摸结算(Table * table)
 	return result;
 }
 
-Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_player, bool 抢杠, bool 抢暗杠)
+Result 荣和结算(const Table* table, Tile *agari_tile, std::vector<int> response_player, bool 抢杠, bool 抢暗杠)
 {
 	Result result;
 	result.result_type = ResultType::荣和终局;
@@ -287,7 +287,8 @@ Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_pl
 	}
 
 	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, table->players[winner], agari_tile, 抢杠, 抢暗杠, table->players[winner].wind, table->场风);
+		ScoreCounter sc(table, &table->players[winner], agari_tile, 抢杠, 抢暗杠);
+		auto yaku = sc.yaku_counter();
 		yaku.calculate_score(winner == table->庄家, false);
 
 		result.results.insert({ winner, yaku });
@@ -321,12 +322,12 @@ Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_pl
 	return result;
 }
 
-Result 抢暗杠结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
+Result 抢暗杠结算(const Table* table, Tile* agari_tile, std::vector<int> response_player)
 {
 	return 荣和结算(table, agari_tile, response_player, false, true);
 }
 
-Result 抢杠结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
+Result 抢杠结算(const Table* table, Tile* agari_tile, std::vector<int> response_player)
 {
 	return 荣和结算(table, agari_tile, response_player, true, false);
 }

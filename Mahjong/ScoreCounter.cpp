@@ -193,41 +193,62 @@ int calculate_fan(const vector<Yaku> &yakus)
 }
 
 
-//1pK -> 1p 1p 1p
-//1pS -> 1p 2p 3p
-//1zK -> 1z 1z 1z
-//1zK- -> 1z 1z 1z 副露
+static std::string make_tilegroup(BaseTile t, char mark);
+static std::string make_tilegroup(BaseTile t, char mark1, char mark2);
+inline static std::string make_toitsu(BaseTile t) { return make_tilegroup(t, mark_toitsu); }
+inline static std::string make_shuntsu(BaseTile t) { return make_tilegroup(t, mark_shuntsu); }
+inline static std::string make_shuntsu_fuuro(BaseTile t) { return make_tilegroup(t, mark_shuntsu, mark_fuuro); }
+inline static std::string make_koutsu(BaseTile t) { return make_tilegroup(t, mark_koutsu); }
+inline static std::string make_koutsu_fuuro(BaseTile t) { return make_tilegroup(t, mark_koutsu, mark_fuuro); }
+inline static std::string make_ankan(BaseTile t) { return make_tilegroup(t, mark_kantsu, mark_ankan); }
+inline static std::string make_minkan(BaseTile t) { return make_tilegroup(t, mark_kantsu, mark_minkan); }
 
-//1p|- -> 1p 1p 1p 1p
-//1p: -> 1p 1p
-//1p|+ -> 1p 1p 1p 1p 暗杠
+inline static bool is_shuntsu_str(const std::string& s) { return s[2] == 'S'; }
+inline static bool is_koutsu_str(const std::string& s) { return s[2] == 'K'; }
+inline static bool is_kantsu_str(const std::string& s) { return s[2] == '|'; }
+inline static bool is_minkan_str(const std::string& s) { return s.size() == 4 && s[2] == '|' && s[3] == '-'; }
+inline static bool is_minkou_str(const std::string& s) { return s.size() == 4 && s[2] == 'K' && s[3] == '-'; }
+inline static bool is_minshun_str(const std::string& s) { return s.size() == 4 && s[2] == 'S' && s[3] == '-'; }
+inline static bool is_ankan_str(const std::string& s) { return s.size() == 4 && s[2] == '|' && s[3] == '+'; }
+inline static bool tile_group_match(const std::string& s1, const std::string& s2) { return s1[0] == s2[0] && s1[1] == s2[1] && s1[2] == s2[2]; }
 
-//1pK! -> (1p) 1p 1p
+/* 牌型对/顺/刻/杠，含字牌 */
+inline static bool 带字牌(const std::string& s) { return s[1] == 'z'; }
 
-//1pS! -> 自摸(1p) 2p 3p
-//1pS@ -> 自摸1p (2p) 3p
-//1pS# -> 自摸1p 2p (3p)
-//1pS$ -> (1p) 2p 3p
-//1pS% -> 1p (2p) 3p
-//1pS^ -> 1p 2p (3p)
+/* 牌型对/顺/刻/杠，含至少1张幺九，不包括字牌，例如789s 1111m */
+inline static bool 带幺九(const std::string& s) {
+	if (带字牌(s)) return false;
+	if (s[2] == 'K' || s[2] == ':' || s[2] == '|') return s[0] == '1' || s[0] == '9';
+	if (s[2] == 'S') return s[0] == '1' || s[0] == '7';
+	throw std::runtime_error(fmt::format("Bad tile group string (input = {})", s));
+}
 
-// 前两位：表示牌
-// 第三位：表示属性 K：刻子 ， S：顺子，: 对子，|: 杠子
-// 第四位：表示位置 - 表示副露 + 表示暗杠 !@# 表示自摸 $%^表示荣和
+/* 牌型对/刻/杠，全幺九，不包括字牌，例如999p 1111m */
+inline static bool 纯老头(const std::string& s) {
+	if (s[2] == 'K' || s[2] == ':' || s[2] == '|') return s[0] == '1' || s[0] == '9';
+	return false;
+}
 
-constexpr char mark_toitsu		= ':';
-constexpr char mark_shuntsu		= 'S';
-constexpr char mark_koutsu		= 'K';
-constexpr char mark_kantsu		= '|';
-constexpr char mark_ankan		= '+';
-constexpr char mark_minkan		= '-';
-constexpr char mark_fuuro		= '-';
-constexpr char mark_tsumo_1st	= '!';
-constexpr char mark_tsumo_2nd	= '@';
-constexpr char mark_tsumo_3rd	= '#';
-constexpr char mark_ron_1st		= '$';
-constexpr char mark_ron_2nd		= '%';
-constexpr char mark_ron_3rd		= '^';
+inline static bool 纯绿牌(const std::string& s) {
+	return std::all_of(std::begin(green_types), std::end(green_types),
+		[&s](const char* green) {return tile_group_match(s, green); });
+}
+
+/* 用于处理全带，不包括杠子 */
+inline static bool 带幺九字(const std::string& s) { return 带字牌(s) || 带幺九(s); }
+
+/* 用于记符，对于役牌对子的计数，包括连风对子 */
+inline static int is役牌对子(std::string s, Wind 自风, Wind 场风) {
+	if (s[2] != ':') return 0; //不是对子
+	if (s[1] != 'z') return 0; //不是字牌
+
+	int cases = 0;
+	int number = s[0] - '1'; // 0 1 2 3分别为东南西北
+	if (number == 自风) cases++;
+	if (number == 场风) cases++;
+	if (number >= 4) cases++; // 4,5,6为白发中
+	return cases;
+}
 
 string make_tilegroup(BaseTile t, char mark)
 {
@@ -247,19 +268,12 @@ string make_tilegroup(BaseTile t, char mark1, char mark2)
 	return ret;
 };
 
-string make_toitsu(BaseTile t)			{ return make_tilegroup(t, mark_toitsu); }
-string make_shuntsu(BaseTile t)			{ return make_tilegroup(t, mark_shuntsu); }
-string make_shuntsu_fuuro(BaseTile t)	{ return make_tilegroup(t, mark_shuntsu, mark_fuuro); }
-string make_koutsu(BaseTile t)			{ return make_tilegroup(t, mark_koutsu); }
-string make_koutsu_fuuro(BaseTile t)	{ return make_tilegroup(t, mark_koutsu, mark_fuuro); }
-string make_ankan(BaseTile t)			{ return make_tilegroup(t, mark_kantsu, mark_ankan); }
-string make_minkan(BaseTile t)			{ return make_tilegroup(t, mark_kantsu, mark_minkan); }
 
-static std::vector<std::vector<std::string>> generate_tile_group_strings(const CompletedTiles &ct, const vector<Fulu> &fulus, bool tsumo, BaseTile last_tile)
+vector<vector<string>> ScoreCounter::generate_tile_group_strings(const CompletedTiles &ct, const vector<Fulu> &fulus, bool tsumo, BaseTile last_tile)
 {
 	profiler _("ScoreCounter.cpp/generate_tgs");
-	std::vector<std::vector<std::string>> tile_group_strings;
-	std::vector<std::string> raw_tile_group_string; // without consider where is the agari tile.	  
+	vector<vector<string>> tile_group_strings;
+	vector<string> raw_tile_group_string; // without consider where is the agari tile.	  
 
 	if (ct.head.tiles.size() != 0)
 		raw_tile_group_string.push_back(make_toitsu(ct.head.tiles[0])); //例如1z2
@@ -349,62 +363,8 @@ static std::vector<std::vector<std::string>> generate_tile_group_strings(const C
 	return tile_group_strings;
 }
 
-bool is_shuntsu_str(const string &s) { return s[2] == 'S'; }
-bool is_koutsu_str(const string &s) { return s[2] == 'K'; }
-bool is_kantsu_str(const string &s) { return s[2] == '|'; }
-bool is_minkan_str(const string &s) { return s.size() == 4 && s[2] == '|' && s[3] == '-'; }
-bool is_minkou_str(const string &s) { return s.size() == 4 && s[2] == 'K' && s[3] == '-'; }
-bool is_minshun_str(const string &s) { return s.size() == 4 && s[2] == 'S' && s[3] == '-'; }
-bool is_ankan_str(const string &s) { return s.size() == 4 && s[2] == '|' && s[3] == '+'; }
-bool tile_group_match(const string& s1, const string& s2) { return s1[0] == s2[0] && s1[1] == s2[1] && s1[2] == s2[2]; }
-
-/* 牌型对/顺/刻/杠，含字牌 */
-bool 带字牌(const string &s) {
-	return s[1] == 'z';
-}
-
-/* 牌型对/顺/刻/杠，含至少1张幺九，不包括字牌，例如789s 1111m */
-bool 带幺九(const string &s) {
-	if (带字牌(s)) return false;
-	if (s[2] == 'K' || s[2] == ':' || s[2] == '|') return s[0] == '1' || s[0] == '9';
-	if (s[2] == 'S') return s[0] == '1' || s[0] == '7';
-	throw runtime_error(fmt::format("Bad tile group string (input = {})", s));
-}
-
-/* 牌型对/刻/杠，全幺九，不包括字牌，例如999p 1111m */
-bool 纯老头(const string &s) {
-	if (s[2] == 'K' || s[2] == ':' || s[2] == '|') return s[0] == '1' || s[0] == '9';
-	return false;
-}
-
-bool 纯绿牌(const string &s) {
-	const char* green_types[] = {"2sK", "3sK", "4sK", "2sS", "6sK", "8sK", "6zK",
-		"2s:", "3s:", "4s:", "6s:", "8s:", "6z:" };
-
-	return all_of(begin(green_types), end(green_types), 
-		[&s](const char* green) {return tile_group_match(s, green); });
-}
-
-/* 用于处理全带，不包括杠子 */
-bool 带幺九字(const string &s) {
-	return 带字牌(s) || 带幺九(s);
-}
-
-/* 用于记符，对于役牌对子的计数，包括连风对子 */
-int is役牌对子(string s, Wind 自风, Wind 场风) {
-	if (s[2] != ':') return 0; //不是对子
-	if (s[1] != 'z') return 0; //不是字牌
-
-	int cases = 0;
-	int number = s[0] - '1'; // 0 1 2 3分别为东南西北
-	if (number == 自风) cases++;
-	if (number == 场风) cases++;
-	if (number >= 4) cases++; // 4,5,6为白发中
-	return cases;
-}
-
 /* 移除副露、胡牌等信息，创建复制 */
-vector<string> remove_4(const vector<string> &strs) {
+static inline vector<string> remove_4(const vector<string> &strs) {
 	vector<string> retstr(strs);
 
 	for (auto &ret : retstr) {
@@ -414,7 +374,7 @@ vector<string> remove_4(const vector<string> &strs) {
 	return retstr;
 }
 
-pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置_役满(const vector<string> &tile_group_string, Wind 自风, Wind 场风, bool &役满) {
+vector<Yaku> ScoreCounter::get_手役_役满(const vector<string> &tile_group_string, Wind 自风, Wind 场风, bool &役满) {
 	vector<Yaku> yakus;
 	
 	// 统计Z一色
@@ -522,11 +482,11 @@ pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置_役满(const
 		yakus.push_back(Yaku::绿一色);
 		役满 = true;
 	}
-	return { yakus, 0 };
+	return yakus;
 }
 
 // 这个函数不判断：7对，国士无双及13面，九莲宝灯与纯正，所有宝牌役，所有场役包括立直，两立直，门清自摸，抢杠，海底，河底，一发，岭上，以及所有役满
-static pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(vector<string> tile_group_string, Wind 自风, Wind 场风, bool 门清) {
+pair<vector<Yaku>, int> ScoreCounter::get_手役(vector<string> tile_group_string, Wind 自风, Wind 场风, bool 门清) {
 
 	vector<Yaku> yakus;
 	yakus.reserve(16); // 随便分配一些空间以免后期重新分配
@@ -939,9 +899,10 @@ static pair<vector<Yaku>, int> get_手役_from_complete_tiles_固定位置(vecto
 	return { yakus, fu };
 }
 
-static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
+pair<vector<Yaku>, int> ScoreCounter::get_max_手役(
 	const CompletedTiles &ct, const vector<Fulu> &fulus, Tile *correspond_tile, BaseTile tsumo_tile, Wind 自风, Wind 场风, bool 门清, bool& 役满)
 {
+
 	bool tsumo = false;	 // 是自摸吗
 	BaseTile last_tile;  // 最后取得的牌，既可以是荣和，也可以是自摸
 	if (correspond_tile == nullptr) {
@@ -952,7 +913,8 @@ static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
 		last_tile = correspond_tile->tile;
 	}
 
-	vector<pair<vector<Yaku>, int>> yaku_fus;
+	pair<vector<Yaku>, int> max_yaku_fus = { {}, 0 };
+	int max_fan = 0;
 	// 当这个 荣和/自摸 的牌存在于不同的地方的时候，也有可能会导致解释不同
 	// 这个牌一定在ct里面
 	// 对于每一种情况，都是vector中的一个元素
@@ -960,44 +922,255 @@ static vector<pair<vector<Yaku>, int>> get_手役_from_complete_tiles(
 	auto tile_group_strings = generate_tile_group_strings(ct, fulus, tsumo, last_tile);
 
 	for (auto tile_group : tile_group_strings) {
-		auto yaku_fu = get_手役_from_complete_tiles_固定位置_役满(tile_group, 自风, 场风, 役满);
-
-		if (!役满) {
-			yaku_fu = get_手役_from_complete_tiles_固定位置(tile_group, 自风, 场风, 门清);
+		const auto& yakus = get_手役_役满(tile_group, 自风, 场风, 役满);
+		if (役满) {
+			int fan = calculate_fan(yakus);
+			if (fan > max_fan) {
+				max_yaku_fus = { yakus, 0 };
+				max_fan = fan;
+			}			
 		}
-		yaku_fus.push_back(yaku_fu);
+		else {
+			const auto &yaku_fu = get_手役(tile_group, 自风, 场风, 门清);
+			int fan = calculate_fan(yaku_fu.first);
+			if (fan > max_fan) {
+				max_yaku_fus = yaku_fu;
+				max_fan = fan;
+			}
+		}
+
 	}
-	return yaku_fus;
+	return max_yaku_fus;
 }
 
-CounterResult yaku_counter(const Table *table, const Player &player, Tile *correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风)
+bool ScoreCounter::get_天地和() {
+	if (player->first_round && tsumo) {
+		有役 = true;
+		if (player->亲家)
+		{
+			天地和.push_back(Yaku::天和);
+			役满 = true;
+			役满倍数 += 1;
+		}
+		else {
+			天地和.push_back(Yaku::地和);
+		}
+		役满 = true;
+		役满倍数 += 1;
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+bool ScoreCounter::get_国士() {
+	if (门清) {
+		if (is国士无双和牌型(basetiles)) {
+			// 判定13面
+			{
+				auto copytiles = tiles;
+				copytiles.pop_back();
+				const static std::vector<BaseTile> raw
+				{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
+
+				sort(tiles.begin(), tiles.end());
+				if (is_same_container(raw, convert_tiles_to_basetiles(tiles)))
+				{
+					最大手役_番符.first.push_back(Yaku::国士无双十三面);
+					国士13 = true;
+				}
+				else {
+					最大手役_番符.first.push_back(Yaku::国士无双);
+					国士 = true;
+				}
+			}
+			役满 = true;
+		}
+	}
+	return false;
+}
+
+void ScoreCounter::get一色() {
+	mpsz一色 = basetiles[0] / 9;
+	for (size_t i = 1; i < 14; ++i)
+		if (basetiles[i] / 9 != mpsz一色) {
+			// 清一色都不是
+			mpsz一色 = -1;
+			break;
+		}
+}
+
+bool ScoreCounter::get_九莲() {
+	if (!门清) return false;
+	if (mpsz一色 < 0 && mpsz一色 > 2) return false;
+	if (is纯九莲和牌型(basetiles)) {
+		九莲纯 = true;
+		最大手役_番符.first.push_back(Yaku::纯正九莲宝灯);
+		役满 = true;
+		return true;
+	}
+	else if (is九莲和牌型(basetiles)) {
+		九莲 = true;
+		最大手役_番符.first.push_back(Yaku::九莲宝灯);
+		役满 = true;
+		return true;
+	}
+	return false;
+}
+
+void ScoreCounter::get_立直() {
+	if (player->double_riichi)
+		场役.push_back(Yaku::两立直);
+	else if (player->riichi)
+		场役.push_back(Yaku::立直);
+}
+
+void ScoreCounter::get_海底河底() {
+	/* 海底的条件是1. remain_tile == 0, 2. 上一手不是杠相关 */
+	if (tsumo && table->get_remain_tile() == 0 &&
+		table->last_action != BaseAction::暗杠 &&
+		table->last_action != BaseAction::杠 &&
+		table->last_action != BaseAction::加杠) {
+		场役.push_back(Yaku::海底捞月);
+	}
+	if (!tsumo && table->get_remain_tile() == 0) {
+		场役.push_back(Yaku::河底捞鱼);
+	}
+}
+
+void ScoreCounter::get_抢杠() {
+	/* 如果是抢杠，那么计算抢杠 */
+	if (抢杠) {
+		场役.push_back(Yaku::抢杠);
+	}
+}
+
+void ScoreCounter::get_岭上() {
+	/* 如果上一轮动作是杠，这一轮是tsumo，那么就是岭上 */
+	if (table->last_action == BaseAction::暗杠 ||
+		table->last_action == BaseAction::加杠 ||
+		table->last_action == BaseAction::杠) {
+		if (tsumo) {
+			场役.push_back(Yaku::岭上开花);
+		}
+	}
+}
+
+inline void ScoreCounter::get_门清自摸() {
+	/*门清自摸*/
+	if (tsumo && player->门清) {
+		场役.push_back(Yaku::门前清自摸和);
+	}
+}
+
+void ScoreCounter::get_一发() {
+	/* 如果保存有一发状态 */
+	if (player->一发) {
+		场役.push_back(Yaku::一发);
+	}
+}
+
+void ScoreCounter::get_aka_dora() {
+	// 接下来统计红宝牌数量
+	for (auto tile : tiles) {
+		if (tile->red_dora == true) {
+			Dora役.push_back(Yaku::赤宝牌);
+		}
+	}
+
+	for (auto fulu : player->副露s) {
+		for (auto tile : fulu.tiles) {
+			if (tile->red_dora == true) {
+				Dora役.push_back(Yaku::赤宝牌);
+			}
+		}
+	}
+
+	/*if (win_tile && win_tile->red_dora == true) {
+		Dora役.push_back(Yaku::赤宝牌);
+	}*/
+}
+
+void ScoreCounter::get_dora() {
+	// 统计宝牌数量
+	auto doratiles = table->get_dora();
+	for (auto doratile : doratiles) {
+		for (auto tile : tiles) {
+			if (tile->tile == doratile) {
+				Dora役.push_back(Yaku::宝牌);
+			}
+		}
+
+		for (auto fulu : player->副露s) {
+			for (auto tile : fulu.tiles) {
+				if (tile->tile == doratile) {
+					Dora役.push_back(Yaku::宝牌);
+				}
+			}
+		}
+
+		/*if (correspond_tile && correspond_tile->tile == doratile) {
+			Dora役.push_back(Yaku::宝牌);
+		}*/
+	}
+}
+
+void ScoreCounter::get_ura_dora() {
+	// 如果是立直和牌，继续统计里宝牌
+	if (player->is_riichi()) {
+		const auto& doratiles = table->get_ura_dora();
+		for (const auto& doratile : doratiles) {
+			for (const auto& tile : tiles) {
+				if (tile->tile == doratile) {
+					Dora役.push_back(Yaku::里宝牌);
+				}
+			}
+
+			for (const auto& fulu : player->副露s) {
+				for (const auto& tile : fulu.tiles) {
+					if (tile->tile == doratile) {
+						Dora役.push_back(Yaku::里宝牌);
+					}
+				}
+			}
+
+			/*if (correspond_tile && correspond_tile->tile == doratile) {
+				Dora役.push_back(Yaku::里宝牌);
+			}*/
+		}
+	}
+}
+
+CounterResult ScoreCounter::yaku_counter()
 {
 	// 首先 假设进入到这个counter阶段的，至少满足了和牌条件的牌型
 	// 以及，是否有某种役是不确定的
 
 	// 从最简单的场役开始计算
 
-	bool tsumo = (correspond_tile == nullptr);
-	bool 门清 = player.门清;
+	// tsumo = (correspond_tile == nullptr);
+	// 门清 = player.门清;
 
 	// 役 = 手役+场役+Dora。手役根据牌的解释不同而不同。
-	vector<pair<vector<Yaku>, int>> all_yaku_fu_cases;
+	// vector<pair<vector<Yaku>, int>> all_yaku_fu_cases;
 	CounterResult final_result;
 
-	auto handcopy = player.hand;
-	if (correspond_tile != nullptr)
-		handcopy.push_back(correspond_tile);
+	// auto handcopy = player.hand;
+	// if (correspond_tile != nullptr)
+	//	 handcopy.push_back(correspond_tile);
 
-	auto hand_basetile = convert_tiles_to_basetiles(handcopy);
+	// auto hand_basetile = convert_tiles_to_basetiles(handcopy);
 
-	bool 役满 = false;
-	vector<Yaku> 天地和;
-	vector<Yaku> 场役;
-	vector<Yaku> Dora役;
-	vector<pair<vector<Yaku>, int>> &all_手役 = all_yaku_fu_cases; // 所有手役可能性
+	役满 = false;
+	// vector<Yaku> 天地和;
+	// vector<Yaku> 场役;
+	// vector<Yaku> Dora役;
+	// vector<pair<vector<Yaku>, int>> &all_手役 = all_yaku_fu_cases; // 所有手役可能性
+	
 
 	/* 天地和的条件是，在第一巡，且没人鸣牌*/
-	if (player.first_round && tsumo) {
+	if (player->first_round && tsumo) {
 		if (table->庄家 == table->turn) {
 			天地和.push_back(Yaku::天和);
 			役满 = true;
@@ -1008,273 +1181,85 @@ CounterResult yaku_counter(const Table *table, const Player &player, Tile *corre
 		}
 	}
 
-	// 接下来统计国士无双&九莲（定牌型）
-	bool 国士 = false;
-	bool 国士13 = false;
-	bool 九莲 = false;
-	bool 九莲纯 = false;
+	get_国士();
+	if (!国士 && !国士13)
+		get_九莲();
 
-	if (handcopy.size() == 14) {
-		// 过滤一次门清条件
-		do {
-			if (is国士无双和牌型(hand_basetile)) {
-				// 判定13面
-				{
-					auto tiles = player.hand;
-					if (correspond_tile == nullptr) tiles.pop_back();
-					vector<BaseTile> raw
-					{ _1m, _9m, _1s, _9s, _1p, _9p, _1z, _2z, _3z, _4z, _5z, _6z, _7z };
-
-					sort(tiles.begin(), tiles.end());
-					if (is_same_container(raw, convert_tiles_to_basetiles(tiles)))
-						国士13 = true;
-					else 
-						国士 = true;
-				}
-				役满 = true;
-				break; // 等同于jump出去，因为国/九莲肯定牌型不同，不需要继续判断九莲了
-			}
-
-			// 九莲
-			int mpsz一色 = handcopy[0]->tile / 9;
-			if (mpsz一色 >= 0 && mpsz一色 <= 2) {
-				for (size_t i = 1; i < 14; ++i) {
-					if (handcopy[i]->tile / 9 != mpsz一色) {
-						// 清一色都不是
-						mpsz一色 = -1;
-						break;
-					}
-				}
-			}
-			if (mpsz一色 < 0 && mpsz一色 > 2) break;//不满足基本条件直接跳出 
-
-			if (is纯九莲和牌型(hand_basetile)) {
-				九莲纯 = true;
-				役满 = true;
-			}
-			else if (is九莲和牌型(hand_basetile)) {
-				九莲 = true;
-				役满 = true;
-			}
-		} while (false);
-	}
-
-	if (国士13) {
-		all_手役.push_back({ { Yaku::国士无双十三面 }, 0 });
-	}
-	else if (国士) {
-		all_手役.push_back({ { Yaku::国士无双 }, 0 });
-	}
-	else if (九莲纯) {
-		all_手役.push_back({ { Yaku::纯正九莲宝灯 }, 0 });
-	}
-	else if (九莲) {
-		all_手役.push_back({ { Yaku::九莲宝灯 }, 0 });
-	}
-	else {
+	if (!国士 && !国士13 && !九莲 && !九莲纯)	{
 		/* 并非以上情况的手役判断 */
 		
-		// 接下来对牌进行拆解
-		auto complete_tiles_list = get_completed_tiles(hand_basetile);
-
-		/* 移除多余的complete_tiles */
-		sort(complete_tiles_list.begin(), complete_tiles_list.end(),
-			[](CompletedTiles c1, CompletedTiles c2) {
-				return c1 < c2;
-			});
-		complete_tiles_list.erase(unique(complete_tiles_list.begin(), complete_tiles_list.end()), complete_tiles_list.end());
+		// 对牌进行拆解 （已经unique）
+		auto&& complete_tiles_list = get_completed_tiles(basetiles);
 
 		/* 统计七对子*/
-		if (is七对和牌型(hand_basetile)) {
+		if (is七对和牌型(basetiles)) {
 			// 即使是役满这里也要纳入考虑，因为存在大七星
 			CompletedTiles ct;
+			sort(basetiles.begin(), basetiles.end());
 			for (int i = 0; i < 14; i += 2) {
 				TileGroup tg;
 				tg.type = TileGroup::Toitsu;
-				tg.set_tiles({ handcopy[i]->tile, handcopy[i]->tile });
+				tg.set_tiles({ basetiles[i], basetiles[i] });
 				ct.body.push_back(tg);
 			}
 			complete_tiles_list.push_back(ct);
 		}
 		// 接下来
 
-		for (auto &complete_tiles : complete_tiles_list) {
-			auto yaku_fus = get_手役_from_complete_tiles(complete_tiles, player.副露s, correspond_tile, player.hand.back()->tile, 自风, 场风, 门清, 役满);
-			merge_into(all_手役, yaku_fus);
+		for (const auto &complete_tiles : complete_tiles_list) {
+			auto yaku_fus = get_max_手役(complete_tiles, player->副露s, win_tile, player->hand.back()->tile, 自风, 场风, 门清, 役满);
+			最大手役_番符 = max(最大手役_番符, yaku_fus);
 		}
 	}
 
-	if (!役满) { // 所有可能性中都没有役满的话，继续判定场役
-		/* riichi 和 double riichi 不重复计算 */
-		if (player.double_riichi)
-			场役.push_back(Yaku::两立直);
-		else if (player.riichi)
-			场役.push_back(Yaku::立直);
+	if (役满) {
+		merge_into(最大手役_番符.first, 天地和);
+	}	
+	else {
+		get_场役_Dora役();
+		merge_into(最大手役_番符.first, 场役);
+		merge_into(最大手役_番符.first, Dora役);
+	}	
 
-		/* 海底的条件是1. remain_tile == 0, 2. 上一手不是杠相关 */
-		if (tsumo && table->get_remain_tile() == 0 &&
-			table->last_action != BaseAction::暗杠 &&
-			table->last_action != BaseAction::杠 &&
-			table->last_action != BaseAction::加杠) {
-			场役.push_back(Yaku::海底捞月);
-		}
-		if (!tsumo && table->get_remain_tile() == 0) {
-			场役.push_back(Yaku::河底捞鱼);
-		}
-
-		/* 如果是抢杠，那么计算抢杠 */
-		if (抢杠 || 抢暗杠) {
-			场役.push_back(Yaku::抢杠);
-		}
-
-		/* 如果上一轮动作是杠，这一轮是tsumo，那么就是岭上 */
-		if (table->last_action == BaseAction::暗杠 ||
-			table->last_action == BaseAction::加杠 ||
-			table->last_action == BaseAction::杠) {
-			if (tsumo) {
-				场役.push_back(Yaku::岭上开花);
-			}
-		}
-
-		/* 如果保存有一发状态 */
-		if (player.一发) {
-			场役.push_back(Yaku::一发);
-		}
-
-		/*门清自摸*/
-		if (tsumo && player.门清) {
-			场役.push_back(Yaku::门前清自摸和);
-		}
-
-		/* dora役 */
-		// 接下来统计红宝牌数量
-		for (auto tile : player.hand) {
-			if (tile->red_dora == true) {
-				Dora役.push_back(Yaku::赤宝牌);
-			}
-		}
-
-		for (auto fulu : player.副露s) {
-			for (auto tile : fulu.tiles) {
-				if (tile->red_dora == true) {
-					Dora役.push_back(Yaku::赤宝牌);
-				}
-			}
-		}
-
-		if (correspond_tile && correspond_tile->red_dora == true) {
-			Dora役.push_back(Yaku::赤宝牌);
-		}
-
-		// 接下来统计宝牌数量
-		auto doratiles = table->get_dora();
-		for (auto doratile : doratiles) {
-			for (auto tile : player.hand) {
-				if (tile->tile == doratile) {
-					Dora役.push_back(Yaku::宝牌);
-				}
-			}
-
-			for (auto fulu : player.副露s) {
-				for (auto tile : fulu.tiles) {
-					if (tile->tile == doratile) {
-						Dora役.push_back(Yaku::宝牌);
-					}
-				}
-			}
-
-			if (correspond_tile && correspond_tile->tile == doratile) {
-				Dora役.push_back(Yaku::宝牌);
-			}
-		}
-
-		// 如果是立直和牌，继续统计里宝牌
-		if (player.is_riichi()) {
-			auto doratiles = table->get_ura_dora();
-			for (auto doratile : doratiles) {
-				for (auto tile : player.hand) {
-					if (tile->tile == doratile) {
-						Dora役.push_back(Yaku::里宝牌);
-					}
-				}
-
-				for (auto fulu : player.副露s) {
-					for (auto tile : fulu.tiles) {
-						if (tile->tile == doratile) {
-							Dora役.push_back(Yaku::里宝牌);
-						}
-					}
-				}
-
-				if (correspond_tile && correspond_tile->tile == doratile) {
-					Dora役.push_back(Yaku::里宝牌);
-				}
-			}
-		}
-	}
-	for (auto& yaku_fu : all_yaku_fu_cases) {
-		if (役满) {
-			merge_into(yaku_fu.first, 天地和);			
-		}
-		else {
-			merge_into(yaku_fu.first, 场役);
-			merge_into(yaku_fu.first, Dora役);
-		}
-	}
-
-	//对于AllYakusAndFu，判定番最高的，番相同的，判定符最高的	
-	auto iter = max_element(all_yaku_fu_cases.begin(), all_yaku_fu_cases.end(), 
-		[](const pair<vector<Yaku>, int> &yaku_fu1, const pair<vector<Yaku>, int> &yaku_fu2) {
-		auto fan1 = calculate_fan(yaku_fu1.first);
-		auto fan2 = calculate_fan(yaku_fu2.first);
-		if (fan1 < fan2) return true;
-		if (fan1 > fan2) return false;
-		// 如果番数一样则判断符
-		return yaku_fu1.second < yaku_fu2.second;
-		});
-
-	if (iter == all_yaku_fu_cases.end()) {
+	if (!can_agari(最大手役_番符.first)) {
 		// 说明无役
 		final_result.yakus.push_back(Yaku::None);
 	}
-	else if (!can_agari(iter->first)) {
-		// 如果只有宝牌役/无役，置为无役
-		final_result.yakus.assign({ Yaku::None });
-	}
 	else {
-		final_result.yakus.assign(iter->first.begin(), iter->first.end());
-		final_result.fan = calculate_fan(final_result.yakus);
-		final_result.fu = iter->second;
-		bool 亲家 = false;
-		if (table->庄家 == table->turn) 亲家 = true;
 
-		final_result.calculate_score(亲家, tsumo);
+		final_result.yakus = 最大手役_番符.first;
+		final_result.fan = calculate_fan(final_result.yakus);
+		final_result.fu = 最大手役_番符.second;
+		final_result.calculate_score(player->亲家, tsumo);
 	}
 	return final_result;
 }
 
-//CounterResult yaku_counter_v2(Table *table, Player &player, Tile* correspond_tile, bool 抢杠, bool 抢暗杠, Wind 自风, Wind 场风)
-//{
-//	// from 2022.3.19
-//
-//	/* step 0 : 初始化 */
-//	bool tsumo;	 // 是自摸吗
-//	bool menchin = player.门清;
-//	BaseTile last_tile;  // 最后取得的牌，既可以是荣和，也可以是自摸
-//	vector<BaseTile> final_hand = convert_tiles_to_basetiles(player.hand);
-//
-//	if (correspond_tile == nullptr) {
-//		tsumo = true;
-//		last_tile = player.hand.back()->tile;
-//	}
-//	else {
-//		tsumo = false;
-//		last_tile = correspond_tile->tile;
-//	}
-//
-//	/* step 1 : 处理国士 */
-//
-//}
+ScoreCounter::ScoreCounter(const Table* t, const Player* p, Tile* win, bool 抢杠_, bool 抢暗杠_)
+	: 抢杠(抢杠_), 抢暗杠(抢暗杠_), 门清(p->门清)
+{
+	tiles = p->hand;
+	if (win_tile == nullptr)
+		tsumo = true;
+	else {
+		tsumo = false;
+		win_tile = win;
+		tiles.push_back(win_tile);
+	}
+	basetiles = convert_tiles_to_basetiles(tiles);
+	自风 = p->wind;
+	场风 = t->场风;
+}
+
+bool ScoreCounter::check_有役()
+{
+	if (抢杠 || 抢暗杠) return true;
+	// roughly check
+	if (get_天地和()) return true;
+	if (get_国士()) return true;
+
+	return false;
+}
 
 namespace_mahjong_end
 

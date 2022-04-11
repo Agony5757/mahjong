@@ -221,7 +221,8 @@ vector<SelfAction> Player::get_自摸(const Table* table) const
 
 	// 听牌列表里的牌可以被自摸
 	if (is_in(听牌, hand.back()->tile)) {
-		auto result = yaku_counter(table, *this, nullptr, false, false, wind, table->场风);
+		ScoreCounter sc(table, this, nullptr, false, false);
+		auto&& result = sc.yaku_counter();
 		if (can_agari(result.yakus)) {
 			SelfAction action;
 			action.action = BaseAction::自摸;
@@ -344,7 +345,9 @@ vector<ResponseAction> Player::get_荣和(Table* table, Tile* tile)
 
 	// 听牌列表里的才能荣
 	if (is_in(听牌, tile->tile)) {
-		if (can_agari(yaku_counter(table, *this, tile, false, false, wind, table->场风).yakus)) {
+		ScoreCounter sc(table, this, tile, false, false);
+		auto&& result = sc.yaku_counter();
+		if (can_agari(result.yakus)) {
 			ResponseAction action;
 			action.action = BaseAction::荣和;
 			action.correspond_tiles = { tile };

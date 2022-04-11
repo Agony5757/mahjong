@@ -56,7 +56,7 @@ struct Result {
 		for (int i = 0; i < 4; ++i) {
 			ss << "Player " << i << ":" << score[i] << endl;
 		}
-		for (auto result : results) {
+		for (const auto &result : results) {
 			ss << "Player" << result.first << ":" << yakus_to_string(result.second.yakus)
 				<< "|" << result.second.fan << "番" << result.second.fu << "符"
 				<< endl;
@@ -69,18 +69,18 @@ struct Result {
 class Table;
 class Tile;
 
-Result 九种九牌流局结算(Table* table);
-Result 四风连打流局结算(Table* table);
-Result 四立直流局结算(Table* table);
-Result 四杠流局结算(Table* table);
+Result 九种九牌流局结算(const Table* table);
+Result 四风连打流局结算(const Table* table);
+Result 四立直流局结算(const Table* table);
+Result 四杠流局结算(const Table* table);
 
-Result 荒牌流局结算(Table* table);
+Result 荒牌流局结算(const Table* table);
 
-Result 自摸结算(Table* table);
-Result 荣和结算(Table* table, Tile* ,std::vector<int> response_player, bool 抢杠 = false, bool 抢暗杠 = false);
+Result 自摸结算(const Table* table);
+Result 荣和结算(const Table* table, Tile* ,std::vector<int> response_player, bool 抢杠 = false, bool 抢暗杠 = false);
 
-Result 抢暗杠结算(Table* table, Tile*, std::vector<int> response_player);
-Result 抢杠结算(Table* table, Tile*, std::vector<int> response_player);
+Result 抢暗杠结算(const Table* table, Tile*, std::vector<int> response_player);
+Result 抢杠结算(const Table* table, Tile*, std::vector<int> response_player);
 
 namespace_mahjong_end
 
