@@ -230,6 +230,8 @@ inline static bool 纯老头(const std::string& s) {
 }
 
 inline static bool 纯绿牌(const std::string& s) {
+	const char* green_types[] = { "2sK", "3sK", "4sK", "2sS", "6sK", "8sK", "6zK",
+		"2s:", "3s:", "4s:", "6s:", "8s:", "6z:" };
 	return std::all_of(std::begin(green_types), std::end(green_types),
 		[&s](const char* green) {return tile_group_match(s, green); });
 }
