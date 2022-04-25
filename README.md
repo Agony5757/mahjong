@@ -14,7 +14,6 @@ Simulator of Japanese Riichi Mahjong (https://en.wikipedia.org/wiki/Japanese_Mah
 # See [here](https://github.com/Agony5757/mahjong/tree/master/pymahjong) for the Python APIs for e.g., decision AI research.
 
 
-
 ## Citation
 ```
 @inproceedings{
@@ -27,3 +26,8 @@ url={https://openreview.net/forum?id=pjqqxepwoMy}
 }
 ```
 
+## Contact us
+
+Email:    dongqi.han@oist.jp
+
+QQ group: 608064044
