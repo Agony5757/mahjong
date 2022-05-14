@@ -373,15 +373,15 @@ bool 带幺九(const string &s) {
 
 /* 牌型对/刻/杠，全幺九，不包括字牌，例如999p 1111m */
 bool 纯老头(const string &s) {
-	if (s[2] == 'K' || s[2] == ':' || s[2] == '|') return s[0] == '1' || s[0] == '9';
+	if (s[2] == 'K' || s[2] == ':' || s[2] == '|') return (s[0] == '1' || s[0] == '9') && s[1] != 'z';
 	return false;
 }
 
 bool 纯绿牌(const string &s) {
 	const char* green_types[] = {"2sK", "3sK", "4sK", "2sS", "6sK", "8sK", "6zK",
-		"2s:", "3s:", "4s:", "6s:", "8s:", "6z:" };
+		"2s:", "3s:", "4s:", "6s:", "8s:", "6z:", "2s|", "3s|", "4s|", "6s|", "8s|", "6z|", };
 
-	return all_of(begin(green_types), end(green_types), 
+	return any_of(begin(green_types), end(green_types), 
 		[&s](const char* green) {return tile_group_match(s, green); });
 }
 
