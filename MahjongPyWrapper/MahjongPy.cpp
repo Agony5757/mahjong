@@ -87,6 +87,13 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		// .def("to_simple_string", &Tile::to_string)
 		;
 
+	py::class_<RiverTile>(m, "RiverTile")
+		.def_readonly("tile", &RiverTile::tile)
+		.def_readonly("remain", &RiverTile::remain)
+		.def_readonly("riichi", &RiverTile::riichi)
+		.def_readonly("fromhand", &RiverTile::fromhand)
+		;
+		
 	m.def("TileToString", [](const Tile *tile) {return py::bytes(tile->to_string()); });
 
 	py::class_<River>(m, "River")
