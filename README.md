@@ -28,6 +28,5 @@ url={https://openreview.net/forum?id=pjqqxepwoMy}
 
 ## Contact us
 
-Email:    dongqi.han@oist.jp
-
+Email:    hdqhdq58@outlook.com
 QQ group: 608064044
