@@ -55,47 +55,47 @@ bool is_same_container(const T& a, const T& b)
 	}
 }
 
-inline std::vector<Tile*>::iterator
-	find_match_tile(std::vector<Tile*>&tiles, BaseTile t) {
+inline auto	find_match_tile(std::vector<Tile*>&tiles, BaseTile t) -> decltype(tiles.end())
+{
 	for (auto iter = tiles.begin(); iter != tiles.end(); ++iter)
 		if ((*iter)->tile == t) return iter;
 
 	return tiles.end();
 }
 
-inline std::vector<Tile*>::const_iterator
-	find_match_tile(const std::vector<Tile*>&tiles, BaseTile t) {
+inline auto find_match_tile(const std::vector<Tile*> &tiles, BaseTile t) -> decltype(tiles.end())
+{
 	for (auto iter = tiles.begin(); iter != tiles.end(); ++iter)
 		if ((*iter)->tile == t) return iter;
 
 	return tiles.end();
 }
 
-inline std::vector<Tile*>::iterator
-	find_match_tile(std::vector<Tile*>&tiles, Tile * t) {
+inline auto find_match_tile(std::vector<Tile*>&tiles, Tile *t) -> decltype(tiles.end())
+{
 	return std::find(tiles.begin(), tiles.end(), t);
 }
 
 inline std::vector<Tile*> get_n_copies(std::vector<Tile*> tiles, BaseTile t, unsigned int n) {
 
-	std::vector<Tile*> duplicate_tiles;
-	if (n > 4) { return duplicate_tiles; }
+	std::vector<Tile*> copy_tiles;
+	if (n > 4) { return copy_tiles; }
 
-	int duplicates = 0;
+	int ncopies = 0;
 	for (auto tile : tiles) {
 		if (tile->tile == t)
-			duplicates++;
+			ncopies++;
 	}
-	if (duplicates == n) {
+	if (ncopies == n) {
 		for (auto tile : tiles) {
 			if (tile->tile == t) {
-				duplicates--;
-				duplicate_tiles.push_back(tile);
+				ncopies--;
+				copy_tiles.push_back(tile);
 			}
 		}
 	}
-	sort(duplicate_tiles.begin(), duplicate_tiles.end());
-	return duplicate_tiles;
+	sort(copy_tiles.begin(), copy_tiles.end());
+	return copy_tiles;
 }
 
 template<typename T>
@@ -214,38 +214,16 @@ inline int get_player_distance(int p1, int p2) {
 	}
 }
 
-// vector<string> merge
-//inline std::string merge_strings(std::vector<std::string> strings) {
-//
-//	return fmt::format("{}", fmt::join(strings, " "));
-//	/*using std::string;
-//	string final_string;
-//	for (auto _string  : strings) {
-//		final_string += _string;
-//		final_string += " ";
-//	}
-//	return final_string;*/
-//}
-
 inline Wind next_wind(Wind wind) {
 	return (Wind)((int(wind) + 1) % 4);
 }
 
-
 inline std::string score_to_string(const std::array<int, 4> &scores) {
 	return fmt::format("{}", fmt::join(scores, "|"));
-	/*using namespace std;
-	stringstream ss;
-	ss << scores[0] << "|" << scores[1] << "|" << scores[2] << "|" << scores[3];
-	return ss.str();*/
 }
 
 inline std::string vec2str(const std::vector<int> &vec)
 {
-	/*std::string str = "{";
-	for (auto t : vec) { str += std::to_string(t); str += ","; }
-	str += "}";
-	return str;*/
 	return fmt::format("{{{}}}", fmt::join(vec, ","));
 };
 

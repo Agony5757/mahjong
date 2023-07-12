@@ -33,6 +33,31 @@ enum BaseTile {
 	_1z, _2z, _3z, _4z,	_5z, _6z, _7z
 };
 
+class Tile {
+public:
+	BaseTile tile;
+	bool red_dora;
+	int id;
+
+	inline std::string to_string() const {
+		int number = tile % 9 + 1;
+		if (red_dora)
+			number = 0;
+		switch (tile / 9) {
+		case 0:
+			return fmt::format("{}m", number);
+		case 1:
+			return fmt::format("{}p", number);
+		case 2:
+			return fmt::format("{}s", number);
+		case 3:
+			return fmt::format("{}z", number);
+		default:
+			throw std::runtime_error("Error Tile object.");
+		}
+	}
+};
+
 inline const char* basetile_to_string(BaseTile bt) {
 	static const char* names[] = {
 		"1m","2m","3m","4m","5m","6m","7m","8m","9m",
@@ -177,31 +202,6 @@ inline bool is_yakuhai(BaseTile tile, Wind game_wind, Wind self_wind) {
 	}
 	return false;
 }
-
-class Tile {
-public:
-	BaseTile tile;
-	bool red_dora;
-	int id;
-
-	inline std::string to_string() const {
-		int number = tile % 9 + 1;
-		if (red_dora)
-			number = 0;
-		switch (tile / 9) {
-		case 0:
-			return fmt::format("{}m", number);
-		case 1:
-			return fmt::format("{}p", number);
-		case 2:
-			return fmt::format("{}s", number);
-		case 3:
-			return fmt::format("{}z", number);
-		default:
-			throw std::runtime_error("Error Tile object.");
-		}
-	}
-};
 
 inline std::string tiles_to_string(const std::vector<Tile*> &tiles) {
 	std::stringstream ss;
