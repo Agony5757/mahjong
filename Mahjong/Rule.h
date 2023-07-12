@@ -4,7 +4,7 @@
 #include "Tile.h"
 #include "macro.h"
 #include "Yaku.h"
-#include <functional>
+
 
 namespace_mahjong
 
@@ -113,21 +113,21 @@ inline bool operator!=(const CompletedTiles& c1, const CompletedTiles& c2) {
 	return false;
 }
 
-class 基本和牌型
+class TileSplitter
 {
 public:
-	static 基本和牌型& GetInstance();
+	static TileSplitter& GetInstance();
 	void reset();
 
 	//std::vector<CompletedTiles> testGetYaku(const Player& p, const Tile& agariTile, bool isTsumo);
 
-	std::vector<CompletedTiles> getAllCompletedTiles(const std::vector<BaseTile>& curTiles);
-	bool hasOneCompletedTiles(const std::vector<BaseTile>& curTiles);
+	std::vector<CompletedTiles> get_all_completed_tiles(const std::vector<BaseTile>& curTiles);
+	bool has_one_completed_tiles(const std::vector<BaseTile>& curTiles);
 
 private:
-	基本和牌型() = default;
-	基本和牌型(const 基本和牌型& other) = delete;
-	~基本和牌型() = default;
+	TileSplitter() = default;
+	TileSplitter(const TileSplitter& other) = delete;
+	~TileSplitter() = default;
 
 	CompletedTiles completed_tiles;
 	bool has_head = false;
@@ -148,32 +148,32 @@ bool has_completed_tiles(std::vector<BaseTile> tiles);
 
 /* 判断和牌状态 */
 
-bool isCommon和牌型(std::vector<BaseTile> tiles);
+bool is_ordinary_shape(std::vector<BaseTile> tiles);
 
-std::vector<BaseTile> isCommon听牌型(std::vector<BaseTile> tiles);
+std::vector<BaseTile> get_ordinary_atari_hai(std::vector<BaseTile> tiles);
 
 /* 特殊役 */
 
-bool is七对和牌型(std::vector<BaseTile> tiles);
+bool is_7toitsu_shape(std::vector<BaseTile> tiles);
 
-std::vector<BaseTile> is七对听牌型(std::vector<BaseTile> tiles);
+std::vector<BaseTile> get_7toitsu_atari_hai(std::vector<BaseTile> tiles);
 
-bool is国士无双和牌型(std::vector<BaseTile> tiles);
+bool is_kokushi_shape(std::vector<BaseTile> tiles);
 
-std::vector<BaseTile> is国士无双听牌型(std::vector<BaseTile> tiles);
+std::vector<BaseTile> get_kokushi_atari_hai(std::vector<BaseTile> tiles);
 
 // 不考虑无役的听牌情况
-std::vector<BaseTile> get听牌(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
-bool is听牌(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
-bool is和牌(std::vector<BaseTile> tiles);
+std::vector<BaseTile> get_atari_hai(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
+bool is_tenpai(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
+bool is_agari_shape(std::vector<BaseTile> tiles);
 
-std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool 门清);
+std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen);
 
 bool can_ron(std::vector<Tile*> hands, Tile* get_tile);
 bool can_tsumo(std::vector<Tile*> hands);
 
-bool is纯九莲和牌型(std::vector<BaseTile> tiles);
-bool is九莲和牌型(std::vector<BaseTile> tiles);
+bool is_churen_9_agari(std::vector<BaseTile> tiles);
+bool is_churen_agari(std::vector<BaseTile> tiles);
 
 namespace_mahjong_end
 

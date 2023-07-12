@@ -19,9 +19,9 @@ class Table
 public:
 	int river_counter = 0;
 	Tile tiles[N_TILES];
-	int dora_spec = 1; // 翻开了几张宝牌指示牌
-	std::vector<Tile*> 宝牌指示牌;
-	std::vector<Tile*> 里宝牌指示牌;
+	int n_active_dora = 1; // 翻开了几张宝牌指示牌
+	std::vector<Tile*> dora_indicator;
+	std::vector<Tile*> uradora_indicator;
 	
 	// 牌山的起始是岭上牌(0,1,2,3)
 	// 然后标记宝牌和ura的位置(5,7,9,11,13)、(4,6,8,10,12)
@@ -29,16 +29,16 @@ public:
 	// 杠的时候所有牌在vector牌山中位置变化的
 	// 并不会影响到宝牌/ura的位置，因为它们一开始就被标记过了
 	// 当牌山.size() <= 14的时候结束游戏
-	std::vector<Tile*> 牌山; 
+	std::vector<Tile*> yama; 
 	
 	std::array<Player, 4> players;
 	int turn = 0;
-	BaseAction last_action = BaseAction::出牌;
-	Wind 场风 = Wind::East;
-	int 庄家 = 0;
-	int n本场 = 0;
-	int n立直棒 = 0;
-	GameLog fullGameLog;
+	BaseAction last_action = BaseAction::Discard;
+	Wind game_wind = Wind::East;
+	int oya = 0; // oya
+	int honba = 0;
+	int kyoutaku = 0;
+	GameLog gamelog;
 
 	/* For debug */
 	int write_log_mode;
@@ -53,15 +53,16 @@ public:
 public:
 	Table() = default;
 
+	inline void new_dora() { n_active_dora++; }
 	std::vector<BaseTile> get_dora() const;
 	std::vector<BaseTile> get_ura_dora() const;
 
 	// 通过这种方式判断杠了几次，相对于判断dora个数更为准确
 	inline int get_remain_kan_tile() const 
-	{ return int(std::find(牌山.begin(), 牌山.end(), 宝牌指示牌[0]) - 牌山.begin() - 1); }
+	{ return int(std::find(yama.begin(), yama.end(), dora_indicator[0]) - yama.begin() - 1); }
 
 	inline int get_remain_tile() const 
-	{ return int(牌山.size() - 14);	}
+	{ return int(yama.size() - 14);	}
 
 	void init_tiles();
 	void init_red_dora_3();
@@ -73,13 +74,12 @@ public:
 	void import_yama(std::vector<int> yama);
 	std::string export_yama();
 	void init_wind();
-	void deal_tile(int i_player);
-	void deal_tile(int i_player, int n_tiles);
-	void deal_tile_岭上(int i_player);
-	void deal_tenhou_style();
 
-	void 发牌(int i_player);
-	void 发岭上牌(int i_player);
+	void draw(int i_player);
+	void draw(int i_player, int n_tiles);
+	void draw_tenhou_style();
+	void draw_normal(int i_player);
+	void draw_rinshan(int i_player);
 
 	void next_turn(int nextturn);
 
@@ -127,7 +127,7 @@ public:
 				players[3].score,
 			};
 			log_buffer_prefix = fmt::format("Table table;\ntable.game_init_for_replay({}, {}, {}, {}, {}, {});\n",
-				vec2str(yama_log), vec2str(init_score), n立直棒, n本场, 场风, 庄家);
+				vec2str(yama_log), vec2str(init_score), kyoutaku, honba, game_wind, oya);
 			selection_log.reserve(512); // avoid reallocation
 			if (write_log_mode == debug_stdout)
 				fmt::print("{}", log_buffer_prefix);
@@ -142,11 +142,11 @@ public:
 
 	std::string to_string() const;
 
-	inline bool after_chipon() { return last_action == BaseAction::吃 || last_action == BaseAction::碰; }
-	inline bool after_daiminkan() {	return last_action == BaseAction::杠; }
-	inline bool after_ankan() {	return last_action == BaseAction::暗杠; }
-	inline bool after_加杠() { return last_action == BaseAction::加杠; }
-	inline bool after_杠() { return after_daiminkan() || after_加杠(); }
+	inline bool after_chipon() { return last_action == BaseAction::Chi || last_action == BaseAction::Pon; }
+	inline bool after_daiminkan() {	return last_action == BaseAction::Kan; }
+	inline bool after_ankan() {	return last_action == BaseAction::AnKan; }
+	inline bool after_kakan() { return last_action == BaseAction::KaKan; }
+	inline bool after_kan() { return after_daiminkan() || after_ankan(); }
 	std::array<int, 4> get_scores();
 
 	// 因为一定是turn所在的player行动，所以不需要输入playerID
@@ -157,10 +157,10 @@ public:
 	std::vector<ResponseAction> _generate_response_actions(int player, Tile* tile, bool);
 
 	// 根据turn打出的tile，可以做出的抢杠决定
-	std::vector<ResponseAction> _generate_抢暗杠_self_actions(int player, Tile* tile);
+	std::vector<ResponseAction> _generate_chanankan_self_actions(int player, Tile* tile);
 
 	// 根据turn打出的tile，可以做出的抢杠决定
-	std::vector<ResponseAction> _generate_抢杠_self_actions(int player, Tile* tile);
+	std::vector<ResponseAction> _generate_chankan_self_actions(int player, Tile* tile);
 
 public:
 	// ---------------------Manual Mode------------------------------
@@ -170,8 +170,8 @@ public:
 	enum PhaseEnum {
 		P1_ACTION, P2_ACTION, P3_ACTION, P4_ACTION,
 		P1_RESPONSE, P2_RESPONSE, P3_RESPONSE, P4_RESPONSE,
-		P1_抢杠RESPONSE, P2_抢杠RESPONSE, P3_抢杠RESPONSE, P4_抢杠RESPONSE,
-		P1_抢暗杠RESPONSE, P2_抢暗杠RESPONSE, P3_抢暗杠RESPONSE, P4_抢暗杠RESPONSE,
+		P1_CHANKAN_RESPONSE, P2_CHANKAN_RESPONSE, P3_CHANKAN_RESPONSE, P4_CHANKAN_RESPONSE,
+		P1_CHANANKAN_RESPONSE, P2_CHANANKAN_RESPONSE, P3_CHANANKAN_RESPONSE, P4_CHANANKAN_RESPONSE,
 		GAME_OVER,
 	};
 	std::vector<SelfAction> self_actions;
@@ -184,7 +184,7 @@ public:
 	Tile* tile = nullptr;
 	std::vector<ResponseAction> actions; // response actions
 	// bool FROM_手切摸切 = false; // global variable for river log
-	BaseAction final_action = BaseAction::pass;
+	BaseAction final_action = BaseAction::Pass;
 	
 	void from_beginning();
 

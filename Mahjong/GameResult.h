@@ -4,19 +4,34 @@
 #include <vector>
 #include <sstream>
 #include <unordered_map>
-#include "ScoreCounter.h"
 #include <array>
+#include "ScoreCounter.h"
 
 namespace_mahjong
 
 enum class ResultType {
-	荣和终局,
-	自摸终局,
-	荒牌流局,
-	流局满贯,
-	中途流局,
-	Error
+	Error = -1,
+	RonAgari,
+	TsumoAgari,
+	Ryukyouku_Notile,
+	NagashiMangan,
+	Ryukyouku_Interval,
 };
+
+inline const char* result_type_str(ResultType type)
+{
+	static const char* result_type_strs[] =
+	{
+		"RonAgari",
+		"TsumoAgari",
+		"Ryukyouku_Notile",
+		"NagashiMangan",
+		"Ryukyouku_Interval",
+	};
+	constexpr size_t len = sizeof(result_type_strs) / sizeof(result_type_strs[0]);
+	return (int(type) >= len || int(type) < 0) ? 
+		"Error type" : result_type_strs[(int)type];
+}
 
 struct Result {
 	ResultType result_type = ResultType::Error;
@@ -25,43 +40,22 @@ struct Result {
 	std::vector<int> winner;
 	std::vector<int> loser;
 	std::array<int, 4> score;
-	int 役满倍数[4];
-	int n立直棒;
-	int n本场;
-	bool 连庄;
+	int n_yakuman[4];
+	int n_riichibo;
+	int n_honba;
+	bool renchan; // 連荘
 
 	inline std::string to_string() const {
-		using namespace std;
-		stringstream ss;
-		switch (result_type) {
-		case ResultType::荒牌流局:
-			ss << "荒牌流局" << endl;
-			break;
-		case ResultType::流局满贯:
-			ss << "流局满贯" << endl;
-			break;
-		case ResultType::荣和终局:
-			ss << "荣和终局" << endl;
-			break;
-		case ResultType::中途流局:
-			ss << "中途流局" << endl;
-			break;
-		case ResultType::自摸终局:
-			ss << "自摸终局" << endl;
-			break;
-		default:
-			throw runtime_error("ResultType Unknown.");
-		}
-		ss << "Score:" << endl;
-		for (int i = 0; i < 4; ++i) {
-			ss << "Player " << i << ":" << score[i] << endl;
-		}
+		std::string result_str;
 		for (auto result : results) {
-			ss << "Player" << result.first << ":" << yakus_to_string(result.second.yakus)
-				<< "|" << result.second.fan << "番" << result.second.fu << "符"
-				<< endl;
+			result_str += fmt::format("Player {} : {} | {} fan - {} fu\n",
+				result.first, yakus_to_string(result.second.yakus)
+				, result.second.fan, result.second.fu);
 		}
-		return ss.str();
+		return fmt::format("{} Score: {} \n{}",
+			result_type_str(result_type),
+			score_to_string(score),
+			result_str);
 	}
 };
 
@@ -69,18 +63,15 @@ struct Result {
 class Table;
 class Tile;
 
-Result 九种九牌流局结算(Table* table);
-Result 四风连打流局结算(Table* table);
-Result 四立直流局结算(Table* table);
-Result 四杠流局结算(Table* table);
-
-Result 荒牌流局结算(Table* table);
-
-Result 自摸结算(Table* table);
-Result 荣和结算(Table* table, Tile* ,std::vector<int> response_player, bool 抢杠 = false, bool 抢暗杠 = false);
-
-Result 抢暗杠结算(Table* table, Tile*, std::vector<int> response_player);
-Result 抢杠结算(Table* table, Tile*, std::vector<int> response_player);
+Result generate_result_9hai(Table* table);
+Result generate_result_4wind(Table* table);
+Result generate_result_4riichi(Table* table);
+Result generate_result_4kan(Table* table);
+Result generate_result_notile(Table* table);
+Result generate_result_tsumo(Table* table);
+Result generate_result_ron(Table* table, Tile* ,std::vector<int> response_player, bool chankan = false, bool chanankan = false);
+Result generate_result_chanankan(Table* table, Tile*, std::vector<int> response_player);
+Result generate_result_chankan(Table* table, Tile*, std::vector<int> response_player);
 
 namespace_mahjong_end
 
