@@ -359,12 +359,6 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("generate_yama", &TenhouShuffle::generate_yama)
 		;
 
-	m.def("encode_table", &encode_table);
-	m.def("encode_table_riichi_step2", &encode_table_riichi_step2);
-	m.def("encode_action", &encode_action);
-	m.def("encode_action_riichi_step2", &encode_action_riichi_step2);
-	m.def("get_riichi_tiles", &TrainingDataEncoding::get_riichi_tiles);
-
 	auto get_self_action_index = 
 	[](const std::vector<SelfAction> &actions, BaseAction action_type, std::vector<BaseTile> correspond_tiles, bool use_red_dora)
 		{ return get_action_index(actions, action_type, correspond_tiles, use_red_dora); };
@@ -375,6 +369,13 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 
 	m.def("get_self_action_index", get_self_action_index);
 	m.def("get_response_action_index", get_response_action_index);
+
+	namespace encv1 = TrainingDataEncoding::v1;
+	m.def("encv1_encode_table", &encv1::py_encode_table);
+	m.def("encv1_encode_table_riichi_step2", &encv1::py_encode_table_riichi_step2);
+	m.def("encv1_encode_action", &encv1::py_encode_action);
+	m.def("encv1_encode_action_riichi_step2", &encv1::py_encode_action_riichi_step2);
+	m.def("encv1_get_riichi_tiles", &encv1::py_get_riichi_tiles);
 }
 
 #ifdef __GNUC__

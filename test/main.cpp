@@ -7,7 +7,8 @@
 #include "macro.h"
 #include "GamePlay.h"
 #include "tenhou.h"
-#include "Encoding/TrainingDataEncoding.h"
+#include "Encoding/TrainingDataEncodingV1.h"
+#include "Encoding/TrainingDataEncodingV2.h"
 
 using namespace std;
 using_mahjong;
@@ -58,7 +59,7 @@ void test_tenhou_game()
 
 void test_random_play(int games = 10)
 {
-	namespace enc = TrainingDataEncoding;
+	namespace enc = TrainingDataEncoding::v1;
 
 	std::default_random_engine reng;
 	reng.seed(time(nullptr));
