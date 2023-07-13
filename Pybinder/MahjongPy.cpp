@@ -116,7 +116,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 
 		.value("AnKan", BaseAction::AnKan)
 		.value("KaKan", BaseAction::KaKan)
-		.value("Play", BaseAction::Discard)
+		.value("Discard", BaseAction::Discard)
 		.value("Riichi", BaseAction::Riichi)
 		.value("Tsumo", BaseAction::Tsumo)
 		.value("Kyushukyuhai", BaseAction::Kyushukyuhai)

@@ -39,10 +39,10 @@ class MahjongEnv(gym.Env):
               "P1_DRAW, P2_DRAW, P3_DRAW, P4_DRAW")
 
     # pymahjhong.BaseAction
-    ACTION_TYPES = [pm.BaseAction.Play] * MAHJONG_TILE_TYPES + [pm.BaseAction.Chi] * 3 + [pm.BaseAction.Pon] \
+    ACTION_TYPES = [pm.BaseAction.Discard] * MAHJONG_TILE_TYPES + [pm.BaseAction.Chi] * 3 + [pm.BaseAction.Pon] \
                    + [pm.BaseAction.AnKan] + [pm.BaseAction.Kan] + [pm.BaseAction.KaKan] \
                    + [pm.BaseAction.Riichi] + [pm.BaseAction.Ron] + [pm.BaseAction.Tsumo] \
-                   + [pm.BaseAction.KyuShuKyuHai] + [pm.BaseAction.Pass] * 2
+                   + [pm.BaseAction.Kyushukyuhai] + [pm.BaseAction.Pass] * 2
 
     def __init__(self):
         self.t = pm.Table()
