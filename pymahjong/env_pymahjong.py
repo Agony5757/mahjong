@@ -224,7 +224,7 @@ class MahjongEnv(gym.Env):
             if action == self.RIICHI:
                 action_type = pm.BaseAction.Riichi
             else:
-                action_type = pm.BaseAction.Play
+                action_type = pm.BaseAction.Discard
 
             self.t.make_selection_from_action_basetile(action_type, [self.may_riichi_tile_id], False)
             self.riichi_stage2 = False

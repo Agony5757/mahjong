@@ -342,13 +342,14 @@ class PaipuReplay:
                 # 牌山
                 inst = mp.TenhouShuffle.instance()
                 yama = inst.generate_yama()
-                #self.log("牌山是: ", yama)
+                self.log("牌山(count={}): ".format(len(yama)), yama)
 
                 # 利用PaiPuReplayer进行重放
                 replayer = mp.PaipuReplayer()
                 if self.write_log:
                     replayer.set_write_log(True)
-                #self.log(f'Replayer.init: {yama} {scores} {riichi_sticks} {honba} {game_order // 4} {oya_id}')
+                
+                self.log(f'Replayer.init: {yama} {scores} {riichi_sticks} {honba} {game_order // 4} {oya_id}')
                 replayer.init(yama, scores, riichi_sticks, honba, game_order // 4, oya_id)
                 #self.log('Init over.')
 
@@ -424,7 +425,7 @@ class PaipuReplay:
                             
                         raise ActionException('立直打牌', paipu, game_order, honba)
                 else:                    
-                    selection = replayer.get_selection_from_action(mp.BaseAction.Play, [discarded_tile])
+                    selection = replayer.get_selection_from_action(mp.BaseAction.Discard, [discarded_tile])
                     self.log(f'Select: {selection}')
                     ret = replayer.make_selection(selection)
 

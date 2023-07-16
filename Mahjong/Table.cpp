@@ -96,20 +96,26 @@ string Table::export_yama() {
 	return ss.str();
 }
 
-void Table::import_yama(string yama) {
-	constexpr int LENGTH = N_TILES * sizeof(Tile);
-	Base64 base64;
-	auto decode = base64.Decode(yama, LENGTH);
-	const char *s = decode.c_str();
-	for (int i = 0; i < N_TILES; i++) {
-		memcpy(tiles + i, s + i * sizeof(Tile), sizeof(Tile));
-	}
-}
+//void Table::import_yama(string yama) {
+//	constexpr int LENGTH = N_TILES * sizeof(Tile);
+//	Base64 base64;
+//	auto decode = base64.Decode(yama, LENGTH);
+//	const char *s = decode.c_str();
+//	for (int i = 0; i < N_TILES; i++) {
+//		memcpy(tiles + i, s + i * sizeof(Tile), sizeof(Tile));
+//	}
+//}
 
-void Table::import_yama(std::vector<int> yama_input)
+void Table::import_yama(const std::vector<int> &yama_input)
 {
-	if (yama.size() != N_TILES)
-		throw runtime_error("Yama import fail.");
+	if (yama_input.size() != N_TILES)
+	{
+		auto&& err_info = fmt::format(
+			"Yama import fail. Reason: yama.size() == {} (Expect {})", 
+			yama_input.size(), N_TILES);
+
+		throw runtime_error(err_info);
+	}
 	yama.resize(N_TILES);
 	for (int i = 0; i < N_TILES; i++) {
 		yama[i] = tiles + yama_input[i];
@@ -158,7 +164,7 @@ void Table::game_init() {
 	init_before_playing();
 }
 
-void Table::game_init_for_replay(std::vector<int> yama, std::vector<int> init_scores, int kyoutaku_, int honba_, int game_wind_, int oya_)
+void Table::game_init_for_replay(const std::vector<int> &yama, const std::vector<int> &init_scores, int kyoutaku_, int honba_, int game_wind_, int oya_)
 {
 	oya = oya_;
 	game_wind = Wind(game_wind_);

@@ -70,8 +70,8 @@ public:
 	void init_yama();
 	void init_dora();
 	void init_before_playing();
-	void import_yama(std::string yama);
-	void import_yama(std::vector<int> yama);
+	// void import_yama(std::string yama);
+	void import_yama(const std::vector<int> &yama);
 	std::string export_yama();
 	void init_wind();
 
@@ -190,7 +190,7 @@ public:
 
 	// Initialize the game.
 	void game_init();
-	void game_init_for_replay(std::vector<int> yama, std::vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家);
+	void game_init_for_replay(const std::vector<int> &yama, const std::vector<int> &init_scores, int 立直棒, int 本场, int 场风, int 亲家);
 	void game_init_with_metadata(std::unordered_map<std::string, std::string> metadata);
 	
 	// Get the phase of the game

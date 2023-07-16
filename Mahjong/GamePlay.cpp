@@ -5,10 +5,12 @@ using namespace std;
 
 namespace_mahjong
 
-void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int kyoutaku, int honba, int game_wind, int oya)
+void PaipuReplayer::init(const vector<int> &yama, const vector<int> &init_scores, int kyoutaku, int honba, int game_wind, int oya)
 {	
+	fmt::print("Yama Size = {}\n", yama.size());
 	if (write_log)
 		table.set_debug_mode(Table::debug_buffer);
+	
 	table.game_init_for_replay(yama, init_scores, kyoutaku, honba, game_wind, oya);
 
 	/*if (write_log) {
