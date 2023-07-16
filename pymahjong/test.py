@@ -41,6 +41,7 @@ def test(num_games=100):
 
             payoffs = np.array(env.get_payoffs())
             print("Game {}, payoffs: {}".format(game, payoffs))
+            # env.render()
 
             success_games += 1
             game += 1

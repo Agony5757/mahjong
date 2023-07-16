@@ -134,7 +134,7 @@ class MahjongEnv(gym.Env):
         if not self.riichi_stage2:
             self.act_container.fill(0)
             curr_pid = self.get_curr_player_id()
-            pm.encode_action(self.t, curr_pid, self.act_container)  # no need zeros
+            pm.encv1_encode_action(self.t, curr_pid, self.act_container)  # no need zeros
 
             if self.act_container[action] == 0:
                 raise ValueError("Not an action in available actions! (use get_valid_actions(player_id))")
@@ -142,7 +142,7 @@ class MahjongEnv(gym.Env):
             # ------- IF riichi is possible -------------
             # riichi is divided to 2 steps: first choosing a tile to discard, then decide if to riichi (if possible)
             if self.act_container[self.RIICHI]:
-                riichi_tiles = pm.get_riichi_tiles(self.t)
+                riichi_tiles = pm.encv1_get_riichi_tiles(self.t)
                 riichi_tiles_id = set()
                 for riichi_tile in riichi_tiles:
                     riichi_tiles_id.add(int(riichi_tile))
@@ -234,9 +234,9 @@ class MahjongEnv(gym.Env):
 
     def _get_obs_from_table(self, player_id):
         self.obs_container.fill(0)  # passing zeros array to C++
-        pm.encode_table(self.t, player_id, True, self.obs_container)
+        pm.encv1_encode_table(self.t, player_id, True, self.obs_container)
         if self.riichi_stage2:
-            pm.encode_table_riichi_step2(self.t, self.may_riichi_tile_id, self.obs_container)
+            pm.encv1_encode_table_riichi_step2(self.t, self.may_riichi_tile_id, self.obs_container)
 
     def get_obs(self, player_id: int):
         self._check_player(player_id)
@@ -256,7 +256,7 @@ class MahjongEnv(gym.Env):
     def get_valid_actions(self, nhot=False):
         if not self.riichi_stage2:
             self.act_container.fill(0)
-            pm.encode_action(self.t, self.get_curr_player_id(), self.act_container)
+            pm.encv1_encode_action(self.t, self.get_curr_player_id(), self.act_container)
             act_container = self.act_container.copy().astype(bool)
             act_container[self.RIICHI] = 0
             act_container[self.PASS_RIICHI] = 0

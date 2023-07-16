@@ -35,6 +35,8 @@
 #    include <cxxabi.h>
 #endif
 
+PYBIND11_NAMESPACE_BEGIN(PYBIND11_NAMESPACE)
+
 /* https://stackoverflow.com/questions/46798456/handling-gccs-noexcept-type-warning
    This warning is about ABI compatibility, not code health.
    It is only actually needed in a couple places, but apparently GCC 7 "generates this warning if
@@ -43,11 +45,10 @@
    No other GCC version generates this warning.
  */
 #if defined(__GNUC__) && __GNUC__ == 7
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wnoexcept-type"
+PYBIND11_WARNING_DISABLE_GCC("-Wnoexcept-type")
 #endif
 
-PYBIND11_NAMESPACE_BEGIN(PYBIND11_NAMESPACE)
+PYBIND11_WARNING_DISABLE_MSVC(4127)
 
 PYBIND11_NAMESPACE_BEGIN(detail)
 
@@ -83,6 +84,7 @@ public:
     cpp_function() = default;
     // NOLINTNEXTLINE(google-explicit-constructor)
     cpp_function(std::nullptr_t) {}
+    cpp_function(std::nullptr_t, const is_setter &) {}
 
     /// Construct a cpp_function from a vanilla function pointer
     template <typename Return, typename... Args, typename... Extra>
@@ -177,22 +179,22 @@ protected:
         auto *rec = unique_rec.get();
 
         /* Store the capture object directly in the function record if there is enough space */
-        if (PYBIND11_SILENCE_MSVC_C4127(sizeof(capture) <= sizeof(rec->data))) {
+        if (sizeof(capture) <= sizeof(rec->data)) {
             /* Without these pragmas, GCC warns that there might not be
                enough space to use the placement new operator. However, the
                'if' statement above ensures that this is the case. */
-#if defined(__GNUG__) && __GNUC__ >= 6 && !defined(__clang__) && !defined(__INTEL_COMPILER)
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wplacement-new"
+            PYBIND11_WARNING_PUSH
+
+#if defined(__GNUG__) && __GNUC__ >= 6
+            PYBIND11_WARNING_DISABLE_GCC("-Wplacement-new")
 #endif
+
             new ((capture *) &rec->data) capture{std::forward<Func>(f)};
-#if defined(__GNUG__) && __GNUC__ >= 6 && !defined(__clang__) && !defined(__INTEL_COMPILER)
-#    pragma GCC diagnostic pop
+
+#if !PYBIND11_HAS_STD_LAUNDER
+            PYBIND11_WARNING_DISABLE_GCC("-Wstrict-aliasing")
 #endif
-#if defined(__GNUG__) && !PYBIND11_HAS_STD_LAUNDER && !defined(__INTEL_COMPILER)
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
+
             // UB without std::launder, but without breaking ABI and/or
             // a significant refactoring it's "impossible" to solve.
             if (!std::is_trivially_destructible<capture>::value) {
@@ -202,9 +204,7 @@ protected:
                     data->~capture();
                 };
             }
-#if defined(__GNUG__) && !PYBIND11_HAS_STD_LAUNDER && !defined(__INTEL_COMPILER)
-#    pragma GCC diagnostic pop
-#endif
+            PYBIND11_WARNING_POP
         } else {
             rec->data[0] = new capture{std::forward<Func>(f)};
             rec->free_data = [](function_record *r) { delete ((capture *) r->data[0]); };
@@ -245,10 +245,16 @@ protected:
             using Guard = extract_guard_t<Extra...>;
 
             /* Perform the function call */
-            handle result
-                = cast_out::cast(std::move(args_converter).template call<Return, Guard>(cap->f),
-                                 policy,
-                                 call.parent);
+            handle result;
+            if (call.func.is_setter) {
+                (void) std::move(args_converter).template call<Return, Guard>(cap->f);
+                result = none().release();
+            } else {
+                result = cast_out::cast(
+                    std::move(args_converter).template call<Return, Guard>(cap->f),
+                    policy,
+                    call.parent);
+            }
 
             /* Invoke call policy post-call hook */
             process_attributes<Extra...>::postcall(call, result);
@@ -312,6 +318,10 @@ protected:
     // along the way.
     class strdup_guard {
     public:
+        strdup_guard() = default;
+        strdup_guard(const strdup_guard &) = delete;
+        strdup_guard &operator=(const strdup_guard &) = delete;
+
         ~strdup_guard() {
             for (auto *s : strings) {
                 std::free(s);
@@ -366,7 +376,7 @@ protected:
         rec->is_constructor = (std::strcmp(rec->name, "__init__") == 0)
                               || (std::strcmp(rec->name, "__setstate__") == 0);
 
-#if !defined(NDEBUG) && !defined(PYBIND11_DISABLE_NEW_STYLE_INIT_WARNING)
+#if defined(PYBIND11_DETAILED_ERROR_MESSAGES) && !defined(PYBIND11_DISABLE_NEW_STYLE_INIT_WARNING)
         if (rec->is_constructor && !rec->is_new_style_constructor) {
             const auto class_name
                 = detail::get_fully_qualified_tp_name((PyTypeObject *) rec->scope.ptr());
@@ -464,13 +474,20 @@ protected:
         if (rec->sibling) {
             if (PyCFunction_Check(rec->sibling.ptr())) {
                 auto *self = PyCFunction_GET_SELF(rec->sibling.ptr());
-                capsule rec_capsule = isinstance<capsule>(self) ? reinterpret_borrow<capsule>(self)
-                                                                : capsule(self);
-                chain = (detail::function_record *) rec_capsule;
-                /* Never append a method to an overload chain of a parent class;
-                   instead, hide the parent's overloads in this case */
-                if (!chain->scope.is(rec->scope)) {
+                if (!isinstance<capsule>(self)) {
                     chain = nullptr;
+                } else {
+                    auto rec_capsule = reinterpret_borrow<capsule>(self);
+                    if (detail::is_function_record_capsule(rec_capsule)) {
+                        chain = rec_capsule.get_pointer<detail::function_record>();
+                        /* Never append a method to an overload chain of a parent class;
+                           instead, hide the parent's overloads in this case */
+                        if (!chain->scope.is(rec->scope)) {
+                            chain = nullptr;
+                        }
+                    } else {
+                        chain = nullptr;
+                    }
                 }
             }
             // Don't trigger for things like the default __init__, which are wrapper_descriptors
@@ -491,6 +508,7 @@ protected:
             rec->def->ml_flags = METH_VARARGS | METH_KEYWORDS;
 
             capsule rec_capsule(unique_rec.release(),
+                                detail::get_function_record_capsule_name(),
                                 [](void *ptr) { destruct((detail::function_record *) ptr); });
             guarded_strdup.release();
 
@@ -514,8 +532,9 @@ protected:
             if (chain->is_method != rec->is_method) {
                 pybind11_fail(
                     "overloading a method with both static and instance methods is not supported; "
-#if defined(NDEBUG)
-                    "compile in debug mode for more details"
+#if !defined(PYBIND11_DETAILED_ERROR_MESSAGES)
+                    "#define PYBIND11_DETAILED_ERROR_MESSAGES or compile in debug mode for more "
+                    "details"
 #else
                     "error while attempting to bind "
                     + std::string(rec->is_method ? "instance" : "static") + " method "
@@ -656,10 +675,13 @@ protected:
     /// Main dispatch logic for calls to functions bound using pybind11
     static PyObject *dispatcher(PyObject *self, PyObject *args_in, PyObject *kwargs_in) {
         using namespace detail;
+        assert(isinstance<capsule>(self));
 
         /* Iterator over the list of potentially admissible overloads */
-        const function_record *overloads = (function_record *) PyCapsule_GetPointer(self, nullptr),
+        const function_record *overloads = reinterpret_cast<function_record *>(
+                                  PyCapsule_GetPointer(self, get_function_record_capsule_name())),
                               *it = overloads;
+        assert(overloads != nullptr);
 
         /* Need to know how many arguments + keyword arguments there are to pick the right
            overload */
@@ -902,7 +924,7 @@ protected:
 
 // 5. Put everything in a vector.  Not technically step 5, we've been building it
 // in `call.args` all along.
-#if !defined(NDEBUG)
+#if defined(PYBIND11_DETAILED_ERROR_MESSAGES)
                 if (call.args.size() != func.nargs || call.args_convert.size() != func.nargs) {
                     pybind11_fail("Internal error: function call dispatcher inserted wrong number "
                                   "of arguments!");
@@ -1168,9 +1190,16 @@ public:
             py::module_ m3 = m2.def_submodule("subsub", "A submodule of 'example.sub'");
     \endrst */
     module_ def_submodule(const char *name, const char *doc = nullptr) {
-        std::string full_name
-            = std::string(PyModule_GetName(m_ptr)) + std::string(".") + std::string(name);
-        auto result = reinterpret_borrow<module_>(PyImport_AddModule(full_name.c_str()));
+        const char *this_name = PyModule_GetName(m_ptr);
+        if (this_name == nullptr) {
+            throw error_already_set();
+        }
+        std::string full_name = std::string(this_name) + '.' + name;
+        handle submodule = PyImport_AddModule(full_name.c_str());
+        if (!submodule) {
+            throw error_already_set();
+        }
+        auto result = reinterpret_borrow<module_>(submodule);
         if (doc && options::show_user_defined_docstrings()) {
             result.attr("__doc__") = pybind11::str(doc);
         }
@@ -1404,9 +1433,9 @@ template <typename T, enable_if_t<has_operator_delete<T>::value, int> = 0>
 void call_operator_delete(T *p, size_t, size_t) {
     T::operator delete(p);
 }
-template <
-    typename T,
-    enable_if_t<!has_operator_delete<T>::value && has_operator_delete_size<T>::value, int> = 0>
+template <typename T,
+          enable_if_t<!has_operator_delete<T>::value && has_operator_delete_size<T>::value, int>
+          = 0>
 void call_operator_delete(T *p, size_t s, size_t) {
     T::operator delete(p, s);
 }
@@ -1561,18 +1590,19 @@ public:
                         scope(*this),
                         sibling(getattr(*this, name_, none())),
                         extra...);
-        attr(cf.name()) = staticmethod(cf);
+        auto cf_name = cf.name();
+        attr(std::move(cf_name)) = staticmethod(std::move(cf));
         return *this;
     }
 
-    template <detail::op_id id, detail::op_type ot, typename L, typename R, typename... Extra>
-    class_ &def(const detail::op_<id, ot, L, R> &op, const Extra &...extra) {
+    template <typename T, typename... Extra, detail::enable_if_t<T::op_enable_if_hook, int> = 0>
+    class_ &def(const T &op, const Extra &...extra) {
         op.execute(*this, extra...);
         return *this;
     }
 
-    template <detail::op_id id, detail::op_type ot, typename L, typename R, typename... Extra>
-    class_ &def_cast(const detail::op_<id, ot, L, R> &op, const Extra &...extra) {
+    template <typename T, typename... Extra, detail::enable_if_t<T::op_enable_if_hook, int> = 0>
+    class_ &def_cast(const T &op, const Extra &...extra) {
         op.execute_cast(*this, extra...);
         return *this;
     }
@@ -1615,7 +1645,7 @@ public:
                 if (!caster.load(obj, false)) {
                     return nullptr;
                 }
-                return new buffer_info(((capture *) ptr)->func(caster));
+                return new buffer_info(((capture *) ptr)->func(std::move(caster)));
             },
             ptr);
         weakref(m_ptr, cpp_function([ptr](handle wr) {
@@ -1706,7 +1736,8 @@ public:
     template <typename Getter, typename Setter, typename... Extra>
     class_ &
     def_property(const char *name, const Getter &fget, const Setter &fset, const Extra &...extra) {
-        return def_property(name, fget, cpp_function(method_adaptor<type>(fset)), extra...);
+        return def_property(
+            name, fget, cpp_function(method_adaptor<type>(fset), is_setter()), extra...);
     }
     template <typename Getter, typename... Extra>
     class_ &def_property(const char *name,
@@ -1817,7 +1848,7 @@ private:
         if (holder_ptr) {
             init_holder_from_existing(v_h, holder_ptr, std::is_copy_constructible<holder_type>());
             v_h.set_holder_constructed();
-        } else if (inst->owned || detail::always_construct_holder<holder_type>::value) {
+        } else if (detail::always_construct_holder<holder_type>::value || inst->owned) {
             new (std::addressof(v_h.holder<holder_type>())) holder_type(v_h.value_ptr<type>());
             v_h.set_holder_constructed();
         }
@@ -1857,9 +1888,22 @@ private:
 
     static detail::function_record *get_function_record(handle h) {
         h = detail::get_function(h);
-        return h ? (detail::function_record *) reinterpret_borrow<capsule>(
-                   PyCFunction_GET_SELF(h.ptr()))
-                 : nullptr;
+        if (!h) {
+            return nullptr;
+        }
+
+        handle func_self = PyCFunction_GET_SELF(h.ptr());
+        if (!func_self) {
+            throw error_already_set();
+        }
+        if (!isinstance<capsule>(func_self)) {
+            return nullptr;
+        }
+        auto cap = reinterpret_borrow<capsule>(func_self);
+        if (!detail::is_function_record_capsule(cap)) {
+            return nullptr;
+        }
+        return cap.get_pointer<detail::function_record>();
     }
 };
 
@@ -1920,7 +1964,8 @@ struct enum_base {
             [](const object &arg) -> str {
                 handle type = type::handle_of(arg);
                 object type_name = type.attr("__name__");
-                return pybind11::str("<{}.{}: {}>").format(type_name, enum_name(arg), int_(arg));
+                return pybind11::str("<{}.{}: {}>")
+                    .format(std::move(type_name), enum_name(arg), int_(arg));
             },
             name("__repr__"),
             is_method(m_base));
@@ -1930,34 +1975,40 @@ struct enum_base {
         m_base.attr("__str__") = cpp_function(
             [](handle arg) -> str {
                 object type_name = type::handle_of(arg).attr("__name__");
-                return pybind11::str("{}.{}").format(type_name, enum_name(arg));
+                return pybind11::str("{}.{}").format(std::move(type_name), enum_name(arg));
             },
             name("name"),
             is_method(m_base));
 
-        m_base.attr("__doc__") = static_property(
-            cpp_function(
-                [](handle arg) -> std::string {
-                    std::string docstring;
-                    dict entries = arg.attr("__entries");
-                    if (((PyTypeObject *) arg.ptr())->tp_doc) {
-                        docstring += std::string(((PyTypeObject *) arg.ptr())->tp_doc) + "\n\n";
-                    }
-                    docstring += "Members:";
-                    for (auto kv : entries) {
-                        auto key = std::string(pybind11::str(kv.first));
-                        auto comment = kv.second[int_(1)];
-                        docstring += "\n\n  " + key;
-                        if (!comment.is_none()) {
-                            docstring += " : " + (std::string) pybind11::str(comment);
+        if (options::show_enum_members_docstring()) {
+            m_base.attr("__doc__") = static_property(
+                cpp_function(
+                    [](handle arg) -> std::string {
+                        std::string docstring;
+                        dict entries = arg.attr("__entries");
+                        if (((PyTypeObject *) arg.ptr())->tp_doc) {
+                            docstring += std::string(
+                                reinterpret_cast<PyTypeObject *>(arg.ptr())->tp_doc);
+                            docstring += "\n\n";
                         }
-                    }
-                    return docstring;
-                },
-                name("__doc__")),
-            none(),
-            none(),
-            "");
+                        docstring += "Members:";
+                        for (auto kv : entries) {
+                            auto key = std::string(pybind11::str(kv.first));
+                            auto comment = kv.second[int_(1)];
+                            docstring += "\n\n  ";
+                            docstring += key;
+                            if (!comment.is_none()) {
+                                docstring += " : ";
+                                docstring += pybind11::str(comment).cast<std::string>();
+                            }
+                        }
+                        return docstring;
+                    },
+                    name("__doc__")),
+                none(),
+                none(),
+                "");
+        }
 
         m_base.attr("__members__") = static_property(cpp_function(
                                                          [](handle arg) -> dict {
@@ -2054,12 +2105,12 @@ struct enum_base {
         str name(name_);
         if (entries.contains(name)) {
             std::string type_name = (std::string) str(m_base.attr("__name__"));
-            throw value_error(type_name + ": element \"" + std::string(name_)
+            throw value_error(std::move(type_name) + ": element \"" + std::string(name_)
                               + "\" already exists!");
         }
 
-        entries[name] = std::make_pair(value, doc);
-        m_base.attr(name) = value;
+        entries[name] = pybind11::make_tuple(value, doc);
+        m_base.attr(std::move(name)) = std::move(value);
     }
 
     PYBIND11_NOINLINE void export_values() {
@@ -2402,7 +2453,8 @@ template <return_value_policy Policy = return_value_policy::reference_internal,
           typename Type,
           typename... Extra>
 iterator make_iterator(Type &value, Extra &&...extra) {
-    return make_iterator<Policy>(std::begin(value), std::end(value), extra...);
+    return make_iterator<Policy>(
+        std::begin(value), std::end(value), std::forward<Extra>(extra)...);
 }
 
 /// Makes an iterator over the keys (`.first`) of a stl map-like container supporting
@@ -2411,7 +2463,8 @@ template <return_value_policy Policy = return_value_policy::reference_internal,
           typename Type,
           typename... Extra>
 iterator make_key_iterator(Type &value, Extra &&...extra) {
-    return make_key_iterator<Policy>(std::begin(value), std::end(value), extra...);
+    return make_key_iterator<Policy>(
+        std::begin(value), std::end(value), std::forward<Extra>(extra)...);
 }
 
 /// Makes an iterator over the values (`.second`) of a stl map-like container supporting
@@ -2420,7 +2473,8 @@ template <return_value_policy Policy = return_value_policy::reference_internal,
           typename Type,
           typename... Extra>
 iterator make_value_iterator(Type &value, Extra &&...extra) {
-    return make_value_iterator<Policy>(std::begin(value), std::end(value), extra...);
+    return make_value_iterator<Policy>(
+        std::begin(value), std::end(value), std::forward<Extra>(extra)...);
 }
 
 template <typename InputType, typename OutputType>
@@ -2449,7 +2503,7 @@ void implicitly_convertible() {
     };
 
     if (auto *tinfo = detail::get_type_info(typeid(OutputType))) {
-        tinfo->implicit_conversions.push_back(implicit_caster);
+        tinfo->implicit_conversions.emplace_back(std::move(implicit_caster));
     } else {
         pybind11_fail("implicitly_convertible: Unable to find type " + type_id<OutputType>());
     }
@@ -2485,7 +2539,7 @@ public:
     exception(handle scope, const char *name, handle base = PyExc_Exception) {
         std::string full_name
             = scope.attr("__name__").cast<std::string>() + std::string(".") + name;
-        m_ptr = PyErr_NewException(const_cast<char *>(full_name.c_str()), base.ptr(), NULL);
+        m_ptr = PyErr_NewException(const_cast<char *>(full_name.c_str()), base.ptr(), nullptr);
         if (hasattr(scope, "__dict__") && scope.attr("__dict__").contains(name)) {
             pybind11_fail("Error during initialization: multiple incompatible "
                           "definitions with name \""
@@ -2567,8 +2621,8 @@ PYBIND11_NOINLINE void print(const tuple &args, const dict &kwargs) {
     for (size_t i = 0; i < args.size(); ++i) {
         strings[i] = str(args[i]);
     }
-    auto sep = kwargs.contains("sep") ? kwargs["sep"] : cast(" ");
-    auto line = sep.attr("join")(strings);
+    auto sep = kwargs.contains("sep") ? kwargs["sep"] : str(" ");
+    auto line = sep.attr("join")(std::move(strings));
 
     object file;
     if (kwargs.contains("file")) {
@@ -2586,8 +2640,8 @@ PYBIND11_NOINLINE void print(const tuple &args, const dict &kwargs) {
     }
 
     auto write = file.attr("write");
-    write(line);
-    write(kwargs.contains("end") ? kwargs["end"] : cast("\n"));
+    write(std::move(line));
+    write(kwargs.contains("end") ? kwargs["end"] : str("\n"));
 
     if (kwargs.contains("flush") && kwargs["flush"].cast<bool>()) {
         file.attr("flush")();
@@ -2601,17 +2655,21 @@ void print(Args &&...args) {
     detail::print(c.args(), c.kwargs());
 }
 
-error_already_set::~error_already_set() {
-    if (m_type) {
-        gil_scoped_acquire gil;
-        error_scope scope;
-        m_type.release().dec_ref();
-        m_value.release().dec_ref();
-        m_trace.release().dec_ref();
-    }
+inline void
+error_already_set::m_fetched_error_deleter(detail::error_fetch_and_normalize *raw_ptr) {
+    gil_scoped_acquire gil;
+    error_scope scope;
+    delete raw_ptr;
+}
+
+inline const char *error_already_set::what() const noexcept {
+    gil_scoped_acquire gil;
+    error_scope scope;
+    return m_fetched_error->error_string().c_str();
 }
 
 PYBIND11_NAMESPACE_BEGIN(detail)
+
 inline function
 get_type_override(const void *this_ptr, const type_info *this_type, const char *name) {
     handle self = get_object_handle(this_ptr, this_type);
@@ -2630,7 +2688,7 @@ get_type_override(const void *this_ptr, const type_info *this_type, const char *
 
     function override = getattr(self, name, function());
     if (override.is_cpp_function()) {
-        cache.insert(key);
+        cache.insert(std::move(key));
         return function();
     }
 
@@ -2830,7 +2888,3 @@ inline function get_overload(const T *this_ptr, const char *name) {
     PYBIND11_OVERRIDE_PURE(PYBIND11_TYPE(ret_type), PYBIND11_TYPE(cname), fn, __VA_ARGS__);
 
 PYBIND11_NAMESPACE_END(PYBIND11_NAMESPACE)
-
-#if defined(__GNUC__) && __GNUC__ == 7
-#    pragma GCC diagnostic pop // -Wnoexcept-type
-#endif

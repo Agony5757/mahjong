@@ -221,15 +221,15 @@ inline std::string call_to_string(Tile* head, std::vector<Tile*> call) {
 inline std::string wind_to_string(Wind wind) {
 	switch (wind) {
 	case Wind::East:
-		return "东";
+		return "East";
 	case Wind::South:
-		return "南";
+		return "South";
 	case Wind::West:
-		return "西";
+		return "West";
 	case Wind::North:
-		return "北";
+		return "North";
 	default:
-		return "??";
+		return "[UnknownWind]";
 	}
 }
 

@@ -33,8 +33,8 @@ string Player::to_string() const
 	if (call_groups.size() != 0)
 	{
 		str_fuuro += "Calls: ";
-		for (auto CallGroup : call_groups) {
-			str_fuuro += CallGroup.to_string();
+		for (auto call_group : call_groups) {
+			str_fuuro += call_group.to_string();
 			str_fuuro += ' ';
 		}
 		str_fuuro += '\n';
