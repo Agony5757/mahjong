@@ -76,7 +76,8 @@ inline auto find_match_tile(std::vector<Tile*>&tiles, Tile *t) -> decltype(tiles
 	return std::find(tiles.begin(), tiles.end(), t);
 }
 
-inline std::vector<Tile*> get_n_copies(std::vector<Tile*> tiles, BaseTile t, unsigned int n) {
+/* 获取n张相同牌，并返回 */
+inline std::vector<Tile*> get_n_copies(const std::vector<Tile*> &tiles, BaseTile t, unsigned int n) {
 
 	std::vector<Tile*> copy_tiles;
 	if (n > 4) { return copy_tiles; }
