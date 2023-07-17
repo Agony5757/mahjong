@@ -47,12 +47,12 @@ bool is_same_container(const T& a, const T& b)
 {
 	if (a.size() != b.size()) {
 		return false;
-
-		for (size_t i = 0; i < a.size(); ++i) {
-			if (a[i] != b[i]) return false;
-		}
-		return true;
 	}
+
+	for (size_t i = 0; i < a.size(); ++i) {
+		if (a[i] != b[i]) return false;
+	}
+	return true;
 }
 
 inline auto	find_match_tile(std::vector<Tile*>&tiles, BaseTile t) -> decltype(tiles.end())

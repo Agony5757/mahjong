@@ -515,8 +515,6 @@ vector<SelfAction> Player::riichi_get_ankan()
 				action.action = BaseAction::AnKan;
 				action.correspond_tiles.assign(duplicate.begin(), duplicate.end());
 				actions.push_back(action);
-
-				fmt::print("AnKan inserted.");
 			}
 		}
 	}
