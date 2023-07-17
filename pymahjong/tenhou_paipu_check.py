@@ -707,12 +707,13 @@ class PaipuReplay:
             path = basepath + "/paipuxmls"
         self._paipu_replay(path, paipu_name)
 
-def paipu_replay(path = None, mode = 'debug'):
+def paipu_replay(path = None, write_log = False, mode = 'debug'):
     if mode == 'debug':
         _logger = Logger(fp = 'stdout')
     else:
         _logger = Logger()
     replayer = PaipuReplay()
+    replayer.write_log = write_log
     replayer.logger = _logger
     replayer.paipu_replay(path, mode)
     print(replayer.progress())
