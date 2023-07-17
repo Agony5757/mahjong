@@ -4,7 +4,7 @@
 [![PyPI version](https://badge.fury.io/py/pymahjong.svg)](https://badge.fury.io/py/pymahjong)
 
 |Branch| Build |
-|:----:|:----:|:----:|
+|:----:|:----:|
 |master|[![Build-and-test](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml/badge.svg?branch=master)](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml)|
 |develop|[![Build-and-test](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml/badge.svg?branch=develop)](https://github.com/Agony5757/mahjong/actions/workflows/build-and-test.yml)|
 
