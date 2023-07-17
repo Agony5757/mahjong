@@ -8,46 +8,45 @@ namespace_mahjong
 
 enum class BaseAction : uint8_t {
 	// response begin
-	pass,
-	吃, 
-	碰,
-	杠,
-	荣和,
+	Pass,
+	Chi, 
+	Pon,
+	Kan,
+	Ron,
 	// response end
-	// 注意到所有的response Action可以通过大小来比较
+	// Response action can be compared.
 
-	抢暗杠,
-	抢杠,
+	ChanAnKan,
+	ChanKan,
 
-	// self action begin
-	暗杠,
-	加杠,
-	出牌,
-	立直,
-	自摸,
-	九种九牌,
-	// self action end
+	// Self action begin
+	AnKan,
+	KaKan,
+	Discard,
+	Riichi,
+	Tsumo,
+	Kyushukyuhai,
+	// Self action end
 };
 
 struct Action
 {
 	Action() = default;
 	Action(BaseAction action, std::vector<Tile*>);
-	BaseAction action = BaseAction::pass;
+	BaseAction action = BaseAction::Pass;
 
-	/* 关于corresponding_tile的约定
-	pass: empty (size=0)
-	吃/碰: 手牌中2张牌 (size=2)
-	杠: 手牌中3张牌 (size=3)
-	荣/抢杠/抢暗杠: 荣到的那1张牌 (size=1)
+	/* About corresponding_tile
+	Pass: empty (size=0)
+	Chi/Pon: 2 tiles in hand (size=2)
+	Kan: 3 tiles in hand (size=3)
+	AnKan: 4 tiles in hand (size=4)
+	KaKan: the tile in hand (size=1)
+	Ron/ChanKan/ChanAnKan: the atari tile (size=1)
+	Discard/Riichi: the discarded tile (size=1)	
+	Tsumo: empty (size=0)
+	Kyushukyuhai: the corresponding kyukai in hand (size>=9)
 
-	暗杠: 手牌中的4张牌 (size=4)
-	加杠: 手牌中的1张牌 (size=1)
-	出牌/立直: 手牌中的1张牌 (size=1)	
-	自摸: empty (size=0)
-	九种九牌: 能推的N种九牌，每种各一张 (size>=9)
-
-	所有的corresponding_tile默认是排序的，否则判断吃牌会出现一定的问题
+	The corresponding_tile is a sorted vector in default.
 	*/
 	std::vector<Tile*> correspond_tiles;
 	std::string to_string() const;
@@ -92,11 +91,10 @@ struct ResponseAction : public Action
 template<typename ActionType>
 int get_action_index(const std::vector<ActionType> &actions, BaseAction action_type, std::vector<Tile*> correspond_tiles)
 {
-
-	if (action_type == BaseAction::九种九牌 ||
-		action_type == BaseAction::荣和 ||
-		action_type == BaseAction::抢杠 ||
-		action_type == BaseAction::抢暗杠) {
+	if (action_type == BaseAction::Kyushukyuhai ||
+		action_type == BaseAction::Ron ||
+		action_type == BaseAction::ChanKan ||
+		action_type == BaseAction::ChanAnKan) {
 		for (int i = 0; i < actions.size(); ++i) {
 			if (actions[i].action == action_type)
 				return i;
@@ -118,10 +116,10 @@ int get_action_index(const std::vector<ActionType> &actions, BaseAction action_t
 	static_assert(std::is_base_of<Action, ActionType>::value, "Bad ActionType.");
 
 	// assume actions vector is sorted.
-	if (action_type == BaseAction::九种九牌 ||
-	    action_type == BaseAction::荣和 || 
-		action_type == BaseAction::抢杠 || 
-		action_type == BaseAction::抢暗杠) {
+	if (action_type == BaseAction::Kyushukyuhai ||
+		action_type == BaseAction::Ron ||
+		action_type == BaseAction::ChanKan ||
+		action_type == BaseAction::ChanAnKan) {
 		for (int i = 0; i < actions.size(); ++i) {
 			if (actions[i].action == action_type)
 				return i;

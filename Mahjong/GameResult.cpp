@@ -4,45 +4,45 @@
 #include "macro.h"
 #include "Rule.h"
 
-namespace_mahjong
 using namespace std;
+namespace_mahjong
 
-static Result 中途流局结算(Table *table) {
+static Result ryukyouku_interval(Table *table) {
 	Result result;
-	result.result_type = ResultType::中途流局;
+	result.result_type = ResultType::Ryukyouku_Interval;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->players[i].score;
 
-	result.连庄 = true;
-	result.n本场 = table->n本场 + 1;
-	result.n立直棒 = table->n立直棒;
+	result.renchan = true;
+	result.n_honba = table->honba + 1;
+	result.n_riichibo = table->kyoutaku;
 
 	return result;
 }
 
-Result 九种九牌流局结算(Table *table)
+Result generate_result_9hai(Table *table)
 {
-	return 中途流局结算(table);
+	return ryukyouku_interval(table);
 }
 
-Result 四风连打流局结算(Table *table)
+Result generate_result_4wind(Table *table)
 {
-	return 中途流局结算(table);
+	return ryukyouku_interval(table);
 }
 
-Result 四立直流局结算(Table *table)
+Result generate_result_4riichi(Table *table)
 {
-	return 中途流局结算(table);
+	return ryukyouku_interval(table);
 }
 
-Result 四杠流局结算(Table *table)
+Result generate_result_4kan(Table *table)
 {
-	return 中途流局结算(table);
+	return ryukyouku_interval(table);
 }
 
-bool is流局满贯(River r) {
+bool is_nagashi_mangan(River r) {
 	return all_of(r.river.begin(), r.river.end(), [](RiverTile& tile){
-		if (is_幺九牌(tile.tile->tile) && tile.remain) {
+		if (is_yaochuhai(tile.tile->tile) && tile.remain) {
 			// remain 表示还在河里
 			// 然后全是幺九牌
 			return true;
@@ -51,44 +51,44 @@ bool is流局满贯(River r) {
 	});
 }
 
-Result 荒牌流局结算(Table * table)
+Result generate_result_notile(Table * table)
 {
 	//cout << "Warning: 罚符 is not considered" << endl;
-	//cout << "Warning: 流局满贯 is not considered" << endl;
+	//cout << "Warning: NagashiMangan is not considered" << endl;
 
 	Result result;
 	
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->players[i].score;
 
-	int 流局满贯人数 = 0;
-	bool 流局满贯[4] = { false,false,false,false };
+	int n_nagashimangan = 0;
+	bool nagashi_mangan_status[4] = { false,false,false,false };
 	// 统计流局满贯的人数
 	for (int i = 0; i < 4; ++i) {
-		if (is流局满贯(table->players[i].river)) {
-			流局满贯[i] = true;
-			流局满贯人数++;
+		if (is_nagashi_mangan(table->players[i].river)) {
+			nagashi_mangan_status[i] = true;
+			n_nagashimangan++;
 		}
 	}
 	
-	if (流局满贯人数 > 0) {
-		result.result_type = ResultType::流局满贯;
-		if (流局满贯[table->庄家])
-			result.连庄 = true;
+	if (n_nagashimangan > 0) {
+		result.result_type = ResultType::NagashiMangan;
+		if (nagashi_mangan_status[table->oya])
+			result.renchan = true;
 		else 
-			result.连庄 = false;
+			result.renchan = false;
 
-		result.n本场 = table->n本场 + 1;
-		result.n立直棒 = table->n立直棒;
-		if (流局满贯人数 == 4) {
+		result.n_honba = table->honba + 1;
+		result.n_riichibo = table->kyoutaku;
+		if (n_nagashimangan == 4) {
 			// 不涉及到分数支付
 		}
-		else if (流局满贯人数 == 3) {
-			if (流局满贯[table->庄家])
+		else if (n_nagashimangan == 3) {
+			if (nagashi_mangan_status[table->oya])
 			{
-				result.score[table->庄家] += 2000;
+				result.score[table->oya] += 2000;
 				for (int i = 0; i < 4; ++i) {
-					if (流局满贯[i])
+					if (nagashi_mangan_status[i])
 						result.score[i] += 2000;
 					else
 						result.score[i] -= 8000;
@@ -97,19 +97,19 @@ Result 荒牌流局结算(Table * table)
 			else
 			{
 				for (int i = 0; i < 4; ++i) {
-					if (流局满贯[i])
+					if (nagashi_mangan_status[i])
 						result.score[i] += 4000;
 					else
 						result.score[i] -= 8000;
 				}
 			}
 		}
-		else if (流局满贯人数 == 2){
-			if (流局满贯[table->庄家])
+		else if (n_nagashimangan == 2){
+			if (nagashi_mangan_status[table->oya])
 			{
-				result.score[table->庄家] += 4000;
+				result.score[table->oya] += 4000;
 				for (int i = 0; i < 4; ++i) {
-					if (流局满贯[i])
+					if (nagashi_mangan_status[i])
 						result.score[i] += 4000;
 					else
 						result.score[i] -= 6000;
@@ -117,20 +117,20 @@ Result 荒牌流局结算(Table * table)
 			}
 			else
 			{
-				result.score[table->庄家] -= 4000;
+				result.score[table->oya] -= 4000;
 				for (int i = 0; i < 4; ++i) {
-					if (流局满贯[i])
+					if (nagashi_mangan_status[i])
 						result.score[i] += 6000;
 					else
 						result.score[i] -= 4000;
 				}
 			}
 		}
-		else if (流局满贯人数 == 1) {
-			if (流局满贯[table->庄家])
+		else if (n_nagashimangan == 1) {
+			if (nagashi_mangan_status[table->oya])
 			{
 				for (int i = 0; i < 4; ++i) {
-					if (流局满贯[i])
+					if (nagashi_mangan_status[i])
 						result.score[i] += 12000;
 					else
 						result.score[i] -= 4000;
@@ -138,9 +138,9 @@ Result 荒牌流局结算(Table * table)
 			}
 			else
 			{
-				result.score[table->庄家] -= 2000;
+				result.score[table->oya] -= 2000;
 				for (int i = 0; i < 4; ++i) {
-					if (流局满贯[i])
+					if (nagashi_mangan_status[i])
 						result.score[i] += 8000;
 					else
 						result.score[i] -= 2000;
@@ -149,51 +149,54 @@ Result 荒牌流局结算(Table * table)
 		}
 	}
 	else {
-		result.result_type = ResultType::荒牌流局;
+		result.result_type = ResultType::Ryukyouku_Notile;
 		// 统计罚符
 		// 开始统计四人听牌的状态	
-		int 听牌人数 = 0;
-		bool 听牌[4] = {false, false, false, false};
+
+		// the number of tenpai players
+		int n_tenpai = 0;
+		// the atari status
+		bool tenpai_status[4] = {false, false, false, false};
 
 		for (int i = 0; i < 4; ++i) {
-			if (get听牌(convert_tiles_to_basetiles(table->players[i].hand)).size() > 0) {
-				听牌[i] = true;
-				听牌人数++;
+			if (get_atari_hai(convert_tiles_to_basetiles(table->players[i].hand)).size() > 0) {
+				tenpai_status[i] = true;
+				n_tenpai++;
 			}
 			else {
-				听牌[i] = false;
+				tenpai_status[i] = false;
 			}
 		}
 		// cout << "Warning: 空听 is not considered" << endl;
 
-		result.n本场 = table->n本场 + 1;
-		result.n立直棒 = table->n立直棒;
-		if (听牌[table->庄家])
-			result.连庄 = true;
+		result.n_honba = table->honba + 1;
+		result.n_riichibo = table->kyoutaku;
+		if (tenpai_status[table->oya])
+			result.renchan = true;
 		else
-			result.连庄 = false;
+			result.renchan = false;
 
-		if (听牌人数 == 4) {	}
-		else if (听牌人数 == 0) { }
-		else if (听牌人数 == 1) {
+		if (n_tenpai == 4) {	}
+		else if (n_tenpai == 0) { }
+		else if (n_tenpai == 1) {
 			for (int i = 0; i < 4; ++i) {
-				if (听牌[i])
+				if (tenpai_status[i])
 					result.score[i] += 3000;
 				else
 					result.score[i] -= 1000;
 			}
 		}
-		else if (听牌人数 == 2) {
+		else if (n_tenpai == 2) {
 			for (int i = 0; i < 4; ++i) {
-				if (听牌[i])
+				if (tenpai_status[i])
 					result.score[i] += 1500;
 				else
 					result.score[i] -= 1500;
 			}
 		}
-		else if (听牌人数 == 3) {
+		else if (n_tenpai == 3) {
 			for (int i = 0; i < 4; ++i) {
-				if (听牌[i])
+				if (tenpai_status[i])
 					result.score[i] += 1000;
 				else
 					result.score[i] -= 3000;
@@ -204,10 +207,10 @@ Result 荒牌流局结算(Table * table)
 	return result;
 }
 
-Result 自摸结算(Table * table)
+Result generate_result_tsumo(Table * table)
 {
 	Result result;
-	result.result_type = ResultType::自摸终局;
+	result.result_type = ResultType::TsumoAgari;
 	int winner = table->turn;
 	// 一人赢
 	result.winner.push_back(winner);
@@ -215,26 +218,26 @@ Result 自摸结算(Table * table)
 	// 三人输
 	for (int i = 0; i < 4; ++i) if (i != winner) result.loser.push_back(i);
 
-	auto yakus = yaku_counter(table, table->players[winner], nullptr, false, false, table->players[winner].wind, table->场风);
-	bool is亲 = false;
-	if (table->turn == table->庄家)
-		is亲 = true;
-	yakus.calculate_score(is亲, true);
+	auto yakus = yaku_counter(table, table->players[winner], nullptr, false, false, table->players[winner].wind, table->game_wind);
+	bool is_oya = false;
+	if (table->turn == table->oya)
+		is_oya = true;
+	yakus.calculate_score(is_oya, true);
 
 	for (int i = 0; i < 4; ++i) {
 		result.score[i] = table->players[i].score;
 	}
 
-	if (is亲) {
+	if (is_oya) {
 		for (int i = 0; i < 4; ++i) {
 			if (i == winner) {
 				result.score[i] += (yakus.score1 * 3);
-				result.score[i] += (table->n立直棒 * 1000);
-				result.score[i] += (table->n本场 * 300);
+				result.score[i] += (table->kyoutaku * 1000);
+				result.score[i] += (table->honba * 300);
 			}
 			else {
 				result.score[i] -= (yakus.score1);
-				result.score[i] -= (table->n本场 * 100);
+				result.score[i] -= (table->honba * 100);
 			}
 		}
 	}
@@ -244,40 +247,40 @@ Result 自摸结算(Table * table)
 				result.score[i] += yakus.score1;
 				result.score[i] += yakus.score2;
 				result.score[i] += yakus.score2;
-				result.score[i] += (table->n立直棒 * 1000);
-				result.score[i] += (table->n本场 * 300);
+				result.score[i] += (table->kyoutaku * 1000);
+				result.score[i] += (table->honba * 300);
 			}
-			else if (i == table->庄家) {
+			else if (i == table->oya) {
 				result.score[i] -= (yakus.score1);
-				result.score[i] -= (table->n本场 * 100);
+				result.score[i] -= (table->honba * 100);
 			}
 			else {
 				result.score[i] -= (yakus.score2);
-				result.score[i] -= (table->n本场 * 100);
+				result.score[i] -= (table->honba * 100);
 			}
 		}
 	}
-	result.result_type = ResultType::自摸终局;
+	result.result_type = ResultType::TsumoAgari;
 	
-	if (winner == table->庄家)
+	if (winner == table->oya)
 	{
-		result.n本场 = table->n本场 + 1;
-		result.连庄 = true;
+		result.n_honba = table->honba + 1;
+		result.renchan = true;
 	}
 	else
 	{
-		result.连庄 = false;
-		result.n本场 = 0;
+		result.renchan = false;
+		result.n_honba = 0;
 	}
-	result.n立直棒 = 0;
+	result.n_riichibo = 0;
 	result.results.insert({ winner, yakus });
 	return result;
 }
 
-Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_player, bool 抢杠, bool 抢暗杠)
+Result generate_result_ron(Table *table, Tile *agari_tile, std::vector<int> response_player, bool chankan, bool chanankan)
 {
 	Result result;
-	result.result_type = ResultType::荣和终局;
+	result.result_type = ResultType::RonAgari;
 
 	result.loser.push_back(table->turn); // 当回合的玩家是loser
 	result.winner.assign(response_player.begin(), response_player.end());
@@ -287,8 +290,8 @@ Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_pl
 	}
 
 	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, table->players[winner], agari_tile, 抢杠, 抢暗杠, table->players[winner].wind, table->场风);
-		yaku.calculate_score(winner == table->庄家, false);
+		auto yaku = yaku_counter(table, table->players[winner], agari_tile, chankan, chanankan, table->players[winner].wind, table->game_wind);
+		yaku.calculate_score(winner == table->oya, false);
 
 		result.results.insert({ winner, yaku });
 
@@ -301,34 +304,34 @@ Result 荣和结算(Table *table, Tile *agari_tile, std::vector<int> response_pl
 	int loser = table->turn;
 	auto iter = min_element(response_player.begin(), response_player.end(), 
 		[loser](int x1, int x2) {
-		return get_distance(loser, x1) < get_distance(loser, x2);
+		return get_player_distance(loser, x1) < get_player_distance(loser, x2);
 	});
-	result.score[*iter] += (table->n立直棒 * 1000);
-	result.score[*iter] += table->n本场 * 300;
-	result.score[table->turn] -= table->n本场 * 300;
+	result.score[*iter] += (table->kyoutaku * 1000);
+	result.score[*iter] += table->honba * 300;
+	result.score[table->turn] -= table->honba * 300;
 
-	if (is_in(response_player, table->庄家))
+	if (is_in(response_player, table->oya))
 	{
-		result.n本场 = table->n本场 + 1;
-		result.连庄 = true;
+		result.n_honba = table->honba + 1;
+		result.renchan = true;
 	}
 	else
 	{
-		result.连庄 = false;
-		result.n本场 = 0;
+		result.renchan = false;
+		result.n_honba = 0;
 	}
-	result.n立直棒 = 0;
+	result.n_riichibo = 0;
 	return result;
 }
 
-Result 抢暗杠结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
+Result generate_result_chanankan(Table * table, Tile* agari_tile, std::vector<int> response_player)
 {
-	return 荣和结算(table, agari_tile, response_player, false, true);
+	return generate_result_ron(table, agari_tile, response_player, false, true);
 }
 
-Result 抢杠结算(Table * table, Tile* agari_tile, std::vector<int> response_player)
+Result generate_result_chankan(Table * table, Tile* agari_tile, std::vector<int> response_player)
 {
-	return 荣和结算(table, agari_tile, response_player, true, false);
+	return generate_result_ron(table, agari_tile, response_player, true, false);
 }
 
 namespace_mahjong_end

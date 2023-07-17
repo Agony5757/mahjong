@@ -24,8 +24,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     
-#     - name: Install Anaconda
-#       run: wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && sudo chmod +x miniconda.sh && sudo ./miniconda.sh -b -p ~/anaconda3 && sudo ~/anaconda3/bin/conda init && sudo source ~/.bashrc
+    # - name: Install Anaconda
+    #   run: wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && sudo chmod +x miniconda.sh && ./miniconda.sh -b -p ~/anaconda3 && ~/anaconda3/bin/conda init && source ~/.bashrc
         
     - name: Install cmake, clang and p7zip
       run: sudo apt install -y clang cmake p7zip-full
@@ -35,5 +35,5 @@ jobs:
       run: sudo python setup.py install
       
     - name: Test
-      run: wget https://github.com/Agony5757/mahjong/releases/download/v1.0.0/paipuxmls.7z && 7z x paipuxmls.7z && python -c "import pymahjong as pm;pm.test();pm.paipu_replay(mode='debug')"
+      run: python -c "import pymahjong as pm;pm.test()" && wget https://github.com/Agony5757/mahjong/releases/download/v1.0.0/paipuxmls.7z && 7z x paipuxmls.7z && python -c "import pymahjong as pm;pm.paipu_replay(mode='debug')"
         

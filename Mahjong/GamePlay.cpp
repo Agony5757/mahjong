@@ -1,24 +1,26 @@
 ﻿#include "GamePlay.h"
 #include "macro.h"
 
-namespace_mahjong
 using namespace std;
 
-void PaipuReplayer::init(vector<int> yama, vector<int> init_scores, int 立直棒, int 本场, int 场风, int 亲家)
+namespace_mahjong
+
+void PaipuReplayer::init(const vector<int> &yama, const vector<int> &init_scores, int kyoutaku, int honba, int game_wind, int oya)
 {	
 	if (write_log)
 		table.set_debug_mode(Table::debug_buffer);
-	table.game_init_for_replay(yama, init_scores, 立直棒, 本场, 场风, 亲家);
+	
+	table.game_init_for_replay(yama, init_scores, kyoutaku, honba, game_wind, oya);
 
-	/*if (write_log) {
+	if (write_log) {
 		FILE* fp = fopen("replay.log", "w+");
 		fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
 			vec2str(yama).c_str(),
 			vec2str(init_scores).c_str(),
-			立直棒, 本场, 场风, 亲家);
+			kyoutaku, honba, game_wind, oya);
 
 		fclose(fp);
-	}*/
+	}
 }
 
 vector<SelfAction> PaipuReplayer::get_self_actions() const
@@ -42,11 +44,11 @@ bool PaipuReplayer::make_selection(int selection)
 	//     if (selection >= get_response_actions().size())
 	// 		return false; 		
 
-	/*if (write_log) {
+	if (write_log) {
 		FILE* fp = fopen("replay.log", "a+");
 		fprintf(fp, "table.make_selection(%d);\n", selection);
 		fclose(fp);
-	}*/
+	}
 	table.make_selection(selection);
 	return true;
 }

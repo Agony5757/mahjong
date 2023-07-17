@@ -17,7 +17,7 @@ struct CounterResult {
 	int score1 = 0;
 	int score2 = 0; // 自摸时用。score1=亲，score2=子
 
-	void calculate_score(bool 亲, bool 自摸);
+	void calculate_score(bool oya, bool tsumo);
 	
 	int fan = 0;
 	int fu = 0;

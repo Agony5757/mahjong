@@ -60,6 +60,10 @@ public:
 		return river[n];
 	}
 
+	inline const RiverTile& operator[](size_t n) const {
+		return river[n];
+	}
+
 	inline size_t size() const {
 		return river.size();
 	}
@@ -78,88 +82,78 @@ public:
 	bool double_riichi = false;
 	bool riichi = false;
 
-	bool 门清 = true;
+	bool menzen = true;
 	Wind wind;
-	bool 亲家;
-	bool 同巡振听 = false;
-	bool 舍牌振听 = false;
-	bool 立直振听 = false;
+	bool oya;
+	bool furiten_round = false;
+	bool furiten_river = false;
+	bool furiten_riichi = false;
 	int score = 25000;
 	std::vector<Tile*> hand;
 	River river;
-	std::vector<Fulu> 副露s;
-	std::vector<BaseTile> 听牌;
+	std::vector<CallGroup> call_groups;
+	std::vector<BaseTile> atari_tiles;
 
-	bool 一发 = false;
+	bool ippatsu = false;
 	bool first_round = true;
 
 	Player();
 	Player(int init_score);
 	inline bool is_riichi() const { return riichi || double_riichi; }
-	inline bool is振听()  const { return 同巡振听 || 舍牌振听 || 立直振听; }
-	inline std::vector<Fulu> get_fuuros() { return 副露s; }
+	inline bool is_furiten()  const { return furiten_round || furiten_river || furiten_riichi; }
+	inline std::vector<CallGroup> get_fuuros() { return call_groups; }
 	inline River get_river() { return river; }
 	std::string hand_to_string() const;
 	std::string river_to_string() const;
 	std::string to_string() const;
 	std::string tenpai_to_string() const;
 
-	void update_听牌();
-	void update_舍牌振听();
-	void remove_听牌(BaseTile t);
+	void update_atari_tiles();
+	void update_furiten_river();
+	void remove_atari_tiles(BaseTile t);
 
 	inline void 见逃() {
-		if (riichi) 立直振听 = true;
-		else 同巡振听 = true;
+		if (riichi) furiten_riichi = true;
+		else furiten_round = true;
 	}
 	int get_normal向胡数() const;
 	// Generate SelfAction
-	std::vector<SelfAction> get_加杠() const ; // 能否杠的过滤统一交给Table
-	std::vector<SelfAction> get_暗杠() const ; // 能否杠的过滤统一交给Table
-	std::vector<SelfAction> get_打牌(bool after_chipon) const;
-	std::vector<SelfAction> get_自摸(const Table* table) const ;
-	std::vector<SelfAction> get_立直() const;
-	std::vector<SelfAction> get_九种九牌() const;
+	std::vector<SelfAction> get_kakan() const; // 能否杠的过滤统一交给Table
+	std::vector<SelfAction> get_ankan() const; // 能否杠的过滤统一交给Table
+	std::vector<SelfAction> get_discard(bool after_chipon) const;
+	std::vector<SelfAction> get_tsumo(const Table* table) const;
+	std::vector<SelfAction> get_riichi() const;
+	std::vector<SelfAction> get_kyushukyuhai() const;
 
 	// Generate ResponseAction
-	std::vector<ResponseAction> get_荣和(Table*, Tile* tile);
-	std::vector<ResponseAction> get_Chi(Tile* tile);
-	std::vector<ResponseAction> get_Pon(Tile* tile);
-	std::vector<ResponseAction> get_Kan(Tile* tile); // 大明杠
+	std::vector<ResponseAction> get_ron(Table*, Tile* tile);
+	std::vector<ResponseAction> get_chi(Tile* tile);
+	std::vector<ResponseAction> get_pon(Tile* tile);
+	std::vector<ResponseAction> get_kan(Tile* tile); // 大明杠
 
-	// Generate ResponseAction (抢暗杠)
-	std::vector<ResponseAction> get_抢暗杠(Tile* tile);
+	// Generate ResponseAction (Chan An Kan)
+	std::vector<ResponseAction> get_chanankan(Tile* tile);
 
-	// Generate ResponseAction (抢杠)
-	std::vector<ResponseAction> get_抢杠(Tile* tile);
+	// Generate ResponseAction (Chan Kan)
+	std::vector<ResponseAction> get_chankan(Tile* tile);
 
-	// Generate 立直后 SelfAction
-	std::vector<SelfAction> riichi_get_暗杠();
-	std::vector<SelfAction> riichi_get_打牌();
+	// Generate SelfAction after riichi
+	std::vector<SelfAction> riichi_get_ankan();
+	std::vector<SelfAction> riichi_get_discard();
 
-	void move_from_hand_to_fulu(std::vector<Tile*> tiles, Tile* tile, int relative_position);
+	void execute_naki(std::vector<Tile*> tiles, Tile* tile, int relative_position);
 	void remove_from_hand(Tile* tile);
+	void execute_ankan(BaseTile tile);
+	void execute_kakan(Tile* tile);
 
-	// 将所有的BaseTile值为tile的四个牌移动到副露区
-	void play_暗杠(BaseTile tile);
-
-	// 移动tile到副露中和它basetile相同的刻子中
-	void play_加杠(Tile* tile);
-
-	// 将牌移动到牌河（一定没有人吃碰杠）
-	// remain指这张牌是不是明面上还在牌河
-	void move_from_hand_to_river(Tile* tile, int& number, bool on_riichi, bool fromhand);
+	/* execute discard whenever it is called by others. */
+	void execute_discard(Tile* tile, int& number, bool on_riichi, bool fromhand);
 
 	inline void set_not_remained() {
 		river.set_not_remain();
 	}
 
-	/*inline void move_from_hand_to_river_really(Tile* tile, int& number, bool fromhand) {
-		return move_from_hand_to_river(tile, number, true, fromhand);
-	}*/
-
 	void sort_hand();
-	void test_show_hand();
 };
 
 namespace_mahjong_end
