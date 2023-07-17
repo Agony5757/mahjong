@@ -223,7 +223,8 @@ vector<SelfAction> Player::get_tsumo(const Table* table) const
 
 	// 听牌列表里的牌可以被自摸
 	if (is_in(atari_tiles, hand.back()->tile)) {
-		auto result = yaku_counter(table, *this, nullptr, false, false, wind, table->game_wind);
+		ScoreCounter sc(table, this, nullptr, false, false);
+		auto&& result = sc.yaku_counter();
 		if (can_agari(result.yakus)) {
 			SelfAction action;
 			action.action = BaseAction::Tsumo;
@@ -348,7 +349,9 @@ vector<ResponseAction> Player::get_ron(Table* table, Tile* tile)
 
 	// 听牌列表里的才能荣
 	if (is_in(atari_tiles, tile->tile)) {
-		if (can_agari(yaku_counter(table, *this, tile, false, false, wind, table->game_wind).yakus)) {
+		ScoreCounter sc(table, this, tile, false, false);
+		auto&& result = sc.yaku_counter();
+		if (can_agari(result.yakus)) {
 			ResponseAction action;
 			action.action = BaseAction::Ron;
 			action.correspond_tiles = { tile };

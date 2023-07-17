@@ -155,12 +155,13 @@ std::vector<BaseTile> get_ordinary_atari_hai(std::vector<BaseTile> tiles);
 /* 特殊役 */
 
 bool is_7toitsu_shape(std::vector<BaseTile> tiles);
-
 std::vector<BaseTile> get_7toitsu_atari_hai(std::vector<BaseTile> tiles);
-
 bool is_kokushi_shape(std::vector<BaseTile> tiles);
-
 std::vector<BaseTile> get_kokushi_atari_hai(std::vector<BaseTile> tiles);
+
+/* 判断九莲牌型 （因为不属于特殊役，因此只需要从get_ordinary_atari_hai里面获取听牌 */
+bool is_churen_9_shape(std::vector<BaseTile> tiles);
+bool is_churen_shape(std::vector<BaseTile> tiles);
 
 // 不考虑无役的听牌情况
 std::vector<BaseTile> get_atari_hai(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
@@ -171,9 +172,6 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen);
 
 bool can_ron(std::vector<Tile*> hands, Tile* get_tile);
 bool can_tsumo(std::vector<Tile*> hands);
-
-bool is_churen_9_agari(std::vector<BaseTile> tiles);
-bool is_churen_agari(std::vector<BaseTile> tiles);
 
 namespace_mahjong_end
 

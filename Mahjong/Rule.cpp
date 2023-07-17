@@ -500,7 +500,7 @@ bool can_tsumo(std::vector<Tile*> hands)
 	return false;
 }
 
-bool is_churen_9_agari(std::vector<BaseTile> tiles)
+bool is_churen_9_shape(std::vector<BaseTile> tiles)
 {
 	if (tiles.size() != 14) return false;
 	int mpsz = tiles[0] / 9;
@@ -516,7 +516,7 @@ bool is_churen_9_agari(std::vector<BaseTile> tiles)
 	return true;
 }
 
-bool is_churen_agari(std::vector<BaseTile> tiles)
+bool is_churen_shape(std::vector<BaseTile> tiles)
 {
 	sort(tiles.begin(), tiles.end());
 	if (tiles.size() != 14) return false;

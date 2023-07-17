@@ -54,7 +54,7 @@ bool is_nagashi_mangan(River r) {
 Result generate_result_notile(Table * table)
 {
 	//cout << "Warning: 罚符 is not considered" << endl;
-	//cout << "Warning: NagashiMangan is not considered" << endl;
+	//cout << "Warning: 流局满贯 is not considered" << endl;
 
 	Result result;
 	
@@ -217,8 +217,8 @@ Result generate_result_tsumo(Table * table)
 
 	// 三人输
 	for (int i = 0; i < 4; ++i) if (i != winner) result.loser.push_back(i);
-
-	auto yakus = yaku_counter(table, table->players[winner], nullptr, false, false, table->players[winner].wind, table->game_wind);
+	ScoreCounter sc(table, &table->players[winner], nullptr, false, false);
+	auto yakus = sc.yaku_counter();
 	bool is_oya = false;
 	if (table->turn == table->oya)
 		is_oya = true;
@@ -290,7 +290,8 @@ Result generate_result_ron(Table *table, Tile *agari_tile, std::vector<int> resp
 	}
 
 	for (auto winner : response_player) {
-		auto yaku = yaku_counter(table, table->players[winner], agari_tile, chankan, chanankan, table->players[winner].wind, table->game_wind);
+		ScoreCounter sc(table, &table->players[winner], agari_tile, chankan, chanankan);
+		auto yaku = sc.yaku_counter();
 		yaku.calculate_score(winner == table->oya, false);
 
 		result.results.insert({ winner, yaku });
