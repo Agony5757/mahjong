@@ -652,7 +652,12 @@ void Table::make_selection(int selection)
 		if (self_actions.size() == 0) {
 			throw runtime_error("Empty Selection Lists.");
 		}
-
+		if (selection >= self_actions.size())
+		{
+			throw runtime_error(
+				fmt::format("Selection overflows. (Executing {} while size is {})", selection, self_actions.size())
+			);
+		}
 		selected_action = self_actions[selection];
 		switch (selected_action.action) {
 		case BaseAction::Kyushukyuhai:

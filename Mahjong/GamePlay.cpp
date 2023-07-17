@@ -7,7 +7,6 @@ namespace_mahjong
 
 void PaipuReplayer::init(const vector<int> &yama, const vector<int> &init_scores, int kyoutaku, int honba, int game_wind, int oya)
 {	
-	fmt::print("Yama Size = {}\n", yama.size());
 	if (write_log)
 		table.set_debug_mode(Table::debug_buffer);
 	
