@@ -1046,9 +1046,9 @@ void ScoreCounter::get_抢杠() {
 
 void ScoreCounter::get_岭上() {
 	/* 如果上一轮动作是杠，这一轮是tsumo，那么就是岭上 */
-	if (table->last_action != BaseAction::AnKan &&
-		table->last_action != BaseAction::Kan &&
-		table->last_action != BaseAction::KaKan) {
+	if (table->last_action == BaseAction::AnKan &&
+		table->last_action == BaseAction::Kan &&
+		table->last_action == BaseAction::KaKan) {
 		if (tsumo) {
 			场役.push_back(Yaku::Rinshankaihou);
 		}
