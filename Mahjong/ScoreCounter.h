@@ -11,10 +11,10 @@
 namespace_mahjong
 int calculate_fan(const std::vector<Yaku>& yakus);
 
-inline bool operator<(const std::pair<std::vector<Yaku>, int>& lhs, const std::pair<std::vector<Yaku>, int>& rhs)
+inline bool compare_yaku_fu(const std::pair<std::vector<Yaku>, int>& lhs, const std::pair<std::vector<Yaku>, int>& rhs)
 {
 	int lfan = calculate_fan(lhs.first);
-	int rfan = calculate_fan(lhs.first);
+	int rfan = calculate_fan(rhs.first);
 	
 	return std::tie(lfan, lhs.second) < std::tie(rfan, rhs.second);
 }
@@ -111,6 +111,13 @@ public:
 	int mpsz一色 = 0;
 	Wind 自风, 场风;
 	
+	/* Arguments:
+		Table *t,
+		Player* p,
+		Tile* win_tile,
+		bool chankan,
+		bool chanankan		
+	*/
 	ScoreCounter(const Table* t, const Player* p, Tile* win, bool 抢杠_, bool 抢暗杠_);
 	
 	bool get_天地和();

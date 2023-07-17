@@ -934,7 +934,7 @@ pair<vector<Yaku>, int> ScoreCounter::get_max_手役(
 		}
 		else {
 			const auto &yaku_fu = get_手役(tile_group, 自风, 场风, 门清);
-			max_yaku_fus = max(max_yaku_fus, yaku_fu);
+			max_yaku_fus = max(max_yaku_fus, yaku_fu, &compare_yaku_fu);
 		}
 
 	}
@@ -1206,7 +1206,7 @@ CounterResult ScoreCounter::yaku_counter()
 
 		for (const auto &complete_tiles : complete_tiles_list) {
 			auto yaku_fus = get_max_手役(complete_tiles, player->call_groups, win_tile, player->hand.back()->tile, 自风, 场风, 门清, 役满);
-			最大手役_番符 = max(最大手役_番符, yaku_fus);
+			最大手役_番符 = max(最大手役_番符, yaku_fus, &compare_yaku_fu);
 		}
 	}
 
