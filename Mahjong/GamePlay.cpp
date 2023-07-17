@@ -13,7 +13,7 @@ void PaipuReplayer::init(const vector<int> &yama, const vector<int> &init_scores
 	
 	table.game_init_for_replay(yama, init_scores, kyoutaku, honba, game_wind, oya);
 
-	/*if (write_log) {
+	if (write_log) {
 		FILE* fp = fopen("replay.log", "w+");
 		fprintf(fp, "Table table;\ntable.game_init_for_replay(%s, %s, %d, %d, %d, %d);\n",
 			vec2str(yama).c_str(),
@@ -21,7 +21,7 @@ void PaipuReplayer::init(const vector<int> &yama, const vector<int> &init_scores
 			kyoutaku, honba, game_wind, oya);
 
 		fclose(fp);
-	}*/
+	}
 }
 
 vector<SelfAction> PaipuReplayer::get_self_actions() const
@@ -45,11 +45,11 @@ bool PaipuReplayer::make_selection(int selection)
 	//     if (selection >= get_response_actions().size())
 	// 		return false; 		
 
-	/*if (write_log) {
+	if (write_log) {
 		FILE* fp = fopen("replay.log", "a+");
 		fprintf(fp, "table.make_selection(%d);\n", selection);
 		fclose(fp);
-	}*/
+	}
 	table.make_selection(selection);
 	return true;
 }

@@ -496,6 +496,7 @@ vector<SelfAction> Player::riichi_get_ankan()
 
 	for (auto tile : hand) {
 		auto duplicate = get_n_copies(hand, tile->tile, 4);
+
 		if (duplicate.size() == 4) {
 
 			// 尝试从手牌删除掉这四张牌，之后检查听牌
@@ -508,12 +509,14 @@ vector<SelfAction> Player::riichi_get_ankan()
 					}), copyhand.end());
 
 			auto new_atari_hai = get_atari_hai(convert_tiles_to_basetiles(copyhand));
-
+			
 			if (is_same_container(new_atari_hai, atari_tiles)) {
 				SelfAction action;
 				action.action = BaseAction::AnKan;
 				action.correspond_tiles.assign(duplicate.begin(), duplicate.end());
 				actions.push_back(action);
+
+				fmt::print("AnKan inserted.");
 			}
 		}
 	}

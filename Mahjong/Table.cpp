@@ -478,7 +478,7 @@ string Table::to_string() const
 	ss << "余" << get_remain_tile() << "张牌" << endl;
 	for (int i = 0; i < 4; ++i)
 		ss << "Player" << i << " : "
-		<< endl << players[i].to_string();
+		<< endl << players[i].to_string() << endl;
 	ss << endl;
 	ss << "亲家: Player " << oya << endl;
 	ss << honba << "本场";
@@ -520,7 +520,9 @@ vector<SelfAction> Table::_generate_riichi_self_actions()
 	auto& the_player = players[turn];
 	
 	if (get_remain_kan_tile() > 0)
+	{
 		merge_into(actions, the_player.riichi_get_ankan());
+	}
 	merge_into(actions, the_player.riichi_get_discard());
 	merge_into(actions, the_player.get_tsumo(this));
 
