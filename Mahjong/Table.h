@@ -133,7 +133,7 @@ public:
 				fmt::print("{}", log_buffer_prefix);
 		}
 	}
-	inline void debug_selection_record(int selection)
+	inline void debug_selection_record()
 	{
 		selection_log.push_back(selection);
 		if (write_log_mode == debug_stdout)
@@ -157,10 +157,10 @@ public:
 	std::vector<ResponseAction> _generate_response_actions(int player, Tile* tile, bool);
 
 	// 根据turn打出的tile，可以做出的抢杠决定
-	std::vector<ResponseAction> _generate_chanankan_self_actions(int player, Tile* tile);
+	std::vector<ResponseAction> _generate_chanankan_response_actions(int player, Tile* tile);
 
 	// 根据turn打出的tile，可以做出的抢杠决定
-	std::vector<ResponseAction> _generate_chankan_self_actions(int player, Tile* tile);
+	std::vector<ResponseAction> _generate_chankan_response_actions(int player, Tile* tile);
 
 public:
 	// ---------------------Manual Mode------------------------------
@@ -172,13 +172,13 @@ public:
 		P1_RESPONSE, P2_RESPONSE, P3_RESPONSE, P4_RESPONSE,
 		P1_CHANKAN_RESPONSE, P2_CHANKAN_RESPONSE, P3_CHANKAN_RESPONSE, P4_CHANKAN_RESPONSE,
 		P1_CHANANKAN_RESPONSE, P2_CHANANKAN_RESPONSE, P3_CHANANKAN_RESPONSE, P4_CHANANKAN_RESPONSE,
-		GAME_OVER,
+		GAME_OVER, UNINITIALIZED,
 	};
 	std::vector<SelfAction> self_actions;
 	std::vector<ResponseAction> response_actions;
 
 	Result result;
-	PhaseEnum phase = GAME_OVER; // initialized to GAME_OVER to avoid illegal gameplay.
+	PhaseEnum phase = UNINITIALIZED; // initialized to UNINITIALIZED to avoid illegal gameplay.
 	int selection = -1;	// initialized to -1 to avoid illegal gameplay.
 	SelfAction selected_action;
 	Tile* tile = nullptr;
@@ -222,6 +222,19 @@ public:
 
 	// Make a selection and game moves on.
 	void make_selection(int selection);
+
+	// handle the "selection" variable
+	// if self action, then assign this->selected_action
+	// if response, then push_back this->actions
+	void _check_selection();
+
+	void _handle_self_action();
+	void _handle_response_action();
+	void _handle_response_chankan_action();
+	void _handle_response_chanankan_action();
+	void _handle_response_final_execution();
+	void _handle_response_final_chankan_execution();
+	void _handle_response_final_chanankan_execution();
 
 	// Get Information. Return the table itself. (For python wrapper)
 	inline Table* get_info() { return this; }

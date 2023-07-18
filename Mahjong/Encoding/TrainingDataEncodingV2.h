@@ -1,5 +1,5 @@
-#ifndef TRAINING_DATA_ENCODING_V1_H
-#define TRAINING_DATA_ENCODING_V1_H
+#ifndef TRAINING_DATA_ENCODING_V2_H
+#define TRAINING_DATA_ENCODING_V2_H
 
 #include <vector>
 #include "Table.h"
