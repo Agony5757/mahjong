@@ -600,7 +600,7 @@ class PaipuReplay:
                     target_score = [score_changes[i] + scores[i] for i in range(4)]                    
                     result_score_change = [result_score[i] - scores[i] for i in range(4)]    
                     self.log(score_changes1, score_changes2, scores, result_score)
-                    self.log(result.to_string())
+                    # self.log(result.to_string())
                     for i in range(4):
                         if score_changes[i] + scores[i] == result_score[i]:
                             continue
