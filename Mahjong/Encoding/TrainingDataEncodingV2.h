@@ -11,7 +11,6 @@ namespace TrainingDataEncoding {
 	{
 
 	}
-
 }
 
 namespace_mahjong_end
