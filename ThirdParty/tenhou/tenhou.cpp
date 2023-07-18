@@ -163,10 +163,14 @@ std::vector<int> TenhouShuffle::generate_yama()
     //ローカルMTで乱数生成
     for (i = 0; i < sizeof(src) / sizeof(*src); ++i) src[i] = genrand_int32();
 
+    fmt::print("src = {}\n", src);
+
     //ハッシュ計算
     for (i = 0; i < sizeof(rnd) / SHA512_DIGEST_LENGTH/*=9 */; ++i) {
         SHA512((BYTE*)src + i * SHA512_DIGEST_LENGTH * 2, SHA512_DIGEST_LENGTH * 2, (BYTE*)rnd + i * SHA512_DIGEST_LENGTH);
     }
+
+    fmt::print("rnd = {}\n", rnd);
 
     int tmp_index;
 
