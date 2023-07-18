@@ -448,8 +448,8 @@ void test_random_play(int games = 10)
 
 int main() {	
 	// test_random_play();
-	// test_tenhou_yama();
-	test_tenhou_game();
+	test_tenhou_yama();
+	// test_tenhou_game();
 	getchar();
 	return 0;
 }
