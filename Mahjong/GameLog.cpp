@@ -24,27 +24,18 @@ string BaseGameLog::to_string()
 	switch (action) {
 	case LogAction::AnKan:
 		return fmt::format("AnKan {}", tiles_to_string(call_tiles));
-		/*ss << "AnKan" << tiles_to_string(call_tiles);
-		return ss.str();*/
 	case LogAction::Pon:
 		return fmt::format("Pon {} with {}", tile->to_string(), tiles_to_string(call_tiles));
-		/*ss << "Pon" << tile->to_string() << "with" << tiles_to_string(call_tiles);
-		return ss.str();*/
 	case LogAction::Chi:
 		return fmt::format("Chi {} with {}", tile->to_string(), tiles_to_string(call_tiles));
-		/*ss << "Chi" << tile->to_string() << "with" << tiles_to_string(call_tiles);
-		return ss.str();*/
 	case LogAction::DiscardFromHand:
 		return fmt::format("Discard (te giri) {}", tile->to_string());
-		/*ss << "Discard (te giri)" << tile->to_string();
-		return ss.str();*/
 	case LogAction::DiscardFromTsumo:
 		return fmt::format("Discard (tsumo giri) {}", tile->to_string());
-		/*ss << "Discard (tsumo giri)" << tile->to_string();
-		return ss.str();*/
-	case LogAction::Draw:
-		ss << "Draw" << tile->to_string();
-		return ss.str();
+	case LogAction::DrawNormal:
+		return fmt::format("Draw {}", tile->to_string());
+	case LogAction::DrawRinshan:
+		return fmt::format("Draw(rinshan) {}", tile->to_string());
 	case LogAction::RiichiDiscardFromHand:
 		ss << "Riichi Discard (te giri)" << tile->to_string();
 		return ss.str();
@@ -94,17 +85,22 @@ void GameLog::log_game_start(
 	start_scores = scores;
 }
 
-void GameLog::log_draw(int player, Tile* tile)
+void GameLog::_log_draw_normal(int player, Tile* tile)
 {
-	_log({ player, -1, LogAction::Draw, tile, {} });
+	_log({ player, -1, LogAction::DrawNormal, tile, {} });
 }
 
-void GameLog::log_discard_from_tsumo(int player, Tile* tile)
+void GameLog::_log_draw_rinshan(int player, Tile* tile)
+{
+	_log({ player, -1, LogAction::DrawRinshan, tile, {} });
+}
+
+void GameLog::_log_discard_from_tsumo(int player, Tile* tile)
 {
 	_log({ player, -1, LogAction::DiscardFromTsumo, tile, {} });
 }
 
-void GameLog::log_discard_from_hand(int player, Tile* tile)
+void GameLog::_log_discard_from_hand(int player, Tile* tile)
 {
 	_log({ player, -1, LogAction::DiscardFromHand, tile, {} });
 }

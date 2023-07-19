@@ -36,6 +36,10 @@ namespace TrainingDataEncoding {
 				pos_discarded_by_player_2,
 				pos_discarded_by_player_3,
 				pos_discarded_by_player_4,
+				pos_discarded_number_1,
+				pos_discarded_number_2,
+				pos_discarded_number_3,
+				pos_discarded_number_4,
 				n_self_information
 			};
 			std::array<int8_t, n_self_information * n_tile_types> self_info;

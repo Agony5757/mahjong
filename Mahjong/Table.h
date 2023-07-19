@@ -75,10 +75,16 @@ public:
 	std::string export_yama();
 	void init_wind();
 
-	void draw(int i_player);
-	void draw(int i_player, int n_tiles);
+	// game init draw with tenhou style
 	void draw_tenhou_style();
+
+	// Draw from the head (the normal sequence)
 	void draw_normal(int i_player);
+
+	// Draw n tiles from the head (the normal sequence)
+	void draw_n_normal(int i_player, int n_tiles);
+
+	// Draw from the tail (from rinshan)
 	void draw_rinshan(int i_player);
 
 	void next_turn(int nextturn);

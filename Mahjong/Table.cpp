@@ -255,14 +255,14 @@ void Table::game_init_with_metadata(unordered_map<string, string> metadata)
 		auto val = metadata["deal"];
 		if (val == "from_oya") {
 			for (int i = oya; i < oya + 4; ++i) {
-				draw(i % 4, 13);
+				draw_n_normal(i % 4, 13);
 			}
 		}
 		else if (val == "from_0") {
-			draw(0, 13);
-			draw(1, 13);
-			draw(2, 13);
-			draw(3, 13);
+			draw_n_normal(0, 13);
+			draw_n_normal(1, 13);
+			draw_n_normal(2, 13);
+			draw_n_normal(3, 13);
 		}
 		else if (val == "tenhou") {
 			draw_tenhou_style();
@@ -301,12 +301,12 @@ void Table::next_turn(int nextturn)
 			player.update_furiten_river();
 		}
 	}
-	if (selected_base_action == BaseAction::AnKan) {
+	else if (selected_base_action == BaseAction::AnKan) {
 		player.update_atari_tiles();
 		player.remove_atari_tiles(selected_action.correspond_tiles[0]->tile);
 		player.update_furiten_river();
 	}
-	if (selected_base_action == BaseAction::KaKan) {
+	else if (selected_base_action == BaseAction::KaKan) {
 		player.update_atari_tiles();
 		player.remove_atari_tiles(selected_action.correspond_tiles[0]->tile);
 		player.update_furiten_river();
@@ -412,6 +412,35 @@ void Table::from_beginning()
 	phase = (PhaseEnum)turn;
 }
 
+void Table::draw_tenhou_style()
+{
+	// 每次摸4个
+	for (int round = 0; round < 3; ++round) {
+		for (int i = 0; i < 4; ++i) {
+			draw_n_normal((oya + i) % 4, 4);
+		}
+	}
+	// 跳章
+	// 每次摸1个
+	for (int i = 0; i < 4; ++i) {
+		draw_normal((oya + i) % 4);
+	}
+}
+
+void Table::draw_normal(int i_player)
+{
+	players[i_player].hand.push_back(yama.back());
+	gamelog.log_draw(i_player, yama.back(), false);
+	yama.pop_back();
+}
+
+void Table::draw_n_normal(int i_player, int n_tiles)
+{
+	for (int i = 0; i < n_tiles; ++i) {
+		draw_normal(i_player);
+	}
+}
+
 /* 如果还有2/4张岭上牌，则摸倒数第2张（因为最后一张压在下面）*/
 void Table::draw_rinshan(int i_player)
 {
@@ -420,41 +449,8 @@ void Table::draw_rinshan(int i_player)
 	auto iter = yama.begin();
 	if (n_kan % 2 == 0) ++iter;
 	players[i_player].hand.push_back(*iter);
+	gamelog.log_draw(i_player, *iter, true);
 	yama.erase(iter);
-}
-
-void Table::draw(int i_player)
-{
-	players[i_player].hand.push_back(yama.back());
-	gamelog.log_draw(i_player, yama.back());
-	yama.pop_back();
-}
-
-void Table::draw(int i_player, int n_tiles)
-{
-	for (int i = 0; i < n_tiles; ++i) {
-		draw(i_player);
-	}
-}
-
-void Table::draw_tenhou_style()
-{
-	// 每次摸4个
-	for (int round = 0; round < 3; ++round) {
-		for (int i = 0; i < 4; ++i) {
-			draw((oya + i) % 4, 4);
-		}
-	}
-	// 跳章
-	// 每次摸1个
-	for (int i = 0; i < 4; ++i) {
-		draw((oya + i) % 4);
-	}
-}
-
-void Table::draw_normal(int i_player)
-{
-	draw(i_player);
 }
 
 string Table::to_string() const
