@@ -538,8 +538,8 @@ vector<SelfAction> Player::riichi_get_discard()
 
 void Player::execute_naki(vector<Tile*> tiles, Tile* tile, int relative_position)
 {
-	CallGroup call_group;
 	menzen = false;
+	CallGroup call_group;
 	if (is_koutsu({ tiles[0]->tile, tiles[1]->tile, tile->tile })
 		&& tiles.size() == 2) {
 		// 碰的情况

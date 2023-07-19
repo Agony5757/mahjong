@@ -24,7 +24,7 @@ enum class LogAction {
 	Ron, // 宣告Ron
 	Tsumo, // 宣告自摸
 	RiichiSuccess, // 立直通过
-	DoraIncrease, // 翻1张宝牌
+	DoraReveal, // 翻1张宝牌
 	InvalidLogAction,
 };
 
@@ -113,6 +113,9 @@ public:
 	void log_ankan(int player, std::vector<Tile*> tiles);
 	void log_riichi_success(Table* table);	
 	void log_kyushukyuhai(int player, Result result);
+	void log_tsumo(int player);
+	void log_ron(int player_win, int player_lose, Tile* tile);
+	void log_reveal_dora(Tile* tile);
 	void log_gameover(Result result);
 
 	std::string to_string();

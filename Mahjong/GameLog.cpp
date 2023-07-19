@@ -19,37 +19,33 @@ BaseGameLog::BaseGameLog(const array<int, 4> &scores)
 
 string BaseGameLog::to_string()
 {
-	stringstream ss;
-	ss << "p" << player;
 	switch (action) {
 	case LogAction::AnKan:
-		return fmt::format("AnKan {}", tiles_to_string(call_tiles));
+		return fmt::format("p{} AnKan {}", player, tiles_to_string(call_tiles));
 	case LogAction::Pon:
-		return fmt::format("Pon {} with {}", tile->to_string(), tiles_to_string(call_tiles));
+		return fmt::format("p{} Pon {} with {}", player, tile->to_string(), tiles_to_string(call_tiles));
 	case LogAction::Chi:
-		return fmt::format("Chi {} with {}", tile->to_string(), tiles_to_string(call_tiles));
+		return fmt::format("p{} Chi {} with {}", player, tile->to_string(), tiles_to_string(call_tiles));
 	case LogAction::DiscardFromHand:
-		return fmt::format("Discard (te giri) {}", tile->to_string());
+		return fmt::format("p{} Discard (from hand) {}", player, tile->to_string());
 	case LogAction::DiscardFromTsumo:
-		return fmt::format("Discard (tsumo giri) {}", tile->to_string());
+		return fmt::format("p{} Discard (from tsumo) {}", player, tile->to_string());
 	case LogAction::DrawNormal:
-		return fmt::format("Draw {}", tile->to_string());
+		return fmt::format("p{} Draw {}", player, tile->to_string());
 	case LogAction::DrawRinshan:
-		return fmt::format("Draw(rinshan) {}", tile->to_string());
+		return fmt::format("p{} Draw (rinshan) {}", player, tile->to_string());
 	case LogAction::RiichiDiscardFromHand:
-		ss << "Riichi Discard (te giri)" << tile->to_string();
-		return ss.str();
+		return fmt::format("p{} Riichi discard (from hand) {}", player, tile->to_string());
 	case LogAction::RiichiDiscardFromTsumo:
-		ss << "Riichi Discard (tsumo giri)" << tile->to_string();
-		return ss.str();
+		return fmt::format("p{} Riichi discard (from tsumo) {}", player, tile->to_string());
 	case LogAction::Kyushukyuhai:
-		ss << "Kyushukyuhai";
-		return ss.str();
+		return fmt::format("p{} Kyushukyuhai", player);
 	case LogAction::RiichiSuccess:
-		ss << "Riichi Success " << score_to_string(score);
-		return ss.str();
+		return fmt::format("p{} Riichi Success {}", player, score_to_string(score));
+	case LogAction::DoraReveal:
+		return fmt::format("Reveal dora: {}", tile->to_string());
 	default:
-		throw runtime_error("Invalid LogAction. BaseAction: " + std::to_string(int(action)));
+		throw runtime_error("Invalid LogAction. LogAction: " + std::to_string(int(action)));
 	}
 }
 
@@ -197,6 +193,21 @@ void GameLog::log_kyushukyuhai(int player, Result result)
 {
 	_log({ player,-1, LogAction::Kyushukyuhai, nullptr, {} });
 	log_gameover(result);
+}
+
+void GameLog::log_tsumo(int player)
+{
+	_log({ player, -1, LogAction::Tsumo, nullptr, {} });
+}
+
+void GameLog::log_ron(int player_win, int player_lose, Tile* tile)
+{
+	_log({ player_win, player_lose, LogAction::Tsumo, tile, {} });
+}
+
+void GameLog::log_reveal_dora(Tile* tile)
+{
+	_log({ -1, -1, LogAction::DoraReveal, tile, {} });
 }
 
 void GameLog::log_gameover(Result _result)

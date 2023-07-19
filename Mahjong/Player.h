@@ -150,6 +150,7 @@ public:
 	void execute_discard(Tile* tile, int& number, bool on_riichi, bool fromhand);
 
 	inline void set_not_remained() {
+		/* 将打出的牌设置为“不存在了” */
 		river.set_not_remain();
 	}
 

@@ -53,7 +53,7 @@ public:
 public:
 	Table() = default;
 
-	inline void new_dora() { n_active_dora++; }
+	void new_dora();
 	std::vector<BaseTile> get_dora() const;
 	std::vector<BaseTile> get_ura_dora() const;
 
