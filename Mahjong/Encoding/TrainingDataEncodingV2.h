@@ -86,10 +86,9 @@ namespace TrainingDataEncoding {
 
 		struct TableEncoder
 		{
-			Player* player;
-			Table* table;
-
 			GlobalInformation global_info;
+			std::vector<GamePlayRecord> records;
+			Table* t;
 		};
 
 	}

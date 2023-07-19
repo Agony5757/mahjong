@@ -7,12 +7,12 @@ using namespace std;
 namespace_mahjong
 
 BaseGameLog::BaseGameLog(int p1, int p2, LogAction action, Tile* tile,
-	vector<Tile*> CallGroup)
-	:player(p1), player2(p2), action(action), tile(tile), call_tiles(CallGroup)
+	const vector<Tile*> &callgroup)
+	: player(p1), player2(p2), action(action), tile(tile), call_tiles(callgroup)
 {
 }
 
-BaseGameLog::BaseGameLog(array<int, 4> scores)
+BaseGameLog::BaseGameLog(const array<int, 4> &scores)
 {
 	score = scores;
 }
@@ -56,15 +56,38 @@ string BaseGameLog::to_string()
 string GameLog::to_string()
 {
 	stringstream ss;
-	ss << "庄家: Player " << oya << endl
-		<< "场风: " << wind_to_string(game_wind) << endl
-		<< start_honba << "本场 " << start_kyoutaku << "立直棒" << endl
-		<< "点数:" << score_to_string(start_scores) << endl
-		<< "牌山:" << yama << endl;
+	ss << fmt::format(
+		"Oya: Player {}\n"
+		"Game wind: {}\n"
+		"{} honba, {} kyoutaku\n"
+		"Initial points: {}\n"
+		"Initial yama: {}\n"
+		"Hand0: {}\n"
+		"Hand1: {}\n"
+		"Hand2: {}\n"
+		"Hand3: {}\n"
+		,
+		oya,
+		wind_to_string(game_wind),
+		start_honba, start_kyoutaku,
+		start_scores,
+		vector_tile_to_string(init_yama),
+		vector_tile_to_string(init_hands[0]),
+		vector_tile_to_string(init_hands[1]),
+		vector_tile_to_string(init_hands[2]),
+		vector_tile_to_string(init_hands[3])
+	);
+
+	//ss << "Oya: Player " << oya << endl
+	//	<< "场风: " << wind_to_string(game_wind) << endl
+	//	<< start_honba << "本场 " << start_kyoutaku << "立直棒" << endl
+	//	<< "点数:" << score_to_string(start_scores) << endl
+	//	<< "牌山:" << init_yama << endl;
 	for (auto log : logs) {
 		ss << log.to_string() << endl;
 	}
-	ss << "结果:" << result.to_string() << endl;
+	if (result.result_type != ResultType::Error)
+		ss << "Result:" << result.to_string() << endl;
 
 	return ss.str();
 }
@@ -74,15 +97,30 @@ void GameLog::_log(BaseGameLog log) {
 }
 
 void GameLog::log_game_start(
-	int start_honba_, int start_kyoutaku_, int oya_, Wind game_wind_, string yama_,
-	array<int, 4> scores)
+	int start_honba_, int start_kyoutaku_, int oya_, Wind game_wind_, 
+	const std::vector<Tile*>& yama_, const std::array<int, 4> &scores,
+	const std::vector<Tile*> init_hand0,
+	const std::vector<Tile*> init_hand1,
+	const std::vector<Tile*> init_hand2,
+	const std::vector<Tile*> init_hand3)
 {
 	start_honba = start_honba_;
 	start_kyoutaku = start_kyoutaku_;
 	oya = oya_;
 	game_wind = game_wind_;
-	yama = yama_;
+	init_yama = yama_;
 	start_scores = scores;
+	init_hands = {
+		init_hand0,
+		init_hand1,
+		init_hand2,
+		init_hand3
+	};
+	for (const auto& hand : init_hands)
+	{
+		if (hand.size() != 13)
+			throw std::runtime_error("Game init log failed. Hand size is not 13 at the beginning.");
+	}
 }
 
 void GameLog::_log_draw_normal(int player, Tile* tile)

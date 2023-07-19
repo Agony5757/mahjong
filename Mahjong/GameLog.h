@@ -25,6 +25,7 @@ enum class LogAction {
 	Tsumo, // 宣告自摸
 	RiichiSuccess, // 立直通过
 	DoraIncrease, // 翻1张宝牌
+	InvalidLogAction,
 };
 
 constexpr bool DiscardFromTsumo = false;
@@ -33,20 +34,17 @@ constexpr bool DiscardFromHand = true;
 class Table;
 
 struct BaseGameLog {
-
-protected:
-	BaseGameLog() {}
-
-public:
-	int player;
-	int player2; 
-	LogAction action;
-	Tile* tile;
+	BaseGameLog() = delete;
+	int player = 0;
+	int player2 = 0; 
+	LogAction action = LogAction::InvalidLogAction;
+	Tile* tile = nullptr;
 	std::vector<Tile*> call_tiles;
-	std::array<int, 4> score;
+	std::array<int, 4> score = { 0 };
 
-	BaseGameLog(int, int, LogAction, Tile*, std::vector<Tile*>);
-	BaseGameLog(std::array<int, 4> scores);
+	BaseGameLog(int p1, int p2, LogAction action, Tile* tile,
+		const std::vector<Tile*>& callgroup);
+	BaseGameLog(const std::array<int, 4> &scores);
 	virtual std::string to_string();
 };
 
@@ -55,12 +53,13 @@ public:
 	std::vector<int> winner;
 	std::vector<int> loser;
 	std::array<int, 4> start_scores;
-	std::string yama;
+	std::vector<Tile*> init_yama;
+	std::array<std::vector<Tile*>, 4> init_hands;
 	int start_honba;
-	int end_honba;
+	int end_honba = -1;
 
 	int start_kyoutaku;
-	int end_kyoutaku;
+	int end_kyoutaku = -1;
 	int oya;
 
 	Wind game_wind;
@@ -68,9 +67,14 @@ public:
 	std::vector<BaseGameLog> logs;
 
 	void _log(BaseGameLog log);
+
 	void log_game_start(int start_honba, int start_kyoutaku, int oya, Wind game_wind,
-		std::string yama,
-		std::array<int, 4>);
+		const std::vector<Tile*> &yama, const std::array<int, 4> &start_scores,
+		const std::vector<Tile*> init_hand0,
+		const std::vector<Tile*> init_hand1,
+		const std::vector<Tile*> init_hand2,
+		const std::vector<Tile*> init_hand3
+		);
 
 	void _log_draw_normal(int player, Tile* tile);
 	void _log_draw_rinshan(int player, Tile* tile);

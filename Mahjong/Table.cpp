@@ -143,7 +143,8 @@ void Table::init_before_playing()
 	}
 
 	debug_replay_init();
-
+	gamelog.log_game_start(honba, kyoutaku, oya, game_wind, yama,
+		get_scores(), players[0].hand, players[1].hand, players[2].hand, players[3].hand);
 	from_beginning();
 }
 
@@ -866,6 +867,7 @@ void Table::_handle_self_action()
 		return;
 	case BaseAction::Tsumo:
 		result = generate_result_tsumo(this);
+		gamelog.log_gameover(result);
 		phase = GAME_OVER;
 		return;
 	case BaseAction::Discard:

@@ -70,7 +70,6 @@ public:
 	void init_yama();
 	void init_dora();
 	void init_before_playing();
-	// void import_yama(std::string yama);
 	void import_yama(const std::vector<int> &yama);
 	std::string export_yama();
 	void init_wind();
