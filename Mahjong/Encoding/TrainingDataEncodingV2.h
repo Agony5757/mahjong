@@ -38,7 +38,7 @@ namespace TrainingDataEncoding {
 
 		using self_info_t = std::array<int8_t, n_row_self_info* n_col_self_info>;
 
-		size_t locate_attribute(size_t attribute_row, size_t tile_type)
+		constexpr size_t locate_attribute(size_t attribute_row, size_t tile_type)
 		{
 			if (tile_type >= n_col_self_info)
 			{
