@@ -384,6 +384,17 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 	m.def("encv1_encode_action", &encv1::py_encode_action);
 	m.def("encv1_encode_action_riichi_step2", &encv1::py_encode_action_riichi_step2);
 	m.def("encv1_get_riichi_tiles", &encv1::py_get_riichi_tiles);
+
+	namespace encv2 = TrainingDataEncoding::v2;
+
+	py::class_<encv2::TableEncoder>(m, "TableEncoder")
+		.def(py::init<Table*>())
+		.def_readonly("self_infos", &encv2::TableEncoder::self_infos)
+		.def_readonly("records", &encv2::TableEncoder::records)
+		.def_readonly("global_infos", &encv2::TableEncoder::global_infos)
+		.def("init", &encv2::TableEncoder::init)
+		.def("update", &encv2::TableEncoder::update)
+		;
 }
 
 #ifdef __GNUC__
