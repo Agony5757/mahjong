@@ -16,20 +16,22 @@ enum class LogAction {
 	KaKan, // 加杠
 	DiscardFromHand, // 手切
 	DiscardFromTsumo,// 摸切
-	DrawNormal,   // 正常摸牌
-	DrawRinshan,  // 摸岭上牌
 	RiichiDiscardFromHand, // 宣告手切立
 	RiichiDiscardFromTsumo,// 宣告摸切立
+	RiichiSuccess, // 立直通过
+	DrawNormal,   // 正常摸牌
+	DrawRinshan,  // 摸岭上牌
+	DoraReveal, // 翻1张宝牌
 	Kyushukyuhai, // 宣告九种九牌
 	Ron, // 宣告Ron
 	Tsumo, // 宣告自摸
-	RiichiSuccess, // 立直通过
-	DoraReveal, // 翻1张宝牌
 	InvalidLogAction,
 };
 
 constexpr bool DiscardFromTsumo = false;
 constexpr bool DiscardFromHand = true;
+constexpr bool DrawNormally = false;
+constexpr bool DrawFromRinshan = true;
 
 class Table;
 
@@ -117,6 +119,9 @@ public:
 	void log_ron(int player_win, int player_lose, Tile* tile);
 	void log_reveal_dora(Tile* tile);
 	void log_gameover(Result result);
+	inline size_t logsize() const { return logs.size(); }
+	inline auto& operator[](size_t loc) const { return logs[loc]; }
+	inline auto& operator[](size_t loc) { return logs[loc]; }
 
 	std::string to_string();
 };

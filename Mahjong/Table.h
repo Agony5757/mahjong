@@ -80,7 +80,12 @@ public:
 	// Draw from the head (the normal sequence)
 	void draw_normal(int i_player);
 
+	// Draw from the head without record.
+	// This is for initializing the game
+	void draw_normal_no_record(int i_player);
+
 	// Draw n tiles from the head (the normal sequence)
+	// **No Record**, implemented by ``draw_normal_no_record''
 	void draw_n_normal(int i_player, int n_tiles);
 
 	// Draw from the tail (from rinshan)

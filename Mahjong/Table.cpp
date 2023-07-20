@@ -429,7 +429,7 @@ void Table::draw_tenhou_style()
 	// 跳章
 	// 每次摸1个
 	for (int i = 0; i < 4; ++i) {
-		draw_normal((oya + i) % 4);
+		draw_normal_no_record((oya + i) % 4);
 	}
 }
 
@@ -440,10 +440,16 @@ void Table::draw_normal(int i_player)
 	yama.pop_back();
 }
 
+void Table::draw_normal_no_record(int i_player)
+{
+	players[i_player].hand.push_back(yama.back());
+	yama.pop_back();
+}
+
 void Table::draw_n_normal(int i_player, int n_tiles)
 {
 	for (int i = 0; i < n_tiles; ++i) {
-		draw_normal(i_player);
+		draw_normal_no_record(i_player);
 	}
 }
 
