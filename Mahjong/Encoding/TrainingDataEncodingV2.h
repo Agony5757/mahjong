@@ -48,7 +48,7 @@ namespace TrainingDataEncoding {
 		}
 
 		constexpr size_t n_tile_types_include_aka = n_tile_types + 3;
-		enum class EnumAction
+		enum class EnumGameRecordAction
 		{
 			DrawNormal,
 			DrawRinshan,
@@ -66,7 +66,7 @@ namespace TrainingDataEncoding {
 			RiichiSuccess,
 			n_actions,
 		};
-		constexpr size_t n_actions = (size_t)EnumAction::n_actions;
+		constexpr size_t n_actions = (size_t)EnumGameRecordAction::n_actions;
 		constexpr size_t n_players = 4;
 		constexpr size_t n_step_actions = n_tile_types_include_aka + n_actions + n_players;
 		constexpr size_t offset_tile = 0;

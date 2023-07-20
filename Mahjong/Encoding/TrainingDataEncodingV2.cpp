@@ -226,6 +226,13 @@ namespace TrainingDataEncoding {
 
 			constexpr size_t offset_tsumo = (size_t)EnumSelfInformation::pos_tsumo_tile;
 
+		}
+
+		void TableEncoder::_update_from_draw(const BaseGameLog& log, bool from_rinshan)
+		{
+			int player = log.player;
+			auto& self_info = self_infos[player];
+			_update_hand();
 			if (hand.size() % 3 == 2)
 			{
 				int tile_type = hand.back()->tile;
@@ -238,12 +245,6 @@ namespace TrainingDataEncoding {
 					self_info[locate_attribute(offset_tsumo, tile_type)] = 0;
 				}
 			}
-		}
-
-		void TableEncoder::_update_from_draw(const BaseGameLog& log, bool from_rinshan)
-		{
-			int player = log.player;
-			_update_hand(player);
 		}
 
 		void TableEncoder::_update_from_dora_reveal(const BaseGameLog& log)
@@ -301,8 +302,18 @@ namespace TrainingDataEncoding {
 					record[tile2idx(tile)] = 0;
 				}
 			}
-			
-			if (log.tile)
+
+			if (log.action == LogAction::DrawNormal || log.action == LogAction::DrawRinshan)
+			{
+				for (int i = 0; i < 4; ++i)
+				{
+					if (i == player)
+					{
+						record[tile2idx(log.tile)] = 1;
+					}
+				}
+			}
+			else if (log.action != LogAction::Chi && log.tile)
 			{
 				record[tile2idx(log.tile)] = 1;
 			}
@@ -310,13 +321,13 @@ namespace TrainingDataEncoding {
 			switch (log.action)
 			{
 			case LogAction::DrawNormal:
-				record[EnumAction::DrawNormal] = 1;
+				record[EnumGameRecordAction::DrawNormal] = 1;
 				break;
 			case LogAction::DrawRinshan:
-				record[EnumAction::DrawRinshan] = 1;
+				record[EnumGameRecordAction::DrawRinshan] = 1;
 				break;
 			case LogAction::DiscardFromHand:
-				record[EnumAction::DiscardFromHand] = 1;
+				record[EnumGameRecordAction::DiscardFromHand] = 1;
 				break;
 			case LogAction::Chi:
 				int chitile = log.tile->tile;
@@ -330,29 +341,29 @@ namespace TrainingDataEncoding {
 				}
 
 				if (chitile < handtile1)
-					record[EnumAction::ChiLeft] = 1;
+					record[EnumGameRecordAction::ChiLeft] = 1;
 				else if (chitile > handtile2)
-					record[EnumAction::ChiRight] = 1;
+					record[EnumGameRecordAction::ChiRight] = 1;
 				else
-					record[EnumAction::ChiMid] = 1;
+					record[EnumGameRecordAction::ChiMid] = 1;
 				break;
 			case LogAction::Pon:
-				record[EnumAction::Pon] = 1;
+				record[EnumGameRecordAction::Pon] = 1;
 				break;
 			case LogAction::Kan:
-				record[EnumAction::Kan] = 1;
+				record[EnumGameRecordAction::Kan] = 1;
 				break;
 			case LogAction::KaKan:
-				record[EnumAction::Kakan] = 1;
+				record[EnumGameRecordAction::Kakan] = 1;
 				break;
 			case LogAction::RiichiDiscardFromHand:
-				record[EnumAction::RiichiFromHand] = 1;
+				record[EnumGameRecordAction::RiichiFromHand] = 1;
 				break;
 			case LogAction::RiichiDiscardFromTsumo:
-				record[EnumAction::RiichiFromTsumo] = 1;
+				record[EnumGameRecordAction::RiichiFromTsumo] = 1;
 				break;
 			case LogAction::RiichiSuccess:
-				record[EnumAction::RiichiSuccess] = 1;
+				record[EnumGameRecordAction::RiichiSuccess] = 1;
 				break;
 			default:
 				throw std::runtime_error("Bad LogAction (not handled in the _update_record).");
@@ -363,7 +374,6 @@ namespace TrainingDataEncoding {
 			records[2].push_back(record);
 			records[3].push_back(record);
 
-			int player = log.player;
 			for (int i = 0; i < 4; ++i)
 			{
 				int p = (player + i) % 4;
