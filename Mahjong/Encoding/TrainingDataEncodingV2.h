@@ -103,6 +103,7 @@ namespace TrainingDataEncoding {
 			std::array<uint8_t, 4 * n_col_self_info> visible_tiles = { 0 };
 			std::array<uint8_t, n_col_self_info> visible_tiles_count = { 0 };
 			Table* table = nullptr;
+			int record_count = 0;
 
 		public:
 			std::array<self_info_t, 4> self_infos;
@@ -139,6 +140,7 @@ namespace TrainingDataEncoding {
 			void _update_hand(int player);
 			void _update_visible_tiles();
 			void _update_record(const BaseGameLog& log);
+			void _update_ippatsu();
 
 			void init();
 			void update();

@@ -7,7 +7,7 @@ namespace TrainingDataEncoding {
 
 		bool TableEncoder::_require_update()
 		{
-			return records[3].size() < table->gamelog.logsize();
+			return record_count < table->gamelog.logsize();
 		}
 
 		void TableEncoder::init()
@@ -88,6 +88,12 @@ namespace TrainingDataEncoding {
 			global_infos[1][pos] = table->players[2].score / 100;
 			global_infos[2][pos] = table->players[3].score / 100;
 			global_infos[3][pos] = table->players[0].score / 100;
+
+			pos = (size_t)EnumGlobalInformation::pos_remaining_tiles;
+			global_infos[0][pos] = 
+			global_infos[1][pos] = 
+			global_infos[2][pos] = 
+			global_infos[3][pos] = table->get_remain_tile();
 
 		}
 
@@ -248,6 +254,11 @@ namespace TrainingDataEncoding {
 					self_info[locate_attribute(offset_tsumo, tile_type)] = 0;
 				}
 			}
+
+			global_infos[0].back()--;
+			global_infos[1].back()--;
+			global_infos[2].back()--;
+			global_infos[3].back()--;
 		}
 
 		void TableEncoder::_update_from_dora_reveal(const BaseGameLog& log)
@@ -384,66 +395,74 @@ namespace TrainingDataEncoding {
 			}
 		}
 
+		void TableEncoder::_update_ippatsu()
+		{
+			for (int player = 0; player < 4; ++player) {
+				for (int i = 0; i < 4; ++i)
+				{
+					int p = (player + i) % 4;
+					size_t pos_ippatsu = p + (size_t)EnumGlobalInformation::pos_player_0_ippatsu;
+					global_infos[i][pos_ippatsu] = table->players[player].ippatsu ? 1 : 0;
+				}
+			}
+
+		}
+
 		void TableEncoder::update()
 		{
 			while (_require_update())
 			{
-				auto& log = table->gamelog[records[0].size()];
+				auto& log = table->gamelog[record_count];
 				switch (log.action)
 				{
 				case LogAction::AnKan:
 					_update_from_ankan(log);
-					_update_record(log);
-					return;
+					break;
 				case LogAction::Pon:
 				case LogAction::Chi:
 				case LogAction::Kan:
 					_update_from_call(log);
-					_update_record(log);
-					return;
+					break;
 				case LogAction::KaKan:
 					_update_from_kakan(log);
-					_update_record(log);
-					return;
+					break;
 				case LogAction::DiscardFromHand:
 					_update_from_discard(log, DiscardFromHand);
-					_update_record(log);
-					return;
+					break;
 				case LogAction::DiscardFromTsumo:
 					_update_from_discard(log, DiscardFromTsumo);
-					_update_record(log);
-					return;
+					break;
 				case LogAction::RiichiDiscardFromHand:
 					_update_from_riichi(log, DiscardFromHand);
-					_update_record(log);
-					return;
+					break;
 				case LogAction::RiichiDiscardFromTsumo:
 					_update_from_riichi(log, DiscardFromTsumo);
-					_update_record(log);
-					return;
+					break;
 				case LogAction::RiichiSuccess:
 					_update_from_riichi_success(log);
-					_update_record(log);
-					return;
+					break;
 				case LogAction::DrawNormal:
 					_update_from_draw(log, DrawNormally);
-					_update_record(log);
-					return;
+					break;
 				case LogAction::DrawRinshan:
 					_update_from_draw(log, DrawFromRinshan);
-					_update_record(log);
-					return;
+					break;
 				case LogAction::DoraReveal:
 					_update_from_dora_reveal(log);
-					return;
+					break;
 				case LogAction::Kyushukyuhai:
 				case LogAction::Ron:
 				case LogAction::Tsumo:
 					// Actually do nothing
-					return;
+					break;
 				default:
-					throw std::runtime_error("Bad LogAction.");
+					throw std::runtime_error("Bad LogAction.");					
 				}
+				
+				_update_record(log);
+				_update_ippatsu();
+
+				++record_count;
 			}
 		}
 	}
