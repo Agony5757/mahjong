@@ -288,7 +288,7 @@ namespace TrainingDataEncoding {
 		{
 			game_record_t record = { 0 };
 			
-			static auto& tile2idx = [](Tile* tile) -> size_t
+			static auto tile2idx = [](Tile* tile) -> size_t
 			{
 				if (tile->red_dora)
 				{
