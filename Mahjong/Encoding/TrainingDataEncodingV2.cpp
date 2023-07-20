@@ -24,6 +24,7 @@ namespace TrainingDataEncoding {
 			else
 			{
 				visible_tiles[locate_attribute(0, dora->tile)] = 1;
+				visible_tiles_count[dora->tile]++;
 			}
 
 			// Init static global information
@@ -64,6 +65,30 @@ namespace TrainingDataEncoding {
 			global_infos[2][pos] =
 			global_infos[3][pos] = table->game_wind - Wind::East;
 
+			pos = (size_t)EnumGlobalInformation::pos_player_0_point;
+			global_infos[0][pos] = table->players[0].score / 100;
+			global_infos[1][pos] = table->players[1].score / 100;
+			global_infos[2][pos] = table->players[2].score / 100;
+			global_infos[3][pos] = table->players[3].score / 100;
+
+			pos = (size_t)EnumGlobalInformation::pos_player_1_point;
+			global_infos[0][pos] = table->players[3].score / 100;
+			global_infos[1][pos] = table->players[0].score / 100;
+			global_infos[2][pos] = table->players[1].score / 100;
+			global_infos[3][pos] = table->players[2].score / 100;
+
+			pos = (size_t)EnumGlobalInformation::pos_player_2_point;
+			global_infos[0][pos] = table->players[2].score / 100;
+			global_infos[1][pos] = table->players[3].score / 100;
+			global_infos[2][pos] = table->players[0].score / 100;
+			global_infos[3][pos] = table->players[1].score / 100;
+
+			pos = (size_t)EnumGlobalInformation::pos_player_3_point;
+			global_infos[0][pos] = table->players[1].score / 100;
+			global_infos[1][pos] = table->players[2].score / 100;
+			global_infos[2][pos] = table->players[3].score / 100;
+			global_infos[3][pos] = table->players[0].score / 100;
+
 		}
 
 		void TableEncoder::_update_from_ankan(const BaseGameLog& log)
@@ -73,18 +98,111 @@ namespace TrainingDataEncoding {
 			visible_tiles[locate_attribute(0, tile)] = 1;
 			visible_tiles[locate_attribute(1, tile)] = 1;
 			visible_tiles[locate_attribute(2, tile)] = 1;
-			visible_tiles[locate_attribute(3, tile)] = 1;
+			visible_tiles[locate_attribute(3, tile)] = 1; 
+			visible_tiles_count[basetile] = 4;
 
 			// update the corresponding self_info
 			int player = log.player;
 			_update_hand(player);
 			_update_visible_tiles();
+		}
 
-			// update the game_record
+		void TableEncoder::_update_from_call(const BaseGameLog& log)
+		{
+			// update visible tiles
+			for (auto tile : log.call_tiles)
+			{
+				auto basetile = tile->tile;
+				if (tile->red_dora)
+					visible_tiles[locate_attribute(3, basetile)] = 1;
+				else
+				{
+					visible_tiles[locate_attribute(visible_tiles_count[basetile]++, basetile)] = 1;
+				}
+			}
 
-			// update the global information
-			// 
-			// (no need)
+			// update the corresponding self_info
+			int player = log.player;
+			_update_hand(player);
+			_update_visible_tiles();
+		}
+
+		void TableEncoder::_update_from_kakan(const BaseGameLog& log)
+		{
+			// update visible tiles
+			auto tile = log.tile->tile;
+			visible_tiles[locate_attribute(0, tile)] = 1;
+			visible_tiles[locate_attribute(1, tile)] = 1;
+			visible_tiles[locate_attribute(2, tile)] = 1;
+			visible_tiles[locate_attribute(3, tile)] = 1;
+			visible_tiles_count[basetile] = 4;
+
+			// update the corresponding self_info
+			int player = log.player;
+			_update_hand(player);
+			_update_visible_tiles();
+		}
+
+		void TableEncoder::_update_from_discard(const BaseGameLog& log, bool fromhand)
+		{
+			auto tile = log.tile;
+			auto basetile = tile->tile;
+			if (tile->red_dora)
+				visible_tiles[locate_attribute(3, basetile)] = 1;
+			else
+			{
+				visible_tiles[locate_attribute(visible_tiles_count[basetile]++, basetile)] = 1;
+			}
+
+			// set furiten area
+			for (int i = 0; i < 4; ++i)
+			{
+				int p = (log.player + i) % 4;
+				size_t pos_discarded_by = p + (size_t)EnumSelfInformation::pos_discarded_by_player_1;
+				self_infos[i][locate_attribute(pos_discarded_by, basetile)] = 1;
+			}
+
+			_update_hand(player);
+			_update_visible_tiles();
+		}
+
+		void TableEncoder::_update_from_riichi(const BaseGameLog& log, bool fromhand)
+		{
+			auto tile = log.tile;
+			auto basetile = tile->tile;
+			if (tile->red_dora)
+				visible_tiles[locate_attribute(3, basetile)] = 1;
+			else
+			{
+				visible_tiles[locate_attribute(visible_tiles_count[basetile]++, basetile)] = 1;
+			}
+
+			// set furiten area
+			for (int i = 0; i < 4; ++i)
+			{
+				int p = (log.player + i) % 4;
+				size_t pos_discarded_by = p + (size_t)EnumSelfInformation::pos_discarded_by_player_1;
+				self_infos[i][locate_attribute(pos_discarded_by, basetile)] = 1;
+			}
+
+			_update_hand(player);
+			_update_visible_tiles();
+		}
+
+		void TableEncoder::_update_from_riichi_success(const BaseGameLog& log)
+		{
+			int player = log.player;
+			size_t pos_kyoutaku = (size_t)EnumGlobalInformation::pos_kyoutaku;
+			for (int i = 0; i < 3; ++i)
+			{
+				int p = (player + i) % 4;
+				size_t pos_player = (size_t)EnumGlobalInformation::pos_player_0_point + p;
+				global_infos[i][pos_player] -= 10;
+			}
+			global_infos[0][pos_kyoutaku] += 1;
+			global_infos[1][pos_kyoutaku] += 1;
+			global_infos[2][pos_kyoutaku] += 1;
+			global_infos[3][pos_kyoutaku] += 1;
 		}
 
 		void TableEncoder::_update_hand(int player)
@@ -105,12 +223,152 @@ namespace TrainingDataEncoding {
 					self_info[locate_attribute(offset_akadora, tile_type)] = 1;
 				}
 			}
+
+			constexpr size_t offset_tsumo = (size_t)EnumSelfInformation::pos_tsumo_tile;
+
+			if (hand.size() % 3 == 2)
+			{
+				int tile_type = hand.back()->tile;
+				self_info[locate_attribute(offset_tsumo, tile_type)] = 1;
+			}
+			else
+			{
+				for (int tile_type = 0; tile_type < n_tile_types; ++tile_type)
+				{
+					self_info[locate_attribute(offset_tsumo, tile_type)] = 0;
+				}
+			}
+		}
+
+		void TableEncoder::_update_from_draw(const BaseGameLog& log, bool from_rinshan)
+		{
+			int player = log.player;
+			_update_hand(player);
+		}
+
+		void TableEncoder::_update_from_dora_reveal(const BaseGameLog& log)
+		{
+			auto tile = log.tile;
+			auto basetile = tile->tile;
+			if (tile->red_dora)
+				visible_tiles[locate_attribute(3, basetile)] = 1;
+			else
+			{
+				visible_tiles[locate_attribute(visible_tiles_count[basetile]++, basetile)] = 1;
+			}
+			_update_visible_tiles();
 		}
 
 		void TableEncoder::_update_visible_tiles()
+		{			
+			constexpr size_t offset = (size_t)EnumSelfInformation::pos_discarded_number_1 * n_col_self_info;
+			constexpr size_t szbytes = 4 * n_col_self_info * sizeof(decltype(visible_tiles[0]));
+			memcpy(self_infos[0].data() + offset, visible_tiles.data(), szbytes);
+			memcpy(self_infos[1].data() + offset, visible_tiles.data(), szbytes);
+			memcpy(self_infos[2].data() + offset, visible_tiles.data(), szbytes);
+			memcpy(self_infos[3].data() + offset, visible_tiles.data(), szbytes);
+		}
+
+		void TableEncoder::_update_record(const BaseGameLog& log)
 		{
-			size_t offset = EnumSelfInformation::pos_discarded_number_1
-			memcpy(self_infos[0].data() + )
+			game_record_t record = { 0 };
+			
+			static auto& tile2idx = [](Tile* tile) -> size_t
+			{
+				if (tile->red_dora)
+				{
+					switch (tile->tile)
+					{
+					case _5m:
+						return n_tile_types;
+					case _5p:
+						return n_tile_types + 1;
+					case _5s:
+						return n_tile_types + 2;
+					default:
+						throw std::runtime_error("Bad tile.");
+					}
+				}
+				else
+					return (size_t)(tile->tile);
+			}
+
+			int player = log.player;
+			if (log.call_tiles.size() != 0)
+			{
+				for (auto tile : log.call_tiles)
+				{
+					record[tile2idx(tile)] = 0;
+				}
+			}
+			
+			if (log.tile)
+			{
+				record[tile2idx(log.tile)] = 1;
+			}
+
+			switch (log.action)
+			{
+			case LogAction::DrawNormal:
+				record[EnumAction::DrawNormal] = 1;
+				break;
+			case LogAction::DrawRinshan:
+				record[EnumAction::DrawRinshan] = 1;
+				break;
+			case LogAction::DiscardFromHand:
+				record[EnumAction::DiscardFromHand] = 1;
+				break;
+			case LogAction::Chi:
+				int chitile = log.tile->tile;
+				int handtile1 = log.call_tiles[0]->tile;
+				int handtile2 = log.call_tiles[1]->tile;
+
+				if (handtile2 < handtile1)
+				{
+					std::swap(handtile1, handtile2); 
+					throw std::runtime_error("An abnormal LogAction object.");
+				}
+
+				if (chitile < handtile1)
+					record[EnumAction::ChiLeft] = 1;
+				else if (chitile > handtile2)
+					record[EnumAction::ChiRight] = 1;
+				else
+					record[EnumAction::ChiMid] = 1;
+				break;
+			case LogAction::Pon:
+				record[EnumAction::Pon] = 1;
+				break;
+			case LogAction::Kan:
+				record[EnumAction::Kan] = 1;
+				break;
+			case LogAction::KaKan:
+				record[EnumAction::Kakan] = 1;
+				break;
+			case LogAction::RiichiDiscardFromHand:
+				record[EnumAction::RiichiFromHand] = 1;
+				break;
+			case LogAction::RiichiDiscardFromTsumo:
+				record[EnumAction::RiichiFromTsumo] = 1;
+				break;
+			case LogAction::RiichiSuccess:
+				record[EnumAction::RiichiSuccess] = 1;
+				break;
+			default:
+				throw std::runtime_error("Bad LogAction (not handled in the _update_record).");
+			}
+
+			records[0].push_back(record);
+			records[1].push_back(record);
+			records[2].push_back(record);
+			records[3].push_back(record);
+
+			int player = log.player;
+			for (int i = 0; i < 4; ++i)
+			{
+				int p = (player + i) % 4;
+				records[i][offset_player + p] = 0;
+			}
 		}
 
 		void TableEncoder::update()
@@ -122,37 +380,49 @@ namespace TrainingDataEncoding {
 				{
 				case LogAction::AnKan:
 					_update_from_ankan(log);
+					_update_record(log);
 					return;
 				case LogAction::Pon:
 				case LogAction::Chi:
 				case LogAction::Kan:
 					_update_from_call(log);
+					_update_record(log);
 					return;
 				case LogAction::KaKan:
 					_update_from_kakan(log);
+					_update_record(log);
 					return;
 				case LogAction::DiscardFromHand:
 					_update_from_discard(log, DiscardFromHand);
+					_update_record(log);
 					return;
 				case LogAction::DiscardFromTsumo:
 					_update_from_discard(log, DiscardFromTsumo);
+					_update_record(log);
 					return;
 				case LogAction::RiichiDiscardFromHand:
 					_update_from_riichi(log, DiscardFromHand);
+					_update_record(log);
 					return;
 				case LogAction::RiichiDiscardFromTsumo:
 					_update_from_riichi(log, DiscardFromTsumo);
+					_update_record(log);
 					return;
 				case LogAction::RiichiSuccess:
 					_update_from_riichi_success(log);
+					_update_record(log);
+					return;
 				case LogAction::DrawNormal:
 					_update_from_draw(log, DrawNormally);
+					_update_record(log);
 					return;
 				case LogAction::DrawRinshan:
 					_update_from_draw(log, DrawFromRinshan);
+					_update_record(log);
 					return;
 				case LogAction::DoraReveal:
 					_update_from_dora_reveal(log);
+					return;
 				case LogAction::Kyushukyuhai:
 				case LogAction::Ron:
 				case LogAction::Tsumo:

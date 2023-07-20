@@ -48,7 +48,25 @@ namespace TrainingDataEncoding {
 		}
 
 		constexpr size_t n_tile_types_include_aka = n_tile_types + 3;
-		constexpr size_t n_actions = 12;
+		enum class EnumAction
+		{
+			DrawNormal,
+			DrawRinshan,
+			DiscardFromHand,
+			DiscardFromTsumo,
+			ChiLeft,
+			ChiMiddle,
+			ChiRight,
+			Pon,
+			Kan,
+			Ankan,
+			Kakan,
+			RiichiFromHand,
+			RiichiFromTsumo,
+			RiichiSuccess,
+			n_actions,
+		};
+		constexpr size_t n_actions = (size_t)EnumAction::n_actions;
 		constexpr size_t n_players = 4;
 		constexpr size_t n_step_actions = n_tile_types_include_aka + n_actions + n_players;
 		constexpr size_t offset_tile = 0;
@@ -82,8 +100,9 @@ namespace TrainingDataEncoding {
 
 		struct TableEncoder
 		{
-			std::array<uint8_t, 4 * n_col_self_info> visible_tiles = { 0 };			
-			Table* table;
+			std::array<uint8_t, 4 * n_col_self_info> visible_tiles = { 0 };
+			std::array<uint8_t, n_col_self_info> visible_tiles_count = { 0 };
+			Table* table = nullptr;
 
 		public:
 			std::array<self_info_t, 4> self_infos;
@@ -119,6 +138,7 @@ namespace TrainingDataEncoding {
 
 			void _update_hand(int player);
 			void _update_visible_tiles();
+			void _update_record(const BaseGameLog& log);
 
 			void init();
 			void update();
