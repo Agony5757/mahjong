@@ -110,7 +110,11 @@ namespace TrainingDataEncoding {
 			std::array<std::vector<game_record_t>, 4> records;
 			std::array<global_info_t, 4> global_infos;
 
-			inline TableEncoder(Table* t) : table(t) {}
+			inline TableEncoder(Table* t) : table(t) {
+				self_infos.fill(self_info_t{ 0 });
+				records.fill(std::vector<game_record_t>());
+				global_infos.fill(global_info_t{ 0 });
+			}
 
 			inline const auto& get_self_info(size_t player) const
 			{

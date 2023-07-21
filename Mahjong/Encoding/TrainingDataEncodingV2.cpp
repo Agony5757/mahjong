@@ -94,7 +94,12 @@ namespace TrainingDataEncoding {
 			global_infos[1][pos] = 
 			global_infos[2][pos] = 
 			global_infos[3][pos] = table->get_remain_tile();
-
+			
+			_update_hand(0);
+			_update_hand(1);
+			_update_hand(2);
+			_update_hand(3);
+			_update_visible_tiles();
 		}
 
 		void TableEncoder::_update_from_ankan(const BaseGameLog& log)

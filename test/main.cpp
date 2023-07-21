@@ -306,9 +306,15 @@ void test_random_play_v2(int games = 1)
 
 	for (int i = 0; i < games; ++i) {
 		Table t;
+		enc::TableEncoder encoder(&t);
 		t.set_debug_mode(Table::debug_close);
 		t.game_init();
-
+		encoder.init();
+		encoder.update();
+		fmt::print("{}\n", encoder.self_infos[0]);
+		fmt::print("{}\n", encoder.self_infos[1]);
+		fmt::print("{}\n", encoder.self_infos[2]);
+		fmt::print("{}\n", encoder.self_infos[3]);
 		do {
 			int selection;
 			if (t.is_self_acting()) {
