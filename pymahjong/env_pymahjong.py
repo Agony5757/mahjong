@@ -28,9 +28,9 @@ class MahjongEnv(gym.Env):
     RON = 42
     TSUMO = 43
     PUSH = 44
-
-    PASS_RESPONSE = 45
-    PASS_RIICHI = 46
+    
+    PASS_RIICHI = 45
+    PASS_RESPONSE = 46
 
     # corresponding to self.t.get_phase()
     Phases = ("P1_ACTION", "P2_ACTION", "P3_ACTION", "P4_ACTION", "P1_RESPONSE", "P2_RESPONSE", "P3_RESPONSE",
