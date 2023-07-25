@@ -20,12 +20,16 @@ BaseGameLog::BaseGameLog(const array<int, 4> &scores)
 string BaseGameLog::to_string()
 {
 	switch (action) {
+	case LogAction::KaKan:
+		return fmt::format("p{} Kakan {}", player, tile->to_string());
 	case LogAction::AnKan:
 		return fmt::format("p{} AnKan {}", player, tiles_to_string(call_tiles));
 	case LogAction::Pon:
 		return fmt::format("p{} Pon {} with {}", player, tile->to_string(), tiles_to_string(call_tiles));
 	case LogAction::Chi:
 		return fmt::format("p{} Chi {} with {}", player, tile->to_string(), tiles_to_string(call_tiles));
+	case LogAction::Kan:
+		return fmt::format("p{} Kan {} with {}", player, tile->to_string(), tiles_to_string(call_tiles));
 	case LogAction::DiscardFromHand:
 		return fmt::format("p{} Discard (from hand) {}", player, tile->to_string());
 	case LogAction::DiscardFromTsumo:
@@ -89,6 +93,7 @@ string GameLog::to_string()
 }
 
 void GameLog::_log(BaseGameLog log) {
+	FunctionProfiler;
 	logs.push_back(log);
 }
 

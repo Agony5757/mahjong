@@ -348,6 +348,9 @@ namespace TrainingDataEncoding {
 			case LogAction::DiscardFromHand:
 				record[(size_t)EnumGameRecordAction::DiscardFromHand] = 1;
 				break;
+			case LogAction::DiscardFromTsumo:
+				record[(size_t)EnumGameRecordAction::DiscardFromTsumo] = 1;
+				break;
 			case LogAction::Chi: {
 					int chitile = log.tile->tile;
 					int handtile1 = log.call_tiles[0]->tile;
@@ -376,6 +379,9 @@ namespace TrainingDataEncoding {
 			case LogAction::KaKan:
 				record[(size_t)EnumGameRecordAction::Kakan] = 1;
 				break;
+			case LogAction::AnKan:
+				record[(size_t)EnumGameRecordAction::Ankan] = 1;
+				break;
 			case LogAction::RiichiDiscardFromHand:
 				record[(size_t)EnumGameRecordAction::RiichiFromHand] = 1;
 				break;
@@ -384,6 +390,9 @@ namespace TrainingDataEncoding {
 				break;
 			case LogAction::RiichiSuccess:
 				record[(size_t)EnumGameRecordAction::RiichiSuccess] = 1;
+				break;
+			case LogAction::DoraReveal:
+				// this does not involve record update.
 				break;
 			default:
 				throw std::runtime_error("Bad LogAction (not handled in the _update_record).");
