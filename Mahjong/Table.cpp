@@ -332,13 +332,13 @@ void Table::from_beginning()
 	if (phase == GAME_OVER)
 		return;
 
-	const static auto 四风连打牌 = [](const array<Player, 4>& players) {
+	const static auto siifurenda_test = [](const array<Player, 4>& players) {
 		BaseTile t0 = players[0].river[0].tile->tile;
 		BaseTile t1 = players[1].river[0].tile->tile;
 		BaseTile t2 = players[2].river[0].tile->tile;
 		BaseTile t3 = players[3].river[0].tile->tile;
 
-		return t0 == t1 && t2 == t3 && t0 == t2 && t1 >= BaseTile::_1z && t1 <= BaseTile::_4z;
+		return t0 == t1 && t0 == t2 && t0 == t3 && t1 >= BaseTile::_1z && t1 <= BaseTile::_4z;
 	};
 
 	// 四风连打判定
@@ -350,7 +350,7 @@ void Table::from_beginning()
 		players[1].call_groups.size() == 0 &&
 		players[2].call_groups.size() == 0 &&
 		players[3].call_groups.size() == 0 &&
-		四风连打牌(players))
+		siifurenda_test(players))
 	{
 		result = generate_result_4wind(this);
 		gamelog.log_gameover(result);
@@ -664,10 +664,8 @@ void Table::_handle_response_action()
 		}
 		else {
 			// 对于所有其他人			
-			bool is下家 = false;
-			if (i == (turn + 1) % 4)
-				is下家 = true;
-			response_actions = _generate_response_actions(i, tile, is下家);
+			bool is_next = (i == (turn + 1) % 4);
+			response_actions = _generate_response_actions(i, tile, is_next);
 		}
 		phase = PhaseEnum(phase + 1);
 	}
@@ -691,10 +689,6 @@ void Table::_handle_response_chankan_action()
 			response_actions = { ra };
 		}
 		else {
-			// 对于所有其他人			
-			bool is下家 = false;
-			if (i == (turn + 1) % 4)
-				is下家 = true;
 			response_actions = _generate_chankan_response_actions(i, tile);
 		}
 		phase = PhaseEnum(phase + 1);
@@ -719,10 +713,6 @@ void Table::_handle_response_chanankan_action()
 			response_actions = { ra };
 		}
 		else {
-			// 对于所有其他人			
-			bool is下家 = false;
-			if (i == (turn + 1) % 4)
-				is下家 = true;
 			response_actions = _generate_chanankan_response_actions(i, tile);
 		}
 		phase = PhaseEnum(phase + 1);

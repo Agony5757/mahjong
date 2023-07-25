@@ -53,9 +53,6 @@ bool is_nagashi_mangan(River r) {
 
 Result generate_result_notile(Table * table)
 {
-	//cout << "Warning: 罚符 is not considered" << endl;
-	//cout << "Warning: 流局满贯 is not considered" << endl;
-
 	Result result;
 	
 	for (int i = 0; i < 4; ++i)
@@ -167,7 +164,6 @@ Result generate_result_notile(Table * table)
 				tenpai_status[i] = false;
 			}
 		}
-		// cout << "Warning: 空听 is not considered" << endl;
 
 		result.n_honba = table->honba + 1;
 		result.n_riichibo = table->kyoutaku;

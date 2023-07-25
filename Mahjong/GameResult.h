@@ -28,9 +28,15 @@ inline const char* result_type_str(ResultType type)
 		"NagashiMangan",
 		"Ryukyouku_Interval",
 	};
+
+	/* obtain number of result types (5) */
 	constexpr size_t len = sizeof(result_type_strs) / sizeof(result_type_strs[0]);
-	return (int(type) >= len || int(type) < 0) ? 
-		"Error type" : result_type_strs[(int)type];
+
+	/* only accept 0~4 */
+	if ((int)type >= 0 && (int)type < len)
+		return result_type_strs[(int)type];
+	else
+		throw std::runtime_error("Cannot identify the ResultType.");
 }
 
 struct Result {
@@ -40,7 +46,7 @@ struct Result {
 	std::vector<int> winner;
 	std::vector<int> loser;
 	std::array<int, 4> score;
-	int n_yakuman[4];
+	int n_yakuman[4] = { 0 };
 	int n_riichibo;
 	int n_honba;
 	bool renchan; // 連荘

@@ -101,6 +101,7 @@ namespace TrainingDataEncoding {
 			_update_hand(3);
 			_update_visible_tiles();
 
+			// The first record shouldn't be taken into account.
 			record_count = table->gamelog.logsize();
 		}
 
