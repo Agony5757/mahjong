@@ -100,6 +100,8 @@ namespace TrainingDataEncoding {
 			_update_hand(2);
 			_update_hand(3);
 			_update_visible_tiles();
+
+			record_count = table->gamelog.logsize();
 		}
 
 		void TableEncoder::_update_from_ankan(const BaseGameLog& log)
