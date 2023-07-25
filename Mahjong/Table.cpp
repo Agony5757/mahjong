@@ -456,7 +456,6 @@ void Table::draw_n_normal(int i_player, int n_tiles)
 /* 如果还有2/4张岭上牌，则摸倒数第2张（因为最后一张压在下面）*/
 void Table::draw_rinshan(int i_player)
 {
-	new_dora(); // 先翻dora
 	int n_kan = get_remain_kan_tile();
 	auto iter = yama.begin();
 	if (n_kan % 2 == 0) ++iter;
@@ -850,6 +849,8 @@ void Table::_handle_response_final_chankan_execution()
 		players[i].ippatsu = false;
 	}
 	next_turn(turn);
+
+	// 这里还不急着翻dora，先记录last_action
 }
 
 void Table::_handle_response_final_chanankan_execution()
@@ -882,6 +883,7 @@ void Table::_handle_response_final_chanankan_execution()
 		players[i].first_round = false;
 		players[i].ippatsu = false;
 	}
+
 	next_turn(turn);
 }
 
@@ -905,6 +907,10 @@ void Table::_handle_self_action()
 	{
 		// 决定不胡牌，则不具有ippatsu状态
 		players[turn].ippatsu = false;
+
+		// 上个动作是杠/加杠，则在self action决定后翻dora
+		if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
+			new_dora();
 
 		tile = selected_action.correspond_tiles[0];
 		// 等待回复
@@ -945,6 +951,10 @@ void Table::_handle_self_action()
 	}
 	case BaseAction::KaKan:
 	{
+		// 上个动作是杠/加杠，则在self action决定后翻dora
+		if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
+			new_dora();
+
 		tile = selected_action.correspond_tiles[0];
 
 		/* log kakan before response*/
@@ -966,6 +976,10 @@ void Table::_handle_self_action()
 	}
 	case BaseAction::AnKan:
 	{
+		// 上个动作是杠/加杠，则在self action决定后翻dora
+		if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
+			new_dora();
+
 		tile = selected_action.correspond_tiles[0];
 
 		/* log kakan before response*/
@@ -983,7 +997,8 @@ void Table::_handle_self_action()
 		else {
 			response_actions = _generate_chanankan_response_actions(0, tile);
 		}
-
+		// 暗杠不等response，直接翻dora
+		new_dora();
 		return;
 	}
 	default:
