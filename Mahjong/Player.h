@@ -112,7 +112,7 @@ public:
 	void update_furiten_river();
 	void remove_atari_tiles(BaseTile t);
 
-	inline void 见逃() {
+	inline void minogashi() {
 		if (riichi) furiten_riichi = true;
 		else furiten_round = true;
 	}

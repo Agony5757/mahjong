@@ -9,7 +9,7 @@
 using namespace std;
 namespace_mahjong
 
-static bool check_见逃(const vector<ResponseAction>& responses, int selection)
+static bool check_minogashi(const vector<ResponseAction>& responses, int selection)
 {
 	for (int i = 0; i < responses.size();++i) {
 		if (responses[i].action == BaseAction::Ron ||
@@ -650,8 +650,8 @@ void Table::_handle_response_action()
 {
 	// 见逃判断
 	int i = phase - P1_RESPONSE;
-	if (check_见逃(response_actions, selection)) {
-		players[i].见逃();
+	if (check_minogashi(response_actions, selection)) {
+		players[i].minogashi();
 	}	
 	// 在0,1,2处理完之后，为下一个玩家生成对应的动作，并改变对应的phase
 	if (i < 3)
@@ -675,8 +675,8 @@ void Table::_handle_response_chankan_action()
 {
 	// 见逃判断
 	int i = phase - P1_CHANKAN_RESPONSE;
-	if (check_见逃(response_actions, selection)) {
-		players[i].见逃();
+	if (check_minogashi(response_actions, selection)) {
+		players[i].minogashi();
 	}
 
 	// 在0,1,2处理完之后，为下一个玩家生成对应的动作，并改变对应的phase
@@ -699,8 +699,8 @@ void Table::_handle_response_chanankan_action()
 {
 	// 见逃判断
 	int i = phase - P1_CHANANKAN_RESPONSE;
-	if (check_见逃(response_actions, selection)) {
-		players[i].见逃();
+	if (check_minogashi(response_actions, selection)) {
+		players[i].minogashi();
 	}
 
 	// 在0,1,2处理完之后，为下一个玩家生成对应的动作，并改变对应的phase
