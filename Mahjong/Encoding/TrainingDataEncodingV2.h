@@ -10,7 +10,7 @@ namespace TrainingDataEncoding {
 	namespace v2
 	{
 		constexpr size_t n_tile_types = 9 + 9 + 9 + 7;
-
+		using dtype = int16_t;
 		enum class EnumSelfInformation
 		{
 			pos_hand_1,
@@ -36,7 +36,7 @@ namespace TrainingDataEncoding {
 		constexpr size_t n_row_self_info = (size_t)EnumSelfInformation::n_self_information;
 		constexpr size_t n_col_self_info = n_tile_types;
 
-		using self_info_t = std::array<int8_t, n_row_self_info* n_col_self_info>;
+		using self_info_t = std::array<dtype, n_row_self_info* n_col_self_info>;
 
 		constexpr size_t locate_attribute(size_t attribute_row, size_t tile_type)
 		{
@@ -74,7 +74,7 @@ namespace TrainingDataEncoding {
 		constexpr size_t offset_player = offset_action + n_actions;
 
 		// a record structure for encoding
-		using game_record_t = std::array<int8_t, n_step_actions>;
+		using game_record_t = std::array<dtype, n_step_actions>;
 
 		enum class EnumGlobalInformation
 		{
@@ -96,12 +96,12 @@ namespace TrainingDataEncoding {
 			n_global_information
 		};
 		
-		using global_info_t = std::array<int8_t, (size_t)EnumGlobalInformation::n_global_information>;
+		using global_info_t = std::array<dtype, (size_t)EnumGlobalInformation::n_global_information>;
 
 		struct TableEncoder
 		{
-			std::array<uint8_t, 4 * n_col_self_info> visible_tiles = { 0 };
-			std::array<uint8_t, n_col_self_info> visible_tiles_count = { 0 };
+			std::array<dtype, 4 * n_col_self_info> visible_tiles = { 0 };
+			std::array<dtype, n_col_self_info> visible_tiles_count = { 0 };
 			Table* table = nullptr;
 			int record_count = 0;
 
