@@ -367,6 +367,33 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("generate_yama", &TenhouShuffle::generate_yama)
 		;
 
+	py::class_<BaseGameLog>(m, "BaseGameLog")
+		.def_readonly("player", &BaseGameLog::player)
+		.def_readonly("player2", &BaseGameLog::player2)
+		.def_readonly("action", &BaseGameLog::action)
+		.def_readonly("tile", &BaseGameLog::tile)
+		.def_readonly("call_tiles", &BaseGameLog::call_tiles)
+		.def_readonly("score", &BaseGameLog::score)
+		.def("to_string", &BaseGameLog::to_string)
+		;
+
+	py::class_<GameLog>(m, "GameLog")
+		.def_readonly("winner", &GameLog::winner)
+		.def_readonly("loser", &GameLog::loser)
+		.def_readonly("start_scores", &GameLog::start_scores)
+		.def_readonly("init_yama", &GameLog::init_yama)
+		.def_readonly("init_hands", &GameLog::init_hands)
+		.def_readonly("start_honba", &GameLog::start_honba)
+		.def_readonly("end_honba", &GameLog::end_honba)
+		.def_readonly("start_kyoutaku", &GameLog::start_kyoutaku)
+		.def_readonly("end_kyoutaku", &GameLog::end_kyoutaku)
+		.def_readonly("oya", &GameLog::oya)
+		.def_readonly("game_wind", &GameLog::game_wind)
+		.def_readonly("result", &GameLog::result)
+		.def_readonly("logs", &GameLog::logs)
+		.def("to_string", &GameLog::to_string)
+		;
+
 	auto get_self_action_index = 
 	[](const std::vector<SelfAction> &actions, BaseAction action_type, std::vector<BaseTile> correspond_tiles, bool use_red_dora)
 		{ return get_action_index(actions, action_type, correspond_tiles, use_red_dora); };
