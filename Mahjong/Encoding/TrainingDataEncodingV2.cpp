@@ -199,9 +199,12 @@ namespace TrainingDataEncoding {
 			}
 
 			// set furiten area
+			// 对i来说，player是i的第p家，p = 0自家，p = 1下家，etc..
+			// e.g. player = 2, i = 3, 则为上家，因此 player - i == -1 == 3
 			for (int i = 0; i < 4; ++i)
 			{
-				int p = (log.player + i) % 4;
+				int p = log.player - i;
+				p = (p < 0) ? (p + 4) : p;
 				size_t pos_discarded_by = p + (size_t)EnumSelfInformation::pos_discarded_by_player_1;
 				self_infos[i][locate_attribute(pos_discarded_by, basetile)] = 1;
 			}
@@ -223,9 +226,12 @@ namespace TrainingDataEncoding {
 			}
 
 			// set furiten area
+			// 对i来说，player是i的第p家，p = 0自家，p = 1下家，etc..
+			// e.g. player = 2, i = 3, 则为上家，因此 player - i == -1 == 3
 			for (int i = 0; i < 4; ++i)
 			{
-				int p = (log.player + i) % 4;
+				int p = log.player - i;
+				p = (p < 0) ? (p + 4) : p;
 				size_t pos_discarded_by = p + (size_t)EnumSelfInformation::pos_discarded_by_player_1;
 				self_infos[i][locate_attribute(pos_discarded_by, basetile)] = 1;
 			}
@@ -236,11 +242,14 @@ namespace TrainingDataEncoding {
 
 		void TableEncoder::_update_from_riichi_success(const BaseGameLog& log)
 		{
-			int player = log.player;
 			size_t pos_kyoutaku = (size_t)EnumGlobalInformation::pos_kyoutaku;
-			for (int i = 0; i < 3; ++i)
+
+			// 对i来说，player是i的第p家，p = 0自家，p = 1下家，etc..
+			// e.g. player = 2, i = 3, 则为上家，因此 player - i == -1 == 3
+			for (int i = 0; i < 4; ++i)
 			{
-				int p = (player + i) % 4;
+				int p = log.player - i;
+				p = (p < 0) ? (p + 4) : p;
 				size_t pos_player = (size_t)EnumGlobalInformation::pos_player_0_point + p;
 				global_infos[i][pos_player] -= 10;
 			}
@@ -446,9 +455,13 @@ namespace TrainingDataEncoding {
 			records[1].push_back(record);
 			records[2].push_back(record);
 			records[3].push_back(record);
+
+			// 对i来说，player是i的第p家，p = 0自家，p = 1下家，etc..
+			// e.g. player = 2, i = 3, 则为上家，因此 player - i == -1 == 3
 			for (int i = 0; i < 4; ++i)
 			{
-				int p = (player + i) % 4;
+				int p = player - i;
+				p = (p < 0) ? (p + 4) : p;
 				records[i].back()[offset_player + p] = 0;
 			}
 		}
@@ -456,9 +469,12 @@ namespace TrainingDataEncoding {
 		void TableEncoder::_update_ippatsu()
 		{
 			for (int player = 0; player < 4; ++player) {
+				// 对i来说，player是i的第p家，p = 0自家，p = 1下家，etc..
+				// e.g. player = 2, i = 3, 则为上家，因此 player - i == -1 == 3
 				for (int i = 0; i < 4; ++i)
 				{
-					int p = (player + i) % 4;
+					int p = player - i;
+					p = (p < 0) ? (p + 4) : p;
 					size_t pos_ippatsu = p + (size_t)EnumGlobalInformation::pos_player_0_ippatsu;
 					global_infos[i][pos_ippatsu] = table->players[player].ippatsu ? 1 : 0;
 				}
