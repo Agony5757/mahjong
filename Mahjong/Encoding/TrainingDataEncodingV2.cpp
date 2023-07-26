@@ -43,16 +43,18 @@ namespace TrainingDataEncoding {
 			self_infos[3][locate_attribute(pos, get_dora_next(dora_indicator->tile))]++;
 
 			pos = (size_t)EnumSelfInformation::pos_self_wind;
-			global_infos[0][pos] = (table->players[0].wind - Wind::East) + BaseTile::_1z;
-			global_infos[1][pos] = (table->players[1].wind - Wind::East) + BaseTile::_1z;
-			global_infos[2][pos] = (table->players[2].wind - Wind::East) + BaseTile::_1z;
-			global_infos[3][pos] = (table->players[3].wind - Wind::East) + BaseTile::_1z;
-
+			for (int i = 0; i < 4; ++i)
+			{
+				auto wind_type = table->players[i].wind - Wind::East + BaseTile::_1z;
+				self_infos[i][locate_attribute(pos, wind_type)] = 1;
+			}
+			
 			pos = (size_t)EnumSelfInformation::pos_game_wind;
-			global_infos[0][pos] =
-			global_infos[1][pos] =
-			global_infos[2][pos] =
-			global_infos[3][pos] = (table->game_wind - Wind::East) + BaseTile::_1z;
+			for (auto& self_info : self_infos)
+			{
+				auto wind_type = table->game_wind - Wind::East + BaseTile::_1z;
+				self_info[locate_attribute(pos, wind_type)] = 1;
+			}
 			
 			// Init static global information
 			pos = (size_t)EnumGlobalInformation::pos_game_number;
