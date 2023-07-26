@@ -271,7 +271,6 @@ string make_tilegroup(BaseTile t, char mark1, char mark2)
 	return ret;
 };
 
-
 vector<vector<string>> ScoreCounter::generate_tile_group_strings(const CompletedTiles &ct, const vector<CallGroup> &callgroups, bool tsumo, BaseTile last_tile)
 {
 	profiler _("ScoreCounter.cpp/generate_tgs");
@@ -488,7 +487,7 @@ vector<Yaku> ScoreCounter::get_hand_yakuman(const vector<string> &tile_group_str
 }
 
 // 这个函数不判断：7对，国士无双及13面，九莲宝灯与纯正，所有宝牌役，所有场役包括立直，两立直，门清自摸，抢杠，海底，河底，一发，岭上，以及所有役满
-pair<vector<Yaku>, int> ScoreCounter::get_hand_yakus(vector<string> tile_group_string, Wind self_wind, Wind game_wind, bool menzen) {
+pair<vector<Yaku>, int> ScoreCounter::get_hand_yakus(const vector<string> &tile_group_string, Wind self_wind, Wind game_wind, bool menzen) {
 
 	vector<Yaku> yakus;
 	yakus.reserve(16); // 随便分配一些空间以免后期重新分配
@@ -1147,27 +1146,9 @@ CounterResult ScoreCounter::yaku_counter()
 	// 首先 假设进入到这个counter阶段的，至少满足了和牌条件的牌型
 	// 以及，是否有某种役是不确定的
 
-	// 从最简单的场役开始计算
-
-	// tsumo = (correspond_tile == nullptr);
-	// 门清 = player.门清;
-
-	// 役 = 手役+场役+Dora。手役根据牌的解释不同而不同。
-	// vector<pair<vector<Yaku>, int>> all_yaku_fu_cases;
 	CounterResult final_result;
 
-	// auto handcopy = player.hand;
-	// if (correspond_tile != nullptr)
-	//	 handcopy.push_back(correspond_tile);
-
-	// auto hand_basetile = convert_tiles_to_basetiles(handcopy);
-
 	yakuman = false;
-	// vector<Yaku> 天地和;
-	// vector<Yaku> 场役;
-	// vector<Yaku> Dora役;
-	// vector<pair<vector<Yaku>, int>> &all_手役 = all_yaku_fu_cases; // 所有手役可能性
-	
 
 	/* 天地和的条件是，在第一巡，且没人鸣牌*/
 	if (player->first_round && tsumo) {
@@ -1213,6 +1194,7 @@ CounterResult ScoreCounter::yaku_counter()
 	}
 
 	if (yakuman) {
+		// 役满情况下，不判断状态役和dora役
 		merge_into(max_hand_yakus_fan_fu.first, tenhou_chihou_yakus);
 	}	
 	else {
@@ -1226,7 +1208,6 @@ CounterResult ScoreCounter::yaku_counter()
 		final_result.yakus.push_back(Yaku::None);
 	}
 	else {
-
 		final_result.yakus = max_hand_yakus_fan_fu.first;
 		final_result.fan = calculate_fan(final_result.yakus);
 		final_result.fu = max_hand_yakus_fan_fu.second;
@@ -1252,16 +1233,6 @@ ScoreCounter::ScoreCounter(const Table* t, const Player* p, Tile* win, bool chan
 	basetiles = convert_tiles_to_basetiles(tiles);
 	self_wind = p->wind;
 	game_wind = t->game_wind;
-}
-
-bool ScoreCounter::check_have_yaku()
-{
-	if (chankan || chanankan) return true;
-	// roughly check
-	if (get_tenhou_chihou()) return true;
-	if (get_kokushi()) return true;
-
-	return false;
 }
 
 namespace_mahjong_end

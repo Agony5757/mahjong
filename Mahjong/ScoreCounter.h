@@ -78,10 +78,6 @@ constexpr char mark_ron_1st = '$';
 constexpr char mark_ron_2nd = '%';
 constexpr char mark_ron_3rd = '^';
 
-
-//constexpr static BaseTile raw[] = { _1m, _9m, _1s, _9s, _1p, _9p,
-//     _1z, _2z, _3z, _4z, _5z, _6z, _7z };
-
 class ScoreCounter {
 public:
 	std::vector<Tile*> tiles;
@@ -142,7 +138,7 @@ public:
 
 	std::vector<std::vector<std::string>> generate_tile_group_strings(const CompletedTiles& ct, const std::vector<CallGroup>& callgroups, bool tsumo, BaseTile last_tile);
 	std::vector<Yaku> get_hand_yakuman(const std::vector<std::string>& tile_group_string, Wind self_wind, Wind game_wind, bool& yakuman);
-	std::pair<std::vector<Yaku>, int> get_hand_yakus(std::vector<std::string> tile_group_string, Wind self_wind, Wind game_wind, bool menzen);
+	std::pair<std::vector<Yaku>, int> get_hand_yakus(const std::vector<std::string> &tile_group_string, Wind self_wind, Wind game_wind, bool menzen);
 	std::pair<std::vector<Yaku>, int> get_max_hand_yakus(const CompletedTiles& ct, const std::vector<CallGroup>& callgroups, Tile* correspond_tile, BaseTile tsumo_tile, Wind self_wind, Wind game_wind, bool menzen, bool& yakuman);
 
 	void get_riichi();
@@ -157,6 +153,17 @@ public:
 	void get_dora();
 	void get_ura_dora();
 
+	/* 状态役 state yaku
+	*	满足一定条件后可以无条件胡牌的役，包括一发，但不包括天地胡
+	*	包括
+	*		- 立直
+	*		- 海底
+	*		- 河底
+	*		- 抢杠
+	*		- 岭上
+	*		- 一发
+	*		- 门清自摸
+	*/
 	inline void get_state_yaku_dora_yaku()
 	{
 		get_riichi();
@@ -174,8 +181,7 @@ public:
 	}	
 
 	CounterResult yaku_counter();
-	bool check_have_yaku();
-	
+		
 };
 
 namespace_mahjong_end
