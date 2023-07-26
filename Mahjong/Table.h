@@ -174,8 +174,36 @@ public:
 
 public:
 	// ---------------------Manual Mode------------------------------
-	// The following part is for the manual instead of the automatic.
-	// Never mix using GameProcess and using the following functions.
+	// Stage:
+	//  self_action - response(0) - response(1) - response(2) - response(3) - execute
+	// 
+	// Usage:
+	//  0. get_phase() : to obtain the PhaseEnum
+	//	1. get_self_actions() / get_response_actions()
+	//	2. make_selection(int) : to input the selection and automatically move to the next stage
+	// 
+	// Implementation:
+	//		... (previous steps)
+	//			-> from_beginning
+	//			-> _generate_self_actions
+	//		make_selection
+	//			-> _handle_self_action
+	//			-> _generate_response_actions (0)
+	//		make_selection
+	//			-> _handle_response_action (0)
+	//			-> _generate_response_actions (1)
+	//		make_selection
+	//			-> _handle_response_action (1)
+	//			-> _generate_response_actions (2)
+	//		make_selection
+	//			-> _handle_response_action (2)
+	//			-> _generate_response_actions (3)
+	//		make_selection
+	//			-> _handle_response_action (3)
+	//			-> _handle_response_final_execution 
+	//				-> next_turn
+	//			-> from_beginning (loop ⬆)
+	//		
 	// -------------------------------------------------------------- 
 	enum PhaseEnum {
 		P1_ACTION, P2_ACTION, P3_ACTION, P4_ACTION,
@@ -184,23 +212,22 @@ public:
 		P1_CHANANKAN_RESPONSE, P2_CHANANKAN_RESPONSE, P3_CHANANKAN_RESPONSE, P4_CHANANKAN_RESPONSE,
 		GAME_OVER, UNINITIALIZED,
 	};
-	std::vector<SelfAction> self_actions;
-	std::vector<ResponseAction> response_actions;
+	std::vector<SelfAction> self_actions; // prepared list for self actions
+	std::vector<ResponseAction> response_actions; // prepared list for response actions
 
 	Result result;
 	PhaseEnum phase = UNINITIALIZED; // initialized to UNINITIALIZED to avoid illegal gameplay.
 	int selection = -1;	// initialized to -1 to avoid illegal gameplay.
-	SelfAction selected_action;
-	Tile* tile = nullptr;
+	SelfAction selected_action; // the action selected in the self_action stage
+	Tile* tile = nullptr; // the corresponding tile of the self_action
 	std::vector<ResponseAction> actions; // response actions
-	// bool FROM_手切摸切 = false; // global variable for river log
-	BaseAction final_action = BaseAction::Pass;
+	BaseAction final_action = BaseAction::Pass; // final response action (ron > pon/kan > chi > pass)
 	
 	void from_beginning();
 
 	// Initialize the game.
 	void game_init();
-	void game_init_for_replay(const std::vector<int> &yama, const std::vector<int> &init_scores, int 立直棒, int 本场, int 场风, int 亲家);
+	void game_init_for_replay(const std::vector<int> &yama, const std::vector<int> &init_scores, int 立直棒, int 本场, int game_wind, int 亲家);
 	void game_init_with_metadata(std::unordered_map<std::string, std::string> metadata);
 	
 	// Get the phase of the game
