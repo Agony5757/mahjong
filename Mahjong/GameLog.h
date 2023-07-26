@@ -68,6 +68,12 @@ public:
 	Result result;
 	std::vector<BaseGameLog> logs;
 
+	GameLog() 
+	{ 
+		/* avoid reallocation */ 
+		logs.reserve(128);
+	}
+
 	void _log(BaseGameLog log);
 
 	void log_game_start(int start_honba, int start_kyoutaku, int oya, Wind game_wind,
