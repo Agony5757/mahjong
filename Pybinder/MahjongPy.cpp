@@ -421,6 +421,8 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("global_infos", &encv2::TableEncoder::global_infos)
 		.def("init", &encv2::TableEncoder::init)
 		.def("update", &encv2::TableEncoder::update)
+		.def("_require_update", &encv2::TableEncoder::_require_update)
+		.def_readonly("record_count", &encv2::TableEncoder::record_count)
 		;
 }
 
