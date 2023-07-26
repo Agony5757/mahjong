@@ -16,19 +16,45 @@ namespace TrainingDataEncoding {
 
 			// Set visible_tiles
 			//   Initial dora is visible and will always be updated when "DoraReveal" is logged
-			Tile* dora = table->dora_indicator[0];
-			if (dora->red_dora)
+			Tile* dora_indicator = table->dora_indicator[0];
+			if (dora_indicator->red_dora)
 			{
-				visible_tiles[locate_attribute(3, dora->tile)] = 1;
+				visible_tiles[locate_attribute(3, dora_indicator->tile)] = 1;
 			}
 			else
 			{
-				visible_tiles[locate_attribute(0, dora->tile)] = 1;
-				visible_tiles_count[dora->tile]++;
+				visible_tiles[locate_attribute(0, dora_indicator->tile)] = 1;
+				visible_tiles_count[dora_indicator->tile]++;
 			}
 
-			// Init static global information
 			size_t pos;
+			// Init static self information
+			
+			pos = (size_t)EnumSelfInformation::pos_dora_indicator_1;			
+			self_infos[0][locate_attribute(pos, dora_indicator->tile)]++;
+			self_infos[1][locate_attribute(pos, dora_indicator->tile)]++;
+			self_infos[2][locate_attribute(pos, dora_indicator->tile)]++;
+			self_infos[3][locate_attribute(pos, dora_indicator->tile)]++;
+			
+			pos = (size_t)EnumSelfInformation::pos_dora_1;
+			self_infos[0][locate_attribute(pos, get_dora_next(dora_indicator->tile))]++;
+			self_infos[1][locate_attribute(pos, get_dora_next(dora_indicator->tile))]++;
+			self_infos[2][locate_attribute(pos, get_dora_next(dora_indicator->tile))]++;
+			self_infos[3][locate_attribute(pos, get_dora_next(dora_indicator->tile))]++;
+
+			pos = (size_t)EnumSelfInformation::pos_self_wind;
+			global_infos[0][pos] = (table->players[0].wind - Wind::East) + BaseTile::_1z;
+			global_infos[1][pos] = (table->players[1].wind - Wind::East) + BaseTile::_1z;
+			global_infos[2][pos] = (table->players[2].wind - Wind::East) + BaseTile::_1z;
+			global_infos[3][pos] = (table->players[3].wind - Wind::East) + BaseTile::_1z;
+
+			pos = (size_t)EnumSelfInformation::pos_game_wind;
+			global_infos[0][pos] =
+			global_infos[1][pos] =
+			global_infos[2][pos] =
+			global_infos[3][pos] = (table->game_wind - Wind::East) + BaseTile::_1z;
+			
+			// Init static global information
 			pos = (size_t)EnumGlobalInformation::pos_game_number;
 			global_infos[0][pos] =
 			global_infos[1][pos] =
@@ -95,6 +121,7 @@ namespace TrainingDataEncoding {
 			global_infos[2][pos] = 
 			global_infos[3][pos] = table->get_remain_tile();
 			
+
 			_update_hand(0);
 			_update_hand(1);
 			_update_hand(2);
@@ -224,22 +251,25 @@ namespace TrainingDataEncoding {
 		void TableEncoder::_update_hand(int player)
 		{
 			std::array<int, n_tile_types> ntiles = { 0 };
+			std::array<dtype, 4 * n_col_self_info> hand_cols = { 0 };
 			auto& hand = table->players[player].hand;
-			auto& self_info = self_infos[player];
 			constexpr size_t offset_tile = (size_t)EnumSelfInformation::pos_hand_1;
 			constexpr size_t offset_akadora = (size_t)EnumSelfInformation::pos_aka_dora;
 
 			for (size_t i = 0; i < hand.size(); ++i) {
 				int tile_type = (hand[i]->tile);
-				self_info[locate_attribute(ntiles[tile_type] + offset_tile, tile_type)] = 1;
+				hand_cols[locate_attribute(ntiles[tile_type] + offset_tile, tile_type)] = 1;
 				++ntiles[tile_type];
 
 				if (hand[i]->red_dora)
 				{
-					self_info[locate_attribute(offset_akadora, tile_type)] = 1;
+					hand_cols[locate_attribute(offset_akadora, tile_type)] = 1;
 				}
 			}
 
+			auto& self_info = self_infos[player];
+			// overwrite self_info with hand_cols
+			memcpy(self_info.data(), hand_cols.data(), sizeof(hand_cols));
 		}
 
 		void TableEncoder::_update_from_draw(const BaseGameLog& log, bool from_rinshan)
@@ -272,14 +302,23 @@ namespace TrainingDataEncoding {
 		void TableEncoder::_update_from_dora_reveal(const BaseGameLog& log)
 		{
 			auto tile = log.tile;
-			auto basetile = tile->tile;
+			auto dora_indicator = tile->tile;
 			if (tile->red_dora)
-				visible_tiles[locate_attribute(3, basetile)] = 1;
+				visible_tiles[locate_attribute(3, dora_indicator)] = 1;
 			else
 			{
-				visible_tiles[locate_attribute(visible_tiles_count[basetile]++, basetile)] = 1;
+				visible_tiles[locate_attribute(visible_tiles_count[dora_indicator]++, dora_indicator)] = 1;
 			}
 			_update_visible_tiles();
+
+			constexpr size_t offset_dora_indicator = (size_t)EnumSelfInformation::pos_dora_indicator_1;
+			constexpr size_t offset_dora = (size_t)EnumSelfInformation::pos_dora_indicator_1;
+			auto dora = get_dora_next(dora_indicator);
+			for (auto& self_info : self_infos)
+			{
+				self_info[locate_attribute(offset_dora_indicator, dora_indicator)]++;
+				self_info[locate_attribute(offset_dora, dora)]++;
+			}
 		}
 
 		void TableEncoder::_update_visible_tiles()
