@@ -263,6 +263,7 @@ namespace TrainingDataEncoding {
 		{
 			std::array<int, n_tile_types> ntiles = { 0 };
 			std::array<dtype, 4 * n_col_self_info> hand_cols = { 0 };
+			std::array<dtype, n_col_self_info> tsumo_tile = { 0 };
 			auto& hand = table->players[player].hand;
 			constexpr size_t offset_tile = (size_t)EnumSelfInformation::pos_hand_1;
 			constexpr size_t offset_akadora = (size_t)EnumSelfInformation::pos_aka_dora;
@@ -281,6 +282,14 @@ namespace TrainingDataEncoding {
 			auto& self_info = self_infos[player];
 			// overwrite self_info with hand_cols
 			memcpy(self_info.data(), hand_cols.data(), sizeof(hand_cols));
+
+			constexpr size_t offset_tsumo = (size_t)EnumSelfInformation::pos_tsumo_tile;
+			if (hand.size() % 3 == 2 && table->is_self_acting())
+			{
+				int tile_type = hand.back()->tile;
+				tsumo_tile[tile_type] = 1;
+			}
+			memcpy(self_info.data() + offset_tsumo * n_col_self_info, tsumo_tile.data(), sizeof(tsumo_tile));
 		}
 
 		void TableEncoder::_update_from_draw(const BaseGameLog& log, bool from_rinshan)
@@ -288,21 +297,6 @@ namespace TrainingDataEncoding {
 			int player = log.player;
 			auto& self_info = self_infos[player];
 			_update_hand(player);
-
-			constexpr size_t offset_tsumo = (size_t)EnumSelfInformation::pos_tsumo_tile;
-			auto hand = table->players[player].hand;
-			if (hand.size() % 3 == 2)
-			{
-				int tile_type = hand.back()->tile;
-				self_info[locate_attribute(offset_tsumo, tile_type)] = 1;
-			}
-			else
-			{
-				for (int tile_type = 0; tile_type < n_tile_types; ++tile_type)
-				{
-					self_info[locate_attribute(offset_tsumo, tile_type)] = 0;
-				}
-			}
 
 			global_infos[0].back()--;
 			global_infos[1].back()--;
