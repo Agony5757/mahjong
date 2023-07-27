@@ -393,16 +393,16 @@ namespace TrainingDataEncoding {
 			switch (log.action)
 			{
 			case LogAction::DrawNormal:
-				record[(size_t)EnumGameRecordAction::DrawNormal] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::DrawNormal] = 1;
 				break;
 			case LogAction::DrawRinshan:
-				record[(size_t)EnumGameRecordAction::DrawRinshan] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::DrawRinshan] = 1;
 				break;
 			case LogAction::DiscardFromHand:
-				record[(size_t)EnumGameRecordAction::DiscardFromHand] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::DiscardFromHand] = 1;
 				break;
 			case LogAction::DiscardFromTsumo:
-				record[(size_t)EnumGameRecordAction::DiscardFromTsumo] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::DiscardFromTsumo] = 1;
 				break;
 			case LogAction::Chi: {
 					int chitile = log.tile->tile;
@@ -416,33 +416,33 @@ namespace TrainingDataEncoding {
 					}
 
 					if (chitile < handtile1)
-						record[(size_t)EnumGameRecordAction::ChiLeft] = 1;
+						record[offset_action + (size_t)EnumGameRecordAction::ChiLeft] = 1;
 					else if (chitile > handtile2)
-						record[(size_t)EnumGameRecordAction::ChiRight] = 1;
+						record[offset_action + (size_t)EnumGameRecordAction::ChiRight] = 1;
 					else
-						record[(size_t)EnumGameRecordAction::ChiMiddle] = 1;
+						record[offset_action + (size_t)EnumGameRecordAction::ChiMiddle] = 1;
 					break;
 			    }
 			case LogAction::Pon:
-				record[(size_t)EnumGameRecordAction::Pon] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::Pon] = 1;
 				break;
 			case LogAction::Kan:
-				record[(size_t)EnumGameRecordAction::Kan] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::Kan] = 1;
 				break;
 			case LogAction::KaKan:
-				record[(size_t)EnumGameRecordAction::Kakan] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::Kakan] = 1;
 				break;
 			case LogAction::AnKan:
-				record[(size_t)EnumGameRecordAction::Ankan] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::Ankan] = 1;
 				break;
 			case LogAction::RiichiDiscardFromHand:
-				record[(size_t)EnumGameRecordAction::RiichiFromHand] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::RiichiFromHand] = 1;
 				break;
 			case LogAction::RiichiDiscardFromTsumo:
-				record[(size_t)EnumGameRecordAction::RiichiFromTsumo] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::RiichiFromTsumo] = 1;
 				break;
 			case LogAction::RiichiSuccess:
-				record[(size_t)EnumGameRecordAction::RiichiSuccess] = 1;
+				record[offset_action + (size_t)EnumGameRecordAction::RiichiSuccess] = 1;
 				break;
 			case LogAction::DoraReveal:
 				// this does not involve record update.
@@ -462,7 +462,7 @@ namespace TrainingDataEncoding {
 			{
 				int p = player - i;
 				p = (p < 0) ? (p + 4) : p;
-				records[i].back()[offset_player + p] = 0;
+				records[i].back()[offset_player + p] = 1;
 			}
 		}
 
