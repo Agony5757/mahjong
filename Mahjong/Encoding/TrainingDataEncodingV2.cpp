@@ -531,8 +531,8 @@ namespace TrainingDataEncoding {
 				case LogAction::Kyushukyuhai:
 				case LogAction::Ron:
 				case LogAction::Tsumo:
-					// Actually do nothing
-					break;
+					++record_count;
+					return;
 				default:
 					throw std::runtime_error("Bad LogAction.");					
 				}
