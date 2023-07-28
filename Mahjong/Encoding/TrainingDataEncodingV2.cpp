@@ -365,7 +365,7 @@ namespace TrainingDataEncoding {
 			{
 				for (auto tile : log.call_tiles)
 				{
-					record[tile2idx(tile)] = 0;
+					record[tile2idx(tile)] = 1;
 				}
 			}
 
