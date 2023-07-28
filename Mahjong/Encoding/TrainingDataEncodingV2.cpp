@@ -281,15 +281,26 @@ namespace TrainingDataEncoding {
 
 			auto& self_info = self_infos[player];
 			// overwrite self_info with hand_cols
-			memcpy(self_info.data(), hand_cols.data(), sizeof(hand_cols));
-
+			//  Note: temporally remove the unsafe memcpy
+			// memcpy(self_info.data(), hand_cols.data(), sizeof(hand_cols));
+			for (size_t i = 0; i < hand_cols.size(); ++i)
+			{
+				self_info[i] = hand_cols[i];
+			}
+			
 			constexpr size_t offset_tsumo = (size_t)EnumSelfInformation::pos_tsumo_tile;
 			if (hand.size() % 3 == 2 && table->is_self_acting())
 			{
 				int tile_type = hand.back()->tile;
 				tsumo_tile[tile_type] = 1;
 			}
-			memcpy(self_info.data() + offset_tsumo * n_col_self_info, tsumo_tile.data(), sizeof(tsumo_tile));
+			//  Note: temporally remove the unsafe memcpy
+			// memcpy(self_info.data() + offset_tsumo * n_col_self_info, tsumo_tile.data(), sizeof(tsumo_tile));
+			static_assert(tsumo_tile.size() == n_tile_types, "Tile type and tsumo_tile.size() not match");
+			for (size_t tile_type = 0; tile_type < tsumo_tile.size(); ++tile_type)
+			{
+				self_info[locate_attribute(offset_tsumo, tile_type)] = tsumo_tile[tile_type];
+			}
 		}
 
 		void TableEncoder::_update_from_draw(const BaseGameLog& log, bool from_rinshan)
@@ -330,10 +341,19 @@ namespace TrainingDataEncoding {
 		{			
 			constexpr size_t offset = (size_t)EnumSelfInformation::pos_discarded_number_1 * n_col_self_info;
 			constexpr size_t szbytes = 4 * n_col_self_info * sizeof(decltype(visible_tiles[0]));
-			memcpy(self_infos[0].data() + offset, visible_tiles.data(), szbytes);
-			memcpy(self_infos[1].data() + offset, visible_tiles.data(), szbytes);
-			memcpy(self_infos[2].data() + offset, visible_tiles.data(), szbytes);
-			memcpy(self_infos[3].data() + offset, visible_tiles.data(), szbytes);
+
+			//  Note: temporally remove the unsafe memcpy
+			// memcpy(self_infos[0].data() + offset, visible_tiles.data(), szbytes);
+			// memcpy(self_infos[1].data() + offset, visible_tiles.data(), szbytes);
+			// memcpy(self_infos[2].data() + offset, visible_tiles.data(), szbytes);
+			// memcpy(self_infos[3].data() + offset, visible_tiles.data(), szbytes);
+			for (size_t p = 0; p < 4; ++p)
+			{
+				for (size_t i = 0; i < visible_tiles.size(); ++i)
+				{
+					self_infos[p][offset + i] = visible_tiles[i];
+				}
+			}
 		}
 
 		void TableEncoder::_update_record(const BaseGameLog& log)
