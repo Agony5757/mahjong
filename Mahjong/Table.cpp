@@ -831,7 +831,6 @@ void Table::_handle_response_final_chankan_execution()
 	// 这里是全部pass
 	players[turn].execute_kakan(tile);
 	last_action = BaseAction::KaKan;
-	gamelog.log_kakan(turn, tile);
 
 	// 这是鸣牌，消除所有人第一巡和ippatsu
 	for (int i = 0; i < 4; ++i) {
@@ -866,7 +865,6 @@ void Table::_handle_response_final_chanankan_execution()
 	}
 	players[turn].execute_ankan(tile->tile);
 	last_action = BaseAction::AnKan;
-	gamelog.log_ankan(turn, selected_action.correspond_tiles);
 
 	// 这是暗杠，消除所有人第一巡和ippatsu
 	for (int i = 0; i < 4; ++i) {
@@ -909,14 +907,14 @@ void Table::_handle_self_action()
 		// 并且判定抉择弃牌是不是最后一张牌
 
 		bool is_from_hand = DiscardFromHand;
-		if (last_action == BaseAction::Discard ||
-			last_action == BaseAction::KaKan ||
-			last_action == BaseAction::AnKan) {
+		if (last_action != BaseAction::Chi &&
+			last_action != BaseAction::Pon) {
 			// tile是不是最后一张
 			if (tile == players[turn].hand.back())
 				is_from_hand = DiscardFromTsumo;
 		}
-		players[turn].execute_discard(tile, river_counter, selected_action.action == BaseAction::Riichi, is_from_hand);
+		players[turn].execute_discard(tile, river_counter, 
+			selected_action.action == BaseAction::Riichi, is_from_hand);
 		
 		/* Log discard before any response */
 		if (selected_action.action == BaseAction::Discard)
@@ -972,7 +970,7 @@ void Table::_handle_self_action()
 
 		tile = selected_action.correspond_tiles[0];
 
-		/* log kakan before response*/
+		/* log ankan before response*/
 		gamelog.log_ankan(turn, selected_action.correspond_tiles);
 
 		// 第一巡消除

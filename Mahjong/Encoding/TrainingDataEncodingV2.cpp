@@ -371,6 +371,8 @@ namespace TrainingDataEncoding {
 			};
 
 			int player = log.player;
+
+			/* Update the call tiles for all fuuro, kakan */
 			if (log.call_tiles.size() != 0)
 			{
 				for (auto tile : log.call_tiles)
@@ -379,18 +381,14 @@ namespace TrainingDataEncoding {
 				}
 			}
 
-			if (log.action == LogAction::DrawNormal || log.action == LogAction::DrawRinshan)
+			if (log.action != LogAction::Chi &&
+				log.action != LogAction::DrawNormal &&
+				log.action != LogAction::DrawRinshan &&
+				log.tile)
 			{
-				for (int i = 0; i < 4; ++i)
-				{
-					if (i == player)
-					{
-						record[tile2idx(log.tile)] = 1;
-					}
-				}
-			}
-			else if (log.action != LogAction::Chi && log.tile)
-			{
+				// For chi, the tiles correspond only to the 2 chi-tiles
+				// For draw/drawrinshan, update in the last part. 
+				// (Here only involves global update)
 				record[tile2idx(log.tile)] = 1;
 			}
 
@@ -468,6 +466,11 @@ namespace TrainingDataEncoding {
 				p = (p < 0) ? (p + 4) : p;
 				records[i].back()[offset_player + p] = 1;
 			}
+
+			/* Only player record the tile, other is empty */
+			if (log.action == LogAction::DrawNormal ||
+				log.action == LogAction::DrawRinshan)
+				records[player].back()[tile2idx(log.tile)] = 1;
 		}
 
 		void TableEncoder::_update_ippatsu()
