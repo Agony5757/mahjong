@@ -275,7 +275,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.value("UraDora", Yaku::Uradora)
 		.value("AkaDora", Yaku::Akadora)
 		.value("Chantai_", Yaku::Honchantaiyaochu_Naki)
-		.value("Ikkitsukan_", Yaku::Ikkitsuukan_Naki)
+		.value("Ikkitsuukan_", Yaku::Ikkitsuukan_Naki)
 		.value("Sanshokudoujun_", Yaku::Sanshokudoujun_Naki)
 
 		.value("DoubleRiichi", Yaku::Dabururiichi)
