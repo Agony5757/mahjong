@@ -793,11 +793,21 @@ void Table::_handle_response_final_execution()
 
 	case BaseAction::Ron:
 		/* 为每一个胡牌的玩家生成gamelog */
+
 		for (int player : response_player)
 		{
 			gamelog.log_ron(player, turn, selected_action.correspond_tiles[0]);
 		}
-		result = generate_result_ron(this, selected_action.correspond_tiles[0], response_player);
+
+		/* 3响 */
+		if (response_player.size() == 3)
+		{
+			result = generate_result_3ron(this);
+		}
+		else
+		{
+			result = generate_result_ron(this, selected_action.correspond_tiles[0], response_player);
+		}
 		gamelog.log_gameover(result);
 		phase = GAME_OVER;
 		return;
@@ -818,11 +828,20 @@ void Table::_handle_response_final_chankan_execution()
 
 	// 要么有抢杠，要么是pass
 	// 这里是有抢杠
-	if (response_player.size() != 0) {
-		// 有人抢杠则进行结算，除非加杠宣告成功，否则ippatsu状态仍然存在
+	// 有人抢杠则进行结算，除非加杠宣告成功，否则ippatsu状态仍然存在
+	if (response_player.size() > 0)
+	{
 		for (int player : response_player)
 			gamelog.log_ron(player, turn, tile);
-		result = generate_result_chankan(this, tile, response_player);
+
+		/* 3响 */
+		if (response_player.size() == 3)
+		{
+			result = generate_result_3ron(this);
+		}
+		else {
+			result = generate_result_chankan(this, tile, response_player);
+		}
 		gamelog.log_gameover(result);
 		phase = GAME_OVER;
 		return;
@@ -854,15 +873,25 @@ void Table::_handle_response_final_chanankan_execution()
 
 	// 要么有抢杠，要么是pass
 	// 这里是有抢杠
-	if (response_player.size() != 0) {
-		// 有人抢暗杠则进行结算，已经不用管ippatsu了
+	if (response_player.size() > 0)
+	{
 		for (int player : response_player)
 			gamelog.log_ron(player, turn, tile);
-		result = generate_result_chanankan(this, tile, response_player);
+
+		/* 3响 */
+		if (response_player.size() == 3)
+		{
+			result = generate_result_3ron(this);
+		}
+		else {
+			result = generate_result_chanankan(this, tile, response_player);
+		}
 		gamelog.log_gameover(result);
 		phase = GAME_OVER;
 		return;
 	}
+
+	// 这里是全部pass
 	players[turn].execute_ankan(tile->tile);
 	last_action = BaseAction::AnKan;
 

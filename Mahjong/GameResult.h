@@ -15,7 +15,11 @@ enum class ResultType {
 	TsumoAgari,
 	Ryukyouku_Notile,
 	NagashiMangan,
-	Ryukyouku_Interval,
+	Ryukyouku_Interval_9Hai,
+	Ryukyouku_Interval_4Wind,
+	Ryukyouku_Interval_4Riichi,
+	Ryukyouku_Interval_4Kan,
+	Ryukyouku_Interval_3Ron,
 };
 
 inline const char* result_type_str(ResultType type)
@@ -26,7 +30,11 @@ inline const char* result_type_str(ResultType type)
 		"TsumoAgari",
 		"Ryukyouku_Notile",
 		"NagashiMangan",
-		"Ryukyouku_Interval",
+		"Ryukyouku_Interval_9Hai",
+		"Ryukyouku_Interval_4Wind",
+		"Ryukyouku_Interval_4Riichi",
+		"Ryukyouku_Interval_4Kan",
+		"Ryukyouku_Interval_3Ron",
 	};
 
 	/* obtain number of result types (5) */
@@ -73,6 +81,7 @@ Result generate_result_9hai(Table* table);
 Result generate_result_4wind(Table* table);
 Result generate_result_4riichi(Table* table);
 Result generate_result_4kan(Table* table);
+Result generate_result_3ron(Table* table);
 Result generate_result_notile(Table* table);
 Result generate_result_tsumo(Table* table);
 Result generate_result_ron(Table* table, Tile* ,std::vector<int> response_player, bool chankan = false, bool chanankan = false);
