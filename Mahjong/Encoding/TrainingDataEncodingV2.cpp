@@ -93,6 +93,14 @@ namespace TrainingDataEncoding {
 			global_infos[2][pos] =
 			global_infos[3][pos] = table->game_wind - Wind::East;
 
+			/* pos_player_{x}_point has a reverse-positional implementation.
+			*  For example,
+			*  pos_player_{x}_point for player0
+			*  x = 0 (player0 point)
+			*  x = 1 (player3 point) Previous player
+			*  x = 2 (player2 point) Opposite player
+			*  x = 3 (player1 point) Next player
+			*/
 			pos = (size_t)EnumGlobalInformation::pos_player_0_point;
 			global_infos[0][pos] = table->players[0].score / 100;
 			global_infos[1][pos] = table->players[1].score / 100;
