@@ -81,7 +81,6 @@ class Player {
 public:
 	bool double_riichi = false;
 	bool riichi = false;
-
 	bool menzen = true;
 	Wind wind;
 	bool oya;
@@ -102,6 +101,9 @@ public:
 	inline bool is_riichi() const { return riichi || double_riichi; }
 	inline bool is_furiten()  const { return furiten_round || furiten_river || furiten_riichi; }
 	inline std::vector<CallGroup> get_fuuros() { return call_groups; }
+	inline bool is_menzen() { return menzen; }
+	inline bool is_tenpai() { return atari_tiles.size() > 0; }
+
 	inline River get_river() { return river; }
 	std::string hand_to_string() const;
 	std::string river_to_string() const;
