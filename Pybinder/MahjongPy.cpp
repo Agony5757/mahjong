@@ -179,6 +179,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 
 		// 函数们
 		.def("game_init", &Table::game_init)
+		.def("game_init_with_config", &Table::game_init_with_config)
 		.def("game_init_with_metadata", &Table::game_init_with_metadata)
 		.def("get_phase", &Table::get_phase)
 		.def("make_selection", &Table::make_selection)

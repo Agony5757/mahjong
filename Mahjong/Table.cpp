@@ -170,6 +170,60 @@ void Table::game_init() {
 	init_before_playing();
 }
 
+void Table::game_init_with_config(const std::vector<int>& yama, const std::vector<int>& init_scores, int kyoutaku_, int honba_, int game_wind_, int oya_)
+{
+	if (oya_ >= 0 && oya_ <= 3)
+		oya = oya_;
+	else
+		oya = 0;
+
+	if (game_wind_ >= 0 && game_wind_ <= 3)
+		game_wind = Wind(game_wind_);
+	else
+		game_wind = Wind::East;
+
+	if (kyoutaku >= 0)
+		kyoutaku = kyoutaku_;
+	else
+		kyoutaku = 0;
+
+	if (honba >= 0)
+		honba = honba_;
+	else
+		honba = 0;
+
+	init_tiles();
+	init_red_dora_3();
+
+	if (yama.size() == N_TILES)
+		import_yama(yama);
+	else if (yama.size() == 0)
+		shuffle_tiles();
+	else
+		throw std::runtime_error("Yama size is not 136.");
+
+	yama_log = yama;
+	init_dora();
+	draw_tenhou_style();
+
+	if (init_scores.size() == 4)
+	{
+		for (int i = 0; i < 4; ++i) {
+			players[i].score = init_scores[i];
+		}
+	}
+	else if (init_scores.size() == 0)
+	{
+		for (int i = 0; i < 4; ++i) {
+			players[i].score = 25000;
+		}
+	}
+	else
+		throw std::runtime_error("init_scores size is not 136.");
+	
+	init_before_playing();
+}
+
 void Table::game_init_for_replay(const std::vector<int> &yama, const std::vector<int> &init_scores, int kyoutaku_, int honba_, int game_wind_, int oya_)
 {
 	oya = oya_;
