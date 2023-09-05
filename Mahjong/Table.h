@@ -227,7 +227,16 @@ public:
 
 	// Initialize the game.
 	void game_init();
+
+	// Initialize the game with configurable configs
+	// yama: Empty for random shuffle, or size=136 for fixed yama
+	// init_scores: Empty for 25000 init scores, or size=4
+	// kyoutaku: -1 for default (0) or set to the initial kyoutaku
+	// honba: -1 for default (0) or set to the initial honba
+	// game_wind: 0~3 to set the initial game wind, or default (East)
+	// oya: 0~3 to set the oya, or default (player 0)
 	void game_init_with_config(const std::vector<int>& yama, const std::vector<int>& init_scores, int kyoutaku, int honba, int game_wind, int oya);
+
 	void game_init_for_replay(const std::vector<int> &yama, const std::vector<int> &init_scores, int kyoutaku, int honba, int game_wind, int oya);
 	void game_init_with_metadata(std::unordered_map<std::string, std::string> metadata);
 	
