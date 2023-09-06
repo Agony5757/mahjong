@@ -6,31 +6,36 @@ import MahjongPyWrapper as pm
 
 np.set_printoptions(threshold=np.inf)
 
-
 class MahjongEnv(gym.Env):
 
     PLAYER_OBS_DIM = 93
     ORACLE_OBS_DIM = 18
-    ACTION_DIM = 47
+    ACTION_DIM = 54
     MAHJONG_TILE_TYPES = 34
     INIT_POINTS = 25000
 
     # ACTION INDICES
-    CHILEFT = 34
-    CHIMIDDLE = 35
-    CHIRIGHT = 36
-    PON = 37
-    ANKAN = 38
-    MINKAN = 39
-    KAKAN = 40
-
-    RIICHI = 41
-    RON = 42
-    TSUMO = 43
-    PUSH = 44
+    CHILEFT = 37
+    CHIMIDDLE = 38
+    CHIRIGHT = 39
     
-    PASS_RIICHI = 45
-    PASS_RESPONSE = 46
+    CHILEFT_USERED = 40
+    CHIMIDDLE_USERED = 41
+    CHIRIGHT_USERED = 42
+    
+    PON = 43
+    PON_USERED = 44
+    ANKAN = 45
+    MINKAN = 46
+    KAKAN = 47
+
+    RIICHI = 48
+    RON = 49
+    TSUMO = 50
+    PUSH = 51
+    
+    PASS_RIICHI = 52
+    PASS_RESPONSE = 53
 
     # corresponding to self.t.get_phase()
     Phases = ("P1_ACTION", "P2_ACTION", "P3_ACTION", "P4_ACTION", "P1_RESPONSE", "P2_RESPONSE", "P3_RESPONSE",
@@ -39,7 +44,7 @@ class MahjongEnv(gym.Env):
               "P1_DRAW, P2_DRAW, P3_DRAW, P4_DRAW")
 
     # pymahjhong.BaseAction
-    ACTION_TYPES = [pm.BaseAction.Discard] * MAHJONG_TILE_TYPES + [pm.BaseAction.Chi] * 3 + [pm.BaseAction.Pon] \
+    ACTION_TYPES = [pm.BaseAction.Discard] * (MAHJONG_TILE_TYPES + 3) + [pm.BaseAction.Chi] * 6 + [pm.BaseAction.Pon] * 2 \
                    + [pm.BaseAction.AnKan] + [pm.BaseAction.Kan] + [pm.BaseAction.KaKan] \
                    + [pm.BaseAction.Riichi] + [pm.BaseAction.Ron] + [pm.BaseAction.Tsumo] \
                    + [pm.BaseAction.Kyushukyuhai] + [pm.BaseAction.Pass] * 2
@@ -59,6 +64,8 @@ class MahjongEnv(gym.Env):
 
         self.obs_container = np.zeros([self.PLAYER_OBS_DIM + self.ORACLE_OBS_DIM, self.MAHJONG_TILE_TYPES], dtype=np.int8)
         self.act_container = np.zeros([self.ACTION_DIM], dtype=np.int8)
+
+        self.use_red_dora = False
 
     def _check_player(self, player_id):
         if not player_id == self.t.who_make_selection():
@@ -126,6 +133,8 @@ class MahjongEnv(gym.Env):
         # Use .is_over() to know whether this game has finished
         # Use get_obs(player_id) or get_full_obs(player_id) or get_oracle_obs(player_id) to get observation
         # For rewards, after the game is over, one may use .get_payoffs
+        
+        # self.use_red_dora = False
 
         if not player_id == self.get_curr_player_id():
             raise ValueError("current acting player ID is {}, but you are trying to ask player {} to act !!".format(
@@ -156,20 +165,48 @@ class MahjongEnv(gym.Env):
 
                 if action < self.MAHJONG_TILE_TYPES:
                     corresponding_tiles = [action]
+                    self.use_red_dora = False
+                elif action == 34: # red 5m
+                    corresponding_tiles = [4]
+                    self.use_red_dora = True
+                elif action == 35: # red 5p
+                    corresponding_tiles = [13]
+                    self.use_red_dora = True
+                elif action == 36: # red 5s
+                    corresponding_tiles = [22]
+                    self.use_red_dora = True
 
-                elif action in (self.CHILEFT, self.CHIMIDDLE, self.CHIRIGHT):
+                elif action in (self.CHILEFT, self.CHILEFT_USERED, self.CHIMIDDLE, self.CHIMIDDLE_USERED, self.CHIRIGHT, self.CHIRIGHT_USERED):
                     chi_tile_id = int(self.t.get_selected_action_tile().tile)
                     if action == self.CHILEFT:
                         corresponding_tiles = [chi_tile_id + 1, chi_tile_id + 2]
+                        self.use_red_dora = False
                     elif action == self.CHIMIDDLE:
                         corresponding_tiles = [chi_tile_id - 1, chi_tile_id + 1]
+                        self.use_red_dora = False
                     elif action == self.CHIRIGHT:
                         corresponding_tiles = [chi_tile_id - 2, chi_tile_id - 1]
+                        self.use_red_dora = False
+                    if action == self.CHILEFT_USERED:
+                        corresponding_tiles = [chi_tile_id + 1, chi_tile_id + 2]
+                        self.use_red_dora = True
+                    elif action == self.CHIMIDDLE_USERED:
+                        corresponding_tiles = [chi_tile_id - 1, chi_tile_id + 1]
+                        self.use_red_dora = True
+                    elif action == self.CHIRIGHT_USERED:
+                        corresponding_tiles = [chi_tile_id - 2, chi_tile_id - 1]
+                        self.use_red_dora = True
 
                 elif action == self.PON:
                     pon_tile_id = int(self.t.get_selected_action_tile().tile)
                     corresponding_tiles = [pon_tile_id, pon_tile_id]
+                    self.use_red_dora = False
 
+                elif action == self.PON_USERED:
+                    pon_tile_id = int(self.t.get_selected_action_tile().tile)
+                    corresponding_tiles = [pon_tile_id, pon_tile_id]
+                    self.use_red_dora = True
+                
                 elif action == self.MINKAN:
                     kan_tile_id = int(self.t.get_selected_action_tile().tile)
                     corresponding_tiles = [kan_tile_id] * 3
@@ -203,12 +240,12 @@ class MahjongEnv(gym.Env):
                         for ron_type in [pm.BaseAction.Ron, pm.BaseAction.ChanKan, pm.BaseAction.ChanAnKan]:
                             try:
                                 self.t.make_selection_from_action_basetile(
-                                    ron_type, corresponding_tiles, action >= self.MAHJONG_TILE_TYPES)
+                                    ron_type, corresponding_tiles, self.use_red_dora)
                             except:
                                 pass
                     else:
                         self.t.make_selection_from_action_basetile(
-                            action_type, corresponding_tiles, action >= self.MAHJONG_TILE_TYPES)
+                            action_type, corresponding_tiles, self.use_red_dora)
 
                 except Exception as inst:
                     print("-------------- execption in make_selection_from_action_basetile ------------------")
@@ -226,7 +263,7 @@ class MahjongEnv(gym.Env):
             else:
                 action_type = pm.BaseAction.Discard
 
-            self.t.make_selection_from_action_basetile(action_type, [self.may_riichi_tile_id], False)
+            self.t.make_selection_from_action_basetile(action_type, [self.may_riichi_tile_id], self.use_red_dora)
             self.riichi_stage2 = False
             self.may_riichi_tile_id = None
 

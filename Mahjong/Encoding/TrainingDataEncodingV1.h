@@ -42,7 +42,7 @@ namespace TrainingDataEncoding {
 		constexpr size_t n_row = size_hand + size_fulu * size_player + size_river * size_player + size_field + size_last + size_action + size_hand * (size_player - 1);
 		constexpr size_t n_col = n_tile_types;
 
-		constexpr size_t n_actions = 47;
+		constexpr size_t n_actions = 54;
 
 		void encode_table(const Table& table, int pid, bool use_oracle, dtype* data);
 		void encode_table_riichi_step2(const Table& table, BaseTile riichi_tile, dtype* data);
