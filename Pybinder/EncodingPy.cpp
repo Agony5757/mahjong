@@ -37,7 +37,6 @@ namespace TrainingDataEncoding {
 		{
 			return get_riichi_tiles(table);
 		}
-
 	}
 }
 

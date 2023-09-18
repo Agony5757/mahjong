@@ -82,10 +82,10 @@ namespace TrainingDataEncoding {
 			global_infos[3][pos] = table->kyoutaku;
 
 			pos = (size_t)EnumGlobalInformation::pos_self_wind;
-			global_infos[0][pos] = table->players[0].wind;
-			global_infos[1][pos] = table->players[1].wind;
-			global_infos[2][pos] = table->players[2].wind;
-			global_infos[3][pos] = table->players[3].wind;
+			global_infos[0][pos] = table->players[0].wind - Wind::East;
+			global_infos[1][pos] = table->players[1].wind - Wind::East;
+			global_infos[2][pos] = table->players[2].wind - Wind::East;
+			global_infos[3][pos] = table->players[3].wind - Wind::East;
 
 			pos = (size_t)EnumGlobalInformation::pos_game_wind;
 			global_infos[0][pos] =
@@ -554,6 +554,105 @@ namespace TrainingDataEncoding {
 				++record_count;
 			}
 		}
+
+		void PassiveTableEncoder::encode_game_basic(int game_number,
+			int game_size,
+			int honba,
+			int kyoutaku,
+			int self_wind,
+			int game_wind)
+		{
+
+			// Init static global information
+			size_t pos;
+			pos = (size_t)EnumGlobalInformation::pos_game_number;
+			global_info[pos] = game_number;
+
+			pos = (size_t)EnumGlobalInformation::pos_game_size;
+			global_info[pos] = game_size;
+
+			pos = (size_t)EnumGlobalInformation::pos_honba;
+			global_info[pos] = honba;
+
+			pos = (size_t)EnumGlobalInformation::pos_kyoutaku;
+			global_info[pos] = kyoutaku;
+
+			pos = (size_t)EnumGlobalInformation::pos_self_wind;
+			global_info[pos] = self_wind - Wind::East;
+
+			pos = (size_t)EnumGlobalInformation::pos_game_wind;
+			global_info[pos]  = game_wind - Wind::East;
+		}
+		
+		void PassiveTableEncoder::encode_points(const std::vector<int>& points)
+		{
+
+			/* pos_player_{x}_point has a reverse-positional implementation.
+			*  For example,
+			*  pos_player_{x}_point for player0
+			*  x = 0 (player0 point)
+			*  x = 1 (player3 point) Previous player
+			*  x = 2 (player2 point) Opposite player
+			*  x = 3 (player1 point) Next player
+			*/
+			size_t pos;
+			pos = (size_t)EnumGlobalInformation::pos_player_0_point;
+			global_info[pos] = points[0];
+
+			pos = (size_t)EnumGlobalInformation::pos_player_1_point;
+			global_info[pos] = points[3];
+
+			pos = (size_t)EnumGlobalInformation::pos_player_2_point;
+			global_info[pos] = points[2];
+
+			pos = (size_t)EnumGlobalInformation::pos_player_3_point;
+			global_info[pos] = points[1];
+		}
+
+		void PassiveTableEncoder::encode_remaining_tiles(int remain_tiles)
+		{
+			constexpr size_t pos = (size_t)EnumGlobalInformation::pos_remaining_tiles;
+			global_info[pos] = remain_tiles;
+		}
+
+		void PassiveTableEncoder::encode_hand(const std::vector<Tile>& hand, bool after_chipon)
+		{
+			std::array<int, n_tile_types> ntiles = { 0 };
+			std::array<dtype, 4 * n_col_self_info> hand_cols = { 0 };
+			std::array<dtype, n_col_self_info> hand_cols_aka = { 0 };
+			std::array<dtype, n_col_self_info> tsumo_tile = { 0 };
+			// auto& hand = table->players[player].hand;
+			constexpr size_t offset_tile = (size_t)EnumSelfInformation::pos_hand_1;
+			constexpr size_t offset_akadora = (size_t)EnumSelfInformation::pos_aka_dora;
+
+			for (size_t i = 0; i < hand.size(); ++i) {
+				int tile_type = hand[i].tile;
+				if (hand[i].red_dora)
+					hand_cols_aka[tile_type] = 1;
+				hand_cols[locate_attribute(ntiles[tile_type] + offset_tile, tile_type)] = 1;
+				++ntiles[tile_type];
+			}
+
+			// overwrite self_info with hand_cols
+			constexpr size_t szbytes_hand = 4 * n_col_self_info * sizeof(decltype(hand_cols[0]));
+			memcpy(self_info.data(), hand_cols.data(), szbytes_hand);
+
+			// overwrite self_info with hand_cols_aka
+			constexpr size_t szbytes_aka = n_col_self_info * sizeof(decltype(hand_cols[0]));
+			memcpy(self_info.data() + offset_akadora * n_col_self_info, hand_cols_aka.data(), szbytes_aka);
+
+			constexpr size_t offset_tsumo = (size_t)EnumSelfInformation::pos_tsumo_tile;
+			if (!after_chipon && hand.size() % 3 == 2)
+			{
+				int tile_type = hand.back().tile;
+				tsumo_tile[tile_type] = 1;
+			}
+
+			// overwrite self_info with tsumo_tile
+			constexpr size_t szbytes_tsumo = n_col_self_info * sizeof(decltype(tsumo_tile[0]));
+			memcpy(self_info.data() + offset_tsumo * n_col_self_info, tsumo_tile.data(), szbytes_tsumo);
+		}
+
 	}
 }
 namespace_mahjong_end

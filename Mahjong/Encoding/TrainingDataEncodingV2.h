@@ -150,6 +150,65 @@ namespace TrainingDataEncoding {
 			void update();
 		};
 
+		struct PassiveTableEncoder
+		{
+			std::array<dtype, 4 * n_col_self_info> visible_tiles = { 0 };
+			std::array<dtype, n_col_self_info> visible_tiles_count = { 0 };
+
+		public:
+			self_info_t self_info;
+			std::vector<game_record_t> records;
+			global_info_t global_info;
+
+			inline PassiveTableEncoder(Table* t) {
+				self_info.fill(0);
+				global_info.fill(0);
+			}
+
+			inline const auto& get_self_info() const
+			{
+				return self_info;
+			}
+
+			inline const auto& get_play_record() const
+			{
+				return records;
+			}
+
+			inline const auto& get_global_info() const
+			{
+				return global_info;
+			}
+
+			void encode_game_basic(
+				int game_number,
+				int game_size,
+				int honba,
+				int kyoutaku,
+				int self_wind,
+				int game_wind
+			);
+
+			void encode_hand(const std::vector<Tile>& hand, bool after_chipon);
+
+			void encode_self_river(const std::vector<BaseTile>& river);
+			void encode_next_river(const std::vector<BaseTile>& river);
+			void encode_opposite_river(const std::vector<BaseTile>& river);
+			void encode_previous_river(const std::vector<BaseTile>& river);
+
+			void encode_self_fuuro(const std::vector<CallGroup> callgroups);
+			void encode_next_fuuro(const std::vector<CallGroup> callgroups);
+			void encode_opposite_fuuro(const std::vector<CallGroup> callgroups);
+			void encode_previous_fuuro(const std::vector<CallGroup> callgroups);
+
+			void encode_dora(const std::vector<BaseTile> revealed_doras);
+
+			void encode_points(const std::vector<int>& points);
+			void encode_remaining_tiles(int remain_tiles);
+			void encode_riichi_states(const std::vector<int>& riichi_states);
+			void encode_ippatsu_states(const std::vector<int>& ippatsu_states);
+		};
+
 	}
 }
 
