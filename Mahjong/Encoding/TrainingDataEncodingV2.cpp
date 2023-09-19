@@ -562,7 +562,6 @@ namespace TrainingDataEncoding {
 			int self_wind,
 			int game_wind)
 		{
-
 			// Init static global information
 			size_t pos;
 			pos = (size_t)EnumGlobalInformation::pos_game_number;
@@ -582,11 +581,16 @@ namespace TrainingDataEncoding {
 
 			pos = (size_t)EnumGlobalInformation::pos_game_wind;
 			global_info[pos]  = game_wind - Wind::East;
+
+			pos = (size_t)EnumSelfInformation::pos_self_wind;
+			self_info[locate_attribute(pos, game_wind - Wind::East + BaseTile::_1z)] = 1;
+
+			pos = (size_t)EnumSelfInformation::pos_game_wind;
+			self_info[locate_attribute(pos, game_wind - Wind::East + BaseTile::_1z)] = 1;
 		}
 		
-		void PassiveTableEncoder::encode_points(const std::vector<int>& points)
+		void PassiveTableEncoder::encode_points(const std::array<int, 4>& points)
 		{
-
 			/* pos_player_{x}_point has a reverse-positional implementation.
 			*  For example,
 			*  pos_player_{x}_point for player0
@@ -653,6 +657,115 @@ namespace TrainingDataEncoding {
 			memcpy(self_info.data() + offset_tsumo * n_col_self_info, tsumo_tile.data(), szbytes_tsumo);
 		}
 
+		void PassiveTableEncoder::encode_river(const std::vector<BaseTile>& river, int relative_position)
+		{
+			for (auto tile : river)
+			{
+				// record visible_tiles
+				visible_tiles[locate_attribute(visible_tiles_count[tile], tile)] += 1;
+				visible_tiles_count[tile]++;
+
+				// update furiten area
+				size_t pos_discarded_by = (size_t)EnumSelfInformation::pos_discarded_by_player_1 + relative_position;
+				self_info[locate_attribute(pos_discarded_by, tile)] = 1;
+			}
+			// update visible_tiles
+			_update_visible_tiles();
+		}
+
+		void PassiveTableEncoder::encode_self_river(const std::vector<BaseTile>& river)
+		{
+			encode_river(river, 0);
+		}
+
+		void PassiveTableEncoder::encode_next_river(const std::vector<BaseTile>& river)
+		{
+			encode_river(river, 1);
+		}
+
+		void PassiveTableEncoder::encode_opposite_river(const std::vector<BaseTile>& river)
+		{
+			encode_river(river, 2);
+		}
+
+		void PassiveTableEncoder::encode_previous_river(const std::vector<BaseTile>& river)
+		{
+			encode_river(river, 3);
+		}
+
+		void PassiveTableEncoder::_update_visible_tiles()
+		{
+			constexpr size_t offset = (size_t)EnumSelfInformation::pos_discarded_number_1 * n_col_self_info;
+			constexpr size_t szbytes = 4 * n_col_self_info * sizeof(decltype(visible_tiles[0]));
+
+			memcpy(self_info.data() + offset, visible_tiles.data(), szbytes);
+		}
+
+		void PassiveTableEncoder::encode_fuuro(const std::vector<CallGroup>& callgroups, int relative_position)
+		{
+			for (auto& group : callgroups)
+			{
+				for (auto tile_ : group.tiles)
+				{
+					// record visible_tiles
+					auto tile = tile_->tile;
+					visible_tiles[locate_attribute(visible_tiles_count[tile], tile)] += 1;
+					visible_tiles_count[tile]++;
+				}
+			}
+			_update_visible_tiles();
+		}
+
+		void PassiveTableEncoder::encode_self_fuuro(const std::vector<CallGroup>& callgroups)
+		{
+			encode_fuuro(callgroups, 0);
+		}
+
+		void PassiveTableEncoder::encode_next_fuuro(const std::vector<CallGroup>& callgroups)
+		{
+			encode_fuuro(callgroups, 1);
+		}
+
+		void PassiveTableEncoder::encode_opposite_fuuro(const std::vector<CallGroup>& callgroups)
+		{
+			encode_fuuro(callgroups, 2);
+		}
+
+		void PassiveTableEncoder::encode_previous_fuuro(const std::vector<CallGroup>& callgroups)
+		{
+			encode_fuuro(callgroups, 3);
+		}
+
+		void PassiveTableEncoder::encode_dora(const std::vector<BaseTile> revealed_doras)
+		{
+			for (auto tile : revealed_doras)
+			{
+				// record visible_tiles
+				visible_tiles[locate_attribute(visible_tiles_count[tile], tile)] += 1;
+				visible_tiles_count[tile]++;
+			}
+			_update_visible_tiles();
+
+			for (auto tile : revealed_doras)
+			{
+				self_info[locate_attribute((size_t)EnumSelfInformation::pos_dora_indicator_1, tile)] += 1;
+				self_info[locate_attribute((size_t)EnumSelfInformation::pos_dora_1, get_dora_next(tile))] += 1;
+			}
+		}
+
+		void PassiveTableEncoder::encode_riichi_states(const std::array<int, 4>& riichi_states)
+		{
+			// no information
+		}
+
+		void PassiveTableEncoder::encode_ippatsu_states(const std::array<int, 4>& ippatsu_states)
+		{
+			for (int i = 0; i < 4; ++i)
+			{
+				size_t pos = (size_t)EnumGlobalInformation::pos_player_0_ippatsu + i;
+				global_info[pos] = ippatsu_states[i];
+			}
+		}
 	}
 }
 namespace_mahjong_end

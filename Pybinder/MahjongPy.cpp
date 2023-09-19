@@ -434,6 +434,29 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("_require_update", &encv2::TableEncoder::_require_update)
 		.def_readonly("record_count", &encv2::TableEncoder::record_count)
 		;
+
+	py::class_<encv2::PassiveTableEncoder>(m, "PassiveTableEncoder")
+		.def(py::init<>())
+		.def_readonly("self_info", &encv2::PassiveTableEncoder::self_info)
+		.def_readonly("records", &encv2::PassiveTableEncoder::records)
+		.def_readonly("global_info", &encv2::PassiveTableEncoder::global_info)
+		.def("encode_game_basic", &encv2::PassiveTableEncoder::encode_game_basic)
+		.def("encode_hand", &encv2::PassiveTableEncoder::encode_hand)
+		.def("encode_self_river", &encv2::PassiveTableEncoder::encode_self_river)
+		.def("encode_next_river", &encv2::PassiveTableEncoder::encode_next_river)
+		.def("encode_opposite_river", &encv2::PassiveTableEncoder::encode_opposite_river)
+		.def("encode_river", &encv2::PassiveTableEncoder::encode_river)
+		.def("encode_self_fuuro", &encv2::PassiveTableEncoder::encode_self_fuuro)
+		.def("encode_next_fuuro", &encv2::PassiveTableEncoder::encode_next_fuuro)
+		.def("encode_opposite_fuuro", &encv2::PassiveTableEncoder::encode_opposite_fuuro)
+		.def("encode_previous_fuuro", &encv2::PassiveTableEncoder::encode_previous_fuuro)
+		.def("encode_fuuro", &encv2::PassiveTableEncoder::encode_fuuro)
+		.def("encode_dora", &encv2::PassiveTableEncoder::encode_dora)
+		.def("encode_points", &encv2::PassiveTableEncoder::encode_points)
+		.def("encode_remaining_tiles", &encv2::PassiveTableEncoder::encode_remaining_tiles)
+		.def("encode_riichi_states", &encv2::PassiveTableEncoder::encode_riichi_states)
+		.def("encode_ippatsu_states", &encv2::PassiveTableEncoder::encode_ippatsu_states)
+		;
 }
 
 #ifdef __GNUC__

@@ -160,7 +160,7 @@ namespace TrainingDataEncoding {
 			std::vector<game_record_t> records;
 			global_info_t global_info;
 
-			inline PassiveTableEncoder(Table* t) {
+			inline PassiveTableEncoder() {
 				self_info.fill(0);
 				global_info.fill(0);
 			}
@@ -190,23 +190,23 @@ namespace TrainingDataEncoding {
 			);
 
 			void encode_hand(const std::vector<Tile>& hand, bool after_chipon);
-
+			void _update_visible_tiles();
 			void encode_self_river(const std::vector<BaseTile>& river);
 			void encode_next_river(const std::vector<BaseTile>& river);
 			void encode_opposite_river(const std::vector<BaseTile>& river);
 			void encode_previous_river(const std::vector<BaseTile>& river);
-
-			void encode_self_fuuro(const std::vector<CallGroup> callgroups);
-			void encode_next_fuuro(const std::vector<CallGroup> callgroups);
-			void encode_opposite_fuuro(const std::vector<CallGroup> callgroups);
-			void encode_previous_fuuro(const std::vector<CallGroup> callgroups);
-
+			void encode_river(const std::vector<BaseTile>& river, int relative_position);
+			void encode_self_fuuro(const std::vector<CallGroup> &callgroups);
+			void encode_next_fuuro(const std::vector<CallGroup> &callgroups);
+			void encode_opposite_fuuro(const std::vector<CallGroup> &callgroups);
+			void encode_previous_fuuro(const std::vector<CallGroup> &callgroups);
+			void encode_fuuro(const std::vector<CallGroup>& callgroups, int relative_position);
 			void encode_dora(const std::vector<BaseTile> revealed_doras);
 
-			void encode_points(const std::vector<int>& points);
+			void encode_points(const std::array<int, 4>& points);
 			void encode_remaining_tiles(int remain_tiles);
-			void encode_riichi_states(const std::vector<int>& riichi_states);
-			void encode_ippatsu_states(const std::vector<int>& ippatsu_states);
+			void encode_riichi_states(const std::array<int, 4>& riichi_states);
+			void encode_ippatsu_states(const std::array<int, 4>& ippatsu_states);
 		};
 
 	}
