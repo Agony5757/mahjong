@@ -198,7 +198,10 @@ void Table::game_init_with_config(const std::vector<int>& yama, const std::vecto
 	if (yama.size() == N_TILES)
 		import_yama(yama);
 	else if (yama.size() == 0)
+	{
+		init_yama();
 		shuffle_tiles();
+	}
 	else
 		throw std::runtime_error("Yama size is not 136.");
 

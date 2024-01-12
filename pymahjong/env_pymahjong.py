@@ -18,11 +18,11 @@ class MahjongEnv(gym.Env):
     CHILEFT = 37
     CHIMIDDLE = 38
     CHIRIGHT = 39
-    
+
     CHILEFT_USERED = 40
     CHIMIDDLE_USERED = 41
     CHIRIGHT_USERED = 42
-    
+
     PON = 43
     PON_USERED = 44
     ANKAN = 45
@@ -33,7 +33,7 @@ class MahjongEnv(gym.Env):
     RON = 49
     TSUMO = 50
     PUSH = 51
-    
+
     PASS_RIICHI = 52
     PASS_RESPONSE = 53
 
@@ -100,7 +100,24 @@ class MahjongEnv(gym.Env):
 
         return len(aval_actions)
 
-    def reset(self, oya=None, game_wind=None, seed=None, debug_mode=None):
+    def reset(
+        self, *,
+        oya=None,
+        game_wind=None,
+        scores=None,
+        seed=None,
+        kyoutaku=-1,
+        honba=-1,
+        debug_mode=None
+    ):
+        if scores is None:
+            scores = [25000, 25000, 25000, 25000]
+        else:
+            assert len(scores) == 4, "scores should be a list of length 4"
+
+        assert isinstance(kyoutaku, int)
+        assert isinstance(honba, int)
+
         if oya is None:
             oya = self.game_count % 4  # Each player alternatively be the "Oya" (parent)
         else:
@@ -114,14 +131,22 @@ class MahjongEnv(gym.Env):
         self.t = pm.Table()
         if seed is not None:
             self.t.seed = seed
-		
+
         if debug_mode is not None:
             self.t.set_debug_mode(debug_mode)
 
-        self.t.game_init_with_metadata({"oya": str(oya), "wind": game_wind})
+        self.t.game_init_with_config(
+            [],
+            scores,
+            kyoutaku,
+            honba,
+            ["east", "south", "west", "north"].index(game_wind),
+            oya,
+        )
+
+        # self.t.game_init_with_metadata({"oya": str(oya), "wind": game_wind})
         self.riichi_stage2 = False
         self.may_riichi_tile_id = None
-
         self.game_count += 1
 
         self._proceed()
@@ -133,7 +158,7 @@ class MahjongEnv(gym.Env):
         # Use .is_over() to know whether this game has finished
         # Use get_obs(player_id) or get_full_obs(player_id) or get_oracle_obs(player_id) to get observation
         # For rewards, after the game is over, one may use .get_payoffs
-        
+
         # self.use_red_dora = False
 
         if not player_id == self.get_curr_player_id():
@@ -206,7 +231,7 @@ class MahjongEnv(gym.Env):
                     pon_tile_id = int(self.t.get_selected_action_tile().tile)
                     corresponding_tiles = [pon_tile_id, pon_tile_id]
                     self.use_red_dora = True
-                
+
                 elif action == self.MINKAN:
                     kan_tile_id = int(self.t.get_selected_action_tile().tile)
                     corresponding_tiles = [kan_tile_id] * 3
@@ -371,9 +396,9 @@ class SingleAgentMahjongEnv(gym.Env):
                     self.opponent_agent.device = device
                     self.opponent_agent.to(device=device)
                     print("----- CUDA detected, using CUDA for inference. -----")
-                
+
                 self.opponent_agent.eval()  # not necessary now, but remained for future
-                
+
             except Exception as e:
                 print(e)
                 raise FileNotFoundError("opponent_agent should be 'random' or the path of a pre-trained model (You can download the pre-trained model from pymahjong github release: https://github.com/Agony5757/mahjong/releases ")
