@@ -222,7 +222,7 @@ void Table::game_init_with_config(const std::vector<int>& yama, const std::vecto
 		}
 	}
 	else
-		throw std::runtime_error("init_scores size is not 136.");
+		throw std::runtime_error("init_scores size is not 4.");
 	
 	init_before_playing();
 }
