@@ -12,7 +12,8 @@
 
 namespace_mahjong
 
-constexpr auto N_TILES = (34 * 4);
+constexpr auto N_BASETILES = 34;
+constexpr auto N_TILES = N_BASETILES * 4;
 
 class Table
 {

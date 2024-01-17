@@ -71,7 +71,7 @@ string Player::tenpai_to_string() const
 void Player::update_atari_tiles()
 {
 	vector<BaseTile> bt = convert_tiles_to_basetiles(hand);
-	atari_tiles = get_atari_hai(bt);
+	atari_tiles = get_atari_hai(bt, get_false_atari_hai());
 }
 
 void Player::update_furiten_river()
@@ -239,8 +239,11 @@ vector<SelfAction> Player::get_riichi() const
 {
 	vector<SelfAction> actions;
 
-	auto riichi_tiles = is_riichi_able(hand, menzen);
+	auto riichi_tiles = is_riichi_able(hand, get_false_atari_hai(), menzen);
 	for (auto riichi_tile : riichi_tiles) {
+
+		/* Todo: remove the riichi_tile when the tenpai is not available*/
+
 		SelfAction action;
 		action.action = BaseAction::Riichi;
 		action.correspond_tiles.push_back(riichi_tile);
@@ -511,7 +514,8 @@ vector<SelfAction> Player::riichi_get_ankan()
 						else return false;
 					}), copyhand.end());
 
-			auto new_atari_hai = get_atari_hai(convert_tiles_to_basetiles(copyhand));
+			auto new_atari_hai = get_atari_hai(convert_tiles_to_basetiles(copyhand),
+				get_false_atari_hai());
 			
 			if (is_same_container(new_atari_hai, atari_tiles)) {
 				SelfAction action;
@@ -663,6 +667,22 @@ void Player::execute_kakan(Tile* tile)
 		}
 	}
 	remove_from_hand(tile);
+}
+
+std::vector<BaseTile> Player::get_false_atari_hai() const
+{
+	// add the tiles with four in hands
+	static std::array<int, N_BASETILES> tile_counter;
+
+	std::vector<BaseTile> except_tiles;
+	tile_counter.fill(0);
+	for (auto tile : hand)
+	{
+		tile_counter[int(tile->tile)]++;
+		if (tile_counter[int(tile->tile)] == 4)
+			except_tiles.push_back(tile->tile);
+	}
+	return except_tiles;
 }
 
 void Player::execute_discard(Tile* tile, int& number, bool on_riichi, bool fromhand)

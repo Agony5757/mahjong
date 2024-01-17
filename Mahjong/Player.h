@@ -148,6 +148,9 @@ public:
 	void execute_ankan(BaseTile tile);
 	void execute_kakan(Tile* tile);
 
+	/* 假听牌 */
+	std::vector<BaseTile> get_false_atari_hai() const;
+
 	/* execute discard whenever it is called by others. */
 	void execute_discard(Tile* tile, int& number, bool on_riichi, bool fromhand);
 

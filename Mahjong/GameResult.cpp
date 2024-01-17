@@ -160,7 +160,10 @@ Result generate_result_notile(Table *table)
 	bool tenpai_status[4] = { false, false, false, false };
 
 	for (int i = 0; i < 4; ++i) {
-		if (get_atari_hai(convert_tiles_to_basetiles(table->players[i].hand)).size() > 0) {
+		auto atari_hai = get_atari_hai(convert_tiles_to_basetiles(table->players[i].hand),
+			table->players[i].get_false_atari_hai());
+
+		if (atari_hai.size() > 0) {
 			tenpai_status[i] = true;
 			n_tenpai++;
 		}
