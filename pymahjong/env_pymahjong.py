@@ -280,7 +280,7 @@ class MahjongEnv(gym.Env):
                         except:
                             # If riichi and ANKAN the latest drawed tile failed
                             self.t.make_selection_from_action_basetile(
-                                pm.BaseAction.Discard, [int(self.t.players[player_id].hand[-1].tile)], self.t.players[player_id].hand[-1].tile.red_dora)
+                                pm.BaseAction.Discard, [int(self.t.players[player_id].hand[-1].tile)], self.t.players[player_id].hand[-1].red_dora)
 
                 except Exception as inst:
                     print("-------------- execption in make_selection_from_action_basetile ------------------")
