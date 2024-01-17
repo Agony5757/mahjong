@@ -236,12 +236,17 @@ class MahjongEnv(gym.Env):
                     kan_tile_id = int(self.t.get_selected_action_tile().tile)
                     corresponding_tiles = [kan_tile_id] * 3
 
-                # Here we have an approximation, it a player has multiple options to KaKan or AnKan,
-                # the player will random select one if action == ANKAN or KAKAN
-                # However, this case should be very rare in normal play
-
                 elif action == self.ANKAN:
-                    kan_tile_id = np.random.choice(np.argwhere(self.get_obs(curr_pid)[3]).flatten())
+                    if self.t.players[player_id].double_riichi or self.t.players[player_id].riichi:
+                        # If has riichi, the player can only ANKAN the latest drawed tile
+                        kan_tile_id = int(self.t.players[player_id].hand[-1].tile)
+                    else:
+
+                        # Here we have an approximation, it a player has multiple options to KaKan or AnKan,
+                        # the player will random select one if action == ANKAN or KAKAN
+                        # However, this case should be very rare in normal play
+                        kan_tile_id = np.random.choice(np.argwhere(self.get_obs(curr_pid)[3]).flatten())
+                    
                     corresponding_tiles = [kan_tile_id] * 4
 
                 elif action == self.KAKAN:
@@ -269,8 +274,13 @@ class MahjongEnv(gym.Env):
                             except:
                                 pass
                     else:
-                        self.t.make_selection_from_action_basetile(
-                            action_type, corresponding_tiles, self.use_red_dora)
+                        try:
+                            self.t.make_selection_from_action_basetile(
+                                action_type, corresponding_tiles, self.use_red_dora)
+                        except:
+                            # If riichi and ANKAN the latest drawed tile failed
+                            self.t.make_selection_from_action_basetile(
+                                pm.BaseAction.Discard, [int(self.t.players[player_id].hand[-1].tile)], self.t.players[player_id].hand[-1].tile.red_dora)
 
                 except Exception as inst:
                     print("-------------- execption in make_selection_from_action_basetile ------------------")
