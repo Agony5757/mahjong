@@ -78,10 +78,6 @@ constexpr char mark_ron_1st = '$';
 constexpr char mark_ron_2nd = '%';
 constexpr char mark_ron_3rd = '^';
 
-
-//constexpr static BaseTile raw[] = { _1m, _9m, _1s, _9s, _1p, _9p,
-//     _1z, _2z, _3z, _4z, _5z, _6z, _7z };
-
 class ScoreCounter {
 public:
 	std::vector<Tile*> tiles;
@@ -90,26 +86,39 @@ public:
 
 	std::vector<std::vector<CompletedTiles>> completedtiles_list;
 
-	std::vector<Yaku> 天地和;
-	std::vector<Yaku> 场役;
-	std::vector<Yaku> Dora役;
-	// int 最大手役番 = 0;
-	std::pair<std::vector<Yaku>, int> 最大手役_番符 = { {}, 20 };
+	// 天地胡
+	std::vector<Yaku> tenhou_chihou_yakus;
+
+	// 基于状态的役，包括立直、一发、海底、河底、抢杠、岭上、门清自摸
+	std::vector<Yaku> state_yakus;
+
+	// dora役
+	std::vector<Yaku> dora_yakus;
+
+	// 最大手役番&符
+	std::pair<std::vector<Yaku>, int> max_hand_yakus_fan_fu = { {}, 20 };
 
 	const Table* table = nullptr;
 	const Player* player = nullptr;
 
-	bool 有役 = false;
+	// 有役
+	bool have_yaku = false;
 
 	bool tsumo = false;
-	bool 门清 = false;
-	bool 国士 = false, 国士13 = false;
-	bool 九莲 = false, 九莲纯 = false;
-	bool 役满 = false;
-	bool 抢杠 = false, 抢暗杠 = false;
-	int 役满倍数 = 0;
-	int mpsz一色 = 0;
-	Wind 自风, 场风;
+	bool menzen = false;
+	bool kokushi = false, kokushi_13 = false;
+	bool churen = false, churen_pure = false;
+
+	bool chankan = false, chanankan = false;
+	// 役满状态
+	bool yakuman = false;
+
+	// 几倍役满
+	int yakuman_fold = 0;
+
+	// 清一色 or 字一色 (mpsz = 0,1,2,3, respectively)
+	int mpsz_pure_type = 0;
+	Wind self_wind, game_wind;
 	
 	/* Arguments:
 		Table *t,
@@ -118,38 +127,53 @@ public:
 		bool chankan,
 		bool chanankan		
 	*/
-	ScoreCounter(const Table* t, const Player* p, Tile* win, bool 抢杠_, bool 抢暗杠_);
+	ScoreCounter(const Table* t, const Player* p, Tile* win, bool chankan, bool chanankan);
 	
-	bool get_天地和();
-	bool get_国士();
-	inline void get一色();
-	bool get_九莲();
+	bool get_tenhou_chihou();
+	bool get_kokushi();
+	bool get_churen();
+
+	// 更新清一色 or 字一色, mpsz_pure_type
+	void get_pure_type();
 
 	std::vector<std::vector<std::string>> generate_tile_group_strings(const CompletedTiles& ct, const std::vector<CallGroup>& callgroups, bool tsumo, BaseTile last_tile);
-	std::vector<Yaku> get_手役_役满(const std::vector<std::string>& tile_group_string, Wind 自风, Wind 场风, bool& 役满);
-	std::pair<std::vector<Yaku>, int> get_手役(std::vector<std::string> tile_group_string, Wind 自风, Wind 场风, bool 门清);
-	std::pair<std::vector<Yaku>, int> get_max_手役(const CompletedTiles& ct, const std::vector<CallGroup>& callgroups, Tile* correspond_tile, BaseTile tsumo_tile, Wind 自风, Wind 场风, bool 门清, bool& 役满);
+	std::vector<Yaku> get_hand_yakuman(const std::vector<std::string>& tile_group_string, Wind self_wind, Wind game_wind, bool& yakuman);
+	std::pair<std::vector<Yaku>, int> get_hand_yakus(const std::vector<std::string> &tile_group_string, Wind self_wind, Wind game_wind, bool menzen);
+	std::pair<std::vector<Yaku>, int> get_max_hand_yakus(const CompletedTiles& ct, const std::vector<CallGroup>& callgroups, Tile* correspond_tile, BaseTile tsumo_tile, Wind self_wind, Wind game_wind, bool menzen, bool& yakuman);
 
-	void get_立直();
-	void get_海底河底();
-	void get_抢杠();
-	void get_岭上();
-	void get_门清自摸();
-	void get_一发();
+	void get_riichi();
+
+	// 海底&河底
+	void get_haitei_hotei();
+	void get_chankan();
+	void get_rinshan();
+	void get_menzentsumo();
+	void get_ippatsu();
 	void get_aka_dora();
 	void get_dora();
 	void get_ura_dora();
 
-	inline void get_场役_Dora役()
+	/* 状态役 state yaku
+	*	满足一定条件后可以无条件胡牌的役，包括一发，但不包括天地胡
+	*	包括
+	*		- 立直
+	*		- 海底
+	*		- 河底
+	*		- 抢杠
+	*		- 岭上
+	*		- 一发
+	*		- 门清自摸
+	*/
+	inline void get_state_yaku_dora_yaku()
 	{
-		get_立直();
-		get_海底河底();
+		get_riichi();
+		get_haitei_hotei();
 
-		get_抢杠();
-		get_岭上();
+		get_chankan();
+		get_rinshan();
 
-		get_一发();
-		get_门清自摸();
+		get_ippatsu();
+		get_menzentsumo();
 
 		get_aka_dora();
 		get_dora();
@@ -157,8 +181,7 @@ public:
 	}	
 
 	CounterResult yaku_counter();
-	bool check_有役();
-	
+		
 };
 
 namespace_mahjong_end

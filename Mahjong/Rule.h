@@ -164,14 +164,15 @@ bool is_churen_9_shape(std::vector<BaseTile> tiles);
 bool is_churen_shape(std::vector<BaseTile> tiles);
 
 // 不考虑无役的听牌情况
-std::vector<BaseTile> get_atari_hai(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
-bool is_tenpai(std::vector<BaseTile> tiles, std::vector<BaseTile> except_tiles = {});
+std::vector<BaseTile> get_atari_hai(std::vector<BaseTile> tiles, const std::vector<BaseTile> &except_tiles);
+bool is_tenpai(std::vector<BaseTile> tiles, const std::vector<BaseTile> &except_tiles);
 bool is_agari_shape(std::vector<BaseTile> tiles);
 
-std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen);
+std::vector<Tile*> is_riichi_able(const std::vector<Tile*> &hands, 
+	const std::vector<BaseTile>& basetiles, bool Menzen);
 
-bool can_ron(std::vector<Tile*> hands, Tile* get_tile);
-bool can_tsumo(std::vector<Tile*> hands);
+bool can_ron(const std::vector<Tile*> &hands, Tile* get_tile);
+bool can_tsumo(const std::vector<Tile*> &hands);
 
 namespace_mahjong_end
 

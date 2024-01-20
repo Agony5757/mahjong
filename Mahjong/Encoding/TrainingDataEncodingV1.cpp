@@ -256,23 +256,26 @@ namespace TrainingDataEncoding {
 			for (auto& sa : actions) {
 				switch (sa.action) {
 				case BaseAction::Discard:
-					data[int(sa.correspond_tiles[0]->tile)] = 1;
+					if (sa.correspond_tiles[0]->red_dora)
+						data[int(sa.correspond_tiles[0]->tile) / 9 + 34] = 1;
+					else
+						data[int(sa.correspond_tiles[0]->tile)] = 1;
 					break;
 				case BaseAction::AnKan:
-					data[38] = 1;
-					break;
-				case BaseAction::KaKan:
-					data[40] = 1;
-					break;
-				case BaseAction::Riichi:
-					data[41] = 1;
 					data[45] = 1;
 					break;
+				case BaseAction::KaKan:
+					data[47] = 1;
+					break;
+				case BaseAction::Riichi:
+					data[48] = 1;
+					data[52] = 1;
+					break;
 				case BaseAction::Tsumo:
-					data[43] = 1;
+					data[50] = 1;
 					break;
 				case BaseAction::Kyushukyuhai:
-					data[44] = 1;
+					data[51] = 1;
 					break;
 				default:
 					throw runtime_error("Bad SelfAction (while encoding).");
@@ -285,24 +288,35 @@ namespace TrainingDataEncoding {
 			for (auto& ra : actions) {
 				switch (ra.action) {
 				case BaseAction::Pass:
-					data[46] = 1;
+					data[53] = 1;
 					break;
 				case BaseAction::Chi:
-					if (action_tile > ra.correspond_tiles[0]->tile)
-						if (action_tile < ra.correspond_tiles[1]->tile) data[35] = 1; // middle							
-						else data[36] = 1; // right						
-					else data[34] = 1; // left
+					if (action_tile > ra.correspond_tiles[0]->tile){
+						if (action_tile < ra.correspond_tiles[1]->tile){
+							data[38] = 1; // middle							
+							data[41] = 1; // middle_use_red_dora
+							}
+						else{
+							data[39] = 1; // right						
+							data[42] = 1; // right_use_red_dora
+							}
+						}
+					else{
+						data[37] = 1; // left
+						data[40] = 1; // left_use_red_dora
+						}
 					break;
 				case BaseAction::Pon:
-					data[37] = 1;
+					data[43] = 1;
+					data[44] = 1; // use red dora
 					break;
 				case BaseAction::Kan:
-					data[39] = 1;
+					data[46] = 1;
 					break;
 				case BaseAction::Ron:
 				case BaseAction::ChanKan:
 				case BaseAction::ChanAnKan:
-					data[42] = 1;
+					data[49] = 1;
 					break;
 				default:
 					throw runtime_error("Bad ResponseAction (while encoding).");
@@ -342,8 +356,8 @@ namespace TrainingDataEncoding {
 		void encode_actions_vector_riichi_step2(dtype* data)
 		{
 			array<dtype, n_actions> buffer = { 0 };
-			buffer[41] = 1;
-			buffer[46] = 1;
+			buffer[48] = 1;
+			buffer[52] = 1;
 			memcpy(data, buffer.data(), buffer.size());
 		}
 

@@ -70,7 +70,7 @@ void Syanten::hand_to_code(const std::vector<Tile*>& hand, uint32_t* code){
     }
 }
 
-int Syanten::_check_normal(const uint32_t* hand_code, int num_副露) {
+int Syanten::_check_normal(const uint32_t* hand_code, int n_call_groups) {
     int ptm = 0, ptt = 0;
     for (int j = 0; j < 3; j++) {
         int pt1m, pt1t, pt2m, pt2t;
@@ -94,12 +94,12 @@ int Syanten::_check_normal(const uint32_t* hand_code, int num_副露) {
             ptt++; // 雀头
         }
     }
-    while (ptm + ptt > 4 - num_副露 && ptt > 0) ptt--;
-    while (ptm + ptt > 4 - num_副露) ptm--;
-    return 9 - ptm * 2 - ptt - num_副露 * 2;
+    while (ptm + ptt > 4 - n_call_groups && ptt > 0) ptt--;
+    while (ptm + ptt > 4 - n_call_groups) ptm--;
+    return 9 - ptm * 2 - ptt - n_call_groups * 2;
 }
 
-int Syanten::normal_round_to_win(const std::vector<Tile*>& hand, int num_副露) {
+int Syanten::normal_round_to_win(const std::vector<Tile*>& hand, int n_call_groups) {
     if (!is_loaded)
         load_syanten_map();
     int result = 14;
@@ -109,11 +109,11 @@ int Syanten::normal_round_to_win(const std::vector<Tile*>& hand, int num_副露)
         int num = 0b111 & (hand_code[i / (_1p - _1m)] >> (3 * (i % (_1p - _1m))));
         if (num >= 2) {
             hand_code[i / (_1p - _1m)] -= 2 * tile_to_bit[i % (_1p - _1m)];
-            result = std::min(result, _check_normal(hand_code, num_副露) - 1);
+            result = std::min(result, _check_normal(hand_code, n_call_groups) - 1);
             hand_code[i / (_1p - _1m)] += 2 * tile_to_bit[i % (_1p - _1m)];
         }
     }
-    result = std::min(result, _check_normal(hand_code, num_副露));
+    result = std::min(result, _check_normal(hand_code, n_call_groups));
     return result;
 }
 

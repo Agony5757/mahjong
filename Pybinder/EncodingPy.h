@@ -2,6 +2,7 @@
 #define ENCODINGPY_H
 
 #include "Encoding/TrainingDataEncodingV1.h"
+#include "Encoding/TrainingDataEncodingV2.h"
 #include "pybind11/numpy.h"
 #include "Table.h"
 
@@ -20,5 +21,6 @@ namespace TrainingDataEncoding {
 		std::vector<BaseTile> py_get_riichi_tiles(const Table& table);
 	}
 }
+
 namespace_mahjong_end
 #endif
