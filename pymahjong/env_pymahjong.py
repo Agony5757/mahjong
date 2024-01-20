@@ -106,8 +106,8 @@ class MahjongEnv(gym.Env):
         game_wind=None,
         scores=None,
         seed=None,
-        kyoutaku=-1,
-        honba=-1,
+        kyoutaku=0,
+        honba=0,
         debug_mode=None
     ):
         if scores is None:
