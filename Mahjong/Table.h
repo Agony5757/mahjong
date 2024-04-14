@@ -9,6 +9,8 @@
 #include "Player.h"
 #include "fmt/os.h"
 #include <array>
+#include <random>
+#include <ctime>
 
 namespace_mahjong
 
@@ -46,6 +48,7 @@ public:
 	std::vector<int> yama_log;
 	std::string log_buffer_prefix;
 	std::vector<int> selection_log;
+	std::default_random_engine rd;
 
 	/* Set seed (set_seed) before init*/
 	bool use_seed = false;
@@ -93,7 +96,7 @@ public:
 	void draw_rinshan(int i_player);
 
 	// Reshuffle the remaining yama to allow replay from interval
-	// void reshuffle_yama();
+	void reshuffle_yama(unsigned int seed);
 
 	void next_turn(int nextturn);
 

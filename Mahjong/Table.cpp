@@ -63,9 +63,12 @@ void Table::init_red_dora_3()
 
 void Table::shuffle_tiles()
 {
-	static std::default_random_engine rd(time(nullptr));
-
 	if (use_seed) {
+		rd.seed(seed);
+	}
+	else
+	{
+		seed = time(nullptr);
 		rd.seed(seed);
 	}
 	std::shuffle(yama.begin(), yama.end(), rd);
@@ -521,13 +524,45 @@ void Table::draw_rinshan(int i_player)
 	yama.erase(iter);
 }
 
-//void Table::reshuffle_yama()
-//{
-//	// remember to avoid reshuffle the revealed dora
-//	
-//	int ntile_to_shuffle = get_remain_tile() + 14 - n_active_dora;
-//
-//}
+void Table::reshuffle_yama(unsigned int seed)
+{
+	// remember to avoid reshuffle the revealed dora
+		
+	int first_dora_pos = std::find(yama.begin(), yama.end(), dora_indicator[0]) - yama.begin();
+	
+	// shuffle all
+	rd.seed(seed);
+	std::shuffle(yama.begin(), yama.end(), rd);
+
+	// 归还已翻dora
+	for (int i = 0; i < n_active_dora; ++i)
+	{
+		// dora牌被洗到的新位置位置
+		auto dora_current_iter = std::find(yama.begin(), yama.end(), dora_indicator[i]);
+
+		// 当前dora指示牌位置（first_dora_pos + 2 * i）
+		auto dora_pos_iter = yama.begin() + first_dora_pos + 2 * i;
+
+		std::iter_swap(dora_current_iter, dora_pos_iter);
+	}
+
+	// 更新dora_indicator和uradora_indicator
+	dora_indicator = {
+		yama[first_dora_pos],
+		yama[first_dora_pos + 2],
+		yama[first_dora_pos + 4],
+		yama[first_dora_pos + 6],
+		yama[first_dora_pos + 8],
+	};
+
+	uradora_indicator = {
+		yama[first_dora_pos - 1],
+		yama[first_dora_pos + 1],
+		yama[first_dora_pos + 3],
+		yama[first_dora_pos + 5],
+		yama[first_dora_pos + 7],
+	};
+}
 
 string Table::to_string() const
 {
