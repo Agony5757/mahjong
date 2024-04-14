@@ -291,7 +291,7 @@ Result generate_result_tsumo(Table * table)
 	return result;
 }
 
-Result generate_result_ron(Table *table, Tile *agari_tile, std::vector<int> response_player, bool chankan, bool chanankan)
+Result generate_result_ron(Table *table, Tile *agari_tile, const std::vector<int> &response_player, bool chankan, bool chanankan)
 {
 	Result result;
 	result.result_type = ResultType::RonAgari;
@@ -339,12 +339,12 @@ Result generate_result_ron(Table *table, Tile *agari_tile, std::vector<int> resp
 	return result;
 }
 
-Result generate_result_chanankan(Table * table, Tile* agari_tile, std::vector<int> response_player)
+Result generate_result_chanankan(Table * table, Tile* agari_tile, const std::vector<int> &response_player)
 {
 	return generate_result_ron(table, agari_tile, response_player, false, true);
 }
 
-Result generate_result_chankan(Table * table, Tile* agari_tile, std::vector<int> response_player)
+Result generate_result_chankan(Table * table, Tile* agari_tile, const std::vector<int> &response_player)
 {
 	return generate_result_ron(table, agari_tile, response_player, true, false);
 }

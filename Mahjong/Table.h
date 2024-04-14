@@ -26,7 +26,7 @@ public:
 	
 	// 牌山的起始是岭上牌(0,1,2,3)
 	// 然后标记宝牌和ura的位置(5,7,9,11,13)、(4,6,8,10,12)
-	// 初始情况dora_spec = 1，每次翻宝牌只需要dora_spec++
+	// 初始情况n_active_dora = 1，每次翻宝牌只需要n_active_dora++
 	// 杠的时候所有牌在vector牌山中位置变化的
 	// 并不会影响到宝牌/ura的位置，因为它们一开始就被标记过了
 	// 当牌山.size() <= 14的时候结束游戏
@@ -91,6 +91,9 @@ public:
 
 	// Draw from the tail (from rinshan)
 	void draw_rinshan(int i_player);
+
+	// Reshuffle the remaining yama to allow replay from interval
+	// void reshuffle_yama();
 
 	void next_turn(int nextturn);
 
@@ -283,6 +286,32 @@ public:
 	void _handle_response_final_execution();
 	void _handle_response_final_chankan_execution();
 	void _handle_response_final_chanankan_execution();
+
+	void _handle_self_action_discard_riichi_impl();
+	void _handle_self_action_kakan_impl();
+	void _handle_self_action_ankan_impl();
+	void _handle_response_final_pass_impl();
+	void _handle_response_final_chiponkan_impl(int response);
+	void _handle_response_final_ron_impl(const std::vector<int>& response_players)
+	{
+		/* 为每一个胡牌的玩家生成gamelog */
+		for (int player : response_players)
+		{
+			gamelog.log_ron(player, turn, selected_action.correspond_tiles[0]);
+		}
+
+		/* 3响 */
+		if (response_players.size() == 3)
+		{
+			result = generate_result_3ron(this);
+		}
+		else
+		{
+			result = generate_result_ron(this, selected_action.correspond_tiles[0], response_players);
+		}
+		gamelog.log_gameover(result);
+		phase = GAME_OVER;
+	}
 
 	// Get Information. Return the table itself. (For python wrapper)
 	inline Table* get_info() { return this; }

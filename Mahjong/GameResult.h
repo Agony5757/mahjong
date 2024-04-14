@@ -84,9 +84,9 @@ Result generate_result_4kan(Table* table);
 Result generate_result_3ron(Table* table);
 Result generate_result_notile(Table* table);
 Result generate_result_tsumo(Table* table);
-Result generate_result_ron(Table* table, Tile* ,std::vector<int> response_player, bool chankan = false, bool chanankan = false);
-Result generate_result_chanankan(Table* table, Tile*, std::vector<int> response_player);
-Result generate_result_chankan(Table* table, Tile*, std::vector<int> response_player);
+Result generate_result_ron(Table* table, Tile* tile, const std::vector<int> &response_player, bool chankan = false, bool chanankan = false);
+Result generate_result_chanankan(Table* table, Tile* tile, const std::vector<int> &response_player);
+Result generate_result_chankan(Table* table, Tile*, const std::vector<int> &response_player);
 
 namespace_mahjong_end
 

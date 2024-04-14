@@ -521,6 +521,14 @@ void Table::draw_rinshan(int i_player)
 	yama.erase(iter);
 }
 
+//void Table::reshuffle_yama()
+//{
+//	// remember to avoid reshuffle the revealed dora
+//	
+//	int ntile_to_shuffle = get_remain_tile() + 14 - n_active_dora;
+//
+//}
+
 string Table::to_string() const
 {
 	stringstream ss;
@@ -779,13 +787,13 @@ void Table::_handle_response_chanankan_action()
 void Table::_handle_response_final_execution()
 {
 	// 选择优先级，并且进行response结算
-	vector<int> response_player;
+	vector<int> response_players;
 	for (int i = 0; i < 4; ++i) {
 		if (actions[i].action == final_action) {
-			response_player.push_back(i);
+			response_players.push_back(i);
 		}
 	}
-	int response = response_player[0];
+	int response = response_players[0];
 	// 根据最终的final_action来进行判断
 	// response_player里面保存了所有最终action和final_action相同的玩家
 	// 只有在pass和荣和的时候才会出现这种情况
@@ -793,81 +801,22 @@ void Table::_handle_response_final_execution()
 
 	switch (final_action) {
 	case BaseAction::Pass:
-		if (selected_action.action == BaseAction::Riichi) {
-			// 立直成功
-			if (players[turn].first_round) {
-				players[turn].double_riichi = true;
-			}
-			players[turn].riichi = true;
-			kyoutaku++;
-			players[turn].score -= 1000;
-			players[turn].ippatsu = true;
-
-			/* log riichi success if no ron */
-			gamelog.log_riichi_success(this);
-		}
-
-		// 消除第一巡
-		players[turn].first_round = false;
-		next_turn((turn + 1) % 4);
-		last_action = selected_action.action;
-		break;
+	{
+		_handle_response_final_pass_impl();
+		return;
+	}
 	case BaseAction::Chi:
 	case BaseAction::Pon:
 	case BaseAction::Kan:
-
-		if (selected_action.action == BaseAction::Riichi) {
-			// 立直成功
-			if (players[turn].first_round) {
-				players[turn].double_riichi = true;
-			}
-			players[turn].riichi = true;
-			kyoutaku++;
-			players[turn].score -= 1000;
-			// 立直即鸣牌，一定没有ippatsu
-
-			/* log riichi success if no ron */
-			gamelog.log_riichi_success(this);
-		}
-
-		players[turn].set_not_remained();
-
-		players[response].execute_naki(
-			actions[response].correspond_tiles, tile, (turn - response) % 4);
-
-		gamelog.log_call(response, turn, tile, actions[response].correspond_tiles, final_action);
-
-		// 这是鸣牌，消除所有人第一巡和ippatsu
-		for (int i = 0; i < 4; ++i) {
-			players[i].first_round = false;
-			players[i].ippatsu = false;
-		}
-
-		// 切换turn
-		next_turn(response);
-		last_action = final_action;
-		break;
-
-	case BaseAction::Ron:
-		/* 为每一个胡牌的玩家生成gamelog */
-
-		for (int player : response_player)
-		{
-			gamelog.log_ron(player, turn, selected_action.correspond_tiles[0]);
-		}
-
-		/* 3响 */
-		if (response_player.size() == 3)
-		{
-			result = generate_result_3ron(this);
-		}
-		else
-		{
-			result = generate_result_ron(this, selected_action.correspond_tiles[0], response_player);
-		}
-		gamelog.log_gameover(result);
-		phase = GAME_OVER;
+	{
+		_handle_response_final_chiponkan_impl(response);
 		return;
+	}
+	case BaseAction::Ron:
+	{
+		_handle_response_final_ron_impl(response_players);
+		return;
+	}
 	default:
 		throw runtime_error("Invalid Selection.");
 	}
@@ -961,6 +910,160 @@ void Table::_handle_response_final_chanankan_execution()
 	next_turn(turn);
 }
 
+void Table::_handle_self_action_discard_riichi_impl()
+{
+	// 决定不胡牌，则不具有ippatsu状态
+	players[turn].ippatsu = false;
+
+	// 上个动作是杠/加杠，则在self action决定后翻dora
+	if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
+		new_dora();
+
+	tile = selected_action.correspond_tiles[0];
+	// 等待回复
+
+	// 大部分情况都是手切, 除了上一步动作为 出牌 加杠 暗杠
+	// 并且判定抉择弃牌是不是最后一张牌
+
+	bool is_from_hand = DiscardFromHand;
+	if (last_action != BaseAction::Chi &&
+		last_action != BaseAction::Pon) {
+		// tile是不是最后一张
+		if (tile == players[turn].hand.back())
+			is_from_hand = DiscardFromTsumo;
+	}
+	players[turn].execute_discard(tile, river_counter,
+		selected_action.action == BaseAction::Riichi, is_from_hand);
+
+	/* Log discard before any response */
+	if (selected_action.action == BaseAction::Discard)
+		gamelog.log_discard(turn, tile, is_from_hand);
+	else if (selected_action.action == BaseAction::Riichi)
+		gamelog.log_riichi_discard(turn, tile, is_from_hand);
+
+	phase = P1_RESPONSE;
+	if (0 == turn) {
+		ResponseAction ra;
+		ra.action = BaseAction::Pass;
+		response_actions = { ra };
+	}
+	else {
+		// 对于所有其他人
+		bool is_next = false;
+		if (0 == (turn + 1) % 4)
+			is_next = true;
+		response_actions = _generate_response_actions(0, tile, is_next);
+	}
+}
+
+void Table::_handle_self_action_kakan_impl()
+{
+	// 上个动作是杠/加杠，则在self action决定后翻dora
+	if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
+		new_dora();
+
+	tile = selected_action.correspond_tiles[0];
+
+	/* log kakan before response*/
+	gamelog.log_kakan(turn, tile);
+
+	// 第一巡消除
+	players[turn].first_round = false;
+	// 等待回复
+	phase = P1_CHANKAN_RESPONSE;
+	if (0 == turn) {
+		ResponseAction ra;
+		ra.action = BaseAction::Pass;
+		response_actions = { ra };
+	}
+	else {
+		response_actions = _generate_chankan_response_actions(0, tile);
+	}
+}
+
+inline void Table::_handle_self_action_ankan_impl()
+{
+	// 上个动作是杠/加杠，则在self action决定后翻dora
+	if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
+		new_dora();
+
+	tile = selected_action.correspond_tiles[0];
+
+	/* log ankan before response*/
+	gamelog.log_ankan(turn, selected_action.correspond_tiles);
+
+	// 第一巡消除
+	players[turn].first_round = false;
+	// 等待回复
+	phase = P1_CHANANKAN_RESPONSE;
+	if (turn == 0) {
+		ResponseAction ra;
+		ra.action = BaseAction::Pass;
+		response_actions = { ra };
+	}
+	else {
+		response_actions = _generate_chanankan_response_actions(0, tile);
+	}
+	// 暗杠不等response，直接翻dora
+	new_dora();
+}
+
+void Table::_handle_response_final_pass_impl()
+{
+	if (selected_action.action == BaseAction::Riichi) {
+		// 立直成功
+		if (players[turn].first_round) {
+			players[turn].double_riichi = true;
+		}
+		players[turn].riichi = true;
+		kyoutaku++;
+		players[turn].score -= 1000;
+		players[turn].ippatsu = true;
+
+		/* log riichi success if no ron */
+		gamelog.log_riichi_success(this);
+	}
+
+	// 消除第一巡
+	players[turn].first_round = false;
+	next_turn((turn + 1) % 4);
+	last_action = selected_action.action;
+}
+
+void Table::_handle_response_final_chiponkan_impl(int response)
+{
+	if (selected_action.action == BaseAction::Riichi) {
+		// 立直成功
+		if (players[turn].first_round) {
+			players[turn].double_riichi = true;
+		}
+		players[turn].riichi = true;
+		kyoutaku++;
+		players[turn].score -= 1000;
+		// 立直即鸣牌，一定没有ippatsu
+
+		/* log riichi success if no ron */
+		gamelog.log_riichi_success(this);
+	}
+
+	players[turn].set_not_remained();
+
+	players[response].execute_naki(
+		actions[response].correspond_tiles, tile, (turn - response) % 4);
+
+	gamelog.log_call(response, turn, tile, actions[response].correspond_tiles, final_action);
+
+	// 这是鸣牌，消除所有人第一巡和ippatsu
+	for (int i = 0; i < 4; ++i) {
+		players[i].first_round = false;
+		players[i].ippatsu = false;
+	}
+
+	// 切换turn
+	next_turn(response);
+	last_action = final_action;
+}
+
 void Table::_handle_self_action()
 {
 	switch (selected_action.action) {
@@ -979,100 +1082,17 @@ void Table::_handle_self_action()
 	case BaseAction::Discard:
 	case BaseAction::Riichi:
 	{
-		// 决定不胡牌，则不具有ippatsu状态
-		players[turn].ippatsu = false;
-
-		// 上个动作是杠/加杠，则在self action决定后翻dora
-		if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
-			new_dora();
-
-		tile = selected_action.correspond_tiles[0];
-		// 等待回复
-
-		// 大部分情况都是手切, 除了上一步动作为 出牌 加杠 暗杠
-		// 并且判定抉择弃牌是不是最后一张牌
-
-		bool is_from_hand = DiscardFromHand;
-		if (last_action != BaseAction::Chi &&
-			last_action != BaseAction::Pon) {
-			// tile是不是最后一张
-			if (tile == players[turn].hand.back())
-				is_from_hand = DiscardFromTsumo;
-		}
-		players[turn].execute_discard(tile, river_counter, 
-			selected_action.action == BaseAction::Riichi, is_from_hand);
-		
-		/* Log discard before any response */
-		if (selected_action.action == BaseAction::Discard)
-			gamelog.log_discard(turn, tile, is_from_hand);
-		else if (selected_action.action == BaseAction::Riichi)
-			gamelog.log_riichi_discard(turn, tile, is_from_hand);
-
-		phase = P1_RESPONSE;
-		if (0 == turn) {
-			ResponseAction ra;
-			ra.action = BaseAction::Pass;
-			response_actions = { ra };
-		}
-		else {
-			// 对于所有其他人
-			bool is_next = false;
-			if (0 == (turn + 1) % 4)
-				is_next = true;
-			response_actions = _generate_response_actions(0, tile, is_next);
-		}
+		_handle_self_action_discard_riichi_impl();
 		return;
 	}
 	case BaseAction::KaKan:
 	{
-		// 上个动作是杠/加杠，则在self action决定后翻dora
-		if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
-			new_dora();
-
-		tile = selected_action.correspond_tiles[0];
-
-		/* log kakan before response*/
-		gamelog.log_kakan(turn, tile);
-
-		// 第一巡消除
-		players[turn].first_round = false;
-		// 等待回复
-		phase = P1_CHANKAN_RESPONSE;
-		if (0 == turn) {
-			ResponseAction ra;
-			ra.action = BaseAction::Pass;
-			response_actions = { ra };
-		}
-		else {
-			response_actions = _generate_chankan_response_actions(0, tile);
-		}
+		_handle_self_action_kakan_impl();
 		return;
 	}
 	case BaseAction::AnKan:
 	{
-		// 上个动作是杠/加杠，则在self action决定后翻dora
-		if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
-			new_dora();
-
-		tile = selected_action.correspond_tiles[0];
-
-		/* log ankan before response*/
-		gamelog.log_ankan(turn, selected_action.correspond_tiles);
-
-		// 第一巡消除
-		players[turn].first_round = false;
-		// 等待回复
-		phase = P1_CHANANKAN_RESPONSE;
-		if (turn == 0) {
-			ResponseAction ra;
-			ra.action = BaseAction::Pass;
-			response_actions = { ra };
-		}
-		else {
-			response_actions = _generate_chanankan_response_actions(0, tile);
-		}
-		// 暗杠不等response，直接翻dora
-		new_dora();
+		_handle_self_action_ankan_impl();
 		return;
 	}
 	default:
