@@ -225,8 +225,10 @@ inline static bool is_yaochu_str(const std::string& s) {
 
 /* 牌型对/刻/杠，全幺九，不包括字牌，例如999p 1111m */
 inline static bool pure_yaochu_str(const std::string& s) {
-	if (s[2] == 'K' || s[2] == ':' || s[2] == '|') return s[0] == '1' || s[0] == '9';
-	return false;
+	bool no_shuntsu = (s[2] == 'K' || s[2] == ':' || s[2] == '|');
+	bool all_19 = (s[0] == '1' || s[0] == '9');
+	bool no_z = (!is_z_str(s));
+	return no_shuntsu && all_19 && no_z;
 }
 
 /* 全绿牌 */
