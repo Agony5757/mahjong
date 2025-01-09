@@ -9,7 +9,7 @@
 using namespace std;
 namespace_mahjong
 
-static bool check_见逃(const vector<ResponseAction>& responses, int selection)
+static bool check_minogashi(const vector<ResponseAction>& responses, int selection)
 {
 	for (int i = 0; i < responses.size();++i) {
 		if (responses[i].action == BaseAction::Ron ||
@@ -20,6 +20,11 @@ static bool check_见逃(const vector<ResponseAction>& responses, int selection)
 		}
 	}
 	return false;
+}
+
+void Table::new_dora() {
+	n_active_dora++;
+	gamelog.log_reveal_dora(dora_indicator[n_active_dora - 1]);
 }
 
 vector<BaseTile> Table::get_dora() const
@@ -58,9 +63,12 @@ void Table::init_red_dora_3()
 
 void Table::shuffle_tiles()
 {
-	static std::default_random_engine rd(time(nullptr));
-
 	if (use_seed) {
+		rd.seed(seed);
+	}
+	else
+	{
+		seed = time(nullptr);
 		rd.seed(seed);
 	}
 	std::shuffle(yama.begin(), yama.end(), rd);
@@ -143,7 +151,8 @@ void Table::init_before_playing()
 	}
 
 	debug_replay_init();
-
+	gamelog.log_game_start(honba, kyoutaku, oya, game_wind, yama,
+		get_scores(), players[0].hand, players[1].hand, players[2].hand, players[3].hand);
 	from_beginning();
 }
 
@@ -161,6 +170,63 @@ void Table::game_init() {
 	//}
 
 	draw_tenhou_style();
+	init_before_playing();
+}
+
+void Table::game_init_with_config(const std::vector<int>& yama, const std::vector<int>& init_scores, int kyoutaku_, int honba_, int game_wind_, int oya_)
+{
+	if (oya_ >= 0 && oya_ <= 3)
+		oya = oya_;
+	else
+		oya = 0;
+
+	if (game_wind_ >= 0 && game_wind_ <= 3)
+		game_wind = Wind(game_wind_);
+	else
+		game_wind = Wind::East;
+
+	if (kyoutaku >= 0)
+		kyoutaku = kyoutaku_;
+	else
+		kyoutaku = 0;
+
+	if (honba >= 0)
+		honba = honba_;
+	else
+		honba = 0;
+
+	init_tiles();
+	init_red_dora_3();
+
+	if (yama.size() == N_TILES)
+		import_yama(yama);
+	else if (yama.size() == 0)
+	{
+		init_yama();
+		shuffle_tiles();
+	}
+	else
+		throw std::runtime_error("Yama size is not 136.");
+
+	yama_log = yama;
+	init_dora();
+	draw_tenhou_style();
+
+	if (init_scores.size() == 4)
+	{
+		for (int i = 0; i < 4; ++i) {
+			players[i].score = init_scores[i];
+		}
+	}
+	else if (init_scores.size() == 0)
+	{
+		for (int i = 0; i < 4; ++i) {
+			players[i].score = 25000;
+		}
+	}
+	else
+		throw std::runtime_error("init_scores size is not 4.");
+	
 	init_before_playing();
 }
 
@@ -255,14 +321,14 @@ void Table::game_init_with_metadata(unordered_map<string, string> metadata)
 		auto val = metadata["deal"];
 		if (val == "from_oya") {
 			for (int i = oya; i < oya + 4; ++i) {
-				draw(i % 4, 13);
+				draw_n_normal(i % 4, 13);
 			}
 		}
 		else if (val == "from_0") {
-			draw(0, 13);
-			draw(1, 13);
-			draw(2, 13);
-			draw(3, 13);
+			draw_n_normal(0, 13);
+			draw_n_normal(1, 13);
+			draw_n_normal(2, 13);
+			draw_n_normal(3, 13);
 		}
 		else if (val == "tenhou") {
 			draw_tenhou_style();
@@ -301,12 +367,12 @@ void Table::next_turn(int nextturn)
 			player.update_furiten_river();
 		}
 	}
-	if (selected_base_action == BaseAction::AnKan) {
+	else if (selected_base_action == BaseAction::AnKan) {
 		player.update_atari_tiles();
 		player.remove_atari_tiles(selected_action.correspond_tiles[0]->tile);
 		player.update_furiten_river();
 	}
-	if (selected_base_action == BaseAction::KaKan) {
+	else if (selected_base_action == BaseAction::KaKan) {
 		player.update_atari_tiles();
 		player.remove_atari_tiles(selected_action.correspond_tiles[0]->tile);
 		player.update_furiten_river();
@@ -326,13 +392,13 @@ void Table::from_beginning()
 	if (phase == GAME_OVER)
 		return;
 
-	const static auto 四风连打牌 = [](const array<Player, 4>& players) {
+	const static auto siifurenda_test = [](const array<Player, 4>& players) {
 		BaseTile t0 = players[0].river[0].tile->tile;
 		BaseTile t1 = players[1].river[0].tile->tile;
 		BaseTile t2 = players[2].river[0].tile->tile;
 		BaseTile t3 = players[3].river[0].tile->tile;
 
-		return t0 == t1 && t2 == t3 && t0 == t2 && t1 >= BaseTile::_1z && t1 <= BaseTile::_4z;
+		return t0 == t1 && t0 == t2 && t0 == t3 && t1 >= BaseTile::_1z && t1 <= BaseTile::_4z;
 	};
 
 	// 四风连打判定
@@ -344,7 +410,7 @@ void Table::from_beginning()
 		players[1].call_groups.size() == 0 &&
 		players[2].call_groups.size() == 0 &&
 		players[3].call_groups.size() == 0 &&
-		四风连打牌(players))
+		siifurenda_test(players))
 	{
 		result = generate_result_4wind(this);
 		gamelog.log_gameover(result);
@@ -412,49 +478,90 @@ void Table::from_beginning()
 	phase = (PhaseEnum)turn;
 }
 
-/* 如果还有2/4张岭上牌，则摸倒数第2张（因为最后一张压在下面）*/
-void Table::draw_rinshan(int i_player)
-{
-	n_active_dora++; // 先翻dora
-	int n_kan = get_remain_kan_tile();
-	auto iter = yama.begin();
-	if (n_kan % 2 == 0) ++iter;
-	players[i_player].hand.push_back(*iter);
-	yama.erase(iter);
-}
-
-void Table::draw(int i_player)
-{
-	players[i_player].hand.push_back(yama.back());
-	gamelog.log_draw(i_player, yama.back());
-	yama.pop_back();
-}
-
-void Table::draw(int i_player, int n_tiles)
-{
-	for (int i = 0; i < n_tiles; ++i) {
-		draw(i_player);
-	}
-}
-
 void Table::draw_tenhou_style()
 {
 	// 每次摸4个
 	for (int round = 0; round < 3; ++round) {
 		for (int i = 0; i < 4; ++i) {
-			draw((oya + i) % 4, 4);
+			draw_n_normal((oya + i) % 4, 4);
 		}
 	}
 	// 跳章
 	// 每次摸1个
 	for (int i = 0; i < 4; ++i) {
-		draw((oya + i) % 4);
+		draw_normal_no_record((oya + i) % 4);
 	}
 }
 
 void Table::draw_normal(int i_player)
 {
-	draw(i_player);
+	players[i_player].hand.push_back(yama.back());
+	gamelog.log_draw(i_player, yama.back(), false);
+	yama.pop_back();
+}
+
+void Table::draw_normal_no_record(int i_player)
+{
+	players[i_player].hand.push_back(yama.back());
+	yama.pop_back();
+}
+
+void Table::draw_n_normal(int i_player, int n_tiles)
+{
+	for (int i = 0; i < n_tiles; ++i) {
+		draw_normal_no_record(i_player);
+	}
+}
+
+/* 如果还有2/4张岭上牌，则摸倒数第2张（因为最后一张压在下面）*/
+void Table::draw_rinshan(int i_player)
+{
+	int n_kan = get_remain_kan_tile();
+	auto iter = yama.begin();
+	if (n_kan % 2 == 0) ++iter;
+	players[i_player].hand.push_back(*iter);
+	gamelog.log_draw(i_player, *iter, true);
+	yama.erase(iter);
+}
+
+void Table::reshuffle_yama(unsigned int seed)
+{
+	// remember to avoid reshuffle the revealed dora
+		
+	int first_dora_pos = std::find(yama.begin(), yama.end(), dora_indicator[0]) - yama.begin();
+	
+	// shuffle all
+	rd.seed(seed);
+	std::shuffle(yama.begin(), yama.end(), rd);
+
+	// 归还已翻dora
+	for (int i = 0; i < n_active_dora; ++i)
+	{
+		// dora牌被洗到的新位置位置
+		auto dora_current_iter = std::find(yama.begin(), yama.end(), dora_indicator[i]);
+
+		// 当前dora指示牌位置（first_dora_pos + 2 * i）
+		auto dora_pos_iter = yama.begin() + first_dora_pos + 2 * i;
+
+		std::iter_swap(dora_current_iter, dora_pos_iter);
+	}
+
+	// 更新dora_indicator和uradora_indicator
+	dora_indicator = {
+		yama[first_dora_pos],
+		yama[first_dora_pos + 2],
+		yama[first_dora_pos + 4],
+		yama[first_dora_pos + 6],
+		yama[first_dora_pos + 8],
+	};
+
+	uradora_indicator = {
+		yama[first_dora_pos - 1],
+		yama[first_dora_pos + 1],
+		yama[first_dora_pos + 3],
+		yama[first_dora_pos + 5],
+		yama[first_dora_pos + 7],
+	};
 }
 
 string Table::to_string() const
@@ -643,8 +750,8 @@ void Table::_handle_response_action()
 {
 	// 见逃判断
 	int i = phase - P1_RESPONSE;
-	if (check_见逃(response_actions, selection)) {
-		players[i].见逃();
+	if (check_minogashi(response_actions, selection)) {
+		players[i].minogashi();
 	}	
 	// 在0,1,2处理完之后，为下一个玩家生成对应的动作，并改变对应的phase
 	if (i < 3)
@@ -657,10 +764,8 @@ void Table::_handle_response_action()
 		}
 		else {
 			// 对于所有其他人			
-			bool is下家 = false;
-			if (i == (turn + 1) % 4)
-				is下家 = true;
-			response_actions = _generate_response_actions(i, tile, is下家);
+			bool is_next = (i == (turn + 1) % 4);
+			response_actions = _generate_response_actions(i, tile, is_next);
 		}
 		phase = PhaseEnum(phase + 1);
 	}
@@ -670,8 +775,8 @@ void Table::_handle_response_chankan_action()
 {
 	// 见逃判断
 	int i = phase - P1_CHANKAN_RESPONSE;
-	if (check_见逃(response_actions, selection)) {
-		players[i].见逃();
+	if (check_minogashi(response_actions, selection)) {
+		players[i].minogashi();
 	}
 
 	// 在0,1,2处理完之后，为下一个玩家生成对应的动作，并改变对应的phase
@@ -684,10 +789,6 @@ void Table::_handle_response_chankan_action()
 			response_actions = { ra };
 		}
 		else {
-			// 对于所有其他人			
-			bool is下家 = false;
-			if (i == (turn + 1) % 4)
-				is下家 = true;
 			response_actions = _generate_chankan_response_actions(i, tile);
 		}
 		phase = PhaseEnum(phase + 1);
@@ -698,8 +799,8 @@ void Table::_handle_response_chanankan_action()
 {
 	// 见逃判断
 	int i = phase - P1_CHANANKAN_RESPONSE;
-	if (check_见逃(response_actions, selection)) {
-		players[i].见逃();
+	if (check_minogashi(response_actions, selection)) {
+		players[i].minogashi();
 	}
 
 	// 在0,1,2处理完之后，为下一个玩家生成对应的动作，并改变对应的phase
@@ -712,10 +813,6 @@ void Table::_handle_response_chanankan_action()
 			response_actions = { ra };
 		}
 		else {
-			// 对于所有其他人			
-			bool is下家 = false;
-			if (i == (turn + 1) % 4)
-				is下家 = true;
 			response_actions = _generate_chanankan_response_actions(i, tile);
 		}
 		phase = PhaseEnum(phase + 1);
@@ -725,13 +822,13 @@ void Table::_handle_response_chanankan_action()
 void Table::_handle_response_final_execution()
 {
 	// 选择优先级，并且进行response结算
-	vector<int> response_player;
+	vector<int> response_players;
 	for (int i = 0; i < 4; ++i) {
 		if (actions[i].action == final_action) {
-			response_player.push_back(i);
+			response_players.push_back(i);
 		}
 	}
-	int response = response_player[0];
+	int response = response_players[0];
 	// 根据最终的final_action来进行判断
 	// response_player里面保存了所有最终action和final_action相同的玩家
 	// 只有在pass和荣和的时候才会出现这种情况
@@ -739,67 +836,22 @@ void Table::_handle_response_final_execution()
 
 	switch (final_action) {
 	case BaseAction::Pass:
-
-		// 杠，打出牌之后且其他人pass
-		// if (after_杠()) { dora_spec++; }
-
-		if (selected_action.action == BaseAction::Riichi) {
-			// 立直成功
-			if (players[turn].first_round) {
-				players[turn].double_riichi = true;
-			}
-			players[turn].riichi = true;
-			kyoutaku++;
-			players[turn].score -= 1000;
-			players[turn].ippatsu = true;
-		}
-
-		// 什么都不做。将action对应的牌从手牌移动到牌河里面	
-		// players[turn].move_from_hand_to_river_really(tile, river_counter, FROM_手切摸切);
-
-		// 消除第一巡
-		players[turn].first_round = false;
-		next_turn((turn + 1) % 4);
-		last_action = selected_action.action;
-		break;
+	{
+		_handle_response_final_pass_impl();
+		return;
+	}
 	case BaseAction::Chi:
 	case BaseAction::Pon:
 	case BaseAction::Kan:
-
-		// 明杠，打出牌之后且其他人吃碰
-		// if (after_杠()) { dora_spec++; }
-		if (selected_action.action == BaseAction::Riichi) {
-			// 立直成功
-			if (players[turn].first_round) {
-				players[turn].double_riichi = true;
-			}
-			players[turn].riichi = true;
-			kyoutaku++;
-			players[turn].score -= 1000;
-			// 立直即鸣牌，一定没有ippatsu
-		}
-
-		players[turn].set_not_remained();
-
-		players[response].menzen = false;
-		players[response].execute_naki(
-			actions[response].correspond_tiles, tile, (turn - response) % 4);
-
-		// 这是鸣牌，消除所有人第一巡和ippatsu
-		for (int i = 0; i < 4; ++i) {
-			players[i].first_round = false;
-			players[i].ippatsu = false;
-		}
-
-		// 切换turn
-		next_turn(response);
-		last_action = final_action;
-		break;
-
-	case BaseAction::Ron:
-		result = generate_result_ron(this, selected_action.correspond_tiles[0], response_player);
-		phase = GAME_OVER;
+	{
+		_handle_response_final_chiponkan_impl(response);
 		return;
+	}
+	case BaseAction::Ron:
+	{
+		_handle_response_final_ron_impl(response_players);
+		return;
+	}
 	default:
 		throw runtime_error("Invalid Selection.");
 	}
@@ -807,20 +859,37 @@ void Table::_handle_response_final_execution()
 
 void Table::_handle_response_final_chankan_execution()
 {
-	// 进行response结算
+	// 进行chankan结算	
 	vector<int> response_player;
 	for (int i = 0; i < 4; ++i) {
 		if (actions[i].action == BaseAction::ChanKan) {
 			response_player.push_back(i);
 		}
 	}
-	if (response_player.size() != 0) {
-		// 有人抢杠则进行结算，除非加杠宣告成功，否则ippatsu状态仍然存在
-		result = generate_result_chankan(this, tile, response_player);
+
+	// 要么有抢杠，要么是pass
+	// 这里是有抢杠
+	// 有人抢杠则进行结算，除非加杠宣告成功，否则ippatsu状态仍然存在
+	if (response_player.size() > 0)
+	{
+		for (int player : response_player)
+			gamelog.log_ron(player, turn, tile);
+
+		/* 3响 */
+		if (response_player.size() == 3)
+		{
+			result = generate_result_3ron(this);
+		}
+		else {
+			result = generate_result_chankan(this, tile, response_player);
+		}
+		gamelog.log_gameover(result);
 		phase = GAME_OVER;
 		return;
 	}
-	players[turn].execute_kakan(selected_action.correspond_tiles[0]);
+
+	// 这里是全部pass
+	players[turn].execute_kakan(tile);
 	last_action = BaseAction::KaKan;
 
 	// 这是鸣牌，消除所有人第一巡和ippatsu
@@ -829,121 +898,236 @@ void Table::_handle_response_final_chankan_execution()
 		players[i].ippatsu = false;
 	}
 	next_turn(turn);
+
+	// 这里还不急着翻dora，先记录last_action
 }
 
 void Table::_handle_response_final_chanankan_execution()
-{		
-	// 进行response结算
+{
+	// 进行chanankan结算	
 	vector<int> response_player;
 	for (int i = 0; i < 4; ++i) {
 		if (actions[i].action == BaseAction::ChanAnKan) {
 			response_player.push_back(i);
 		}
 	}
-	if (response_player.size() != 0) {
-		// 有人抢暗杠则进行结算
-		result = generate_result_chanankan(this, tile, response_player);
+
+	// 要么有抢杠，要么是pass
+	// 这里是有抢杠
+	if (response_player.size() > 0)
+	{
+		for (int player : response_player)
+			gamelog.log_ron(player, turn, tile);
+
+		/* 3响 */
+		if (response_player.size() == 3)
+		{
+			result = generate_result_3ron(this);
+		}
+		else {
+			result = generate_result_chanankan(this, tile, response_player);
+		}
+		gamelog.log_gameover(result);
 		phase = GAME_OVER;
 		return;
 	}
-	players[turn].execute_ankan(selected_action.correspond_tiles[0]->tile);
+
+	// 这里是全部pass
+	players[turn].execute_ankan(tile->tile);
 	last_action = BaseAction::AnKan;
-	// 立即翻宝牌指示牌
-	// dora_spec++;
 
 	// 这是暗杠，消除所有人第一巡和ippatsu
 	for (int i = 0; i < 4; ++i) {
 		players[i].first_round = false;
 		players[i].ippatsu = false;
 	}
+
 	next_turn(turn);
+}
+
+void Table::_handle_self_action_discard_riichi_impl()
+{
+	// 决定不胡牌，则不具有ippatsu状态
+	players[turn].ippatsu = false;
+
+	// 上个动作是杠/加杠，则在self action决定后翻dora
+	if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
+		new_dora();
+
+	tile = selected_action.correspond_tiles[0];
+	// 等待回复
+
+	// 大部分情况都是手切, 除了上一步动作为 出牌 加杠 暗杠
+	// 并且判定抉择弃牌是不是最后一张牌
+
+	bool is_from_hand = DiscardFromHand;
+	if (last_action != BaseAction::Chi &&
+		last_action != BaseAction::Pon) {
+		// tile是不是最后一张
+		if (tile == players[turn].hand.back())
+			is_from_hand = DiscardFromTsumo;
+	}
+	players[turn].execute_discard(tile, river_counter,
+		selected_action.action == BaseAction::Riichi, is_from_hand);
+
+	/* Log discard before any response */
+	if (selected_action.action == BaseAction::Discard)
+		gamelog.log_discard(turn, tile, is_from_hand);
+	else if (selected_action.action == BaseAction::Riichi)
+		gamelog.log_riichi_discard(turn, tile, is_from_hand);
+
+	phase = P1_RESPONSE;
+	if (0 == turn) {
+		ResponseAction ra;
+		ra.action = BaseAction::Pass;
+		response_actions = { ra };
+	}
+	else {
+		// 对于所有其他人
+		bool is_next = false;
+		if (0 == (turn + 1) % 4)
+			is_next = true;
+		response_actions = _generate_response_actions(0, tile, is_next);
+	}
+}
+
+void Table::_handle_self_action_kakan_impl()
+{
+	// 上个动作是杠/加杠，则在self action决定后翻dora
+	if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
+		new_dora();
+
+	tile = selected_action.correspond_tiles[0];
+
+	/* log kakan before response*/
+	gamelog.log_kakan(turn, tile);
+
+	// 第一巡消除
+	players[turn].first_round = false;
+	// 等待回复
+	phase = P1_CHANKAN_RESPONSE;
+	if (0 == turn) {
+		ResponseAction ra;
+		ra.action = BaseAction::Pass;
+		response_actions = { ra };
+	}
+	else {
+		response_actions = _generate_chankan_response_actions(0, tile);
+	}
+}
+
+inline void Table::_handle_self_action_ankan_impl()
+{
+	// 上个动作是杠/加杠，则在self action决定后翻dora
+	if (last_action == BaseAction::Kan || last_action == BaseAction::KaKan)
+		new_dora();
+
+	tile = selected_action.correspond_tiles[0];
+
+	/* log ankan before response*/
+	gamelog.log_ankan(turn, selected_action.correspond_tiles);
+
+	// 第一巡消除
+	players[turn].first_round = false;
+	// 等待回复
+	phase = P1_CHANANKAN_RESPONSE;
+	if (turn == 0) {
+		ResponseAction ra;
+		ra.action = BaseAction::Pass;
+		response_actions = { ra };
+	}
+	else {
+		response_actions = _generate_chanankan_response_actions(0, tile);
+	}
+	// 暗杠不等response，直接翻dora
+	new_dora();
+}
+
+void Table::_handle_response_final_pass_impl()
+{
+	if (selected_action.action == BaseAction::Riichi) {
+		// 立直成功
+		if (players[turn].first_round) {
+			players[turn].double_riichi = true;
+		}
+		players[turn].riichi = true;
+		kyoutaku++;
+		players[turn].score -= 1000;
+		players[turn].ippatsu = true;
+
+		/* log riichi success if no ron */
+		gamelog.log_riichi_success(this);
+	}
+
+	// 消除第一巡
+	players[turn].first_round = false;
+	next_turn((turn + 1) % 4);
+	last_action = selected_action.action;
+}
+
+void Table::_handle_response_final_chiponkan_impl(int response)
+{
+	if (selected_action.action == BaseAction::Riichi) {
+		// 立直成功
+		if (players[turn].first_round) {
+			players[turn].double_riichi = true;
+		}
+		players[turn].riichi = true;
+		kyoutaku++;
+		players[turn].score -= 1000;
+		// 立直即鸣牌，一定没有ippatsu
+
+		/* log riichi success if no ron */
+		gamelog.log_riichi_success(this);
+	}
+
+	players[turn].set_not_remained();
+
+	players[response].execute_naki(
+		actions[response].correspond_tiles, tile, (turn - response) % 4);
+
+	gamelog.log_call(response, turn, tile, actions[response].correspond_tiles, final_action);
+
+	// 这是鸣牌，消除所有人第一巡和ippatsu
+	for (int i = 0; i < 4; ++i) {
+		players[i].first_round = false;
+		players[i].ippatsu = false;
+	}
+
+	// 切换turn
+	next_turn(response);
+	last_action = final_action;
 }
 
 void Table::_handle_self_action()
 {
 	switch (selected_action.action) {
 	case BaseAction::Kyushukyuhai:
-		result = generate_result_9hai(this);
 		gamelog.log_kyushukyuhai(turn, result);
-
+		result = generate_result_9hai(this);
+		gamelog.log_gameover(result);
 		phase = GAME_OVER;
 		return;
 	case BaseAction::Tsumo:
+		gamelog.log_tsumo(turn);
 		result = generate_result_tsumo(this);
+		gamelog.log_gameover(result);
 		phase = GAME_OVER;
 		return;
 	case BaseAction::Discard:
 	case BaseAction::Riichi:
 	{
-		// 决定不胡牌，则不具有ippatsu状态
-		players[turn].ippatsu = false;
-
-		tile = selected_action.correspond_tiles[0];
-		// 等待回复
-
-		// 大部分情况都是手切, 除了上一步动作为 出牌 加杠 暗杠
-		// 并且判定抉择弃牌是不是最后一张牌
-
-		bool is_from_hand = DiscardFromHand;
-		if (last_action == BaseAction::Discard ||
-			last_action == BaseAction::KaKan ||
-			last_action == BaseAction::AnKan) {
-			// tile是不是最后一张
-			if (tile == players[turn].hand.back())
-				is_from_hand = DiscardFromTsumo;
-		}
-		players[turn].execute_discard(tile, river_counter, selected_action.action == BaseAction::Riichi, is_from_hand);
-
-		phase = P1_RESPONSE;
-		if (0 == turn) {
-			ResponseAction ra;
-			ra.action = BaseAction::Pass;
-			response_actions = { ra };
-		}
-		else {
-			// 对于所有其他人
-			bool is_next = false;
-			if (0 == (turn + 1) % 4)
-				is_next = true;
-			response_actions = _generate_response_actions(0, tile, is_next);
-		}
+		_handle_self_action_discard_riichi_impl();
 		return;
 	}
 	case BaseAction::KaKan:
 	{
-		tile = selected_action.correspond_tiles[0];
-
-		// 第一巡消除
-		players[turn].first_round = false;
-		// 等待回复
-		phase = P1_CHANKAN_RESPONSE;
-		if (0 == turn) {
-			ResponseAction ra;
-			ra.action = BaseAction::Pass;
-			response_actions = { ra };
-		}
-		else {
-			response_actions = _generate_chankan_response_actions(0, tile);
-		}
+		_handle_self_action_kakan_impl();
 		return;
 	}
 	case BaseAction::AnKan:
 	{
-		tile = selected_action.correspond_tiles[0];
-
-		// 第一巡消除
-		players[turn].first_round = false;
-		// 等待回复
-		phase = P1_CHANANKAN_RESPONSE;
-		if (turn == 0) {
-			ResponseAction ra;
-			ra.action = BaseAction::Pass;
-			response_actions = { ra };
-		}
-		else {
-			response_actions = _generate_chanankan_response_actions(0, tile);
-		}
-
+		_handle_self_action_ankan_impl();
 		return;
 	}
 	default:
@@ -979,9 +1163,12 @@ void Table::make_selection(int selection_)
 	case P4_ACTION:
 		_handle_self_action();
 
-		/* ready for response/chankan_response/chanankan_response */
-		actions.resize(0);
-		final_action = BaseAction::Pass;
+		if (phase != GAME_OVER)
+		{
+			/* ready for response/chankan_response/chanankan_response */
+			actions.resize(0);
+			final_action = BaseAction::Pass;
+		}
 		return;
 
 	// P1 P2 P3依次做出抉择，推入actions，并且为下一位玩家生成抉择，改变phase

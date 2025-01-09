@@ -7,9 +7,9 @@
 using namespace std;
 namespace_mahjong
 
-static Result ryukyouku_interval(Table *table) {
+static Result _ryukyouku_interval(Table *table, ResultType type) {
 	Result result;
-	result.result_type = ResultType::Ryukyouku_Interval;
+	result.result_type = type;
 	for (int i = 0; i < 4; ++i)
 		result.score[i] = table->players[i].score;
 
@@ -22,22 +22,27 @@ static Result ryukyouku_interval(Table *table) {
 
 Result generate_result_9hai(Table *table)
 {
-	return ryukyouku_interval(table);
+	return _ryukyouku_interval(table, ResultType::Ryukyouku_Interval_9Hai);
 }
 
 Result generate_result_4wind(Table *table)
 {
-	return ryukyouku_interval(table);
+	return _ryukyouku_interval(table, ResultType::Ryukyouku_Interval_4Wind);
 }
 
 Result generate_result_4riichi(Table *table)
 {
-	return ryukyouku_interval(table);
+	return _ryukyouku_interval(table, ResultType::Ryukyouku_Interval_4Riichi);
 }
 
 Result generate_result_4kan(Table *table)
 {
-	return ryukyouku_interval(table);
+	return _ryukyouku_interval(table, ResultType::Ryukyouku_Interval_4Kan);
+}
+
+Result generate_result_3ron(Table* table)
+{
+	return _ryukyouku_interval(table, ResultType::Ryukyouku_Interval_3Ron);
 }
 
 bool is_nagashi_mangan(River r) {
@@ -51,11 +56,89 @@ bool is_nagashi_mangan(River r) {
 	});
 }
 
-Result generate_result_notile(Table * table)
+void nagashimangan_handler(Result& result, bool nagashi_mangan_status[4], 
+	int n_nagashimangan, bool tenpai_status[4], Table* table)
 {
-	//cout << "Warning: 罚符 is not considered" << endl;
-	//cout << "Warning: 流局满贯 is not considered" << endl;
+	result.result_type = ResultType::NagashiMangan;
+	if (tenpai_status[table->oya])
+		result.renchan = true;
+	else
+		result.renchan = false;
 
+	result.n_honba = table->honba + 1;
+	result.n_riichibo = table->kyoutaku;
+	if (n_nagashimangan == 4) {
+		// 不涉及到分数支付
+	}
+	else if (n_nagashimangan == 3) {
+		if (nagashi_mangan_status[table->oya])
+		{
+			result.score[table->oya] += 2000;
+			for (int i = 0; i < 4; ++i) {
+				if (nagashi_mangan_status[i])
+					result.score[i] += 2000;
+				else
+					result.score[i] -= 8000;
+			}
+		}
+		else
+		{
+			for (int i = 0; i < 4; ++i) {
+				if (nagashi_mangan_status[i])
+					result.score[i] += 4000;
+				else
+					result.score[i] -= 8000;
+			}
+		}
+	}
+	else if (n_nagashimangan == 2) {
+		if (nagashi_mangan_status[table->oya])
+		{
+			result.score[table->oya] += 4000;
+			for (int i = 0; i < 4; ++i) {
+				if (nagashi_mangan_status[i])
+					result.score[i] += 4000;
+				else
+					result.score[i] -= 6000;
+			}
+		}
+		else
+		{
+			result.score[table->oya] -= 4000;
+			for (int i = 0; i < 4; ++i) {
+				if (nagashi_mangan_status[i])
+					result.score[i] += 6000;
+				else
+					result.score[i] -= 4000;
+			}
+		}
+	}
+	else if (n_nagashimangan == 1) {
+		if (nagashi_mangan_status[table->oya])
+		{
+			for (int i = 0; i < 4; ++i) {
+				if (nagashi_mangan_status[i])
+					result.score[i] += 12000;
+				else
+					result.score[i] -= 4000;
+			}
+		}
+		else
+		{
+			result.score[table->oya] -= 2000;
+			for (int i = 0; i < 4; ++i) {
+				if (nagashi_mangan_status[i])
+					result.score[i] += 8000;
+				else
+					result.score[i] -= 2000;
+			}
+		}
+	}
+
+}
+
+Result generate_result_notile(Table *table)
+{
 	Result result;
 	
 	for (int i = 0; i < 4; ++i)
@@ -70,139 +153,70 @@ Result generate_result_notile(Table * table)
 			n_nagashimangan++;
 		}
 	}
+
+	// the number of tenpai players
+	int n_tenpai = 0;
+	// the atari status
+	bool tenpai_status[4] = { false, false, false, false };
+
+	for (int i = 0; i < 4; ++i) {
+		auto atari_hai = get_atari_hai(convert_tiles_to_basetiles(table->players[i].hand),
+			table->players[i].get_false_atari_hai());
+
+		if (atari_hai.size() > 0) {
+			tenpai_status[i] = true;
+			n_tenpai++;
+		}
+		else {
+			tenpai_status[i] = false;
+		}
+	}
 	
+	/* Nagashi mangan special handler */
 	if (n_nagashimangan > 0) {
-		result.result_type = ResultType::NagashiMangan;
-		if (nagashi_mangan_status[table->oya])
-			result.renchan = true;
-		else 
-			result.renchan = false;
-
-		result.n_honba = table->honba + 1;
-		result.n_riichibo = table->kyoutaku;
-		if (n_nagashimangan == 4) {
-			// 不涉及到分数支付
-		}
-		else if (n_nagashimangan == 3) {
-			if (nagashi_mangan_status[table->oya])
-			{
-				result.score[table->oya] += 2000;
-				for (int i = 0; i < 4; ++i) {
-					if (nagashi_mangan_status[i])
-						result.score[i] += 2000;
-					else
-						result.score[i] -= 8000;
-				}
-			}
-			else
-			{
-				for (int i = 0; i < 4; ++i) {
-					if (nagashi_mangan_status[i])
-						result.score[i] += 4000;
-					else
-						result.score[i] -= 8000;
-				}
-			}
-		}
-		else if (n_nagashimangan == 2){
-			if (nagashi_mangan_status[table->oya])
-			{
-				result.score[table->oya] += 4000;
-				for (int i = 0; i < 4; ++i) {
-					if (nagashi_mangan_status[i])
-						result.score[i] += 4000;
-					else
-						result.score[i] -= 6000;
-				}
-			}
-			else
-			{
-				result.score[table->oya] -= 4000;
-				for (int i = 0; i < 4; ++i) {
-					if (nagashi_mangan_status[i])
-						result.score[i] += 6000;
-					else
-						result.score[i] -= 4000;
-				}
-			}
-		}
-		else if (n_nagashimangan == 1) {
-			if (nagashi_mangan_status[table->oya])
-			{
-				for (int i = 0; i < 4; ++i) {
-					if (nagashi_mangan_status[i])
-						result.score[i] += 12000;
-					else
-						result.score[i] -= 4000;
-				}
-			}
-			else
-			{
-				result.score[table->oya] -= 2000;
-				for (int i = 0; i < 4; ++i) {
-					if (nagashi_mangan_status[i])
-						result.score[i] += 8000;
-					else
-						result.score[i] -= 2000;
-				}
-			}
-		}
+		nagashimangan_handler(result, nagashi_mangan_status, n_nagashimangan, tenpai_status, table);
+		return result;
 	}
-	else {
-		result.result_type = ResultType::Ryukyouku_Notile;
-		// 统计罚符
-		// 开始统计四人听牌的状态	
 
-		// the number of tenpai players
-		int n_tenpai = 0;
-		// the atari status
-		bool tenpai_status[4] = {false, false, false, false};
+	/* Normal ryukyouku */
 
+	result.result_type = ResultType::Ryukyouku_Notile;
+	// 统计罚符
+	// 开始统计四人听牌的状态	
+
+	result.n_honba = table->honba + 1;
+	result.n_riichibo = table->kyoutaku;
+	if (tenpai_status[table->oya])
+		result.renchan = true;
+	else
+		result.renchan = false;
+
+	if (n_tenpai == 4) {	}
+	else if (n_tenpai == 0) { }
+	else if (n_tenpai == 1) {
 		for (int i = 0; i < 4; ++i) {
-			if (get_atari_hai(convert_tiles_to_basetiles(table->players[i].hand)).size() > 0) {
-				tenpai_status[i] = true;
-				n_tenpai++;
-			}
-			else {
-				tenpai_status[i] = false;
-			}
+			if (tenpai_status[i])
+				result.score[i] += 3000;
+			else
+				result.score[i] -= 1000;
 		}
-		// cout << "Warning: 空听 is not considered" << endl;
-
-		result.n_honba = table->honba + 1;
-		result.n_riichibo = table->kyoutaku;
-		if (tenpai_status[table->oya])
-			result.renchan = true;
-		else
-			result.renchan = false;
-
-		if (n_tenpai == 4) {	}
-		else if (n_tenpai == 0) { }
-		else if (n_tenpai == 1) {
-			for (int i = 0; i < 4; ++i) {
-				if (tenpai_status[i])
-					result.score[i] += 3000;
-				else
-					result.score[i] -= 1000;
-			}
-		}
-		else if (n_tenpai == 2) {
-			for (int i = 0; i < 4; ++i) {
-				if (tenpai_status[i])
-					result.score[i] += 1500;
-				else
-					result.score[i] -= 1500;
-			}
-		}
-		else if (n_tenpai == 3) {
-			for (int i = 0; i < 4; ++i) {
-				if (tenpai_status[i])
-					result.score[i] += 1000;
-				else
-					result.score[i] -= 3000;
-			}
-		}		
 	}
+	else if (n_tenpai == 2) {
+		for (int i = 0; i < 4; ++i) {
+			if (tenpai_status[i])
+				result.score[i] += 1500;
+			else
+				result.score[i] -= 1500;
+		}
+	}
+	else if (n_tenpai == 3) {
+		for (int i = 0; i < 4; ++i) {
+			if (tenpai_status[i])
+				result.score[i] += 1000;
+			else
+				result.score[i] -= 3000;
+		}
+	}		
 	
 	return result;
 }
@@ -277,7 +291,7 @@ Result generate_result_tsumo(Table * table)
 	return result;
 }
 
-Result generate_result_ron(Table *table, Tile *agari_tile, std::vector<int> response_player, bool chankan, bool chanankan)
+Result generate_result_ron(Table *table, Tile *agari_tile, const std::vector<int> &response_player, bool chankan, bool chanankan)
 {
 	Result result;
 	result.result_type = ResultType::RonAgari;
@@ -325,12 +339,12 @@ Result generate_result_ron(Table *table, Tile *agari_tile, std::vector<int> resp
 	return result;
 }
 
-Result generate_result_chanankan(Table * table, Tile* agari_tile, std::vector<int> response_player)
+Result generate_result_chanankan(Table * table, Tile* agari_tile, const std::vector<int> &response_player)
 {
 	return generate_result_ron(table, agari_tile, response_player, false, true);
 }
 
-Result generate_result_chankan(Table * table, Tile* agari_tile, std::vector<int> response_player)
+Result generate_result_chankan(Table * table, Tile* agari_tile, const std::vector<int> &response_player)
 {
 	return generate_result_ron(table, agari_tile, response_player, true, false);
 }

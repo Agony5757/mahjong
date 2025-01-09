@@ -32,8 +32,8 @@ jobs:
         
     - name: Build
       # Build your program with the given configuration
-      run: sudo python setup.py install
+      run: sudo pip install .
       
     - name: Test
-      run: python -c "import pymahjong as pm;pm.test()" && wget https://github.com/Agony5757/mahjong/releases/download/v1.0.0/paipuxmls.7z && 7z x paipuxmls.7z && python -c "import pymahjong as pm;pm.paipu_replay(mode='debug')"
+      run: python -c "import pymahjong as pm;pm.test()" && wget https://github.com/Agony5757/mahjong/releases/download/v1.0.4/paipuxmls.7z && 7z x paipuxmls.7z && python -c "import pymahjong as pm;pm.paipu_replay(mode='debug')"
         

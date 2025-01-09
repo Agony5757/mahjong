@@ -9,10 +9,13 @@
 #include "Player.h"
 #include "fmt/os.h"
 #include <array>
+#include <random>
+#include <ctime>
 
 namespace_mahjong
 
-constexpr auto N_TILES = (34 * 4);
+constexpr auto N_BASETILES = 34;
+constexpr auto N_TILES = N_BASETILES * 4;
 
 class Table
 {
@@ -25,7 +28,7 @@ public:
 	
 	// 牌山的起始是岭上牌(0,1,2,3)
 	// 然后标记宝牌和ura的位置(5,7,9,11,13)、(4,6,8,10,12)
-	// 初始情况dora_spec = 1，每次翻宝牌只需要dora_spec++
+	// 初始情况n_active_dora = 1，每次翻宝牌只需要n_active_dora++
 	// 杠的时候所有牌在vector牌山中位置变化的
 	// 并不会影响到宝牌/ura的位置，因为它们一开始就被标记过了
 	// 当牌山.size() <= 14的时候结束游戏
@@ -45,6 +48,7 @@ public:
 	std::vector<int> yama_log;
 	std::string log_buffer_prefix;
 	std::vector<int> selection_log;
+	std::default_random_engine rd;
 
 	/* Set seed (set_seed) before init*/
 	bool use_seed = false;
@@ -53,7 +57,7 @@ public:
 public:
 	Table() = default;
 
-	inline void new_dora() { n_active_dora++; }
+	void new_dora();
 	std::vector<BaseTile> get_dora() const;
 	std::vector<BaseTile> get_ura_dora() const;
 
@@ -70,16 +74,29 @@ public:
 	void init_yama();
 	void init_dora();
 	void init_before_playing();
-	// void import_yama(std::string yama);
 	void import_yama(const std::vector<int> &yama);
 	std::string export_yama();
 	void init_wind();
 
-	void draw(int i_player);
-	void draw(int i_player, int n_tiles);
+	// game init draw with tenhou style
 	void draw_tenhou_style();
+
+	// Draw from the head (the normal sequence)
 	void draw_normal(int i_player);
+
+	// Draw from the head without record.
+	// This is for initializing the game
+	void draw_normal_no_record(int i_player);
+
+	// Draw n tiles from the head (the normal sequence)
+	// **No Record**, implemented by ``draw_normal_no_record''
+	void draw_n_normal(int i_player, int n_tiles);
+
+	// Draw from the tail (from rinshan)
 	void draw_rinshan(int i_player);
+
+	// Reshuffle the remaining yama to allow replay from interval
+	void reshuffle_yama(unsigned int seed);
 
 	void next_turn(int nextturn);
 
@@ -164,8 +181,36 @@ public:
 
 public:
 	// ---------------------Manual Mode------------------------------
-	// The following part is for the manual instead of the automatic.
-	// Never mix using GameProcess and using the following functions.
+	// Stage:
+	//  self_action - response(0) - response(1) - response(2) - response(3) - execute
+	// 
+	// Usage:
+	//  0. get_phase() : to obtain the PhaseEnum
+	//	1. get_self_actions() / get_response_actions()
+	//	2. make_selection(int) : to input the selection and automatically move to the next stage
+	// 
+	// Implementation:
+	//		... (previous steps)
+	//			-> from_beginning
+	//			-> _generate_self_actions
+	//		make_selection
+	//			-> _handle_self_action
+	//			-> _generate_response_actions (0)
+	//		make_selection
+	//			-> _handle_response_action (0)
+	//			-> _generate_response_actions (1)
+	//		make_selection
+	//			-> _handle_response_action (1)
+	//			-> _generate_response_actions (2)
+	//		make_selection
+	//			-> _handle_response_action (2)
+	//			-> _generate_response_actions (3)
+	//		make_selection
+	//			-> _handle_response_action (3)
+	//			-> _handle_response_final_execution 
+	//				-> next_turn
+	//			-> from_beginning (loop ⬆)
+	//		
 	// -------------------------------------------------------------- 
 	enum PhaseEnum {
 		P1_ACTION, P2_ACTION, P3_ACTION, P4_ACTION,
@@ -174,23 +219,32 @@ public:
 		P1_CHANANKAN_RESPONSE, P2_CHANANKAN_RESPONSE, P3_CHANANKAN_RESPONSE, P4_CHANANKAN_RESPONSE,
 		GAME_OVER, UNINITIALIZED,
 	};
-	std::vector<SelfAction> self_actions;
-	std::vector<ResponseAction> response_actions;
+	std::vector<SelfAction> self_actions; // prepared list for self actions
+	std::vector<ResponseAction> response_actions; // prepared list for response actions
 
 	Result result;
 	PhaseEnum phase = UNINITIALIZED; // initialized to UNINITIALIZED to avoid illegal gameplay.
 	int selection = -1;	// initialized to -1 to avoid illegal gameplay.
-	SelfAction selected_action;
-	Tile* tile = nullptr;
+	SelfAction selected_action; // the action selected in the self_action stage
+	Tile* tile = nullptr; // the corresponding tile of the self_action
 	std::vector<ResponseAction> actions; // response actions
-	// bool FROM_手切摸切 = false; // global variable for river log
-	BaseAction final_action = BaseAction::Pass;
+	BaseAction final_action = BaseAction::Pass; // final response action (ron > pon/kan > chi > pass)
 	
 	void from_beginning();
 
 	// Initialize the game.
 	void game_init();
-	void game_init_for_replay(const std::vector<int> &yama, const std::vector<int> &init_scores, int 立直棒, int 本场, int 场风, int 亲家);
+
+	// Initialize the game with configurable configs
+	// yama: Empty for random shuffle, or size=136 for fixed yama
+	// init_scores: Empty for 25000 init scores, or size=4
+	// kyoutaku: -1 for default (0) or set to the initial kyoutaku
+	// honba: -1 for default (0) or set to the initial honba
+	// game_wind: 0~3 to set the initial game wind, or default (East)
+	// oya: 0~3 to set the oya, or default (player 0)
+	void game_init_with_config(const std::vector<int>& yama, const std::vector<int>& init_scores, int kyoutaku, int honba, int game_wind, int oya);
+
+	void game_init_for_replay(const std::vector<int> &yama, const std::vector<int> &init_scores, int kyoutaku, int honba, int game_wind, int oya);
 	void game_init_with_metadata(std::unordered_map<std::string, std::string> metadata);
 	
 	// Get the phase of the game
@@ -235,6 +289,32 @@ public:
 	void _handle_response_final_execution();
 	void _handle_response_final_chankan_execution();
 	void _handle_response_final_chanankan_execution();
+
+	void _handle_self_action_discard_riichi_impl();
+	void _handle_self_action_kakan_impl();
+	void _handle_self_action_ankan_impl();
+	void _handle_response_final_pass_impl();
+	void _handle_response_final_chiponkan_impl(int response);
+	void _handle_response_final_ron_impl(const std::vector<int>& response_players)
+	{
+		/* 为每一个胡牌的玩家生成gamelog */
+		for (int player : response_players)
+		{
+			gamelog.log_ron(player, turn, selected_action.correspond_tiles[0]);
+		}
+
+		/* 3响 */
+		if (response_players.size() == 3)
+		{
+			result = generate_result_3ron(this);
+		}
+		else
+		{
+			result = generate_result_ron(this, selected_action.correspond_tiles[0], response_players);
+		}
+		gamelog.log_gameover(result);
+		phase = GAME_OVER;
+	}
 
 	// Get Information. Return the table itself. (For python wrapper)
 	inline Table* get_info() { return this; }

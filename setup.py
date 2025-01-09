@@ -145,7 +145,7 @@ class CMakeBuild(build_ext):
         
 setup(
     name = "pymahjong",
-    version = "1.0.3",
+    version = "1.0.4",
     author = "Agony",
     author_email = "chenzhaoyun@iai.ustc.edu.cn",
     description= "A Japanese Mahjong environment for decision AI research.",
@@ -158,7 +158,7 @@ setup(
     },
     classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
     packages = ['pymahjong'],
-    install_requires=['numpy', 'gym'],
+    install_requires=['numpy', 'gym<=0.26.2'],
     zip_safe = False,
     python_requires='>=3.6',    
 )

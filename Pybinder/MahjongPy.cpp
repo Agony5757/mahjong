@@ -158,14 +158,16 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("riichi_furiten", &Player::furiten_riichi)
 		.def_readonly("score", &Player::score)
 		.def_readonly("hand", &Player::hand)
-		// .def_readonly("fulus", &Player::副露s)
-		// .def_readonly("river", &Player::river)
 		.def_readonly("ippatsu", &Player::ippatsu)
 		.def_readonly("first_round", &Player::first_round)
+		.def_readonly("atari_tiles", &Player::atari_tiles)
 		
 		// 函数们
 		.def("get_fuuros", &Player::get_fuuros)
 		.def("get_river", &Player::get_river)
+		.def("is_tenpai", &Player::is_tenpai)
+		.def("is_menzen", &Player::is_menzen)
+		.def("is_riichi", &Player::is_riichi)
 		.def("is_furiten", &Player::is_furiten)
 		.def("to_string", &Player::to_string)
 		.def("hand_to_string", &Player::to_string)
@@ -179,7 +181,9 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 
 		// 函数们
 		.def("game_init", &Table::game_init)
+		.def("game_init_with_config", &Table::game_init_with_config)
 		.def("game_init_with_metadata", &Table::game_init_with_metadata)
+		.def("reshuffle_yama", &Table::reshuffle_yama)
 		.def("get_phase", &Table::get_phase)
 		.def("make_selection", &Table::make_selection)
 		.def("get_selection_from_action_tile", &Table::get_selection_from_action_tile)
@@ -229,9 +233,13 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 	py::enum_<ResultType>(m, "ResultType")
 		.value("RonAgari", ResultType::RonAgari)
 		.value("TsumoAgari", ResultType::TsumoAgari)
-		.value("IntervalRyuuKyoku", ResultType::Ryukyouku_Interval)
 		.value("NoTileRyuuKyoku", ResultType::Ryukyouku_Notile)
 		.value("NagashiMangan", ResultType::NagashiMangan)
+		.value("Ryukyouku_Interval_9Hai", ResultType::Ryukyouku_Interval_9Hai)
+		.value("Ryukyouku_Interval_4Wind", ResultType::Ryukyouku_Interval_4Wind)
+		.value("Ryukyouku_Interval_4Riichi", ResultType::Ryukyouku_Interval_4Riichi)
+		.value("Ryukyouku_Interval_4Kan", ResultType::Ryukyouku_Interval_4Kan)
+		.value("Ryukyouku_Interval_3Ron", ResultType::Ryukyouku_Interval_3Ron)
 		;
 
 	py::class_<Result>(m, "Result")
@@ -240,6 +248,9 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("score", &Result::score)
 		.def_readonly("winner", &Result::winner)
 		.def_readonly("loser", &Result::loser)
+		.def_readonly("n_riichibo", &Result::n_riichibo)
+		.def_readonly("n_honba", &Result::n_honba)
+		.def_readonly("renchan", &Result::renchan)
 		.def("to_string", &Result::to_string)
 		;	
 
@@ -258,7 +269,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.value("GameWind_West", Yaku::Bakaze_Sha)
 		.value("GameWind_North", Yaku::Bakaze_Pei)
 		.value("Yakuhai_haku", Yaku::Yakuhai_Haku)
-		.value("Yakuhai_hastu", Yaku::Yakuhai_Hatsu)
+		.value("Yakuhai_hatsu", Yaku::Yakuhai_Hatsu)
 		.value("Yakuhai_chu", Yaku::Yakuhai_Chu)
 		.value("Pinfu", Yaku::Pinfu)
 		.value("Yiipeikou", Yaku::Ippeikou)
@@ -271,7 +282,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.value("UraDora", Yaku::Uradora)
 		.value("AkaDora", Yaku::Akadora)
 		.value("Chantai_", Yaku::Honchantaiyaochu_Naki)
-		.value("Ikkitsukan_", Yaku::Ikkitsuukan_Naki)
+		.value("Ikkitsuukan_", Yaku::Ikkitsuukan_Naki)
 		.value("Sanshokudoujun_", Yaku::Sanshokudoujun_Naki)
 
 		.value("DoubleRiichi", Yaku::Dabururiichi)
@@ -367,6 +378,33 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("generate_yama", &TenhouShuffle::generate_yama)
 		;
 
+	py::class_<BaseGameLog>(m, "BaseGameLog")
+		.def_readonly("player", &BaseGameLog::player)
+		.def_readonly("player2", &BaseGameLog::player2)
+		.def_readonly("action", &BaseGameLog::action)
+		.def_readonly("tile", &BaseGameLog::tile)
+		.def_readonly("call_tiles", &BaseGameLog::call_tiles)
+		.def_readonly("score", &BaseGameLog::score)
+		.def("to_string", &BaseGameLog::to_string)
+		;
+
+	py::class_<GameLog>(m, "GameLog")
+		.def_readonly("winner", &GameLog::winner)
+		.def_readonly("loser", &GameLog::loser)
+		.def_readonly("start_scores", &GameLog::start_scores)
+		.def_readonly("init_yama", &GameLog::init_yama)
+		.def_readonly("init_hands", &GameLog::init_hands)
+		.def_readonly("start_honba", &GameLog::start_honba)
+		.def_readonly("end_honba", &GameLog::end_honba)
+		.def_readonly("start_kyoutaku", &GameLog::start_kyoutaku)
+		.def_readonly("end_kyoutaku", &GameLog::end_kyoutaku)
+		.def_readonly("oya", &GameLog::oya)
+		.def_readonly("game_wind", &GameLog::game_wind)
+		.def_readonly("result", &GameLog::result)
+		.def_readonly("logs", &GameLog::logs)
+		.def("to_string", &GameLog::to_string)
+		;
+
 	auto get_self_action_index = 
 	[](const std::vector<SelfAction> &actions, BaseAction action_type, std::vector<BaseTile> correspond_tiles, bool use_red_dora)
 		{ return get_action_index(actions, action_type, correspond_tiles, use_red_dora); };
@@ -384,6 +422,42 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 	m.def("encv1_encode_action", &encv1::py_encode_action);
 	m.def("encv1_encode_action_riichi_step2", &encv1::py_encode_action_riichi_step2);
 	m.def("encv1_get_riichi_tiles", &encv1::py_get_riichi_tiles);
+
+	namespace encv2 = TrainingDataEncoding::v2;
+
+	py::class_<encv2::TableEncoder>(m, "TableEncoder")
+		.def(py::init<Table*>())
+		.def_readonly("self_infos", &encv2::TableEncoder::self_infos)
+		.def_readonly("records", &encv2::TableEncoder::records)
+		.def_readonly("global_infos", &encv2::TableEncoder::global_infos)
+		.def("init", &encv2::TableEncoder::init)
+		.def("update", &encv2::TableEncoder::update)
+		.def("_require_update", &encv2::TableEncoder::_require_update)
+		.def_readonly("record_count", &encv2::TableEncoder::record_count)
+		;
+
+	py::class_<encv2::PassiveTableEncoder>(m, "PassiveTableEncoder")
+		.def(py::init<>())
+		.def_readonly("self_info", &encv2::PassiveTableEncoder::self_info)
+		.def_readonly("records", &encv2::PassiveTableEncoder::records)
+		.def_readonly("global_info", &encv2::PassiveTableEncoder::global_info)
+		.def("encode_game_basic", &encv2::PassiveTableEncoder::encode_game_basic)
+		.def("encode_hand", &encv2::PassiveTableEncoder::encode_hand)
+		.def("encode_self_river", &encv2::PassiveTableEncoder::encode_self_river)
+		.def("encode_next_river", &encv2::PassiveTableEncoder::encode_next_river)
+		.def("encode_opposite_river", &encv2::PassiveTableEncoder::encode_opposite_river)
+		.def("encode_river", &encv2::PassiveTableEncoder::encode_river)
+		.def("encode_self_fuuro", &encv2::PassiveTableEncoder::encode_self_fuuro)
+		.def("encode_next_fuuro", &encv2::PassiveTableEncoder::encode_next_fuuro)
+		.def("encode_opposite_fuuro", &encv2::PassiveTableEncoder::encode_opposite_fuuro)
+		.def("encode_previous_fuuro", &encv2::PassiveTableEncoder::encode_previous_fuuro)
+		.def("encode_fuuro", &encv2::PassiveTableEncoder::encode_fuuro)
+		.def("encode_dora", &encv2::PassiveTableEncoder::encode_dora)
+		.def("encode_points", &encv2::PassiveTableEncoder::encode_points)
+		.def("encode_remaining_tiles", &encv2::PassiveTableEncoder::encode_remaining_tiles)
+		.def("encode_riichi_states", &encv2::PassiveTableEncoder::encode_riichi_states)
+		.def("encode_ippatsu_states", &encv2::PassiveTableEncoder::encode_ippatsu_states)
+		;
 }
 
 #ifdef __GNUC__

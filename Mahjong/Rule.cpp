@@ -404,7 +404,7 @@ std::vector<BaseTile> get_kokushi_atari_hai(std::vector<BaseTile> tiles)
 	return atari_tiles;
 }
 
-vector<BaseTile> get_atari_hai(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
+vector<BaseTile> get_atari_hai(vector<BaseTile> tiles, const std::vector<BaseTile>& except_tiles)
 {
 	profiler _("Rule.cpp/getAtariHai");;
 	vector<BaseTile> atari_tiles;
@@ -429,7 +429,7 @@ vector<BaseTile> get_atari_hai(vector<BaseTile> tiles, vector<BaseTile> except_t
 	return atari_tiles;
 }
 
-bool is_tenpai(vector<BaseTile> tiles, vector<BaseTile> except_tiles)
+bool is_tenpai(vector<BaseTile> tiles, const std::vector<BaseTile>& except_tiles)
 {
 	profiler _("Rule.cpp/isTenpai");
 	for (int i = BaseTile::_1m; i <= BaseTile::_7z; ++i) {
@@ -467,7 +467,8 @@ bool is_agari_shape(std::vector<BaseTile> tiles)
 	return false;
 }
 
-std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen)
+std::vector<Tile*> is_riichi_able(const std::vector<Tile*> &hands, 
+	const std::vector<BaseTile>& except_tiles, bool Menzen)
 {
 	std::vector<Tile*> play_tiles;
 	if (!Menzen) return play_tiles;
@@ -477,7 +478,7 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen)
 		std::vector<Tile*> copy_hand(hands.begin(), hands.end());
 		copy_hand.erase(copy_hand.begin() + i);
 		auto s = convert_tiles_to_basetiles(copy_hand);
-		auto tenhai = get_atari_hai(s);
+		auto tenhai = get_atari_hai(s, except_tiles);
 		if (tenhai.size() != 0) {
 			play_tiles.push_back(hands[i]);
 		}
@@ -485,15 +486,16 @@ std::vector<Tile*> is_riichi_able(std::vector<Tile*> hands, bool Menzen)
 	return play_tiles;
 }
 
-bool can_ron(std::vector<Tile*> hands, Tile *get_tile)
+bool can_ron(const std::vector<Tile*> &hands_, Tile *get_tile)
 {
+	std::vector<Tile*> hands(hands_);
 	hands.push_back(get_tile);
 	if (is_agari_shape(convert_tiles_to_basetiles(hands)))
 		return true;
 	return false;
 }
 
-bool can_tsumo(std::vector<Tile*> hands)
+bool can_tsumo(const std::vector<Tile*> &hands)
 {
 	if (is_agari_shape(convert_tiles_to_basetiles(hands)))
 		return true;

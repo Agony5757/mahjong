@@ -233,6 +233,18 @@ inline std::string wind_to_string(Wind wind) {
 	}
 }
 
+inline std::string vector_tile_to_string(const std::vector<Tile*>& tiles)
+{
+	std::stringstream ss;
+	ss << "[";
+	for (auto tile : tiles)
+	{
+		ss << tile->to_string();
+	}
+	ss << "]";
+	return ss.str();
+}
+
 struct CallGroup {
 	enum Type {
 		Chi,
