@@ -233,9 +233,15 @@ inline static bool pure_yaochu_str(const std::string& s) {
 
 /* 全绿牌 */
 inline static bool pure_green_str(const std::string& s) {
-	const char* green_types[] = { "2sK", "3sK", "4sK", "2sS", "6sK", "8sK", "6zK",
-		"2s:", "3s:", "4s:", "6s:", "8s:", "6z:" };
-	return std::all_of(std::begin(green_types), std::end(green_types),
+	const char* green_types[] = { 
+		"2sK", "3sK", "4sK",  /* 222s 333s 444s */
+		"6sK", "8sK", "6zK",  /* 666s 888s 666z */
+		"2sS", /* 234s */
+		"2s:", "3s:", "4s:", "6s:", "8s:", "6z:", /* 2s2s, 3s3s, 4s4s, 6s6s, 8s8s, 6z6z */
+		"2s|", "3s|", "4s|", "6s|", "8s|", "6z|", /* 2222s, 3333s, 4444s, 6666s, 8888s, 6666z */
+	};
+
+	return std::any_of(begin(green_types), end(green_types),
 		[&s](const char* green) {return tile_group_match(s, green); });
 }
 
