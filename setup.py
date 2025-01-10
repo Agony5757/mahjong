@@ -3,6 +3,7 @@ from setuptools.command.build_ext import build_ext
 import os
 import subprocess
 import sys
+import re
 
 with open("README.md", 'r', encoding = 'utf-8') as fp:
     readme = fp.read()
@@ -145,7 +146,7 @@ class CMakeBuild(build_ext):
         
 setup(
     name = "pymahjong",
-    version = "1.0.4",
+    version = "1.0.5",
     author = "Agony",
     author_email = "chenzhaoyun@iai.ustc.edu.cn",
     description= "A Japanese Mahjong environment for decision AI research.",
@@ -160,5 +161,5 @@ setup(
     packages = ['pymahjong'],
     install_requires=['numpy', 'gym<=0.26.2'],
     zip_safe = False,
-    python_requires='>=3.6',    
+    python_requires='>=3.8',    
 )
