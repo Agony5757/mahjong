@@ -1,7 +1,7 @@
-import gym
+import gymnasium as gym
 import numpy as np
 import warnings
-from gym.spaces import Discrete, Box
+from gymnasium.spaces import Discrete, Box
 import MahjongPyWrapper as pm
 
 np.set_printoptions(threshold=np.inf)
@@ -431,7 +431,8 @@ class SingleAgentMahjongEnv(gym.Env):
                 action = self.opponent_agent.select(obs, action_mask=action_mask, greedy=True)
                 self.env.step(self.env.get_curr_player_id(), action)
 
-    def reset(self, oya=None, game_wind=None, seed=None):
+    def reset(self, *, oya=None, game_wind=None, seed=None, options=None):
+        super().reset(seed=seed, options=options)
         self.env.reset(oya=oya, game_wind=game_wind, seed=seed)
         self._proceed_until_agent_turn()
 
@@ -439,7 +440,7 @@ class SingleAgentMahjongEnv(gym.Env):
             # if espisode length == 0 for the current player, ignore this game and re-start a new game
             return self.reset()
         else:
-            return self.get_obs()
+            return self.get_obs(), {}
 
     def step(self, action):
         assert self.env.get_curr_player_id() == self.THIS_AGENT_ID
@@ -449,12 +450,12 @@ class SingleAgentMahjongEnv(gym.Env):
 
         if self.env.is_over():
             r = self.env.get_payoffs()[self.THIS_AGENT_ID]
-            done = True
+            terminated = True
         else:
             r = 0
-            done = False
+            terminated = False
 
-        return self.env.get_obs(self.THIS_AGENT_ID), r, done, {}
+        return self.env.get_obs(self.THIS_AGENT_ID), r, terminated, False, {}
 
     def get_obs(self):
         return self.env.get_obs(self.THIS_AGENT_ID)

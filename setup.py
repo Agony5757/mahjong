@@ -159,7 +159,7 @@ setup(
     },
     classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
     packages = ['pymahjong'],
-    install_requires=['numpy', 'gym<=0.26.2'],
+    install_requires=['numpy', 'gymnasium'],
     zip_safe = False,
     python_requires='>=3.8',    
 )
