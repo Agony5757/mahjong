@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 from copy import deepcopy
-import gym
+import gymnasium as gym
 import pymahjong as mp
 
 from mahjong.shanten import Shanten
@@ -12,7 +12,7 @@ from mahjong.tile import TilesConverter
 
 shanten = Shanten()
 
-from gym.spaces import Discrete, Box
+from gymnasium.spaces import Discrete, Box
 
 
 # ------------- OBS INDICES -----------
