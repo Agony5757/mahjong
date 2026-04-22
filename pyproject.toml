@@ -1,0 +1,71 @@
+[build-system]
+requires = [
+    "scikit-build-core>=0.8.0",
+    "pybind11>=2.11.0",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pymahjong"
+version = "1.1.0"
+description = "A Japanese Mahjong environment for decision AI research."
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Agony", email = "chenzhaoyun@iai.ustc.edu.cn"},
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: C++",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+]
+dependencies = [
+    "numpy",
+    "gymnasium",
+]
+
+[project.urls]
+Homepage = "https://github.com/Agony5757/mahjong"
+Documentation = "https://agony5757.github.io/mahjong/"
+Repository = "https://github.com/Agony5757/mahjong"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx>=7.0.0",
+    "furo>=2024.0.0",
+    "sphinx-autodoc-typehints>=2.0.0",
+    "myst-parser>=2.0.0",
+    "sphinx-copybutton>=0.5.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.scikit-build]
+cmake.version = ">=3.15"
+ninja.make-fallback = true
+wheel.packages = ["pymahjong"]
+wheel.install-dir = "."
+sdist.exclude = ["ThirdParty/pybind11"]
+
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
+skip = "*-musllinux_*"
+archs = ["auto64"]
+test-command = "python -c \"import pymahjong as pm; pm.test()\""

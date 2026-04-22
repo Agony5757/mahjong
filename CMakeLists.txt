@@ -1,33 +1,40 @@
-cmake_minimum_required(VERSION 3.1)
-project(mahjong)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Mahjong
-                    ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty
-                    ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/pybind11
-                    ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/fmt/include
-                    ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tenhou
-                    ${CMAKE_CURRENT_SOURCE_DIR}
-                    )
-
-set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/lib)
+cmake_minimum_required(VERSION 3.15...3.26)
+project(mahjong LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if (UNIX)
-    add_definitions("-fPIC")
+# Position-independent code for static libraries
+if(NOT WIN32)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
-find_package(PythonInterp 3 REQUIRED)
-find_package(PythonLibs 3 REQUIRED)
-include_directories(${PYTHON_INCLUDE_DIRS})
+# Output directories
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/resource/syanten.dat ${CMAKE_CURRENT_BINARY_DIR}/resource/syanten.dat COPYONLY)
+# Find Python using modern CMake methods
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
 
-add_subdirectory(ThirdParty EXCLUDE_FROM_ALL)
+# Include directories for project source
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Mahjong
+    ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty
+    ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/fmt/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tenhou
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Copy resource file
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/resource/syanten.dat
+    ${CMAKE_CURRENT_BINARY_DIR}/resource/syanten.dat
+    COPYONLY
+)
+
+# Add subdirectories
+add_subdirectory(ThirdParty)
 add_subdirectory(Mahjong)
 add_subdirectory(Pybinder)
 add_subdirectory(test)

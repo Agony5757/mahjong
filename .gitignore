@@ -28,3 +28,17 @@ paipuxmls/
 *.xml
 *.pkl
 *.model
+
+# Documentation
+docs/_build/
+site/
+.mike/
+
+# Build artifacts
+*.whl
+*.tar.gz
+wheelhouse/
+.eggs/
+
+# IDE
+.idea/

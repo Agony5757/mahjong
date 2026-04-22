@@ -1,8 +1,8 @@
-name: Build-and-test
+name: Build and Test
 
 on:
   push:
-    branches: 
+    branches:
       - master
       - develop
   pull_request:
@@ -11,32 +11,58 @@ on:
       - develop
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
 
 jobs:
-  build:
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  build_and_test:
+    name: Build and Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install clang and p7zip
-      run: sudo apt-get update && sudo apt-get install -y clang p7zip-full
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang p7zip-full
 
-    - name: Build
-      run: pip install .
+      - name: Install Python build dependencies
+        run: pip install cmake ninja build
 
-    - name: Test
-      run: python -c "import pymahjong as pm;pm.test()" && wget https://github.com/Agony5757/mahjong/releases/download/v1.0.4/paipuxmls.7z && 7z x paipuxmls.7z && python -c "import pymahjong as pm;pm.paipu_replay(mode='debug')"
-        
+      - name: Build package
+        run: pip install . -v
+
+      - name: Run basic tests
+        run: python -c "import pymahjong as pm; pm.test()"
+
+      - name: Download paipu data
+        run: wget https://github.com/Agony5757/mahjong/releases/download/v1.0.4/paipuxmls.7z
+
+      - name: Extract paipu data
+        run: 7z x paipuxmls.7z
+
+      - name: Run paipu replay validation
+        run: python -c "import pymahjong as pm; pm.paipu_replay(mode='debug')"
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install linters
+        run: pip install ruff
+
+      - name: Run Ruff
+        run: ruff check pymahjong/ || true
