@@ -4,6 +4,22 @@ from .env_pymahjong import MahjongEnv, SingleAgentMahjongEnv
 
 
 def test(num_games=100):
+    """Run random-play games to verify the environment works correctly.
+
+    Creates a multi-agent Mahjong environment and runs the specified number
+    of games with random action selection. Any errors during gameplay are
+    caught and reported with debug replay information.
+
+    Args:
+        num_games: Number of games to run. Defaults to 100.
+
+    Example:
+        >>> import pymahjong
+        >>> pymahjong.test(10)
+        Game 0, payoffs: [-15.  35.   5. -25.]
+        ...
+        Total 10 random-play games, 10 games without error, takes 2.5 s
+    """
 
     env = MahjongEnv()
 
@@ -62,7 +78,29 @@ def test(num_games=100):
 
 
 def test_with_pretrained(opponent_agent, num_games=100):
-    
+    """Test the single-agent environment with pretrained opponent models.
+
+    Creates a single-agent environment where the agent (player 0) plays
+    against pretrained VLOG models. The agent selects actions randomly,
+    demonstrating the environment's basic functionality with intelligent
+    opponents.
+
+    Args:
+        opponent_agent: Path to a pretrained model file (.pth). Available
+            models are ``mahjong_VLOG_CQL.pth`` (CQL) and
+            ``mahjong_VLOG_BC.pth`` (BC). Download from `GitHub releases
+            <https://github.com/Agony5757/mahjong/releases/tag/v1.0.2>`_.
+        num_games: Number of games to run. Defaults to 100.
+
+    Example:
+        >>> import pymahjong
+        >>> pymahjong.test_with_pretrained("mahjong_VLOG_BC.pth", 10)
+        Game 0, agent payoff -15.0
+        ...
+        Total 10 random-play games with pretrained VLOG models as opponents,
+        10 games without error, takes 30.2 s
+    """
+
     env = SingleAgentMahjongEnv(opponent_agent)
 
     start_time = time.time()

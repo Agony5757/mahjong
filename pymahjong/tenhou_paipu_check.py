@@ -1,3 +1,19 @@
+"""Tenhou paipu (game log) replay validation utilities.
+
+This module provides tools for validating the game engine by replaying
+recorded games from Tenhou.net. It parses XML paipu files and replays
+each game action-by-action, verifying that the engine produces correct
+scores and outcomes.
+
+The main entry points are:
+    - :func:`paipu_replay`: Batch replay validation of multiple paipu files
+    - :func:`paipu_replay_1`: Single paipu file replay for debugging
+
+Example:
+    >>> from pymahjong.tenhou_paipu_check import paipu_replay_1
+    >>> replayer = paipu_replay_1("paipu-2020-01-15-12345678.txt")
+"""
+
 from enum import Flag
 import re
 import os
@@ -17,58 +33,114 @@ import MahjongPyWrapper as mp
 # eventlet.monkey_patch()
 
 def game_round(game_order, honba):
+    """Generate a Chinese string describing the game round.
+
+    Args:
+        game_order: The game order number (0-15 for East 1-4 through North 1-4).
+        honba: The number of repeat counters (honba).
+
+    Returns:
+        str: A Chinese string like "东一局0本场" (East 1, 0 honba).
+    """
     winds = "东南西北"
     chinese_numbers = "一二三四"
-    return "此局是{}{}局{}本场".format(winds[game_order // 4], 
+    return "此局是{}{}局{}本场".format(winds[game_order // 4],
         chinese_numbers[game_order % 4], honba)
 
 class MahjongException(Exception):
+    """Base exception for paipu replay validation errors."""
     pass
 
 class ScoreException(MahjongException):
+    """Raised when computed scores do not match the paipu record."""
+
     def __init__(self, what, paipu, game_order, honba):
         self.info = what
         self.paipu = paipu
         self.ba = game_round(game_order, honba)
 
     def __str__(self):
-        return f"ScoreException: {str(self.info)} {self.paipu} {self.ba}" 
+        return f"ScoreException: {str(self.info)} {self.paipu} {self.ba}"
 
     def __repr__(self):
         return self.__str__()
 
-class ActionException(MahjongException):  
+class ActionException(MahjongException):
+    """Raised when an action in the paipu cannot be reproduced by the engine."""
+
     def __init__(self, what, paipu, game_order, honba):
         self.info = what
         self.paipu = paipu
         self.ba = game_round(game_order, honba)
 
     def __str__(self):
-        return f"ActionException: {str(self.info)} {self.paipu} {self.ba}" 
+        return f"ActionException: {str(self.info)} {self.paipu} {self.ba}"
 
     def __repr__(self):
         return self.__str__()
 
 
 def get_tile_from_id(id):
+    """Convert a tile ID (0-135) to a Tenhou-style string (e.g. '1m', '5p').
+
+    Args:
+        id: Tile ID from 0 to 135. Each suit has 36 IDs (4 copies of 9 ranks).
+
+    Returns:
+        str: Tile string like '7s' (7 of bamboo) or '3z' (3 of honors).
+    """
     color = id // 36
     number = (id % 36) // 4 + 1
     color_str = "mpsz"
     return str(number) + color_str[color]
 
 def get_tiles_from_id(tiles):
+    """Convert a list of tile IDs to a concatenated Tenhou-style string.
+
+    Args:
+        tiles: List of tile IDs (0-135).
+
+    Returns:
+        str: Concatenated tile strings, e.g. '1m5p7s3z'.
+    """
     ret = ''
     for tile in tiles:
         ret += get_tile_from_id(tile)
     return ret
 
 def paipu_link(paipu):
+    """Generate a Tenhou.net replay URL from a paipu filename.
+
+    Args:
+        paipu: Paipu filename ending with '.txt'.
+
+    Returns:
+        str: URL for viewing the game on Tenhou.net.
+    """
     paipu = paipu[:-4]
     return r'http://tenhou.net/0/?log='+paipu
     
 
 # 把副露的5位数解码成具体的东西
 def decodem(naru_tiles_int, naru_player_id):
+    """Decode a Tenhou naru (call) integer into tile details.
+
+    Tenhou encodes chi/pon/kan calls as a single integer. This function
+    decodes it into the side tiles added, hand tiles removed, call type,
+    and whether the call is an open (exposed) meld.
+
+    Args:
+        naru_tiles_int: The integer encoding the call from the paipu XML.
+        naru_player_id: ID (0-3) of the player making the call.
+
+    Returns:
+        tuple: (side_tiles_added, hand_tiles_removed, naru_type, opened)
+            - side_tiles_added: List of [tile_id, is_side] pairs added to calls
+            - hand_tiles_removed: List of tile IDs removed from hand
+            - naru_type: One of "Chi", "Pon", "Min-Kan", "An-Kan", "Ka-Kan"
+            - opened: True if the meld is open (exposed)
+    """
+    # 54279 : 4s0s chi 6s
     # 54279 : 4s0s chi 6s
     # 35849 : 6s pon
     # 51275 : chu pon
@@ -192,6 +264,8 @@ def decodem(naru_tiles_int, naru_player_id):
 
 
 class Logger:
+    """Simple logger for paipu replay debugging output."""
+
     def __init__(self, fp = None):
         self.fp = fp
 
@@ -205,6 +279,19 @@ class Logger:
 
 
 class PaipuReplay:
+    """Replay and validate Tenhou paipu files against the game engine.
+
+    Parses XML paipu files from Tenhou.net and replays each game
+    action-by-action using the C++ engine. Verifies that computed
+    scores match the recorded results.
+
+    Attributes:
+        num_games: Number of games processed.
+        success: Number of games that validated successfully.
+        total_games: Total number of paipu files found.
+        errors: List of paipu filenames that failed validation.
+    """
+
     def __init__(self):
         self.num_games = 0
         self.success = 0
@@ -708,6 +795,24 @@ class PaipuReplay:
         self._paipu_replay(path, paipu_name)
 
 def paipu_replay(path = None, write_log = False, mode = 'debug'):
+    """Batch replay and validate multiple Tenhou paipu files.
+
+    Scans a directory for paipu XML files and replays each one, validating
+    that the game engine produces correct results. Useful for regression
+    testing after engine changes.
+
+    Args:
+        path: Directory containing paipu .txt files. If None, uses
+            ``./paipuxmls`` relative to current working directory.
+        write_log: If True, log all replay actions for debugging.
+        mode: Validation mode:
+            - ``"debug"``: Raise exceptions immediately on error
+            - ``"test"``: Collect errors without raising
+            - ``"mark"``: Write errors to a log file
+
+    Returns:
+        PaipuReplay: Object with validation statistics and error list.
+    """
     if mode == 'debug':
         _logger = Logger(fp = 'stdout')
     else:
@@ -720,6 +825,19 @@ def paipu_replay(path = None, write_log = False, mode = 'debug'):
     return replayer
 
 def paipu_replay_1(filename, path = None):
+    """Replay and validate a single Tenhou paipu file.
+
+    Useful for debugging individual game replays. Prints detailed
+    log output to stdout.
+
+    Args:
+        filename: Name of the paipu .txt file to replay.
+        path: Directory containing the file. If None, uses
+            ``./paipuxmls`` relative to current working directory.
+
+    Returns:
+        PaipuReplay: Object with the replay result.
+    """
     replayer = PaipuReplay()
     replayer.set_log(True)
     replayer.logger = Logger(fp = 'stdout')

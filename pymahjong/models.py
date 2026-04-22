@@ -10,6 +10,44 @@ INFINITY = 1e9
 
 
 class VLOGMahjong(nn.Module):
+    """Variational Latent Oracle Guiding (VLOG) model for Mahjong decision-making.
+
+    This neural network implements the VLOG architecture from the paper
+    "Variational Oracle Guiding for Reinforcement Learning" (ICLR 2022).
+    It combines oracle information (opponents' hidden tiles) with executor
+    observations to make action decisions.
+
+    The model supports multiple algorithm types:
+        - ``ddqn``: Double DQN for value-based reinforcement learning
+        - ``bc``: Behavior cloning for supervised learning from demonstrations
+
+    Args:
+        algorithm: Training algorithm. Either ``"ddqn"`` or ``"bc"``.
+            Defaults to ``"ddqn"``.
+        hidden_layer_width: Width of hidden layers. Defaults to 1024.
+        half_hidden_layer_depth: Number of hidden layer blocks (each block
+            is Linear + activation). Defaults to 2.
+        act_fn: Activation function, either ``"relu"`` or ``"tanh"``.
+            Defaults to ``"relu"``.
+        z_stochastic_size: Size of latent stochastic variable z. If None,
+            uses half of hidden_layer_width for VLOG variants.
+        type: Model type. One of ``"baseline"``, ``"oracle"``, ``"vlog"``,
+            ``"vlog-self"``, ``"suphx"``, ``"opd"``, ``"vlog-oracle"``.
+            Defaults to ``"vlog"``.
+        epsilon: Exploration rate for epsilon-greedy (DDQN only).
+            Defaults to 0.05.
+        dueling: Whether to use dueling network architecture (DDQN only).
+            Defaults to True.
+        alg_config: Additional algorithm configuration dict.
+        opd_mu: Distillation loss weight (OPD type only).
+        opd_teacher_model: Teacher model for distillation (OPD type only).
+
+    Example:
+        >>> model = VLOGMahjong(algorithm="bc")
+        >>> obs = np.random.randint(0, 2, (93, 34)).astype(np.float32)
+        >>> action_mask = np.ones(47, dtype=np.float32)
+        >>> action = model.select(obs, action_mask=action_mask, greedy=True)
+    """
 
     def __init__(self, **kwargs):
 
@@ -163,7 +201,20 @@ class VLOGMahjong(nn.Module):
 
 
     def select(self, x, action_mask=None, greedy=True):
+        """Select an action given an observation.
 
+        Args:
+            x: Observation array of shape (93, 34) for executor-only input,
+                or (111, 34) if using oracle input.
+            action_mask: Optional boolean array of shape (47,) or (action_size,).
+                Valid actions are True/1, invalid actions are False/0.
+                If provided, invalid actions are masked out.
+            greedy: If True, select the highest-value action. If False, use
+                epsilon-greedy exploration (DDQN) or sample from policy (BC).
+
+        Returns:
+            int: Selected action index.
+        """
         with torch.no_grad():
 
             if action_mask is not None:

@@ -7,12 +7,38 @@ import MahjongPyWrapper as pm
 np.set_printoptions(threshold=np.inf)
 
 class MahjongEnv(gym.Env):
+    """Multi-agent Japanese Riichi Mahjong environment.
+
+    A 4-player Mahjong environment where each player takes turns making
+    decisions. At each step, exactly one player acts until the game ends.
+    This environment is suitable for multi-agent reinforcement learning research.
+
+    The environment uses a phase-based state machine: self-action phases
+    (P1_ACTION through P4_ACTION) for discard/riichi/tsumo/kan decisions,
+    and response phases (P1_RESPONSE through P4_RESPONSE) for chi/pon/ron
+    responses. Use ``get_curr_player_id()`` to identify the acting player.
+
+    Observation encoding:
+        - Executor observation: 93x34 boolean matrix (visible game state)
+        - Oracle observation: 18x34 boolean matrix (hidden info: opponents' hands)
+        - Full observation: 111x34 (concatenation of both)
+
+    Action space:
+        54 discrete actions covering discard, chi, pon, kan, riichi,
+        ron, tsumo, and pass decisions. Not all actions are valid at
+        every step -- use ``get_valid_actions()`` to check.
+    """
 
     PLAYER_OBS_DIM = 93
+    """int: Number of channels in executor observation."""
     ORACLE_OBS_DIM = 18
+    """int: Number of channels in oracle observation."""
     ACTION_DIM = 54
+    """int: Total number of discrete actions."""
     MAHJONG_TILE_TYPES = 34
+    """int: Number of distinct tile types in Mahjong (1-9m, 1-9p, 1-9s, 1-7z)."""
     INIT_POINTS = 25000
+    """int: Initial points for each player."""
 
     # ACTION INDICES
     CHILEFT = 37
@@ -110,6 +136,20 @@ class MahjongEnv(gym.Env):
         honba=0,
         debug_mode=None
     ):
+        """Initialize a new game.
+
+        Args:
+            oya: Parent (dealer) player ID (0-3). Defaults to rotating by game count.
+            game_wind: Initial game wind. One of ``"east"``, ``"south"``,
+                ``"west"``, ``"north"``. Defaults to ``"east"``.
+            scores: List of 4 integers for initial player scores.
+                Defaults to ``[25000, 25000, 25000, 25000]``.
+            seed: Random seed for tile shuffling. None for random shuffle.
+            kyoutaku: Number of riichi deposit sticks on the table. Defaults to 0.
+            honba: Number of repeat counters. Defaults to 0.
+            debug_mode: Debug mode for the C++ engine (1 or 2). Generates
+                replayable code for debugging.
+        """
         if scores is None:
             scores = [25000, 25000, 25000, 25000]
         else:
@@ -152,13 +192,26 @@ class MahjongEnv(gym.Env):
         self._proceed()
 
     def step(self, player_id: int, action: int):
-        # Different from single-agent gym env, one should not get the information needed here,
-        # because the next player to act may be different from the current player.
-        # Instead, one should get the information need as follows:
-        # Use .is_over() to know whether this game has finished
-        # Use get_obs(player_id) or get_full_obs(player_id) or get_oracle_obs(player_id) to get observation
-        # For rewards, after the game is over, one may use .get_payoffs
+        """Execute one action for the specified player.
 
+        Riichi is a two-step action: first, the player discards a tile
+        (which must be a valid riichi discard); then on the next call,
+        choose between ``RIICHI`` or ``PASS_RIICHI``.
+
+        Unlike standard gym environments, this method does not return
+        observation/reward. Use ``get_obs()``, ``get_oracle_obs()``, and
+        ``get_payoffs()`` to retrieve information.
+
+        Args:
+            player_id: ID of the player making the action (0-3). Must match
+                ``get_curr_player_id()``.
+            action: Action index from the 54 discrete actions. Must be in
+                ``get_valid_actions()``.
+
+        Raises:
+            ValueError: If player_id is not the current acting player, or
+                if the action is not valid at this step.
+        """
         # self.use_red_dora = False
 
         if not player_id == self.get_curr_player_id():
@@ -246,7 +299,7 @@ class MahjongEnv(gym.Env):
                         # the player will random select one if action == ANKAN or KAKAN
                         # However, this case should be very rare in normal play
                         kan_tile_id = np.random.choice(np.argwhere(self.get_obs(curr_pid)[3]).flatten())
-                    
+
                     corresponding_tiles = [kan_tile_id] * 4
 
                 elif action == self.KAKAN:
@@ -311,21 +364,79 @@ class MahjongEnv(gym.Env):
             pm.encv1_encode_table_riichi_step2(self.t, self.may_riichi_tile_id, self.obs_container)
 
     def get_obs(self, player_id: int):
+        """Get executor observation for the specified player.
+
+        The executor observation is a 93x34 boolean matrix encoding the
+        visible game state from the player's perspective, including their
+        own hand, discards, called tiles, dora indicators, and scores.
+
+        Args:
+            player_id: Player ID (0-3). Must be the current acting player.
+
+        Returns:
+            np.ndarray: Boolean array of shape (93, 34).
+
+        Raises:
+            ValueError: If player_id is not the current acting player.
+        """
         self._check_player(player_id)
         self._get_obs_from_table(player_id)
         return self.obs_container[:self.PLAYER_OBS_DIM].astype(bool)
 
     def get_oracle_obs(self, player_id: int):
+        """Get oracle observation for the specified player.
+
+        The oracle observation is an 18x34 boolean matrix encoding hidden
+        information -- the tiles in other players' hands. This is useful
+        for oracle-guided learning research.
+
+        Args:
+            player_id: Player ID (0-3). Must be the current acting player.
+
+        Returns:
+            np.ndarray: Boolean array of shape (18, 34).
+
+        Raises:
+            ValueError: If player_id is not the current acting player.
+        """
         self._check_player(player_id)
         self._get_obs_from_table(player_id)
         return self.obs_container[-self.ORACLE_OBS_DIM:].astype(bool)
 
     def get_full_obs(self, player_id: int):
+        """Get full observation (executor + oracle) for the specified player.
+
+        The full observation is a 111x34 boolean matrix formed by
+        concatenating the executor and oracle observations.
+
+        Args:
+            player_id: Player ID (0-3). Must be the current acting player.
+
+        Returns:
+            np.ndarray: Boolean array of shape (111, 34).
+
+        Raises:
+            ValueError: If player_id is not the current acting player.
+        """
         self._check_player(player_id)
         self._get_obs_from_table(player_id)
         return self.obs_container.copy().astype(bool)
 
     def get_valid_actions(self, nhot=False):
+        """Get valid action indices at the current step.
+
+        During riichi step 2 (after discarding a valid riichi tile),
+        only ``RIICHI`` and ``PASS_RIICHI`` are valid.
+
+        Args:
+            nhot: If True, return a one-hot boolean array of shape (54,)
+                where valid actions are True. If False, return an array
+                of valid action indices.
+
+        Returns:
+            np.ndarray: Either a boolean array of shape (54,) if nhot is True,
+                or an integer array of valid action indices if nhot is False.
+        """
         if not self.riichi_stage2:
             self.act_container.fill(0)
             pm.encv1_encode_action(self.t, self.get_curr_player_id(), self.act_container)
@@ -343,15 +454,32 @@ class MahjongEnv(gym.Env):
             return np.argwhere(act_container).reshape([-1])
 
     def get_payoffs(self):
+        """Get the payoff for each player relative to the initial points.
+
+        Payoff is calculated as ``final_score - INIT_POINTS`` for each player.
+
+        Returns:
+            np.ndarray: Float32 array of shape (4,) with payoffs for players 0-3.
+        """
         payoffs = np.zeros([4], dtype=np.float32)
         for i in range(4):
             payoffs[i] = self.t.get_result().score[i] - self.INIT_POINTS
         return payoffs
 
     def is_over(self):
+        """Check whether the current game has ended.
+
+        Returns:
+            bool: True if the game is over (GAME_OVER phase).
+        """
         return self.Phases[self.t.get_phase()] == "GAME_OVER"
 
     def get_curr_player_id(self):
+        """Get the ID of the player who should act next.
+
+        Returns:
+            int: Player ID (0-3), or -1 if the game is over.
+        """
         if self.t.get_phase() < 16:
             return self.t.who_make_selection()
         elif self.t.get_phase() == 16:
@@ -361,6 +489,10 @@ class MahjongEnv(gym.Env):
             raise SystemError
 
     def render(self, mode='human'):
+        """Print the current game state for all players.
+
+        Shows each player's hand, river, and status information.
+        """
         print("----------- current player: {} -----------------".format(self.get_curr_player_id()))
         print("[Player 0]")
         print(self.t.players[0].to_string())
@@ -373,6 +505,32 @@ class MahjongEnv(gym.Env):
 
 
 class SingleAgentMahjongEnv(gym.Env):
+    """Single-agent Japanese Riichi Mahjong environment (Gymnasium-compatible).
+
+    The agent controls player 0 and plays against 3 opponents. The opponents
+    can be either random agents or pretrained VLOG models.
+
+    This environment follows the standard Gymnasium API: call ``reset()`` to
+    start a new episode, then repeatedly call ``step(action)`` until the
+    episode terminates. Only the agent's decision steps are exposed; opponent
+    turns are handled automatically.
+
+    Observation encoding:
+        Same as :class:`MahjongEnv` -- 93x34 executor, 18x34 oracle,
+        111x34 full observation.
+
+    Action space:
+        54 discrete actions. Use ``get_valid_actions()`` to check which
+        actions are valid at each step.
+
+    Args:
+        opponent_agent: Either ``"random"`` for random opponents, or a path
+            to a pretrained model file (.pth). Available models:
+            ``mahjong_VLOG_CQL.pth`` (CQL) and ``mahjong_VLOG_BC.pth`` (BC).
+            Download from `GitHub releases
+            <https://github.com/Agony5757/mahjong/releases/tag/v1.0.2>`_.
+    """
+
     THIS_AGENT_ID = 0
     # The agent is the player 0 in MahjongEnv (while Oya may be others)
 
@@ -432,6 +590,23 @@ class SingleAgentMahjongEnv(gym.Env):
                 self.env.step(self.env.get_curr_player_id(), action)
 
     def reset(self, *, oya=None, game_wind=None, seed=None, options=None):
+        """Reset the environment and start a new game.
+
+        Automatically advances past opponent turns until it is the agent's
+        turn. If the game ends before the agent gets a turn (rare edge case),
+        a new game is started automatically.
+
+        Args:
+            oya: Parent (dealer) player ID (0-3). Defaults to rotating.
+            game_wind: Initial game wind (``"east"``, ``"south"``,
+                ``"west"``, ``"north"``). Defaults to ``"east"``.
+            seed: Random seed for tile shuffling.
+            options: Additional options (unused, for Gymnasium compatibility).
+
+        Returns:
+            tuple[np.ndarray, dict]: Executor observation of shape (93, 34)
+                and an empty info dict.
+        """
         super().reset(seed=seed, options=options)
         self.env.reset(oya=oya, game_wind=game_wind, seed=seed)
         self._proceed_until_agent_turn()
@@ -443,6 +618,23 @@ class SingleAgentMahjongEnv(gym.Env):
             return self.get_obs(), {}
 
     def step(self, action):
+        """Execute one action for the agent (player 0).
+
+        After the agent acts, opponent turns are automatically processed
+        until the agent's next turn or the game ends.
+
+        Args:
+            action: Action index (0-53). Must be in ``get_valid_actions()``.
+
+        Returns:
+            tuple[np.ndarray, float, bool, bool, dict]:
+                - observation: Executor observation of shape (93, 34)
+                - reward: Payoff relative to initial points (0 during game,
+                  final payoff when game ends)
+                - terminated: True if the game is over
+                - truncated: Always False
+                - info: Empty dict
+        """
         assert self.env.get_curr_player_id() == self.THIS_AGENT_ID
 
         self.env.step(0, action)
@@ -458,18 +650,39 @@ class SingleAgentMahjongEnv(gym.Env):
         return self.env.get_obs(self.THIS_AGENT_ID), r, terminated, False, {}
 
     def get_obs(self):
+        """Get executor observation for the agent.
+
+        Returns:
+            np.ndarray: Boolean array of shape (93, 34).
+        """
         return self.env.get_obs(self.THIS_AGENT_ID)
 
     def get_oracle_obs(self):
+        """Get oracle observation for the agent.
+
+        Returns:
+            np.ndarray: Boolean array of shape (18, 34).
+        """
         return self.env.get_oracle_obs(self.THIS_AGENT_ID)
 
     def get_full_obs(self):
+        """Get full observation (executor + oracle) for the agent.
+
+        Returns:
+            np.ndarray: Boolean array of shape (111, 34).
+        """
         return self.env.get_full_obs(self.THIS_AGENT_ID)
 
     def get_valid_actions(self):
+        """Get valid action indices at the current step.
+
+        Returns:
+            np.ndarray: Integer array of valid action indices.
+        """
         return self.env.get_valid_actions(nhot=False)
 
     def render(self, mode='human'):
+        """Print the current game state for all players."""
         print("-----------------------------------")
         print("[Player 0 (this agent)]")
         print(self.env.t.players[0].to_string())
@@ -479,6 +692,3 @@ class SingleAgentMahjongEnv(gym.Env):
         print(self.env.t.players[2].to_string())
         print("[Player 3 (the third opponent counterclockwise)]")
         print(self.env.t.players[3].to_string())
-
-
-
