@@ -483,7 +483,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		py::arg("table"), py::arg("pid"), py::arg("arr"));
 	m.def("encv1_encode_action_riichi_step2", &encv1::py_encode_action_riichi_step2,
 		"Encode actions during riichi step 2 (V1 encoding).",
-		py::arg("table"), py::arg("pid"), py::arg("arr"));
+		py::arg("arr"));
 	m.def("encv1_get_riichi_tiles", &encv1::py_get_riichi_tiles,
 		"Get the list of tile IDs that can be discarded for riichi.",
 		py::arg("table"));
@@ -507,37 +507,42 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("records", &encv2::PassiveTableEncoder::records, "Encoded records.")
 		.def_readonly("global_info", &encv2::PassiveTableEncoder::global_info, "Global info encoding.")
 		.def("encode_game_basic", &encv2::PassiveTableEncoder::encode_game_basic,
-			"Encode basic game info (wind, oya, scores).", py::arg("table"))
+			"Encode basic game info (wind, oya, scores).",
+			py::arg("game_number"), py::arg("game_size"), py::arg("honba"),
+			py::arg("kyoutaku"), py::arg("self_wind"), py::arg("game_wind"))
 		.def("encode_hand", &encv2::PassiveTableEncoder::encode_hand,
-			"Encode the player's hand.", py::arg("player"))
+			"Encode the player's hand.",
+			py::arg("hand"), py::arg("after_chipon"))
 		.def("encode_self_river", &encv2::PassiveTableEncoder::encode_self_river,
-			"Encode the player's own discard river.", py::arg("player"))
+			"Encode the player's own discard river.", py::arg("river"))
 		.def("encode_next_river", &encv2::PassiveTableEncoder::encode_next_river,
-			"Encode the next player's discard river.", py::arg("player"))
+			"Encode the next player's discard river.", py::arg("river"))
 		.def("encode_opposite_river", &encv2::PassiveTableEncoder::encode_opposite_river,
-			"Encode the opposite player's discard river.", py::arg("player"))
+			"Encode the opposite player's discard river.", py::arg("river"))
 		.def("encode_river", &encv2::PassiveTableEncoder::encode_river,
-			"Encode all players' discard rivers.", py::arg("table"))
+			"Encode all players' discard rivers.",
+			py::arg("river"), py::arg("relative_position"))
 		.def("encode_self_fuuro", &encv2::PassiveTableEncoder::encode_self_fuuro,
-			"Encode the player's own called melds.", py::arg("player"))
+			"Encode the player's own called melds.", py::arg("callgroups"))
 		.def("encode_next_fuuro", &encv2::PassiveTableEncoder::encode_next_fuuro,
-			"Encode the next player's called melds.", py::arg("player"))
+			"Encode the next player's called melds.", py::arg("callgroups"))
 		.def("encode_opposite_fuuro", &encv2::PassiveTableEncoder::encode_opposite_fuuro,
-			"Encode the opposite player's called melds.", py::arg("player"))
+			"Encode the opposite player's called melds.", py::arg("callgroups"))
 		.def("encode_previous_fuuro", &encv2::PassiveTableEncoder::encode_previous_fuuro,
-			"Encode the previous player's called melds.", py::arg("player"))
+			"Encode the previous player's called melds.", py::arg("callgroups"))
 		.def("encode_fuuro", &encv2::PassiveTableEncoder::encode_fuuro,
-			"Encode all players' called melds.", py::arg("table"))
+			"Encode all players' called melds.",
+			py::arg("callgroups"), py::arg("relative_position"))
 		.def("encode_dora", &encv2::PassiveTableEncoder::encode_dora,
-			"Encode the dora indicators.", py::arg("table"))
+			"Encode the dora indicators.", py::arg("revealed_doras"))
 		.def("encode_points", &encv2::PassiveTableEncoder::encode_points,
-			"Encode the players' scores/points.", py::arg("table"))
+			"Encode the players' scores/points.", py::arg("points"))
 		.def("encode_remaining_tiles", &encv2::PassiveTableEncoder::encode_remaining_tiles,
-			"Encode the remaining tile counts.", py::arg("table"))
+			"Encode the remaining tile counts.", py::arg("remain_tiles"))
 		.def("encode_riichi_states", &encv2::PassiveTableEncoder::encode_riichi_states,
-			"Encode the riichi declaration states.", py::arg("table"))
+			"Encode the riichi declaration states.", py::arg("riichi_states"))
 		.def("encode_ippatsu_states", &encv2::PassiveTableEncoder::encode_ippatsu_states,
-			"Encode the ippatsu possibility states.", py::arg("table"))
+			"Encode the ippatsu possibility states.", py::arg("ippatsu_states"))
 		;
 }
 
