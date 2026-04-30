@@ -249,6 +249,10 @@ function drawTileImage(ctx, x, y, w, h, tileStr, options = {}) {
 
     if (dimmed) ctx.globalAlpha = 0.82;
 
+    // Tile SVG assets have transparent backgrounds, so paint an explicit tile
+    // body underneath to keep every tile readable on the felt.
+    fillRoundedRect(ctx, -w / 2, -h / 2, w, h, Math.max(8, Math.min(w, h) * 0.12), '#fbf7ef', '#d5cab4', 1.2);
+
     if (img) {
         ctx.drawImage(img, -w / 2, -h / 2, w, h);
     } else {
