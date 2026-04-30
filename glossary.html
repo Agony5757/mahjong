@@ -1,0 +1,1099 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Changelog" href="changelog.html"><link rel="prev" title="Mahjong Web 前端文档" href="web_frontend.html">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>&lt;no title&gt; - pymahjong Documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">pymahjong Documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <span class="sidebar-brand-text">pymahjong Documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Live Demo</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/environment.html">Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/observation.html">Observation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/action.html">Action Space</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/utilities.html">Utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="advanced/index.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced/custom_agents.html">Custom Agents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced/paipu_replay.html">Paipu Replay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced/cpp_engine.html">C++ Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced/state_machine.html">C++ 游戏引擎状态机</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/basic_usage.html">Basic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/rl_training.html">RL Training Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="web_frontend.html">Mahjong Web 前端文档</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/glossary.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <p># 术语对照表 / Terminology Glossary</p>
+<p>本文件列出 pymahjong 代码中所有关键术语的中文、日文（罗马字）、英文对照，
+以及对应的 Python/C++ 变量名。</p>
+<p>## 一、麻将通用术语 / General Mahjong Terms</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 20.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>中文</p></th>
+<th class="head"><p>日文（罗马字 / 假名）</p></th>
+<th class="head"><p>English</p></th>
+<th class="head"><p>变量名</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>立直</p></td>
+<td><p>Riichi（リーチ）</p></td>
+<td><p>Riichi (one-way tanyao)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">riichi</span></code>, <code class="docutils literal notranslate"><span class="pre">Riichi</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>副露（鸣牌）</p></td>
+<td><p>Fuuro（鳴き / 鸣き）</p></td>
+<td><p>Called tiles (chi/pon/kan)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fuuro</span></code>, <code class="docutils literal notranslate"><span class="pre">get_fuuros()</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>吃（顺子）</p></td>
+<td><p>Chii（チー）</p></td>
+<td><p>Chow (sequential meld)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Chi</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>碰（刻子）</p></td>
+<td><p>Pon（ポン）</p></td>
+<td><p>Pong (triplet meld)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Pon</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>杠（大明杠）</p></td>
+<td><p>Daimin-kan（大明槓）</p></td>
+<td><p>Open kan (added triplet)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Kan</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>暗杠</p></td>
+<td><p>Ankan（暗槓）</p></td>
+<td><p>Concealed kan</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AnKan</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>加杠</p></td>
+<td><p>Kakan（加槓）</p></td>
+<td><p>Added kan (kan on own triplet)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">KaKan</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>抢杠</p></td>
+<td><p>Chan-kan（槍槓）</p></td>
+<td><p>Robbing a kan</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ChanKan</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>抢暗杠</p></td>
+<td><p>Chan-an-kan（槍暗槓）</p></td>
+<td><p>Robbing a concealed kan</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ChanAnKan</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>荣和（荣）</p></td>
+<td><p>Ron（ロン）</p></td>
+<td><p>Win by discard</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Ron</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>自摸</p></td>
+<td><p>Tsumo（ツモ）</p></td>
+<td><p>Self-draw win</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Tsumo</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>舍牌（丢牌）</p></td>
+<td><p>Sutehai（捨て牌）</p></td>
+<td><p>Discard</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Discard</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>手切</p></td>
+<td><p>Temazari（手直し）</p></td>
+<td><p>Hand tile discard (vs after draw)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fromhand</span> <span class="pre">=</span> <span class="pre">true</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>摸切</p></td>
+<td><p>Sumazari（摸了）</p></td>
+<td><p>After-draw discard</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fromhand</span> <span class="pre">=</span> <span class="pre">false</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>宝牌</p></td>
+<td><p>Dora（ドラ）</p></td>
+<td><p>Bonus indicator tile</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dora_indicator</span></code>, <code class="docutils literal notranslate"><span class="pre">get_dora()</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>里宝牌</p></td>
+<td><p>Uradora（裏ドラ）</p></td>
+<td><p>Hidden dora (revealed after riichi)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">uradora_indicator</span></code>, <code class="docutils literal notranslate"><span class="pre">get_ura_dora()</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>食断</p></td>
+<td><p>Shiimantan（食いタン）</p></td>
+<td><p>Tanyao with called tiles</p></td>
+<td><p>(yaku flag)</p></td>
+</tr>
+<tr class="row-odd"><td><p>一发</p></td>
+<td><p>Ippatsu（一発）</p></td>
+<td><p>Win within one draw after riichi</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ippatsu</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>两立直</p></td>
+<td><p>Double Riichi（ダブルリーチ）</p></td>
+<td><p>Riichi on first discard round</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">double_riichi</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>听牌（听）</p></td>
+<td><p>Tenpai（テンパイ）</p></td>
+<td><p>One tile away from winning</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">is_tenpai()</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>和了（和）</p></td>
+<td><p>Agari（上がり）</p></td>
+<td><p>Winning hand</p></td>
+<td><p>(result)</p></td>
+</tr>
+<tr class="row-odd"><td><p>振听</p></td>
+<td><p>Furiten（振りテbian）</p></td>
+<td><p>Furiten (cannot ron on tile in own river)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">furiten_river</span></code>, <code class="docutils literal notranslate"><span class="pre">furiten_round</span></code>, <code class="docutils literal notranslate"><span class="pre">furiten_riichi</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>荒牌（牌山）</p></td>
+<td><p>Yama（山）</p></td>
+<td><p>Wall / draw pile</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">yama</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>岭上牌</p></td>
+<td><p>Rinshan（嶺上牌）</p></td>
+<td><p>Dead wall draw</p></td>
+<td><p>(drawn after kan)</p></td>
+</tr>
+<tr class="row-even"><td><p>本场</p></td>
+<td><p>Honba（ほんば）</p></td>
+<td><p>Repeat counter sticks</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">honba</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>立直棒（供托）</p></td>
+<td><p>Kyoutaku（供給）</p></td>
+<td><p>Riichi deposit sticks</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">kyoutaku</span></code> (C++), <code class="docutils literal notranslate"><span class="pre">riichibo</span></code> (binding)</p></td>
+</tr>
+<tr class="row-even"><td><p>亲家（庄家）</p></td>
+<td><p>Oya（親）</p></td>
+<td><p>Parent / dealer round holder</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">oya</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>子家</p></td>
+<td><p>Ko（子）</p></td>
+<td><p>Non-dealer</p></td>
+<td><p>(opposite of <code class="docutils literal notranslate"><span class="pre">oya</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p>连庄</p></td>
+<td><p>Renchan（連荘）</p></td>
+<td><p>Dealer wins again (honba continues)</p></td>
+<td><p>(honba increments)</p></td>
+</tr>
+<tr class="row-odd"><td><p>场风</p></td>
+<td><p>Bakaze（場風）</p></td>
+<td><p>Round wind</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">game_wind</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>自风</p></td>
+<td><p>Tonkaze / Ji-kaze（自風）</p></td>
+<td><p>Player’s seat wind</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">wind</span></code> (Player)</p></td>
+</tr>
+<tr class="row-odd"><td><p>流局</p></td>
+<td><p>Ryuu-kyoku（流局）</p></td>
+<td><p>Draw / abortive draw</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Ryukyouku_*</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>九种九牌</p></td>
+<td><p>Kyuushu-kyuuhai（九種九牌）</p></td>
+<td><p>Nine different terminals/honors (abort right)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Kyushukyuhai</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>四风子连打</p></td>
+<td><p>Suufuuda-renda（捨て牌）</p></td>
+<td><p>Four riichi draws (abortive)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Ryukyouku_Interval_4Riichi</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>三家和</p></td>
+<td><p>Sankajou（三家和）</p></td>
+<td><p>Triple ron win</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">generate_result_3ron()</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>役（胡牌型）</p></td>
+<td><p>Yaku（役）</p></td>
+<td><p>Winning hand yaku (scoring combination)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Yaku</span></code> (enum), <code class="docutils literal notranslate"><span class="pre">yaku_detected</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>符</p></td>
+<td><p>Fu（フ）</p></td>
+<td><p>Base points (fu)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">FuCalculator</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>翻</p></td>
+<td><p>Han（ハン）</p></td>
+<td><p>Yaku multiplier count</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">han</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>满（级别）</p></td>
+<td><p>Mangan / Haneman / Baiman</p></td>
+<td><p>Score ceiling levels</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ScoreCounter</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>断幺</p></td>
+<td><p>Tanyao（タンヤオ）</p></td>
+<td><p>All simples (no terminals/honors)</p></td>
+<td><p>(yaku enum)</p></td>
+</tr>
+<tr class="row-even"><td><p>混一色</p></td>
+<td><p>Honiisou（混一色）</p></td>
+<td><p>Mixed one suit</p></td>
+<td><p>(yaku)</p></td>
+</tr>
+<tr class="row-odd"><td><p>清一色</p></td>
+<td><p>Chiniisou（清一色）</p></td>
+<td><p>Pure one suit</p></td>
+<td><p>(yaku)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr class="docutils" />
+<p>## 二、牌名 / Tile Names</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15.0%" />
+<col style="width: 15.0%" />
+<col style="width: 15.0%" />
+<col style="width: 15.0%" />
+<col style="width: 40.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>中文</p></th>
+<th class="head"><p>日文</p></th>
+<th class="head"><p>英文</p></th>
+<th class="head"><p>代码后缀</p></th>
+<th class="head"><p>Tile ID (BaseTile)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>万子</p></td>
+<td><p>Man（マン）</p></td>
+<td><p>Characters</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">m</span></code></p></td>
+<td><p>0–8</p></td>
+</tr>
+<tr class="row-odd"><td><p>筒子</p></td>
+<td><p>Pin（ピン）</p></td>
+<td><p>Dots</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">p</span></code></p></td>
+<td><p>9–17</p></td>
+</tr>
+<tr class="row-even"><td><p>索子</p></td>
+<td><p>Sou（ソー）</p></td>
+<td><p>Bamboo</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">s</span></code></p></td>
+<td><p>18–26</p></td>
+</tr>
+<tr class="row-odd"><td><p>字牌·东</p></td>
+<td><p>Ton / East（東）</p></td>
+<td><p>East wind</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">z</span></code> / <code class="docutils literal notranslate"><span class="pre">1z</span></code></p></td>
+<td><p>27</p></td>
+</tr>
+<tr class="row-even"><td><p>字牌·南</p></td>
+<td><p>Nan / South（南）</p></td>
+<td><p>South wind</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">2z</span></code></p></td>
+<td><p>28</p></td>
+</tr>
+<tr class="row-odd"><td><p>字牌·西</p></td>
+<td><p>Xiaa / West（西）</p></td>
+<td><p>West wind</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">3z</span></code></p></td>
+<td><p>29</p></td>
+</tr>
+<tr class="row-even"><td><p>字牌·北</p></td>
+<td><p>Pei / North（北）</p></td>
+<td><p>North wind</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">4z</span></code></p></td>
+<td><p>30</p></td>
+</tr>
+<tr class="row-odd"><td><p>白</p></td>
+<td><p>Haku（白）</p></td>
+<td><p>White dragon</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">5z</span></code></p></td>
+<td><p>31</p></td>
+</tr>
+<tr class="row-even"><td><p>发</p></td>
+<td><p>Hatsu（發）</p></td>
+<td><p>Green dragon</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">6z</span></code></p></td>
+<td><p>32</p></td>
+</tr>
+<tr class="row-odd"><td><p>中</p></td>
+<td><p>Chun（中）</p></td>
+<td><p>Red dragon</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">7z</span></code></p></td>
+<td><p>33</p></td>
+</tr>
+<tr class="row-even"><td><p>赤5万</p></td>
+<td><p>Aka-5m（赤5マン）</p></td>
+<td><p>Red five characters</p></td>
+<td><p>(red_dora flag)</p></td>
+<td><p>tile id 4</p></td>
+</tr>
+<tr class="row-odd"><td><p>赤5筒</p></td>
+<td><p>Aka-5p（赤5ピン）</p></td>
+<td><p>Red five dots</p></td>
+<td><p>(red_dora flag)</p></td>
+<td><p>tile id 13</p></td>
+</tr>
+<tr class="row-even"><td><p>赤5索</p></td>
+<td><p>Aka-5s（赤5ソー）</p></td>
+<td><p>Red five bamboo</p></td>
+<td><p>(red_dora flag)</p></td>
+<td><p>tile id 22</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr class="docutils" />
+<p>## 三、Table 类状态变量 / <code class="docutils literal notranslate"><span class="pre">Table</span></code> State Variables</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 30.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>变量名</p></th>
+<th class="head"><p>中文</p></th>
+<th class="head"><p>English</p></th>
+<th class="head"><p>日文</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">turn</span></code></p></td>
+<td><p>当前回合玩家</p></td>
+<td><p>Current player ID (whose turn)</p></td>
+<td><p>ターゲットのプレイヤー</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">phase</span></code> / <code class="docutils literal notranslate"><span class="pre">PhaseEnum</span></code></p></td>
+<td><p>当前游戏阶段</p></td>
+<td><p>Phase state machine state</p></td>
+<td><p>フェーズ</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">last_action</span></code></p></td>
+<td><p>上一次动作类型</p></td>
+<td><p>Last BaseAction performed</p></td>
+<td><p>最後のアクション</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">oya</span></code></p></td>
+<td><p>庄家玩家ID</p></td>
+<td><p>Parent/dealer player ID</p></td>
+<td><p>親プレイヤー</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">honba</span></code></p></td>
+<td><p>本场数</p></td>
+<td><p>Repeat (honba) counter</p></td>
+<td><p>本場</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kyoutaku</span></code> (C++) / <code class="docutils literal notranslate"><span class="pre">riichibo</span></code> (binding)</p></td>
+<td><p>立直棒数</p></td>
+<td><p>Riichi deposit sticks on table</p></td>
+<td><p>供給（リーチ棒）</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">game_wind</span></code></p></td>
+<td><p>场风</p></td>
+<td><p>Round wind (East/South/West/North)</p></td>
+<td><p>場風</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">yama</span></code></p></td>
+<td><p>牌山（剩余摸牌堆）</p></td>
+<td><p>Wall (remaining draw pile, vector of Tile*)</p></td>
+<td><p>山（やま）</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">river_counter</span></code></p></td>
+<td><p>河里牌计数</p></td>
+<td><p>Number of tiles in all rivers combined</p></td>
+<td><p>河（こう）の牌数</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">dora_indicator</span></code></p></td>
+<td><p>宝牌指示牌列表</p></td>
+<td><p>Opened dora indicator tiles</p></td>
+<td><p>ドラ表示牌</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">uradora_indicator</span></code></p></td>
+<td><p>里宝牌指示牌列表</p></td>
+<td><p>Ura-dora indicator tiles</p></td>
+<td><p>裏ドラ表示牌</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">n_active_dora</span></code></p></td>
+<td><p>已翻开宝牌数</p></td>
+<td><p>Number of active dora revealed</p></td>
+<td><p>成立ドラ数</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">players</span></code></p></td>
+<td><p>四个玩家数组</p></td>
+<td><p>Array of 4 Player objects</p></td>
+<td><p>プレイヤー4人</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">gamelog</span></code></p></td>
+<td><p>游戏日志</p></td>
+<td><p>Game event log (for replay/debug)</p></td>
+<td><p>ゲームログ</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">result</span></code></p></td>
+<td><p>游戏结果</p></td>
+<td><p>Game result (type + score breakdown)</p></td>
+<td><p>結果</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">write_log_mode</span></code></p></td>
+<td><p>调试日志模式</p></td>
+<td><p>Debug log mode (0=off, 1=buffer, 2=stdout)</p></td>
+<td><p>デバッグモード</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
+<td><p>随机种子</p></td>
+<td><p>Random seed for reproducibility</p></td>
+<td><p>シード値</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">selection</span></code></p></td>
+<td><p>当前选择的动作索引</p></td>
+<td><p>Selected action index during phase transition</p></td>
+<td><p>選択インデックス</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr class="docutils" />
+<p>## 四、Player 类状态变量 / <code class="docutils literal notranslate"><span class="pre">Player</span></code> State Variables</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 30.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>变量名</p></th>
+<th class="head"><p>中文</p></th>
+<th class="head"><p>English</p></th>
+<th class="head"><p>日文</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hand</span></code></p></td>
+<td><p>玩家手牌（Tile* 数组）</p></td>
+<td><p>Player’s closed hand (array of Tile*)</p></td>
+<td><p>手牌（てはい）</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">menzen</span></code></p></td>
+<td><p>是否门清（无副露）</p></td>
+<td><p>Fully concealed (no called tiles)</p></td>
+<td><p>門前（めんぜん）</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">score</span></code></p></td>
+<td><p>当前分数</p></td>
+<td><p>Current score in points</p></td>
+<td><p>点数（点）</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">riichi</span></code></p></td>
+<td><p>是否已立直</p></td>
+<td><p>Has declared riichi</p></td>
+<td><p>リーチ済み</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">oya</span></code></p></td>
+<td><p>是否为庄家</p></td>
+<td><p>Is this player the parent/dealer</p></td>
+<td><p>親かどうか</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">wind</span></code></p></td>
+<td><p>自风</p></td>
+<td><p>Player’s seat wind</p></td>
+<td><p>自風（じふう）</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">double_riichi</span></code></p></td>
+<td><p>是否两立直</p></td>
+<td><p>Declared riichi on first discard round</p></td>
+<td><p>ダブルリーチ</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ippatsu</span></code></p></td>
+<td><p>一发有效</p></td>
+<td><p>Ippatsu condition still valid</p></td>
+<td><p>一発</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">first_round</span></code></p></td>
+<td><p>是否在第一巡</p></td>
+<td><p>Is this the first discard round</p></td>
+<td><p>第一巡</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">furiten_river</span></code></p></td>
+<td><p>振听（舍牌振听）</p></td>
+<td><p>Furiten due to own discard</p></td>
+<td><p>振りテbian（捨て牌）</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">furiten_round</span></code></p></td>
+<td><p>振听（舍牌振听，同巡内）</p></td>
+<td><p>Furiten within current round</p></td>
+<td><p>同巡内振りテbian</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">furiten_riichi</span></code></p></td>
+<td><p>振听（立直振听）</p></td>
+<td><p>Furiten from own riichi discard</p></td>
+<td><p>リーチ振りテbian</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr class="docutils" />
+<p>## 五、PhaseEnum 阶段枚举 / Game Phase States</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15.0%" />
+<col style="width: 25.0%" />
+<col style="width: 30.0%" />
+<col style="width: 30.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>枚举值</p></th>
+<th class="head"><p>中文</p></th>
+<th class="head"><p>English</p></th>
+<th class="head"><p>日文</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">P1_ACTION</span></code> (0)</p></td>
+<td><p>玩家0自摸阶段</p></td>
+<td><p>Player 0 self-action phase</p></td>
+<td><p>プレイヤー0のツモフェーズ</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">P2_ACTION</span></code> (1)</p></td>
+<td><p>玩家1自摸阶段</p></td>
+<td><p>Player 1 self-action phase</p></td>
+<td><p>プレイヤー1のツモフェーズ</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">P3_ACTION</span></code> (2)</p></td>
+<td><p>玩家2自摸阶段</p></td>
+<td><p>Player 2 self-action phase</p></td>
+<td><p>プレイヤー2のツモフェーズ</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">P4_ACTION</span></code> (3)</p></td>
+<td><p>玩家3自摸阶段</p></td>
+<td><p>Player 3 self-action phase</p></td>
+<td><p>プレイヤー3のツモフェーズ</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">P1_RESPONSE</span></code> (4)</p></td>
+<td><p>玩家0响应阶段</p></td>
+<td><p>Player 0 response phase</p></td>
+<td><p>プレイヤー0の応答フェーズ</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">P2_RESPONSE</span></code> (5)</p></td>
+<td><p>玩家1响应阶段</p></td>
+<td><p>Player 1 response phase</p></td>
+<td><p>プレイヤー1の応答フェーズ</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">P3_RESPONSE</span></code> (6)</p></td>
+<td><p>玩家2响应阶段</p></td>
+<td><p>Player 2 response phase</p></td>
+<td><p>プレイヤー2の応答フェーズ</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">P4_RESPONSE</span></code> (7)</p></td>
+<td><p>玩家3响应阶段</p></td>
+<td><p>Player 3 response phase</p></td>
+<td><p>プレイヤー3の応答フェーズ</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">P*_CHANKAN_RESPONSE</span></code> (8-11)</p></td>
+<td><p>抢杠响应阶段</p></td>
+<td><p>Robbing-a-kan response phases</p></td>
+<td><p>槍槓の応答フェーズ</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">P*_CHANANKAN_RESPONSE</span></code> (12-15)</p></td>
+<td><p>抢暗杠响应阶段</p></td>
+<td><p>Robbing-a-concealed-kan response phases</p></td>
+<td><p>槍暗槓の応答フェーズ</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">GAME_OVER</span></code> (16)</p></td>
+<td><p>游戏结束</p></td>
+<td><p>Game is over</p></td>
+<td><p>ゲームオーバー</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">UNINITIALIZED</span></code> (17)</p></td>
+<td><p>未初始化</p></td>
+<td><p>Not yet initialized</p></td>
+<td><p>未初期化</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr class="docutils" />
+<p>## 六、环境层变量 / Python Environment Variables</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+<col style="width: 30.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>变量名 / 类</p></th>
+<th class="head"><p>中文</p></th>
+<th class="head"><p>English</p></th>
+<th class="head"><p>说明</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MahjongEnv</span></code></p></td>
+<td><p>多智能体环境</p></td>
+<td><p>Multi-agent environment</p></td>
+<td><p>4玩家对战环境</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SingleAgentMahjongEnv</span></code></p></td>
+<td><p>单智能体环境</p></td>
+<td><p>Single-agent environment</p></td>
+<td><p>Gymnasium兼容，1人+3AI</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TableEncoder</span></code> / <code class="docutils literal notranslate"><span class="pre">PassiveTableEncoder</span></code></p></td>
+<td><p>观察编码器</p></td>
+<td><p>Observation encoder</p></td>
+<td><p>状态→numpy数组编码</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PaipuReplayer</span></code></p></td>
+<td><p>牌谱回放器</p></td>
+<td><p>Paipu replayer</p></td>
+<td><p>重放天凤XML牌谱</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TenhouShuffle</span></code></p></td>
+<td><p>天凤洗牌算法</p></td>
+<td><p>Tenhou shuffle algorithm</p></td>
+<td><p>MT19937+SHA512</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VLOGMahjong</span></code></p></td>
+<td><p>预训练VLOG模型</p></td>
+<td><p>VLOG Mahjong RL model</p></td>
+<td><p>论文 ICLR 2022 模型</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr class="docutils" />
+<p>## 七、观察空间编码 / Observation Encoding</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 25.0%" />
+<col style="width: 20.0%" />
+<col style="width: 35.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>术语</p></th>
+<th class="head"><p>English</p></th>
+<th class="head"><p>形状</p></th>
+<th class="head"><p>说明</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>执行器观察</p></td>
+<td><p>Executor observation</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">(93,</span> <span class="pre">34)</span></code></p></td>
+<td><p>当前玩家可见信息</p></td>
+</tr>
+<tr class="row-odd"><td><p>神谕观察</p></td>
+<td><p>Oracle observation</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">(18,</span> <span class="pre">34)</span></code></p></td>
+<td><p>对手手牌（隐藏信息）</p></td>
+</tr>
+<tr class="row-even"><td><p>完整观察</p></td>
+<td><p>Full observation</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">(111,</span> <span class="pre">34)</span></code></p></td>
+<td><p>执行器 + 神谕拼接</p></td>
+</tr>
+<tr class="row-odd"><td><p>牌山观察</p></td>
+<td><p>Yama observation</p></td>
+<td><p>包含在观察矩阵中</p></td>
+<td><p>剩余牌数信息</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr class="docutils" />
+<p>## 八、Action 动作索引 / Action Index Mapping</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15.0%" />
+<col style="width: 25.0%" />
+<col style="width: 30.0%" />
+<col style="width: 30.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>索引</p></th>
+<th class="head"><p>中文</p></th>
+<th class="head"><p>English</p></th>
+<th class="head"><p>说明</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0–33</p></td>
+<td><p>普通舍牌</p></td>
+<td><p>Normal discard (tile 0–33)</p></td>
+<td><p>Basetile 0-9m, 9-17p, 18-26s, 27-33z</p></td>
+</tr>
+<tr class="row-odd"><td><p>34–36</p></td>
+<td><p>赤宝牌舍牌</p></td>
+<td><p>Red dora discard (5m/5p/5s)</p></td>
+<td><p>37-39 in basetile space</p></td>
+</tr>
+<tr class="row-even"><td><p>37–42</p></td>
+<td><p>吃（含赤5变体）</p></td>
+<td><p>Chi calls (left/middle/right × with/without red)</p></td>
+<td><p>鸣牌吃</p></td>
+</tr>
+<tr class="row-odd"><td><p>43–44</p></td>
+<td><p>碰（含赤5变体）</p></td>
+<td><p>Pon calls (with/without red 5)</p></td>
+<td><p>鸣牌碰</p></td>
+</tr>
+<tr class="row-even"><td><p>45</p></td>
+<td><p>暗杠</p></td>
+<td><p>Ankan (concealed kan)</p></td>
+<td><p>手牌4张相同</p></td>
+</tr>
+<tr class="row-odd"><td><p>46</p></td>
+<td><p>大明杠</p></td>
+<td><p>Daimin-kan (open kan)</p></td>
+<td><p>碰后加杠</p></td>
+</tr>
+<tr class="row-even"><td><p>47</p></td>
+<td><p>加杠</p></td>
+<td><p>Kakan (added kan)</p></td>
+<td><p>手牌已有3张+第4张</p></td>
+</tr>
+<tr class="row-odd"><td><p>48</p></td>
+<td><p>立直宣言</p></td>
+<td><p>Riichi declaration</p></td>
+<td><p>第一步：选舍牌</p></td>
+</tr>
+<tr class="row-even"><td><p>49</p></td>
+<td><p>荣和</p></td>
+<td><p>Ron win</p></td>
+<td><p>对手舍牌和牌</p></td>
+</tr>
+<tr class="row-odd"><td><p>50</p></td>
+<td><p>自摸</p></td>
+<td><p>Tsumo win</p></td>
+<td><p>摸牌后和牌</p></td>
+</tr>
+<tr class="row-even"><td><p>51</p></td>
+<td><p>摸牌</p></td>
+<td><p>Draw / pass in self-action</p></td>
+<td><p>通常自动执行</p></td>
+</tr>
+<tr class="row-odd"><td><p>52</p></td>
+<td><p>立直确认/取消</p></td>
+<td><p>Riichi confirm / cancel</p></td>
+<td><p>第二步决策</p></td>
+</tr>
+<tr class="row-even"><td><p>53</p></td>
+<td><p>跳过（响应阶段）</p></td>
+<td><p>Pass (response phase)</p></td>
+<td><p>鸣牌/荣和跳过</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="changelog.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Changelog</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="web_frontend.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Mahjong Web 前端文档</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2024, Agony
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=fc837d61"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=30646c52"></script>
+    </body>
+</html>
