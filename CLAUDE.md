@@ -15,10 +15,10 @@ uv pip install ".[dev,docs]"
 pip install ".[dev,docs]"
 
 # Run basic tests
-python -c "import pymahjong as pm; pm.test()"
+python -c "from pymahjong.test import test; test()"
 
 # Run with pretrained opponents (requires PyTorch)
-python -c "import pymahjong as pm; pm.test_with_pretrained('path/to/model.pth')"
+python -c "from pymahjong.test import test; test('path/to/model.pth')"
 ```
 
 ### Build Wheel
@@ -51,7 +51,7 @@ cd docs && make html
 
 CI runs on Ubuntu with Python 3.10-3.13 matrix and executes:
 1. Build package with `pip install .`
-2. Run `python -c "import pymahjong as pm; pm.test()"`
+2. Run `python -c "from pymahjong.test import test; test()"`
 3. Paipu replay validation
 
 ## Architecture Overview

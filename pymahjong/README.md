@@ -20,12 +20,12 @@ pip install pymahjong
 
 To check if it works
 ```
-import pymahjong
-pymahjong.test()
+from pymahjong.test import test
+test()
 ```
 
 Dependence:
-- gym
+- gymnasium
 - numpy
 - torch (to use pretrained models)
 
@@ -56,7 +56,7 @@ while True:
 
     a = np.random.choice(valid_actions)  # make decision among valid actions
 
-    obs, reward, done, _ = env.step(a)  # reward is zero unless the game is over (done = True).
+    obs, reward, done, truncated, info = env.step(a)  # reward is zero unless the game is over (done = True).
 
     # oracle_obs = env.get_oracle_obs()  # if you need oracle observation
     # full_obs = env.get_full_obs()  # full_obs = concat((obs, oracle_obs), axis=0)
@@ -71,7 +71,7 @@ Note: In a Mahjong game, it is possible the game is over before a certain player
 ### pretrained opponents agent
 We provide two pretrained models as the opponents (see the paper https://openreview.net/forum?id=pjqqxepwoMy) in the single-agent version environment.
 
-To use the pretrained models, you need to have [PyTorch](https://pytorch.org/) installed. You can [download the models from the GitHub release](https://github.com/Agony5757/mahjong/releases/tag/v1.0.2). The pretrained model should automatically enable CUDA if your PyTorch supports CUDA.
+To use the pretrained models, you need to have [PyTorch](https://pytorch.org/) installed. You can [download the models from the GitHub release](https://github.com/Agony5757/mahjong/releases/tag/v1.0.4). The pretrained model should automatically enable CUDA if your PyTorch supports CUDA.
 
 - `mahjong_VLOG_CQL.pth`: Variational Latent Oracle Guiding + Conservative Q-learning
 - `mahjong_VLOG_BC.pth`:  Variational Latent Oracle Guiding + Behavior Cloning
@@ -187,7 +187,7 @@ Currently we do not have a GUI, one may roughly check the game status by "env.re
 
 ## Offline dataset
 
-Please [download from the release](https://github.com/Agony5757/mahjong/releases/tag/v1.0.2)
+Please [download from the release](https://github.com/Agony5757/mahjong/releases/tag/v1.0.4)
 
 The data after unzipping are in .mat format, which can be loaded in Python using scipy
 
