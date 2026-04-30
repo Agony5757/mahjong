@@ -1,0 +1,887 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Examples" href="../examples/index.html"><link rel="prev" title="C++ Engine" href="cpp_engine.html">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>C++ 游戏引擎状态机 - pymahjong Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">pymahjong Documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">pymahjong Documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/environment.html">Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/observation.html">Observation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/action.html">Action Space</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/utilities.html">Utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="custom_agents.html">Custom Agents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="paipu_replay.html">Paipu Replay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cpp_engine.html">C++ Engine</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">C++ 游戏引擎状态机</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/basic_usage.html">Basic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/rl_training.html">RL Training Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../web_frontend.html">Mahjong Web 前端文档</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/advanced/state_machine.md.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="c">
+<h1>C++ 游戏引擎状态机<a class="headerlink" href="#c" title="Link to this heading">¶</a></h1>
+<p>本文档详细描述了 Mahjong C++ 引擎的完整状态机实现。理解状态机是正确使用引擎、与前端对接、以及扩展功能的基础。</p>
+<section id="id1">
+<h2>概述<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<p>引擎使用<strong>阶段制（Phase-based）状态机</strong>，每次 <code class="docutils literal notranslate"><span class="pre">make_selection()</span></code> 调用推进一个阶段。所有游戏状态集中在 <code class="docutils literal notranslate"><span class="pre">Table</span></code> 类中，通过 <code class="docutils literal notranslate"><span class="pre">PhaseEnum</span></code> 追踪当前所处的阶段。</p>
+</section>
+<section id="phaseenum">
+<h2>PhaseEnum 完整列表<a class="headerlink" href="#phaseenum" title="Link to this heading">¶</a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">enum</span><span class="w"> </span><span class="nc">PhaseEnum</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">P1_ACTION</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">   </span><span class="c1">// 玩家0自摸阶段</span>
+<span class="w">    </span><span class="n">P2_ACTION</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="c1">// 玩家1自摸阶段</span>
+<span class="w">    </span><span class="n">P3_ACTION</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="c1">// 玩家2自摸阶段</span>
+<span class="w">    </span><span class="n">P4_ACTION</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="c1">// 玩家3自摸阶段</span>
+<span class="w">    </span><span class="n">P1_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w">  </span><span class="c1">// 玩家0响应阶段</span>
+<span class="w">    </span><span class="n">P2_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">  </span><span class="c1">// 玩家1响应阶段</span>
+<span class="w">    </span><span class="n">P3_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">  </span><span class="c1">// 玩家3响应阶段</span>
+<span class="w">    </span><span class="n">P4_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w">  </span><span class="c1">// 玩家3响应阶段</span>
+<span class="w">    </span><span class="n">P1_CHANKAN_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w">   </span><span class="c1">// 玩家0抢杠响应阶段</span>
+<span class="w">    </span><span class="n">P2_CHANKAN_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w">   </span><span class="c1">// 玩家1抢杠响应阶段</span>
+<span class="w">    </span><span class="n">P3_CHANKAN_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">  </span><span class="c1">// 玩家2抢杠响应阶段</span>
+<span class="w">    </span><span class="n">P4_CHANKAN_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">11</span><span class="p">,</span><span class="w">  </span><span class="c1">// 玩家3抢杠响应阶段</span>
+<span class="w">    </span><span class="n">P1_CHANANKAN_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="c1">// 玩家0抢暗杠响应阶段</span>
+<span class="w">    </span><span class="n">P2_CHANANKAN_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"> </span><span class="c1">// 玩家1抢暗杠响应阶段</span>
+<span class="w">    </span><span class="n">P3_CHANANKAN_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">14</span><span class="p">,</span><span class="w"> </span><span class="c1">// 玩家2抢暗杠响应阶段</span>
+<span class="w">    </span><span class="n">P4_CHANANKAN_RESPONSE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="c1">// 玩家3抢暗杠响应阶段</span>
+<span class="w">    </span><span class="n">GAME_OVER</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w">     </span><span class="c1">// 游戏结束</span>
+<span class="w">    </span><span class="n">UNINITIALIZED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">17</span><span class="w"> </span><span class="c1">// 未初始化</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p><strong>关键辅助函数</strong>（均定义于 <code class="docutils literal notranslate"><span class="pre">Table.h</span></code>）：</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>函数</p></th>
+<th class="head"><p>说明</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">who_make_selection()</span></code></p></td>
+<td><p>返回当前需要行动的玩家 ID：<code class="docutils literal notranslate"><span class="pre">phase</span> <span class="pre">%</span> <span class="pre">4</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">is_self_acting()</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">phase</span> <span class="pre">&lt;=</span> <span class="pre">P4_ACTION</span></code> 时为自摸阶段</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">is_over()</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">phase</span> <span class="pre">==</span> <span class="pre">GAME_OVER</span></code> 时游戏结束</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="id2">
+<h2>完整状态转移图<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>┌────────────────┐
+│ UNINITIALIZED  │
+└───────┬────────┘
+        │ game_init() / game_init_with_config()
+        ▼
+┌─────────────────────────────────────┐
+│ from_beginning()                    │
+│  ├─ 流局检测（4风/4立/4杠/无牌）     │
+│  ├─ 摸牌 (draw_normal / draw_rinshan)│
+│  └─ _generate_self_actions()         │
+└───────┬─────────────────────────────┘
+        │ set phase = Pn_ACTION
+        ▼
+┌─────────────────────────────────┐
+│  Pn_ACTION (自摸阶段)           │◄──────────────┐
+│  turn = n                       │               │
+│                                 │               │
+│  get_kyushukyuhai()  ──────────────────────────►流局(9种9牌) → GAME_OVER
+│  get_tsumo()        ──────────────────────────►和牌(tsumo) → GAME_OVER
+│  get_discard()      ──► P1_RESPONSE            │
+│  get_riichi()       ──► 摸牌 → get_riichi() ──► P1_RESPONSE
+│  get_ankan()        ──► P1_CHANANKAN_RESPONSE  │
+│  get_kakan()        ──► P1_CHANKAN_RESPONSE    │
+└──────┬──────────────────────────┘               │
+       │ make_selection()                         │
+       ▼                                          │
+┌─────────────────────────────────────────────────────┐
+│ P1_RESPONSE ─► P2_RESPONSE ─► P3_RESPONSE ─► P4_RESPONSE │
+│ 玩家1      玩家2       玩家3       玩家4                 │
+│                                                        │
+│  优先级: Ron &gt; Pon/Kan &gt; Chi &gt; Pass                   │
+│                                                        │
+│  Ron    ──► generate_result_ron() ──────────────► GAME_OVER
+│  Pon/Kan/Chi ──► execute_naki() ──► from_beginning()
+│  Pass(所有人) ──► _handle_response_final_pass_impl()      │
+│                  ──► next_turn() ──► from_beginning()─────┘
+└─────────────────────────────────────────────────────┘
+
+P1_CHANKAN_RESPONSE ─► P2_CHANKAN ─► P3_CHANKAN ─► P4_CHANKAN
+  (抢加杠)
+  ChanKan ──► generate_result_chankan() ──► GAME_OVER
+  Pass(所有人) ──► _handle_response_final_chankan_execution()
+                      ──► from_beginning()
+
+P1_CHANANKAN_RESPONSE ─► P2 ─► P3 ─► P4
+  (抢暗杠)
+  ChanAnKan ──► generate_result_chanankan() ──► GAME_OVER
+  Pass(所有人) ──► _handle_response_final_chanankan_execution()
+                       ──► from_beginning()
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h2>阶段详解<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h2>
+<section id="pn-action">
+<h3>Pn_ACTION（自摸阶段）<a class="headerlink" href="#pn-action" title="Link to this heading">¶</a></h3>
+<p>玩家 <code class="docutils literal notranslate"><span class="pre">n</span></code>（<code class="docutils literal notranslate"><span class="pre">n</span> <span class="pre">=</span> <span class="pre">turn</span></code>）可执行的动作为 <code class="docutils literal notranslate"><span class="pre">_generate_self_actions()</span></code> 返回的列表：</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>动作类型</p></th>
+<th class="head"><p>方法</p></th>
+<th class="head"><p>结果</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Kyushukyuhai</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">get_kyushukyuhai()</span></code></p></td>
+<td><p>流局，9种9牌，<code class="docutils literal notranslate"><span class="pre">generate_result_9hai()</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Tsumo</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">get_tsumo()</span></code></p></td>
+<td><p>自摸和牌，<code class="docutils literal notranslate"><span class="pre">generate_result_tsumo()</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Discard</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">get_discard()</span></code></p></td>
+<td><p>舍牌，进入 P1_RESPONSE</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Riichi</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">get_riichi()</span></code></p></td>
+<td><p>宣言立直，后续须再次舍牌，进入 P1_RESPONSE</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>AnKan</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">get_ankan()</span></code></p></td>
+<td><p>暗杠，进入 P1_CHANANKAN_RESPONSE</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>KaKan</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">get_kakan()</span></code></p></td>
+<td><p>加杠，进入 P1_CHANKAN_RESPONSE</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="id4">
+<h4>立直的两步流程<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h4>
+<p>立直是一个两阶段操作：</p>
+<ol class="arabic simple">
+<li><p><strong>第一步</strong>：玩家选牌 → <code class="docutils literal notranslate"><span class="pre">make_selection(Riichi_discard_index)</span></code>（action_type=Discard, 但 <code class="docutils literal notranslate"><span class="pre">selected_action.action</span> <span class="pre">=</span> <span class="pre">BaseAction::Riichi</span></code>）。引擎进入下一个 Pn_ACTION，<strong>尚未实际舍牌</strong>。</p></li>
+<li><p><strong>第二步</strong>：前端显示”确认立直”弹窗，玩家再次选同一张牌 → <code class="docutils literal notranslate"><span class="pre">make_selection(discard_index)</span></code> 正式舍牌并宣告立直。</p></li>
+</ol>
+<p>前端必须正确处理此两步流程（详见 <code class="docutils literal notranslate"><span class="pre">pymahjong/env_pymahjong.py</span></code> 中的 <code class="docutils literal notranslate"><span class="pre">step()</span></code> 函数对立直的特殊处理）。</p>
+</section>
+</section>
+<section id="pn-response">
+<h3>Pn_RESPONSE（响应阶段）<a class="headerlink" href="#pn-response" title="Link to this heading">¶</a></h3>
+<p>针对当前 <code class="docutils literal notranslate"><span class="pre">turn</span></code> 玩家舍出的牌，其他玩家按顺序响应。<code class="docutils literal notranslate"><span class="pre">actions[4]</span></code> 数组记录各玩家的选择，优先级如下：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Ron</span> <span class="o">&gt;</span> <span class="n">Pon</span> <span class="o">&gt;</span> <span class="n">Kan</span> <span class="o">&gt;</span> <span class="n">Chi</span> <span class="o">&gt;</span> <span class="n">Pass</span>
+</pre></div>
+</div>
+<p>具体规则：</p>
+<ul class="simple">
+<li><p><strong>Chi</strong>：仅当 <code class="docutils literal notranslate"><span class="pre">player</span> <span class="pre">==</span> <span class="pre">(turn</span> <span class="pre">+</span> <span class="pre">1)</span> <span class="pre">%</span> <span class="pre">4</span></code> 时可用（只能吃上家）</p></li>
+<li><p><strong>Pon</strong>：手中有该牌2张以上时可执行</p></li>
+<li><p><strong>Kan</strong>：手中有该牌3张以上时可执行（大手替打）</p></li>
+<li><p><strong>Ron</strong>：任何玩家在和牌型时可执行</p></li>
+</ul>
+<section id="handle-response-final-execution">
+<h4><code class="docutils literal notranslate"><span class="pre">_handle_response_final_execution()</span></code> 逻辑<a class="headerlink" href="#handle-response-final-execution" title="Link to this heading">¶</a></h4>
+<p>所有4个玩家响应完成后，按以下优先级确认最终动作：</p>
+<ol class="arabic simple">
+<li><p><strong>存在 Ron</strong>：<code class="docutils literal notranslate"><span class="pre">generate_result_ron()</span></code> → <code class="docutils literal notranslate"><span class="pre">GAME_OVER</span></code></p></li>
+<li><p><strong>存在 Pon/Kan/Chi</strong>：执行鸣牌（调用 <code class="docutils literal notranslate"><span class="pre">execute_naki()</span></code>），<code class="docutils literal notranslate"><span class="pre">from_beginning()</span></code> 重新开始</p></li>
+<li><p><strong>全部 Pass</strong>：<code class="docutils literal notranslate"><span class="pre">next_turn()</span></code> → <code class="docutils literal notranslate"><span class="pre">from_beginning()</span></code> 继续下一巡</p></li>
+</ol>
+</section>
+</section>
+<section id="chankan-chanankan">
+<h3>Chankan / ChanAnKan（抢杠）<a class="headerlink" href="#chankan-chanankan" title="Link to this heading">¶</a></h3>
+<p>**加杠（KaKan）**后，触发 <code class="docutils literal notranslate"><span class="pre">P1_CHANKAN_RESPONSE</span></code>：</p>
+<ul class="simple">
+<li><p>其他玩家可以<strong>抢杠</strong>（<code class="docutils literal notranslate"><span class="pre">ChanKan</span></code>）</p></li>
+<li><p>被抢则 <code class="docutils literal notranslate"><span class="pre">generate_result_chankan()</span></code> → <code class="docutils literal notranslate"><span class="pre">GAME_OVER</span></code></p></li>
+</ul>
+<p>**暗杠（AnKan）**后，触发 <code class="docutils literal notranslate"><span class="pre">P1_CHANANKAN_RESPONSE</span></code>：</p>
+<ul class="simple">
+<li><p>其他玩家可以<strong>抢暗杠</strong>（<code class="docutils literal notranslate"><span class="pre">ChanAnKan</span></code>）</p></li>
+<li><p>被抢则 <code class="docutils literal notranslate"><span class="pre">generate_result_chanankan()</span></code> → <code class="docutils literal notranslate"><span class="pre">GAME_OVER</span></code></p></li>
+</ul>
+</section>
+</section>
+<section id="ryukyoku">
+<h2>流局（Ryukyoku）检测<a class="headerlink" href="#ryukyoku" title="Link to this heading">¶</a></h2>
+<p>在每局开始时（<code class="docutils literal notranslate"><span class="pre">from_beginning()</span></code>），引擎检查以下流局条件：</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>条件</p></th>
+<th class="head"><p>检测方式</p></th>
+<th class="head"><p>结果类型</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>四风连打</strong></p></td>
+<td><p>第1巡，4家首张舍牌均为同一风牌，无鸣牌</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Ryukyouku_Interval_4Wind</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>四立直</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">player.riichi</span> <span class="pre">==</span> <span class="pre">true</span></code> 且4家全部宣布立直</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Ryukyouku_Interval_4Riichi</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>四杠子</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">get_remain_kan_tile()</span> <span class="pre">==</span> <span class="pre">0</span></code> 且2+家有杠</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Ryukyouku_Interval_4Kan</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>九种九牌</strong></p></td>
+<td><p>玩家手牌有9种以上幺九牌（kyushukyuhai）</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Ryukyouku_9Hai</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>无牌</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">get_remain_tile()</span> <span class="pre">==</span> <span class="pre">0</span></code>（yama剩余≤14张）</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">generate_result_notile()</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="get-remain-kan-tile">
+<h3><code class="docutils literal notranslate"><span class="pre">get_remain_kan_tile()</span></code> 实现<a class="headerlink" href="#get-remain-kan-tile" title="Link to this heading">¶</a></h3>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kr">inline</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">get_remain_kan_tile</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 找到 dora_indicator[0] 在 yama 中的位置</span>
+<span class="w">    </span><span class="c1">// 该位置之前的所有牌（不含 dora_indicator 本身）= 岭上牌</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">find</span><span class="p">(</span><span class="n">yama</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">yama</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="w"> </span><span class="n">dora_indicator</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">yama</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="get-remain-tile">
+<h3><code class="docutils literal notranslate"><span class="pre">get_remain_tile()</span></code> 实现<a class="headerlink" href="#get-remain-tile" title="Link to this heading">¶</a></h3>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kr">inline</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">get_remain_tile</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// yama.size() - 14 = 剩余可摸牌数</span>
+<span class="w">    </span><span class="c1">// 当剩余≤14时游戏结束（最后14张为王牌）</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="n">yama</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">14</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="id5">
+<h2>关键状态变量<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>变量</p></th>
+<th class="head"><p>类型</p></th>
+<th class="head"><p>位置</p></th>
+<th class="head"><p>说明</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">turn</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int</span></code></p></td>
+<td><p>Table</p></td>
+<td><p>当前行动玩家 ID (0-3)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">oya</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int</span></code></p></td>
+<td><p>Table</p></td>
+<td><p>庄家玩家 ID（每局固定，连庄时不变）</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">honba</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int</span></code></p></td>
+<td><p>Table</p></td>
+<td><p>本场数，每非庄和牌/流局+1</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kyoutaku</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int</span></code></p></td>
+<td><p>Table</p></td>
+<td><p>立直棒累计金额（1000点/棒）</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">last_action</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">BaseAction</span></code></p></td>
+<td><p>Table</p></td>
+<td><p>上一个动作（决定是否摸牌）</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">selected_action</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SelfAction</span></code></p></td>
+<td><p>Table</p></td>
+<td><p>自摸阶段选中的动作（Ron检测用）</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">phase</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PhaseEnum</span></code></p></td>
+<td><p>Table</p></td>
+<td><p>当前阶段</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">self_actions</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">vector&lt;SelfAction&gt;</span></code></p></td>
+<td><p>Table</p></td>
+<td><p>当前自摸阶段可用动作列表</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">response_actions</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">vector&lt;ResponseAction&gt;</span></code></p></td>
+<td><p>Table</p></td>
+<td><p>当前响应阶段可用动作列表</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">actions</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">vector&lt;ResponseAction&gt;</span></code></p></td>
+<td><p>Table</p></td>
+<td><p>4名玩家的响应选择</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hand</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">vector&lt;Tile*&gt;</span></code></p></td>
+<td><p>Player</p></td>
+<td><p>玩家手牌</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">call_groups</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">vector&lt;CallGroup&gt;</span></code></p></td>
+<td><p>Player</p></td>
+<td><p>鸣牌组（吃/碰/杠）</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">riichi</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool</span></code></p></td>
+<td><p>Player</p></td>
+<td><p>是否已宣言立直</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">double_riichi</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool</span></code></p></td>
+<td><p>Player</p></td>
+<td><p>是否双立直</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">menzen</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool</span></code></p></td>
+<td><p>Player</p></td>
+<td><p>是否门清（无鸣牌）</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">furiten_*</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool</span></code></p></td>
+<td><p>Player</p></td>
+<td><p>三种振听状态</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">atari_tiles</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">vector&lt;BaseTile&gt;</span></code></p></td>
+<td><p>Player</p></td>
+<td><p>当前听牌列表</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">score</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int</span></code></p></td>
+<td><p>Player</p></td>
+<td><p>当前得分（点）</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="baseaction">
+<h2>BaseAction 枚举<a class="headerlink" href="#baseaction" title="Link to this heading">¶</a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">enum</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">BaseAction</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Pass</span><span class="p">,</span><span class="w">        </span><span class="c1">// 跳过</span>
+<span class="w">    </span><span class="n">Chi</span><span class="p">,</span><span class="w">         </span><span class="c1">// 吃（仅上家）</span>
+<span class="w">    </span><span class="n">Pon</span><span class="p">,</span><span class="w">         </span><span class="c1">// 碰</span>
+<span class="w">    </span><span class="n">Kan</span><span class="p">,</span><span class="w">         </span><span class="c1">// 大明杠</span>
+<span class="w">    </span><span class="n">Ron</span><span class="p">,</span><span class="w">         </span><span class="c1">// 荣和</span>
+<span class="w">    </span><span class="n">ChanAnKan</span><span class="p">,</span><span class="w">   </span><span class="c1">// 抢暗杠</span>
+<span class="w">    </span><span class="n">ChanKan</span><span class="p">,</span><span class="w">     </span><span class="c1">// 抢加杠</span>
+<span class="w">    </span><span class="n">AnKan</span><span class="p">,</span><span class="w">       </span><span class="c1">// 暗杠</span>
+<span class="w">    </span><span class="n">KaKan</span><span class="p">,</span><span class="w">       </span><span class="c1">// 加杠</span>
+<span class="w">    </span><span class="n">Discard</span><span class="p">,</span><span class="w">     </span><span class="c1">// 舍牌</span>
+<span class="w">    </span><span class="n">Riichi</span><span class="p">,</span><span class="w">      </span><span class="c1">// 立直宣言</span>
+<span class="w">    </span><span class="n">Tsumo</span><span class="p">,</span><span class="w">       </span><span class="c1">// 自摸</span>
+<span class="w">    </span><span class="n">Kyushukyuhai</span><span class="w"> </span><span class="c1">// 九种九牌</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="python-api">
+<h2>动作索引（Python API）<a class="headerlink" href="#python-api" title="Link to this heading">¶</a></h2>
+<p>在 Python 绑定中，所有动作被编码为 0-53 的整数索引：</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>索引范围</p></th>
+<th class="head"><p>动作</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0-33</p></td>
+<td><p>34种标准牌的舍牌</p></td>
+</tr>
+<tr class="row-odd"><td><p>34-36</p></td>
+<td><p>赤5万/筒/索的舍牌</p></td>
+</tr>
+<tr class="row-even"><td><p>37-39</p></td>
+<td><p>吃左/中/右（标准）</p></td>
+</tr>
+<tr class="row-odd"><td><p>40-42</p></td>
+<td><p>吃左/中/右（赤宝牌）</p></td>
+</tr>
+<tr class="row-even"><td><p>43</p></td>
+<td><p>碰（标准）</p></td>
+</tr>
+<tr class="row-odd"><td><p>44</p></td>
+<td><p>碰（赤宝牌）</p></td>
+</tr>
+<tr class="row-even"><td><p>45</p></td>
+<td><p>暗杠</p></td>
+</tr>
+<tr class="row-odd"><td><p>46</p></td>
+<td><p>大明杠</p></td>
+</tr>
+<tr class="row-even"><td><p>47</p></td>
+<td><p>加杠</p></td>
+</tr>
+<tr class="row-odd"><td><p>48</p></td>
+<td><p>立直</p></td>
+</tr>
+<tr class="row-even"><td><p>49</p></td>
+<td><p>荣和</p></td>
+</tr>
+<tr class="row-odd"><td><p>50</p></td>
+<td><p>自摸</p></td>
+</tr>
+<tr class="row-even"><td><p>51</p></td>
+<td><p>自动通过（推进对手回合）</p></td>
+</tr>
+<tr class="row-odd"><td><p>52</p></td>
+<td><p>确认立直（第二步）</p></td>
+</tr>
+<tr class="row-even"><td><p>53</p></td>
+<td><p>跳过响应</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="last-action">
+<h2>摸牌规则（<code class="docutils literal notranslate"><span class="pre">last_action</span></code> 决定）<a class="headerlink" href="#last-action" title="Link to this heading">¶</a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kr">inline</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="nf">after_chipon</span><span class="p">()</span><span class="w">     </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">last_action</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">BaseAction</span><span class="o">::</span><span class="n">Chi</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">last_action</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">BaseAction</span><span class="o">::</span><span class="n">Pon</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="kr">inline</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="nf">after_daiminkan</span><span class="p">()</span><span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">last_action</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">BaseAction</span><span class="o">::</span><span class="n">Kan</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="kr">inline</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="nf">after_ankan</span><span class="p">()</span><span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">last_action</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">BaseAction</span><span class="o">::</span><span class="n">AnKan</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="kr">inline</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="nf">after_kakan</span><span class="p">()</span><span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">last_action</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">BaseAction</span><span class="o">::</span><span class="n">KaKan</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="kr">inline</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="nf">after_kan</span><span class="p">()</span><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">after_daiminkan</span><span class="p">()</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">after_ankan</span><span class="p">();</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>上一个动作</p></th>
+<th class="head"><p>本巡是否摸牌</p></th>
+<th class="head"><p>说明</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Discard / Riichi</p></td>
+<td><p><strong>是</strong>（<code class="docutils literal notranslate"><span class="pre">draw_normal()</span></code>）</p></td>
+<td><p>正常摸牌</p></td>
+</tr>
+<tr class="row-odd"><td><p>Chi / Pon</p></td>
+<td><p><strong>否</strong>（不摸牌）</p></td>
+<td><p>吃碰后不补牌，直接由鸣牌者继续</p></td>
+</tr>
+<tr class="row-even"><td><p>Kan / AnKan / KaKan</p></td>
+<td><p><strong>是</strong>（<code class="docutils literal notranslate"><span class="pre">draw_rinshan()</span></code>）</p></td>
+<td><p>杠后从岭上补牌</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="from-beginning">
+<h2><code class="docutils literal notranslate"><span class="pre">from_beginning()</span></code> 完整流程<a class="headerlink" href="#from-beginning" title="Link to this heading">¶</a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">Table::from_beginning</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 1. 检查流局条件</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">is_4wind_ryukyoku</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">generate_result_4wind</span><span class="p">();</span><span class="w"> </span><span class="n">phase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">GAME_OVER</span><span class="p">;</span><span class="w"> </span><span class="k">return</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">is_4riichi</span><span class="p">())</span><span class="w">         </span><span class="p">{</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">generate_result_4riichi</span><span class="p">();</span><span class="w"> </span><span class="n">phase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">GAME_OVER</span><span class="p">;</span><span class="w"> </span><span class="k">return</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">is_4kan</span><span class="p">())</span><span class="w">            </span><span class="p">{</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">generate_result_4kan</span><span class="p">();</span><span class="w"> </span><span class="n">phase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">GAME_OVER</span><span class="p">;</span><span class="w"> </span><span class="k">return</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">get_remain_tile</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">generate_result_notile</span><span class="p">();</span><span class="w"> </span><span class="n">phase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">GAME_OVER</span><span class="p">;</span><span class="w"> </span><span class="k">return</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 2. 补牌</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">after_chipon</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 吃碰后不补牌，轮转到鸣牌者</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">after_kan</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">draw_rinshan</span><span class="p">(</span><span class="n">turn</span><span class="p">);</span><span class="w">   </span><span class="c1">// 岭上摸牌</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">draw_normal</span><span class="p">(</span><span class="n">turn</span><span class="p">);</span><span class="w">    </span><span class="c1">// 正常从牌山摸牌</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 3. 生成自摸动作</span>
+<span class="w">    </span><span class="n">self_actions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">_generate_self_actions</span><span class="p">();</span>
+<span class="w">    </span><span class="n">phase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PhaseEnum</span><span class="p">(</span><span class="n">turn</span><span class="p">);</span><span class="w"> </span><span class="c1">// P1_ACTION ~ P4_ACTION</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id6">
+<h2>鸣牌后轮转规则<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h2>
+<p>当 Pon/Kan/Chi 发生时，轮到鸣牌者（而非被鸣牌者）继续：</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">Table::_handle_response_final_chiponkan_impl</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">response_player</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 鸣牌后轮到鸣牌者（response_player）继续</span>
+<span class="w">    </span><span class="c1">// turn 更新为 response_player</span>
+<span class="w">    </span><span class="n">last_action</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span><span class="w"> </span><span class="c1">// Chi/Pon/Kan</span>
+<span class="w">    </span><span class="n">from_beginning</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h2>与前端对接注意事项<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p><strong>阶段轮询</strong>：前端通过 <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/api/game/{id}/state</span></code> 轮询，<code class="docutils literal notranslate"><span class="pre">phase</span></code> 字段指示当前状态</p></li>
+<li><p><strong>立直两步</strong>：前端必须在 <code class="docutils literal notranslate"><span class="pre">selected_action.action</span> <span class="pre">==</span> <span class="pre">Riichi</span></code> 时显示确认弹窗</p></li>
+<li><p><strong>响应阶段</strong>：前端通过 <code class="docutils literal notranslate"><span class="pre">response_actions</span></code> 列表渲染按钮（Chi/Pon/Ron/Pass）</p></li>
+<li><p><strong>SSE 推送</strong>：AI 动作完成后通过 SSE 推送，前端无需高频轮询</p></li>
+<li><p><strong>牌谱记录</strong>：每个 <code class="docutils literal notranslate"><span class="pre">make_selection()</span></code> 调用的索引都应记录，用于重放</p></li>
+</ol>
+</section>
+<section id="id8">
+<h2>参考文件<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Mahjong/Table.h</span></code> - <code class="docutils literal notranslate"><span class="pre">PhaseEnum</span></code> 定义及核心状态</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Mahjong/Table.cpp</span></code> - 状态转移实现（<code class="docutils literal notranslate"><span class="pre">_handle_self_action()</span></code>、<code class="docutils literal notranslate"><span class="pre">_handle_response_final_execution()</span></code> 等）</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Mahjong/Player.h/cpp</span></code> - <code class="docutils literal notranslate"><span class="pre">get_*()</span></code> 系列方法实现</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Mahjong/GameResult.h/cpp</span></code> - 流局和结算结果生成</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="../examples/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Examples</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="cpp_engine.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">C++ Engine</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2024, Agony
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">C++ 游戏引擎状态机</a><ul>
+<li><a class="reference internal" href="#id1">概述</a></li>
+<li><a class="reference internal" href="#phaseenum">PhaseEnum 完整列表</a></li>
+<li><a class="reference internal" href="#id2">完整状态转移图</a></li>
+<li><a class="reference internal" href="#id3">阶段详解</a><ul>
+<li><a class="reference internal" href="#pn-action">Pn_ACTION（自摸阶段）</a><ul>
+<li><a class="reference internal" href="#id4">立直的两步流程</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pn-response">Pn_RESPONSE（响应阶段）</a><ul>
+<li><a class="reference internal" href="#handle-response-final-execution"><code class="docutils literal notranslate"><span class="pre">_handle_response_final_execution()</span></code> 逻辑</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#chankan-chanankan">Chankan / ChanAnKan（抢杠）</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ryukyoku">流局（Ryukyoku）检测</a><ul>
+<li><a class="reference internal" href="#get-remain-kan-tile"><code class="docutils literal notranslate"><span class="pre">get_remain_kan_tile()</span></code> 实现</a></li>
+<li><a class="reference internal" href="#get-remain-tile"><code class="docutils literal notranslate"><span class="pre">get_remain_tile()</span></code> 实现</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id5">关键状态变量</a></li>
+<li><a class="reference internal" href="#baseaction">BaseAction 枚举</a></li>
+<li><a class="reference internal" href="#python-api">动作索引（Python API）</a></li>
+<li><a class="reference internal" href="#last-action">摸牌规则（<code class="docutils literal notranslate"><span class="pre">last_action</span></code> 决定）</a></li>
+<li><a class="reference internal" href="#from-beginning"><code class="docutils literal notranslate"><span class="pre">from_beginning()</span></code> 完整流程</a></li>
+<li><a class="reference internal" href="#id6">鸣牌后轮转规则</a></li>
+<li><a class="reference internal" href="#id7">与前端对接注意事项</a></li>
+<li><a class="reference internal" href="#id8">参考文件</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=fc837d61"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=30646c52"></script>
+    </body>
+</html>

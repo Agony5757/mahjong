@@ -205,6 +205,7 @@
 <li class="toctree-l2"><a class="reference internal" href="custom_agents.html">Custom Agents</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Paipu Replay</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cpp_engine.html">C++ Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html">C++ 游戏引擎状态机</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -212,6 +213,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../examples/rl_training.html">RL Training Example</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../web_frontend.html">Mahjong Web 前端文档</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
 </ul>
 
@@ -263,51 +265,218 @@
 <li><p>Generate training data from human games</p></li>
 </ol>
 </section>
-<section id="using-paipu-replay">
-<h2>Using Paipu Replay<a class="headerlink" href="#using-paipu-replay" title="Link to this heading">¶</a></h2>
-<section id="basic-usage">
-<h3>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pymahjong</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pm</span>
-
-<span class="c1"># Replay paipu files in the current directory</span>
-<span class="n">pm</span><span class="o">.</span><span class="n">paipu_replay</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;debug&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="replay-modes">
-<h3>Replay Modes<a class="headerlink" href="#replay-modes" title="Link to this heading">¶</a></h3>
+<section id="tenhou-xml-paipu-format">
+<h2>Tenhou XML Paipu Format<a class="headerlink" href="#tenhou-xml-paipu-format" title="Link to this heading">¶</a></h2>
+<p>Tenhou.net publishes game records as XML files (<code class="docutils literal notranslate"><span class="pre">.txt</span></code> extension). The complete format is defined in <code class="docutils literal notranslate"><span class="pre">pymahjong/tenhou_paipu_check.py</span></code>.</p>
+<section id="xml-tag-reference">
+<h3>XML Tag Reference<a class="headerlink" href="#xml-tag-reference" title="Link to this heading">¶</a></h3>
+<p>The following table documents all supported XML tags in Tenhou paipu files:</p>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
 <thead>
-<tr class="row-odd"><th class="head"><p>Mode</p></th>
-<th class="head"><p>Description</p></th>
+<tr class="row-odd"><th class="head"><p>Tag</p></th>
+<th class="head"><p>说明</p></th>
+<th class="head"><p>属性/内容</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">'debug'</span></code></p></td>
-<td><p>Print detailed information for debugging</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;SHOWER</span> <span class="pre">seed=&quot;...&quot;&gt;</span></code></p></td>
+<td><p>牌山生成</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code>: base64 MT19937+SHA512 种子</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">'normal'</span></code></p></td>
-<td><p>Standard replay without verbose output</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;GO</span> <span class="pre">type=&quot;N&quot;&gt;</span></code></p></td>
+<td><p>游戏规则</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">type</span></code>: 位掩码（见下表）</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;UN</span> <span class="pre">...&gt;</span></code></p></td>
+<td><p>玩家信息</p></td>
+<td><p>名字/等级等（解析但不使用）</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;INIT</span> <span class="pre">ten=&quot;...&quot;</span> <span class="pre">oya=&quot;N&quot;</span> <span class="pre">seed=&quot;...&quot;</span> <span class="pre">hai0=&quot;...&quot;</span> <span class="pre">hai1=&quot;...&quot;</span> <span class="pre">hai2=&quot;...&quot;</span> <span class="pre">hai3=&quot;...&quot;&gt;</span></code></p></td>
+<td><p>游戏初始化</p></td>
+<td><p>见下方详解</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;DORA</span> <span class="pre">hai=&quot;N&quot;&gt;</span></code></p></td>
+<td><p>翻开宝牌</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">hai</span></code>: tile ID</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;REACH</span> <span class="pre">who=&quot;N&quot;</span> <span class="pre">step=&quot;1|2&quot;&gt;</span></code></p></td>
+<td><p>立直宣言</p></td>
+<td><p>step1=宣言，step2=成功确认</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;T&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;U&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;V&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;W&gt;</span></code></p></td>
+<td><p>摸牌</p></td>
+<td><p>Tag索引=玩家ID(0-3)，内容为tile ID</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;D&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;E&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;F&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;G&gt;</span></code></p></td>
+<td><p>舍牌</p></td>
+<td><p>Tag索引=玩家ID(0-3)，内容为tile ID</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;N</span> <span class="pre">who=&quot;N&quot;</span> <span class="pre">m=&quot;NNNN&quot;&gt;</span></code></p></td>
+<td><p>鸣牌</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">who</span></code>=鸣牌者，<code class="docutils literal notranslate"><span class="pre">m</span></code>=编码的牌组</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;AGARI</span> <span class="pre">...&gt;</span></code></p></td>
+<td><p>和牌</p></td>
+<td><p>含详细得分/役种信息</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&lt;RYUUKYOKU</span> <span class="pre">...&gt;</span></code></p></td>
+<td><p>流局</p></td>
+<td><p>含tenpai信息</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 </section>
-<section id="paipu-format">
-<h3>Paipu Format<a class="headerlink" href="#paipu-format" title="Link to this heading">¶</a></h3>
-<p>pymahjong supports Tenhou.net XML format paipu files. The expected structure:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>paipuxmls/
-├── mjlog_2020010101gm-xxxx-xxxx-xxxx.xml
-├── mjlog_2020010102gm-xxxx-xxxx-xxxx.xml
-└── ...
+<section id="game-type-go-type-n">
+<h3>Game Type (<code class="docutils literal notranslate"><span class="pre">&lt;GO</span> <span class="pre">type=&quot;N&quot;&gt;</span></code>)<a class="headerlink" href="#game-type-go-type-n" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">type</span></code> 是位掩码：</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>位</p></th>
+<th class="head"><p>值</p></th>
+<th class="head"><p>含义</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>1</p></td>
+<td><p>PVP（人对人）</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>2</p></td>
+<td><p>无赤宝牌</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>4</p></td>
+<td><p>无食断</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>8</p></td>
+<td><p>半庄（hanchan）</p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p>16</p></td>
+<td><p>三人麻将</p></td>
+</tr>
+<tr class="row-odd"><td><p>5</p></td>
+<td><p>32</p></td>
+<td><p>Pro（专业）</p></td>
+</tr>
+<tr class="row-even"><td><p>6</p></td>
+<td><p>64</p></td>
+<td><p>快速</p></td>
+</tr>
+<tr class="row-odd"><td><p>7</p></td>
+<td><p>128</p></td>
+<td><p>上级</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>四人东风为例</strong>：<code class="docutils literal notranslate"><span class="pre">type=0</span></code>（东风/新人）</p>
+</section>
+<section id="init">
+<h3><code class="docutils literal notranslate"><span class="pre">&lt;INIT&gt;</span></code> 详解<a class="headerlink" href="#init" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">INIT</span> <span class="n">ten</span><span class="o">=</span><span class="s2">&quot;25000,25000,25000,25000&quot;</span> <span class="n">oya</span><span class="o">=</span><span class="s2">&quot;0&quot;</span>
+      <span class="n">seed</span><span class="o">=</span><span class="s2">&quot;123456789,0,0,3,5,...&quot;</span>
+      <span class="n">hai0</span><span class="o">=</span><span class="s2">&quot;0,8,18,26,27,30,32,...&quot;</span>
+      <span class="n">hai1</span><span class="o">=</span><span class="s2">&quot;1,9,19,27,28,31,33,...&quot;</span>
+      <span class="n">hai2</span><span class="o">=</span><span class="s2">&quot;2,10,20,27,29,30,32,...&quot;</span>
+      <span class="n">hai3</span><span class="o">=</span><span class="s2">&quot;3,11,21,27,28,31,33,...&quot;</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ten</span></code>: 初始分数（除以100后传入 <code class="docutils literal notranslate"><span class="pre">PaipuReplayer.init()</span></code>）</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">oya</span></code>: 庄家玩家 ID (0-3)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seed</span></code>: 逗号分隔：</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">[0]</span></code>: game_order（决定场风：game_order // 4 = 0=东, 1=南, 2=西, 3=北）</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[1]</span></code>: honba 本场数</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[2]</span></code>: kyoutaku 立直棒</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[3]</span></code>: dice1 骰子1</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[4]</span></code>: dice2 骰子2</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[5+]</span></code>: dora0, dora1, … 初始宝牌指示牌</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hai0..hai3</span></code>: 各玩家初始手牌（13张，逗号分隔 tile ID）</p></li>
+</ul>
+</section>
+<section id="tile-id">
+<h3>Tile ID 映射规则<a class="headerlink" href="#tile-id" title="Link to this heading">¶</a></h3>
+<p>Tenhou tile ID (0-135) 编码：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>tile_id = basetile × 4 + copy_index
+basetile = tile_id // 4   (0-33)
+copy_index = tile_id % 4 (0-3)
+</pre></div>
+</div>
+<p><strong>花色/数字映射</strong>：</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>basetile</p></th>
+<th class="head"><p>牌</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0-8</p></td>
+<td><p>1m-9m</p></td>
+</tr>
+<tr class="row-odd"><td><p>9-17</p></td>
+<td><p>1p-9p</p></td>
+</tr>
+<tr class="row-even"><td><p>18-26</p></td>
+<td><p>1s-9s</p></td>
+</tr>
+<tr class="row-odd"><td><p>27-33</p></td>
+<td><p>1z-7z（东/南/西/北/白/发/中）</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>赤宝牌</strong>：5m红=id4, 5p红=id13, 5s红=id22</p>
+</section>
+<section id="mt19937-seed-yama">
+<h3>MT19937 Seed → Yama 生成<a class="headerlink" href="#mt19937-seed-yama" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">&lt;SHOWER</span> <span class="pre">seed=&quot;mt19937ar-sha512-n288-base64,...&quot;&gt;</span></code> 中的 seed 用于初始化 MT19937 伪随机数生成器，产生确定性牌山。</p>
+<p>在代码中调用：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">MahjongPy</span><span class="w"> </span><span class="kn">import</span> <span class="n">TenhouShuffle</span>
+<span class="n">TenhouShuffle</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>  <span class="c1"># base64 seed 字符串</span>
+<span class="n">yama</span> <span class="o">=</span> <span class="n">TenhouShuffle</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span><span class="o">.</span><span class="n">generate_yama</span><span class="p">()</span>  <span class="c1"># 136 tile IDs</span>
 </pre></div>
 </div>
 </section>
+<section id="n-who-n-m-nnnn">
+<h3>鸣牌编码 (<code class="docutils literal notranslate"><span class="pre">&lt;N</span> <span class="pre">who=&quot;N&quot;</span> <span class="pre">m=&quot;NNNN&quot;&gt;</span></code>)<a class="headerlink" href="#n-who-n-m-nnnn" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">m</span></code> 是一个16位整数，二进制编码鸣牌信息：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>bit[0-1]:   鸣牌类型 (0=Chi, 1=Pon, 2=Kan, 3=AnKan)
+bit[2-7]:   被鸣牌 basetile
+bit[8-15]:  手牌中用于鸣牌的牌（3个basetile）
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">decodem()</span></code> 函数（<code class="docutils literal notranslate"><span class="pre">pymahjong/tenhou_paipu_check.py</span></code>）负责解码。</p>
+</section>
+<section id="reach">
+<h3><code class="docutils literal notranslate"><span class="pre">&lt;REACH&gt;</span></code> 立直流程<a class="headerlink" href="#reach" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>step=1</strong>: 立直宣言，<code class="docutils literal notranslate"><span class="pre">who</span></code> 玩家宣布立直（score -= 1000, kyoutaku++）</p></li>
+<li><p><strong>step=2</strong>: 立直确认，1巡后若未被发现荣和则立直成功</p></li>
+</ul>
+<p>前端实现时，step=1 宣言后须进入特殊状态，等待 step=2 确认。</p>
+</section>
+</section>
+<section id="using-paipu-replay">
+<h2>Using Paipu Replay<a class="headerlink" href="#using-paipu-replay" title="Link to this heading">¶</a></h2>
+<section id="python-paipu-replay">
+<h3>Python: <code class="docutils literal notranslate"><span class="pre">paipu_replay()</span></code><a class="headerlink" href="#python-paipu-replay" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pymahjong</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pm</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">paipu_replay</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;debug&#39;</span><span class="p">)</span>  <span class="c1"># 自动重放 paipuxmls/ 目录下的所有 XML</span>
+</pre></div>
+</div>
 </section>
 <section id="c-paipureplayer">
-<h2>C++ PaipuReplayer<a class="headerlink" href="#c-paipureplayer" title="Link to this heading">¶</a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">PaipuReplayer</span></code> class provides low-level control:</p>
+<h3>C++ PaipuReplayer<a class="headerlink" href="#c-paipureplayer" title="Link to this heading">¶</a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">MahjongPyWrapper</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pm</span>
 
 <span class="c1"># Create replayer</span>
@@ -333,9 +502,74 @@
 <span class="c1"># Make selection</span>
 <span class="n">replayer</span><span class="o">.</span><span class="n">make_selection</span><span class="p">(</span><span class="n">selection_index</span><span class="p">)</span>
 
-<span class="c1"># Get result</span>
+<span class="c1"># Get result (when game_over)</span>
 <span class="n">result</span> <span class="o">=</span> <span class="n">replayer</span><span class="o">.</span><span class="n">get_result</span><span class="p">()</span>
 </pre></div>
+</div>
+</section>
+<section id="complete-flow-tenhou-xml-replayer">
+<h3>Complete Flow: Tenhou XML → Replayer<a class="headerlink" href="#complete-flow-tenhou-xml-replayer" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">MahjongPyWrapper</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pymahjong.tenhou_paipu_check</span><span class="w"> </span><span class="kn">import</span> <span class="n">PaipuReplay</span>
+
+<span class="c1"># Parse XML</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">PaipuReplay</span><span class="p">(</span><span class="n">xml_path</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">_paipu_replay</span><span class="p">()</span>  <span class="c1"># populates replayer</span>
+
+<span class="c1"># Use replayer</span>
+<span class="n">rp</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">replayer</span>
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200</span><span class="p">):</span>  <span class="c1"># max steps</span>
+    <span class="k">if</span> <span class="n">rp</span><span class="o">.</span><span class="n">get_phase</span><span class="p">()</span> <span class="o">==</span> <span class="mi">16</span><span class="p">:</span>  <span class="c1"># GAME_OVER</span>
+        <span class="k">break</span>
+    <span class="n">phase</span> <span class="o">=</span> <span class="n">rp</span><span class="o">.</span><span class="n">get_phase</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">phase</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="n">actions</span> <span class="o">=</span> <span class="n">rp</span><span class="o">.</span><span class="n">get_self_actions</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">actions</span> <span class="o">=</span> <span class="n">rp</span><span class="o">.</span><span class="n">get_response_actions</span><span class="p">()</span>
+    <span class="c1"># replay with same actions</span>
+    <span class="n">rp</span><span class="o">.</span><span class="n">make_selection</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># pass</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">rp</span><span class="o">.</span><span class="n">get_result</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="replay-validation">
+<h2>Replay Validation<a class="headerlink" href="#replay-validation" title="Link to this heading">¶</a></h2>
+<p>CI validates the engine against real Tenhou games:</p>
+<ol class="arabic simple">
+<li><p>Download paipu files from <code class="docutils literal notranslate"><span class="pre">paipuxmls/</span></code> or releases</p></li>
+<li><p>Parse XML → <code class="docutils literal notranslate"><span class="pre">PaipuReplayer</span></code></p></li>
+<li><p>Replay every action</p></li>
+<li><p>Compare final scores with XML <code class="docutils literal notranslate"><span class="pre">&lt;AGARI&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;RYUUKYOKU&gt;</span></code> result</p></li>
+</ol>
+<p>This ensures the engine faithfully reproduces real game outcomes.</p>
+</section>
+<section id="paipu-data-locations">
+<h2>Paipu Data Locations<a class="headerlink" href="#paipu-data-locations" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>来源</p></th>
+<th class="head"><p>路径</p></th>
+<th class="head"><p>说明</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>CI 数据集</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pymahjong/paipuxmls/mjlog_*.txt</span></code></p></td>
+<td><p>预置的 Tenhou XML 文件</p></td>
+</tr>
+<tr class="row-odd"><td><p>Tenhou 下载</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">https://tenhou.net/mjlog/</span></code></p></td>
+<td><p>需登录获取</p></td>
+</tr>
+<tr class="row-even"><td><p>Releases</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">github.com/Agony5757/mahjong/releases</span></code></p></td>
+<td><p>预处理数据集</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 </section>
 <section id="debug-mode">
@@ -362,39 +596,21 @@
 </pre></div>
 </div>
 </section>
-<section id="validation">
-<h2>Validation<a class="headerlink" href="#validation" title="Link to this heading">¶</a></h2>
-<p>The CI pipeline runs paipu replay validation:</p>
-<ol class="arabic simple">
-<li><p>Downloads paipu files from releases</p></li>
-<li><p>Replays each game</p></li>
-<li><p>Verifies that actions and outcomes match</p></li>
-</ol>
-<p>This ensures the game engine correctly implements Mahjong rules.</p>
-</section>
-<section id="downloading-paipu-data">
-<h2>Downloading Paipu Data<a class="headerlink" href="#downloading-paipu-data" title="Link to this heading">¶</a></h2>
-<p>Paipu files are available from:</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://tenhou.net/mjlog/">Tenhou.net MJLog</a></p></li>
-<li><p><a class="reference external" href="https://github.com/Agony5757/mahjong/releases">Project Releases</a></p></li>
-</ul>
 <section id="offline-dataset">
-<h3>Offline Dataset<a class="headerlink" href="#offline-dataset" title="Link to this heading">¶</a></h3>
+<h2>Offline Dataset<a class="headerlink" href="#offline-dataset" title="Link to this heading">¶</a></h2>
 <p>Pre-processed datasets are available for machine learning:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">scipy.io</span>
 
 <span class="n">data</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">loadmat</span><span class="p">(</span><span class="s2">&quot;mahjong_data.mat&quot;</span><span class="p">)</span>
 
-<span class="c1"># data[&quot;X&quot;] - Executor observation</span>
-<span class="c1"># data[&quot;O&quot;] - Oracle observation</span>
+<span class="c1"># data[&quot;X&quot;] - Executor observation (93×34)</span>
+<span class="c1"># data[&quot;O&quot;] - Oracle observation (18×34)</span>
 <span class="c1"># data[&quot;A&quot;] - Actions taken</span>
 <span class="c1"># data[&quot;M&quot;] - Valid action masks</span>
 <span class="c1"># data[&quot;R&quot;] - Rewards</span>
 <span class="c1"># data[&quot;D&quot;] - Done signals</span>
 </pre></div>
 </div>
-</section>
 </section>
 </section>
 
@@ -455,19 +671,26 @@
             <ul>
 <li><a class="reference internal" href="#">Paipu Replay</a><ul>
 <li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#tenhou-xml-paipu-format">Tenhou XML Paipu Format</a><ul>
+<li><a class="reference internal" href="#xml-tag-reference">XML Tag Reference</a></li>
+<li><a class="reference internal" href="#game-type-go-type-n">Game Type (<code class="docutils literal notranslate"><span class="pre">&lt;GO</span> <span class="pre">type=&quot;N&quot;&gt;</span></code>)</a></li>
+<li><a class="reference internal" href="#init"><code class="docutils literal notranslate"><span class="pre">&lt;INIT&gt;</span></code> 详解</a></li>
+<li><a class="reference internal" href="#tile-id">Tile ID 映射规则</a></li>
+<li><a class="reference internal" href="#mt19937-seed-yama">MT19937 Seed → Yama 生成</a></li>
+<li><a class="reference internal" href="#n-who-n-m-nnnn">鸣牌编码 (<code class="docutils literal notranslate"><span class="pre">&lt;N</span> <span class="pre">who=&quot;N&quot;</span> <span class="pre">m=&quot;NNNN&quot;&gt;</span></code>)</a></li>
+<li><a class="reference internal" href="#reach"><code class="docutils literal notranslate"><span class="pre">&lt;REACH&gt;</span></code> 立直流程</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#using-paipu-replay">Using Paipu Replay</a><ul>
-<li><a class="reference internal" href="#basic-usage">Basic Usage</a></li>
-<li><a class="reference internal" href="#replay-modes">Replay Modes</a></li>
-<li><a class="reference internal" href="#paipu-format">Paipu Format</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#python-paipu-replay">Python: <code class="docutils literal notranslate"><span class="pre">paipu_replay()</span></code></a></li>
 <li><a class="reference internal" href="#c-paipureplayer">C++ PaipuReplayer</a></li>
-<li><a class="reference internal" href="#debug-mode">Debug Mode</a></li>
-<li><a class="reference internal" href="#validation">Validation</a></li>
-<li><a class="reference internal" href="#downloading-paipu-data">Downloading Paipu Data</a><ul>
-<li><a class="reference internal" href="#offline-dataset">Offline Dataset</a></li>
+<li><a class="reference internal" href="#complete-flow-tenhou-xml-replayer">Complete Flow: Tenhou XML → Replayer</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#replay-validation">Replay Validation</a></li>
+<li><a class="reference internal" href="#paipu-data-locations">Paipu Data Locations</a></li>
+<li><a class="reference internal" href="#debug-mode">Debug Mode</a></li>
+<li><a class="reference internal" href="#offline-dataset">Offline Dataset</a></li>
 </ul>
 </li>
 </ul>

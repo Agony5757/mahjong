@@ -173,7 +173,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -205,6 +205,7 @@
 <li class="toctree-l2"><a class="reference internal" href="custom_agents.html">Custom Agents</a></li>
 <li class="toctree-l2"><a class="reference internal" href="paipu_replay.html">Paipu Replay</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cpp_engine.html">C++ Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html">C++ 游戏引擎状态机</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -212,6 +213,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../examples/rl_training.html">RL Training Example</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../web_frontend.html">Mahjong Web 前端文档</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
 </ul>
 
@@ -246,7 +248,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
@@ -266,11 +268,12 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="paipu_replay.html">Paipu Replay</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="paipu_replay.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="paipu_replay.html#tenhou-xml-paipu-format">Tenhou XML Paipu Format</a></li>
 <li class="toctree-l2"><a class="reference internal" href="paipu_replay.html#using-paipu-replay">Using Paipu Replay</a></li>
-<li class="toctree-l2"><a class="reference internal" href="paipu_replay.html#c-paipureplayer">C++ PaipuReplayer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="paipu_replay.html#replay-validation">Replay Validation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="paipu_replay.html#paipu-data-locations">Paipu Data Locations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="paipu_replay.html#debug-mode">Debug Mode</a></li>
-<li class="toctree-l2"><a class="reference internal" href="paipu_replay.html#validation">Validation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="paipu_replay.html#downloading-paipu-data">Downloading Paipu Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="paipu_replay.html#offline-dataset">Offline Dataset</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="cpp_engine.html">C++ Engine</a><ul>
@@ -283,9 +286,31 @@
 <li class="toctree-l2"><a class="reference internal" href="cpp_engine.html#debugging">Debugging</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="state_machine.html">C++ 游戏引擎状态机</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#id1">概述</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#phaseenum">PhaseEnum 完整列表</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#id2">完整状态转移图</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#id3">阶段详解</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#ryukyoku">流局（Ryukyoku）检测</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#id5">关键状态变量</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#baseaction">BaseAction 枚举</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#python-api">动作索引（Python API）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#last-action">摸牌规则（<code class="docutils literal notranslate"><span class="pre">last_action</span></code> 决定）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#from-beginning"><code class="docutils literal notranslate"><span class="pre">from_beginning()</span></code> 完整流程</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#id6">鸣牌后轮转规则</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#id7">与前端对接注意事项</a></li>
+<li class="toctree-l2"><a class="reference internal" href="state_machine.html#id8">参考文件</a></li>
+</ul>
+</li>
 </ul>
 </div>
 <p>This section covers advanced topics for users who want to extend pymahjong or understand its internals.</p>
+<section id="c-engine-reference">
+<h2>C++ Engine Reference<a class="headerlink" href="#c-engine-reference" title="Link to this heading">¶</a></h2>
+<p>For complete C++ API documentation (classes, functions, data structures), see:</p>
+<div class="toctree-wrapper compound">
+</div>
+</section>
 </section>
 
         </article>
@@ -331,8 +356,27 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Advanced Topics</a><ul>
+<li><a class="reference internal" href="#c-engine-reference">C++ Engine Reference</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
