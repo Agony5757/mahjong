@@ -709,7 +709,7 @@ python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;
 <section id="c">
 <h3>回归测试（原有 C++ 引擎）<a class="headerlink" href="#c" title="Link to this heading">¶</a></h3>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>/home/agony/projects/mahjong-dev
-python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import pymahjong as pm; pm.test()&quot;</span>
+python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from pymahjong.test import test; test()&quot;</span>
 </pre></div>
 </div>
 <p>此测试验证 <code class="docutils literal notranslate"><span class="pre">MahjongEnv</span></code>（游戏引擎）核心逻辑未被影响。</p>

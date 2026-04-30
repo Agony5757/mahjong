@@ -258,10 +258,44 @@
 <p>All notable changes to this project will be documented in this file.</p>
 <p>The format is based on <a class="reference external" href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
 and this project adheres to <a class="reference external" href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
-<section id="xx-xx">
-<h2><a class="reference external" href="https://github.com/Agony5757/mahjong/compare/v1.0.5...v1.1.0">1.1.0</a> - 2024-XX-XX<a class="headerlink" href="#xx-xx" title="Link to this heading">¶</a></h2>
+<section id="id1">
+<h2><a class="reference external" href="https://github.com/Agony5757/mahjong/compare/v1.1.1...v1.1.2">1.1.2</a> - 2026-04-30<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<section id="fixed">
+<h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">get_scores()</span></code> binding missing in pybind11 (was causing <code class="docutils literal notranslate"><span class="pre">AttributeError</span></code> in <code class="docutils literal notranslate"><span class="pre">web/game_manager.py</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seed</span></code> attribute assignment fixed: use <code class="docutils literal notranslate"><span class="pre">set_seed()</span></code> instead of direct member access</p></li>
+<li><p>All <code class="docutils literal notranslate"><span class="pre">to_string()</span></code> methods returning <code class="docutils literal notranslate"><span class="pre">bytes</span></code> instead of <code class="docutils literal notranslate"><span class="pre">str</span></code> (pybind11 <code class="docutils literal notranslate"><span class="pre">py::bytes</span></code> → <code class="docutils literal notranslate"><span class="pre">py::str</span></code>)</p></li>
+<li><p>CI workflow test invocation broken after <code class="docutils literal notranslate"><span class="pre">test()</span></code> removal from public API</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">pymahjong</span></code> failing in environments without torch (lazy-load RL model imports)</p></li>
+</ul>
+</section>
+<section id="changed">
+<h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Established clean public <code class="docutils literal notranslate"><span class="pre">__all__</span></code> API surface: 36 symbols, explicit imports, no wildcard pollution</p></li>
+<li><p>Added <code class="docutils literal notranslate"><span class="pre">__version__</span></code> from setuptools-scm build-time injection</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test()</span></code> moved to internal <code class="docutils literal notranslate"><span class="pre">pymahjong.test</span></code> module (not part of public API)</p></li>
+<li><p>Python submodules now export <code class="docutils literal notranslate"><span class="pre">__all__</span></code></p></li>
+<li><p>Renamed <code class="docutils literal notranslate"><span class="pre">paipu_replay_1</span></code> → <code class="docutils literal notranslate"><span class="pre">paipu_replay_summary</span></code></p></li>
+<li><p>Removed deprecated <code class="docutils literal notranslate"><span class="pre">env_mahjong.py</span></code> (superseded by <code class="docutils literal notranslate"><span class="pre">env_pymahjong.py</span></code>)</p></li>
+</ul>
+</section>
 <section id="added">
 <h3>Added<a class="headerlink" href="#added" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/cpp_api/</span></code> — C++ engine API reference documentation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/advanced/state_machine.md</span></code> — C++ engine phase/state machine reference</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/web_frontend.md</span></code> — Web frontend (FastAPI + Canvas) documentation</p></li>
+<li><p>C++ <code class="docutils literal notranslate"><span class="pre">ScoreTable</span></code>, <code class="docutils literal notranslate"><span class="pre">YakuDetector</span></code>, <code class="docutils literal notranslate"><span class="pre">FuCalculator</span></code> modules</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">web/</span></code> — Web UI for human-vs-AI, 4-AI battle, and paipu replay</p></li>
+</ul>
+</section>
+</section>
+<section id="xx-xx">
+<h2><a class="reference external" href="https://github.com/Agony5757/mahjong/compare/v1.0.5...v1.1.0">1.1.0</a> - 2024-XX-XX<a class="headerlink" href="#xx-xx" title="Link to this heading">¶</a></h2>
+<section id="id2">
+<h3>Added<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Modern build system using <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> with scikit-build-core</p></li>
 <li><p>cibuildwheel GitHub Actions for cross-platform wheel building</p></li>
@@ -270,8 +304,8 @@ and this project adheres to <a class="reference external" href="https://semver.o
 <li><p>GitHub Pages documentation deployment</p></li>
 </ul>
 </section>
-<section id="changed">
-<h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">¶</a></h3>
+<section id="id3">
+<h3>Changed<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Python version support updated to 3.10-3.14 (dropped 3.8, 3.9)</p></li>
 <li><p>pybind11 is now a build dependency instead of vendored</p></li>
@@ -287,34 +321,34 @@ and this project adheres to <a class="reference external" href="https://semver.o
 </section>
 <section id="xx">
 <h2><a class="reference external" href="https://github.com/Agony5757/mahjong/compare/v1.0.4...v1.0.5">1.0.5</a> - 2024-01-XX<a class="headerlink" href="#xx" title="Link to this heading">¶</a></h2>
-<section id="id1">
-<h3>Changed<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<section id="id4">
+<h3>Changed<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Migrated from gym to gymnasium for modern compatibility</p></li>
 <li><p>Fixed CI workflow for compatibility with modern GitHub Actions runners</p></li>
 </ul>
 </section>
 </section>
-<section id="id2">
-<h2><a class="reference external" href="https://github.com/Agony5757/mahjong/compare/v1.0.0...v1.0.4">1.0.4</a> - 2023-XX-XX<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
-<section id="id3">
-<h3>Added<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<section id="id5">
+<h2><a class="reference external" href="https://github.com/Agony5757/mahjong/compare/v1.0.0...v1.0.4">1.0.4</a> - 2023-XX-XX<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h2>
+<section id="id6">
+<h3>Added<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Pretrained VLOG models (CQL and BC variants)</p></li>
 <li><p>Offline dataset for training</p></li>
 </ul>
 </section>
-<section id="fixed">
-<h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading">¶</a></h3>
+<section id="id7">
+<h3>Fixed<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Various bug fixes and performance improvements</p></li>
 </ul>
 </section>
 </section>
-<section id="id4">
-<h2><a class="reference external" href="https://github.com/Agony5757/mahjong/releases/tag/v1.0.0">1.0.0</a> - 2022-XX-XX<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h2>
-<section id="id5">
-<h3>Added<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
+<section id="id8">
+<h2><a class="reference external" href="https://github.com/Agony5757/mahjong/releases/tag/v1.0.0">1.0.0</a> - 2022-XX-XX<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h2>
+<section id="id9">
+<h3>Added<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Initial release</p></li>
 <li><p>Complete Japanese Riichi Mahjong rules implementation</p></li>
@@ -376,23 +410,29 @@ and this project adheres to <a class="reference external" href="https://semver.o
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Changelog</a><ul>
-<li><a class="reference internal" href="#xx-xx">1.1.0 - 2024-XX-XX</a><ul>
-<li><a class="reference internal" href="#added">Added</a></li>
+<li><a class="reference internal" href="#id1">1.1.2 - 2026-04-30</a><ul>
+<li><a class="reference internal" href="#fixed">Fixed</a></li>
 <li><a class="reference internal" href="#changed">Changed</a></li>
+<li><a class="reference internal" href="#added">Added</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xx-xx">1.1.0 - 2024-XX-XX</a><ul>
+<li><a class="reference internal" href="#id2">Added</a></li>
+<li><a class="reference internal" href="#id3">Changed</a></li>
 <li><a class="reference internal" href="#removed">Removed</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#xx">1.0.5 - 2024-01-XX</a><ul>
-<li><a class="reference internal" href="#id1">Changed</a></li>
+<li><a class="reference internal" href="#id4">Changed</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id2">1.0.4 - 2023-XX-XX</a><ul>
-<li><a class="reference internal" href="#id3">Added</a></li>
-<li><a class="reference internal" href="#fixed">Fixed</a></li>
+<li><a class="reference internal" href="#id5">1.0.4 - 2023-XX-XX</a><ul>
+<li><a class="reference internal" href="#id6">Added</a></li>
+<li><a class="reference internal" href="#id7">Fixed</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id4">1.0.0 - 2022-XX-XX</a><ul>
-<li><a class="reference internal" href="#id5">Added</a></li>
+<li><a class="reference internal" href="#id8">1.0.0 - 2022-XX-XX</a><ul>
+<li><a class="reference internal" href="#id9">Added</a></li>
 </ul>
 </li>
 </ul>

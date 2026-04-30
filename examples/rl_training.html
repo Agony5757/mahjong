@@ -258,15 +258,17 @@
 <p>This example shows how to train a reinforcement learning agent with pymahjong.</p>
 <section id="setup">
 <h2>Setup<a class="headerlink" href="#setup" title="Link to this heading">¶</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>pymahjong<span class="w"> </span>torch<span class="w"> </span>stable-baselines3
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>pymahjong<span class="w"> </span>torch<span class="w"> </span>gymnasium<span class="w"> </span>sb3-contrib
 </pre></div>
 </div>
 </section>
-<section id="ppo-with-stable-baselines3">
-<h2>PPO with Stable-Baselines3<a class="headerlink" href="#ppo-with-stable-baselines3" title="Link to this heading">¶</a></h2>
+<section id="ppo-with-sb3-contrib">
+<h2>PPO with sb3-contrib<a class="headerlink" href="#ppo-with-sb3-contrib" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">sb3-contrib</span></code> is the recommended package for training with gymnasium environments.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">gymnasium</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gym</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stable_baselines3</span><span class="w"> </span><span class="kn">import</span> <span class="n">PPO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sb3_contrib</span><span class="w"> </span><span class="kn">import</span> <span class="n">MaskablePPO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sb3_contrib.common.wrappers</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActionMasker</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stable_baselines3.common.vec_env</span><span class="w"> </span><span class="kn">import</span> <span class="n">DummyVecEnv</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stable_baselines3.common.callbacks</span><span class="w"> </span><span class="kn">import</span> <span class="n">EvalCallback</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pymahjong</span>
@@ -289,33 +291,23 @@
         <span class="n">obs</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">obs</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">info</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_valid_actions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nhot</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">get_valid_actions</span><span class="p">(</span><span class="n">nhot</span><span class="o">=</span><span class="n">nhot</span><span class="p">)</span>
-
-
-<span class="k">class</span><span class="w"> </span><span class="nc">ActionMaskWrapper</span><span class="p">(</span><span class="n">gym</span><span class="o">.</span><span class="n">ActionWrapper</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Mask invalid actions by sampling from valid ones.&quot;&quot;&quot;</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">):</span>
-        <span class="c1"># The action is already validated by our custom policy</span>
-        <span class="k">return</span> <span class="n">action</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">valid_actions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">get_valid_actions</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_action_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return boolean mask of valid actions (required by sb3-contrib ActionMasker).&quot;&quot;&quot;</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">54</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">mask</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">get_valid_actions</span><span class="p">()]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">mask</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">make_env</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">ActionMaskWrapper</span><span class="p">(</span><span class="n">MahjongGymWrapper</span><span class="p">(</span><span class="n">opponent_agent</span><span class="o">=</span><span class="s2">&quot;random&quot;</span><span class="p">))</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">MahjongGymWrapper</span><span class="p">(</span><span class="n">opponent_agent</span><span class="o">=</span><span class="s2">&quot;random&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ActionMasker</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">)</span>
 
 
 <span class="c1"># Create vectorized environment</span>
 <span class="n">env</span> <span class="o">=</span> <span class="n">DummyVecEnv</span><span class="p">([</span><span class="n">make_env</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)])</span>
 
-<span class="c1"># Create PPO model</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">PPO</span><span class="p">(</span>
+<span class="c1"># Create MaskablePPO model (supports action masking via sb3-contrib)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">MaskablePPO</span><span class="p">(</span>
     <span class="s2">&quot;MlpPolicy&quot;</span><span class="p">,</span>
     <span class="n">env</span><span class="p">,</span>
     <span class="n">learning_rate</span><span class="o">=</span><span class="mf">3e-4</span><span class="p">,</span>
@@ -336,45 +328,15 @@
 </section>
 <section id="custom-policy-with-action-masking">
 <h2>Custom Policy with Action Masking<a class="headerlink" href="#custom-policy-with-action-masking" title="Link to this heading">¶</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<p>With <code class="docutils literal notranslate"><span class="pre">MaskablePPO</span></code> and <code class="docutils literal notranslate"><span class="pre">ActionMasker</span></code>, action masking is handled automatically. For a custom policy:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sb3_contrib.common.policies</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActorCriticCnnPolicy</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stable_baselines3.common.policies</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActorCriticPolicy</span>
 
-
-<span class="k">class</span><span class="w"> </span><span class="nc">MaskedActorCriticPolicy</span><span class="p">(</span><span class="n">ActorCriticPolicy</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Policy that properly handles action masking.&quot;&quot;&quot;</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">,</span> <span class="n">deterministic</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="c1"># Get base outputs</span>
-        <span class="n">latent_pi</span><span class="p">,</span> <span class="n">latent_vf</span><span class="p">,</span> <span class="n">latent_sde</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_latent</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
-
-        <span class="c1"># Evaluate actions</span>
-        <span class="n">actions</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">log_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_evaluate_actions</span><span class="p">(</span>
-            <span class="n">latent_pi</span><span class="p">,</span> <span class="n">latent_vf</span><span class="p">,</span> <span class="n">latent_sde</span><span class="p">,</span> <span class="n">obs</span><span class="p">,</span> <span class="n">deterministic</span><span class="o">=</span><span class="n">deterministic</span>
-        <span class="p">)</span>
-
-        <span class="c1"># Get valid actions from environment (if available)</span>
-        <span class="c1"># This requires passing action mask through observation or separate channel</span>
-        <span class="k">return</span> <span class="n">actions</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">log_prob</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_get_action_distribution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
-        <span class="c1"># Override to add action masking</span>
-        <span class="n">latent_pi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_features</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
-        <span class="n">latent_pi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mlp_extractor</span><span class="o">.</span><span class="n">forward_actor</span><span class="p">(</span><span class="n">latent_pi</span><span class="p">)</span>
-        <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_net</span><span class="p">(</span><span class="n">latent_pi</span><span class="p">)</span>
-
-        <span class="c1"># Apply mask (requires mask in obs or separate handling)</span>
-        <span class="c1"># This is a simplified example</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_distribution</span><span class="p">(</span><span class="n">logits</span><span class="p">)</span>
-
-
-<span class="c1"># Use custom policy</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">PPO</span><span class="p">(</span>
-    <span class="n">MaskedActorCriticPolicy</span><span class="p">,</span>
+<span class="c1"># Use standard MlpPolicy — ActionMasker handles masking at env level</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">MaskablePPO</span><span class="p">(</span>
+    <span class="s2">&quot;MlpPolicy&quot;</span><span class="p">,</span>
     <span class="n">env</span><span class="p">,</span>
+    <span class="n">policy_kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">net_arch</span><span class="o">=</span><span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="n">pi</span><span class="o">=</span><span class="p">[</span><span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">],</span> <span class="n">vf</span><span class="o">=</span><span class="p">[</span><span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">])]),</span>
     <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
@@ -627,7 +589,7 @@
             <ul>
 <li><a class="reference internal" href="#">RL Training Example</a><ul>
 <li><a class="reference internal" href="#setup">Setup</a></li>
-<li><a class="reference internal" href="#ppo-with-stable-baselines3">PPO with Stable-Baselines3</a></li>
+<li><a class="reference internal" href="#ppo-with-sb3-contrib">PPO with sb3-contrib</a></li>
 <li><a class="reference internal" href="#custom-policy-with-action-masking">Custom Policy with Action Masking</a></li>
 <li><a class="reference internal" href="#pytorch-dqn-implementation">PyTorch DQN Implementation</a></li>
 <li><a class="reference internal" href="#evaluation">Evaluation</a></li>

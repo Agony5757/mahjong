@@ -15,8 +15,8 @@ pip install pymahjong
 ## Verify Installation
 
 ```python
-import pymahjong as pm
-pm.test()
+from pymahjong.test import test
+test()
 ```
 
 If installation is successful, you should see output like:
