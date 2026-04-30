@@ -8,6 +8,7 @@ A Japanese Mahjong environment for decision AI research.
 
 installation
 quickstart
+demo
 api/index
 advanced/index
 examples/index
