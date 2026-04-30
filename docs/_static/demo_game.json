@@ -1,0 +1,124 @@
+{
+  "steps": [
+    {
+      "turn": 0,
+      "oya": 0,
+      "honba": 0,
+      "riichibo": 0,
+      "dora": ["3p"],
+      "scores": [25000, 25000, 25000, 25000],
+      "last_action": "start",
+      "players": [
+        {"hand": ["1m", "2m", "3m", "4m", "5m", "6m", "2p", "3p", "4p", "7s", "8s", "9s", "5z", "5z"], "river": [], "score": 25000, "riichi": false},
+        {"hand": ["2m", "2m", "7m", "8m", "9m", "1p", "1p", "6p", "7p", "8p", "3s", "4s", "5s"], "river": [], "score": 25000, "riichi": false},
+        {"hand": ["3m", "4m", "5m", "7m", "8m", "9m", "2p", "2p", "2p", "6s", "7s", "8s", "1z"], "river": [], "score": 25000, "riichi": false},
+        {"hand": ["1m", "1m", "6m", "6m", "6m", "3p", "4p", "5p", "5s", "5s", "5s", "6z", "7z"], "river": [], "score": 25000, "riichi": false}
+      ]
+    },
+    {
+      "turn": 1,
+      "oya": 0,
+      "honba": 0,
+      "riichibo": 0,
+      "dora": ["3p"],
+      "scores": [25000, 25000, 25000, 25000],
+      "last_action": "discard",
+      "players": [
+        {"hand": ["1m", "2m", "3m", "4m", "5m", "6m", "2p", "3p", "4p", "7s", "8s", "5z", "5z"], "river": ["9s"], "score": 25000, "riichi": false},
+        {"hand": ["2m", "2m", "7m", "8m", "9m", "1p", "1p", "6p", "7p", "8p", "3s", "4s", "5s"], "river": [], "score": 25000, "riichi": false},
+        {"hand": ["3m", "4m", "5m", "7m", "8m", "9m", "2p", "2p", "2p", "6s", "7s", "8s", "1z"], "river": [], "score": 25000, "riichi": false},
+        {"hand": ["1m", "1m", "6m", "6m", "6m", "3p", "4p", "5p", "5s", "5s", "5s", "6z", "7z"], "river": [], "score": 25000, "riichi": false}
+      ]
+    },
+    {
+      "turn": 2,
+      "oya": 0,
+      "honba": 0,
+      "riichibo": 0,
+      "dora": ["3p"],
+      "scores": [25000, 25000, 25000, 25000],
+      "last_action": "discard",
+      "players": [
+        {"hand": ["1m", "2m", "3m", "4m", "5m", "6m", "2p", "3p", "4p", "7s", "8s", "5z", "5z"], "river": ["9s"], "score": 25000, "riichi": false},
+        {"hand": ["2m", "2m", "7m", "8m", "1p", "1p", "6p", "7p", "8p", "3s", "4s", "5s"], "river": ["9m"], "score": 25000, "riichi": false},
+        {"hand": ["3m", "4m", "5m", "7m", "8m", "9m", "2p", "2p", "2p", "6s", "7s", "8s", "1z"], "river": [], "score": 25000, "riichi": false},
+        {"hand": ["1m", "1m", "6m", "6m", "6m", "3p", "4p", "5p", "5s", "5s", "5s", "6z", "7z"], "river": [], "score": 25000, "riichi": false}
+      ]
+    },
+    {
+      "turn": 3,
+      "oya": 0,
+      "honba": 0,
+      "riichibo": 0,
+      "dora": ["3p"],
+      "scores": [25000, 25000, 25000, 25000],
+      "last_action": "discard",
+      "players": [
+        {"hand": ["1m", "2m", "3m", "4m", "5m", "6m", "2p", "3p", "4p", "7s", "8s", "5z", "5z"], "river": ["9s"], "score": 25000, "riichi": false},
+        {"hand": ["2m", "2m", "7m", "8m", "1p", "1p", "6p", "7p", "8p", "3s", "4s", "5s"], "river": ["9m"], "score": 25000, "riichi": false},
+        {"hand": ["3m", "4m", "5m", "7m", "8m", "9m", "2p", "2p", "2p", "6s", "7s", "8s"], "river": ["1z"], "score": 25000, "riichi": false},
+        {"hand": ["1m", "1m", "6m", "6m", "6m", "3p", "4p", "5p", "5s", "5s", "5s", "6z", "7z"], "river": [], "score": 25000, "riichi": false}
+      ]
+    },
+    {
+      "turn": 0,
+      "oya": 0,
+      "honba": 0,
+      "riichibo": 0,
+      "dora": ["3p"],
+      "scores": [25000, 25000, 25000, 25000],
+      "last_action": "discard",
+      "players": [
+        {"hand": ["1m", "2m", "3m", "4m", "5m", "6m", "2p", "3p", "4p", "7s", "8s", "5z", "5z"], "river": ["9s"], "score": 25000, "riichi": false},
+        {"hand": ["2m", "2m", "7m", "8m", "1p", "1p", "6p", "7p", "8p", "3s", "4s", "5s"], "river": ["9m"], "score": 25000, "riichi": false},
+        {"hand": ["3m", "4m", "5m", "7m", "8m", "9m", "2p", "2p", "2p", "6s", "7s", "8s"], "river": ["1z"], "score": 25000, "riichi": false},
+        {"hand": ["1m", "1m", "6m", "6m", "6m", "3p", "4p", "5p", "5s", "5s", "5s", "6z"], "river": ["7z"], "score": 25000, "riichi": false}
+      ]
+    },
+    {
+      "turn": 1,
+      "oya": 0,
+      "honba": 0,
+      "riichibo": 1,
+      "dora": ["3p"],
+      "scores": [24000, 25000, 25000, 25000],
+      "last_action": "riichi",
+      "players": [
+        {"hand": ["1m", "2m", "3m", "4m", "5m", "6m", "2p", "3p", "4p", "7s", "8s", "5z", "6z"], "river": ["9s", "5z"], "score": 24000, "riichi": true},
+        {"hand": ["2m", "2m", "7m", "8m", "1p", "1p", "6p", "7p", "8p", "3s", "4s", "5s"], "river": ["9m"], "score": 25000, "riichi": false},
+        {"hand": ["3m", "4m", "5m", "7m", "8m", "9m", "2p", "2p", "2p", "6s", "7s", "8s"], "river": ["1z"], "score": 25000, "riichi": false},
+        {"hand": ["1m", "1m", "6m", "6m", "6m", "3p", "4p", "5p", "5s", "5s", "5s", "6z"], "river": ["7z"], "score": 25000, "riichi": false}
+      ]
+    },
+    {
+      "turn": 2,
+      "oya": 0,
+      "honba": 0,
+      "riichibo": 1,
+      "dora": ["3p"],
+      "scores": [24000, 25000, 25000, 25000],
+      "last_action": "discard",
+      "players": [
+        {"hand": ["1m", "2m", "3m", "4m", "5m", "6m", "2p", "3p", "4p", "7s", "8s", "5z", "6z"], "river": ["9s", "5z"], "score": 24000, "riichi": true},
+        {"hand": ["2m", "2m", "7m", "8m", "1p", "6p", "7p", "8p", "3s", "4s", "5s"], "river": ["9m", "1p"], "score": 25000, "riichi": false},
+        {"hand": ["3m", "4m", "5m", "7m", "8m", "9m", "2p", "2p", "2p", "6s", "7s", "8s"], "river": ["1z"], "score": 25000, "riichi": false},
+        {"hand": ["1m", "1m", "6m", "6m", "6m", "3p", "4p", "5p", "5s", "5s", "5s", "6z"], "river": ["7z"], "score": 25000, "riichi": false}
+      ]
+    },
+    {
+      "turn": 3,
+      "oya": 0,
+      "honba": 0,
+      "riichibo": 1,
+      "dora": ["3p"],
+      "scores": [24000, 25000, 25000, 25000],
+      "last_action": "discard",
+      "players": [
+        {"hand": ["1m", "2m", "3m", "4m", "5m", "6m", "2p", "3p", "4p", "7s", "8s", "5z", "6z"], "river": ["9s", "5z"], "score": 24000, "riichi": true},
+        {"hand": ["2m", "2m", "7m", "8m", "1p", "6p", "7p", "8p", "3s", "4s", "5s"], "river": ["9m", "1p"], "score": 25000, "riichi": false},
+        {"hand": ["3m", "4m", "5m", "7m", "8m", "9m", "2p", "2p", "2p", "6s", "7s"], "river": ["1z", "8s"], "score": 25000, "riichi": false},
+        {"hand": ["1m", "1m", "6m", "6m", "6m", "3p", "4p", "5p", "5s", "5s", "5s", "6z"], "river": ["7z"], "score": 25000, "riichi": false}
+      ]
+    }
+  ]
+}

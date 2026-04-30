@@ -1,4 +1,5 @@
-# 术语对照表 / Terminology Glossary
+术语对照表 / Terminology Glossary
+=================================
 
 本文件列出 pymahjong 代码中所有关键术语的中文、日文（罗马字）、英文对照，
 以及对应的 Python/C++ 变量名。

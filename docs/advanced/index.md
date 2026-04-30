@@ -19,5 +19,5 @@ For complete C++ API documentation (classes, functions, data structures), see:
 :maxdepth: 2
 :caption: C++ API
 
-cpp_api/index
+/cpp_api/index
 ```

@@ -34,27 +34,10 @@ The environment was introduced in the research article ["Variational Oracle Guid
 
 ## Quick Links
 
-```{panels}
-:container: +full-width
-
-Installation
-^^^
-```{badge} pip install pymahjong,badge-primary
-```
-[Installation Guide](installation.md)
-```
-
-Quick Start
-^^^
-Get started with basic usage examples.
-[Quick Start Guide](quickstart.md)
-```
-
-API Reference
-^^^
-Complete API documentation.
-[API Reference](api/index.md)
-```
+- [Installation Guide](installation.md)
+- [Quick Start Guide](quickstart.md)
+- {doc}`Live Demo <demo>`
+- [API Reference](api/index.md)
 
 ## Citation
 
