@@ -200,6 +200,22 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		"Returns 0 for agari, 1 for tenpai, 2 for 1-shanten, and so on."
 	);
 
+	m.def(
+		"is_ordinary_agari",
+		[](const std::string& hand) {
+			std::vector<BaseTile> tiles;
+			auto counts = parse_compact_tiles(hand);
+			for (int tile = 0; tile < 34; ++tile) {
+				for (int copy = 0; copy < counts[tile]; ++copy) {
+					tiles.push_back(static_cast<BaseTile>(tile));
+				}
+			}
+			return is_ordinary_shape(tiles);
+		},
+		py::arg("hand"),
+		"Check whether a compact hand string is an ordinary 4-meld-1-pair agari shape."
+	);
+
 	py::class_<Player>(m, "Player", "A Mahjong player with hand, river, and game state.")
 		// 成员变量们
 		.def_readonly("double_riichi", &Player::double_riichi, "Whether double riichi was declared.")
