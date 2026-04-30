@@ -44,14 +44,15 @@ from MahjongPyWrapper import (  # noqa: F401, F403
     get_response_action_index,
 )
 
-# RL models
-from pymahjong.models import VLOGMahjong
-from pymahjong.base_modules import (
-    MinusOneModule,
-    MahjongNet,
-    DiscreteActionQNetwork,
-    DiscreteActionPolicyNetwork,
-)
+# RL models (lazy-loaded, torch is an optional dependency)
+def __getattr__(name):
+    if name == "VLOGMahjong":
+        from pymahjong.models import VLOGMahjong
+        return VLOGMahjong
+    if name in ("MinusOneModule", "MahjongNet", "DiscreteActionQNetwork", "DiscreteActionPolicyNetwork"):
+        from pymahjong import base_modules
+        return getattr(base_modules, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 # Utilities
 from pymahjong.tenhou_paipu_check import paipu_replay, paipu_replay_summary
