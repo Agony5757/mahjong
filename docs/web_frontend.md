@@ -398,7 +398,7 @@ print('ok')
 
 ```bash
 cd /home/agony/projects/mahjong-dev
-python3 -c "import pymahjong as pm; pm.test()"
+python3 -c "from pymahjong.test import test; test()"
 ```
 
 此测试验证 `MahjongEnv`（游戏引擎）核心逻辑未被影响。

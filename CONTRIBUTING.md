@@ -23,7 +23,7 @@ uv venv && source .venv/bin/activate
 uv pip install ".[dev,docs]"
 
 # Verify installation
-python -c "import pymahjong as pm; pm.test()"
+python -c "from pymahjong.test import test; test()"
 ```
 
 ### Build C++ Native Module
@@ -56,7 +56,7 @@ ruff format pymahjong/
 
 ## Pull Request Process
 
-1. **Create a branch** from `develop` with a descriptive name:
+1. **Create a branch** from `master` with a descriptive name:
    - `feature/add-new-encoding` for new features
    - `fix/observation-bug` for bug fixes
    - `docs/api-reference` for documentation
@@ -65,12 +65,12 @@ ruff format pymahjong/
 
 3. **Test your changes**:
    ```bash
-   python -c "import pymahjong as pm; pm.test()"
+   python -c "from pymahjong.test import test; test()"
    ```
 
 4. **Update documentation** if you've added or changed public APIs
 
-5. **Open a Pull Request** against the `develop` branch with:
+5. **Open a Pull Request** against the `master` branch with:
    - A clear description of the change
    - Any relevant issue references
    - Test results or screenshots if applicable

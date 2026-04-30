@@ -26,8 +26,8 @@ pip install pymahjong
 Verify the installation:
 
 ```python
-import pymahjong
-pymahjong.test()
+from pymahjong.test import test
+test()
 ```
 
 ## Quick Start
@@ -88,7 +88,7 @@ Full documentation is available at [https://agony5757.github.io/mahjong/](https:
 
 ## Pretrained Models
 
-Pretrained opponent models are available from the [GitHub releases](https://github.com/Agony5757/mahjong/releases/tag/v1.0.2):
+Pretrained opponent models are available from the [GitHub releases](https://github.com/Agony5757/mahjong/releases/tag/v1.0.4):
 
 ```python
 env = pymahjong.SingleAgentMahjongEnv(opponent_agent="path/to/model.pth")
@@ -96,7 +96,7 @@ env = pymahjong.SingleAgentMahjongEnv(opponent_agent="path/to/model.pth")
 
 ## Offline Dataset
 
-Human demonstration data from Tenhou.net (6 dan+ players) is available for offline RL research. [Download from releases](https://github.com/Agony5757/mahjong/releases/tag/v1.0.2).
+Human demonstration data from Tenhou.net (6 dan+ players) is available for offline RL research. [Download from releases](https://github.com/Agony5757/mahjong/releases/tag/v1.0.4).
 
 ## Contributing
 

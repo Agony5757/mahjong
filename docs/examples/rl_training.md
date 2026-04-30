@@ -5,15 +5,18 @@ This example shows how to train a reinforcement learning agent with pymahjong.
 ## Setup
 
 ```bash
-pip install pymahjong torch stable-baselines3
+pip install pymahjong torch gymnasium sb3-contrib
 ```
 
-## PPO with Stable-Baselines3
+## PPO with sb3-contrib
+
+`sb3-contrib` is the recommended package for training with gymnasium environments.
 
 ```python
 import gymnasium as gym
 import numpy as np
-from stable_baselines3 import PPO
+from sb3_contrib import MaskablePPO
+from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.callbacks import EvalCallback
 import pymahjong
@@ -36,33 +39,23 @@ class MahjongGymWrapper(gym.Env):
         obs, reward, done, info = self.env.step(action)
         return obs, reward, done, False, info
 
-    def get_valid_actions(self, nhot=False):
-        return self.env.get_valid_actions(nhot=nhot)
-
-
-class ActionMaskWrapper(gym.ActionWrapper):
-    """Mask invalid actions by sampling from valid ones."""
-
-    def __init__(self, env):
-        super().__init__(env)
-
-    def action(self, action):
-        # The action is already validated by our custom policy
-        return action
-
-    def valid_actions(self):
-        return self.env.get_valid_actions()
+    def get_action_mask(self):
+        """Return boolean mask of valid actions (required by sb3-contrib ActionMasker)."""
+        mask = np.zeros(54, dtype=bool)
+        mask[self.env.get_valid_actions()] = True
+        return mask
 
 
 def make_env():
-    return ActionMaskWrapper(MahjongGymWrapper(opponent_agent="random"))
+    env = MahjongGymWrapper(opponent_agent="random")
+    return ActionMasker(env, np.ones)
 
 
 # Create vectorized environment
 env = DummyVecEnv([make_env for _ in range(4)])
 
-# Create PPO model
-model = PPO(
+# Create MaskablePPO model (supports action masking via sb3-contrib)
+model = MaskablePPO(
     "MlpPolicy",
     env,
     learning_rate=3e-4,
@@ -82,46 +75,17 @@ model.save("ppo_mahjong")
 
 ## Custom Policy with Action Masking
 
+With `MaskablePPO` and `ActionMasker`, action masking is handled automatically. For a custom policy:
+
 ```python
-import torch
-import torch.nn as nn
+from sb3_contrib.common.policies import ActorCriticCnnPolicy
 from stable_baselines3.common.policies import ActorCriticPolicy
 
-
-class MaskedActorCriticPolicy(ActorCriticPolicy):
-    """Policy that properly handles action masking."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def forward(self, obs, deterministic=False):
-        # Get base outputs
-        latent_pi, latent_vf, latent_sde = self._get_latent(obs)
-
-        # Evaluate actions
-        actions, values, log_prob = self._evaluate_actions(
-            latent_pi, latent_vf, latent_sde, obs, deterministic=deterministic
-        )
-
-        # Get valid actions from environment (if available)
-        # This requires passing action mask through observation or separate channel
-        return actions, values, log_prob
-
-    def _get_action_distribution(self, obs):
-        # Override to add action masking
-        latent_pi = self.extract_features(obs)
-        latent_pi = self.mlp_extractor.forward_actor(latent_pi)
-        logits = self.action_net(latent_pi)
-
-        # Apply mask (requires mask in obs or separate handling)
-        # This is a simplified example
-        return self._get_distribution(logits)
-
-
-# Use custom policy
-model = PPO(
-    MaskedActorCriticPolicy,
+# Use standard MlpPolicy — ActionMasker handles masking at env level
+model = MaskablePPO(
+    "MlpPolicy",
     env,
+    policy_kwargs=dict(net_arch=[dict(pi=[256, 256], vf=[256, 256])]),
     verbose=1,
 )
 ```
