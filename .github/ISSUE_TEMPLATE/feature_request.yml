@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose a user-facing feature, API addition, or tooling improvement.
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user or developer problem does this solve?
+      placeholder: It is hard to validate normal-hand shanten edge cases without building a whole table state.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the API, behavior, or workflow you want.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds, competing approaches, or prior art.
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Who benefits, and what areas of the repository would likely change?
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I searched existing issues and pull requests first.
+          required: true

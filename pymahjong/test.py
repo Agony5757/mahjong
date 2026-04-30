@@ -1,6 +1,29 @@
 import time
 import numpy as np
 from .env_pymahjong import MahjongEnv, SingleAgentMahjongEnv
+from MahjongPyWrapper import normal_round_to_win
+
+
+def test_shanten_regressions():
+    """Run deterministic regression checks for normal-hand shanten search.
+
+    ``normal_round_to_win`` uses the historical project convention:
+    0 for agari, 1 for tenpai, 2 for 1-shanten, and so on.
+    """
+
+    cases = [
+        ("123m123p123s111z22z", 0, 0),
+        ("123m123p123s111z2z", 0, 1),
+        ("245568m245568p77s", 0, 3),  # Issue #30: 2-shanten in standard notation
+        ("123m456m11p56s", 1, 1),
+    ]
+
+    for hand, num_open_melds, expected in cases:
+        actual = normal_round_to_win(hand, num_open_melds)
+        assert actual == expected, (
+            f"normal_round_to_win({hand!r}, {num_open_melds}) = {actual}, "
+            f"expected {expected}"
+        )
 
 
 def test(num_games=100):

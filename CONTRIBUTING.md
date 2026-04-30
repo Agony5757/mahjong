@@ -1,99 +1,135 @@
 # Contributing to pymahjong
 
-Thank you for your interest in contributing! This guide covers the basics for getting started.
+Thanks for contributing. This repository mixes a C++ Mahjong engine, pybind11 bindings, Python environments, and documentation, so small, focused pull requests are much easier to review and validate than broad refactors.
+
+## Before You Start
+
+- Search existing [issues](https://github.com/Agony5757/mahjong/issues) before opening a new one.
+- For behavior changes, include a concrete reproduction or paipu fragment whenever possible.
+- For substantial design changes, open an issue first so the direction can be aligned before implementation.
 
 ## Development Setup
 
 ### Prerequisites
 
 - Python 3.10+
-- C++14 compatible compiler (GCC 7+, Clang 5+, MSVC 2019+)
 - CMake 3.15+
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- A C++14 compiler
+- `uv` (recommended) or `pip`
 
-### Install for Development
+### Install a Development Environment
 
 ```bash
-# Clone the repository
 git clone https://github.com/Agony5757/mahjong.git
 cd mahjong
 
-# Create virtual environment and install
-uv venv && source .venv/bin/activate
+uv venv
+source .venv/bin/activate
 uv pip install ".[dev,docs]"
-
-# Verify installation
-python -c "from pymahjong.test import test; test()"
 ```
 
-### Build C++ Native Module
+If you prefer `pip`, the equivalent is:
 
 ```bash
-mkdir build && cd build
-cmake .. -DCMAKE_CXX_COMPILER=clang++
-make -j$(nproc)
-./bin/test
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install ".[dev,docs]"
 ```
 
-## Code Style
+## Repository Layout
 
-### Python
-
-- Follow [PEP 8](https://peps.python.org/pep-0008/) with a line length of 88 characters
-- Use [ruff](https://docs.astral.sh/ruff/) for linting and formatting
-- Write docstrings in [Google style](https://google.github.io/styleguide/pyguide.html#384-classes) for all public APIs
-
-```bash
-ruff check pymahjong/
-ruff format pymahjong/
-```
-
-### C++
-
-- Follow C++14 standard
-- Use `clang-format` with the project's `.clang-format` configuration
-- Add comments for non-obvious logic
-
-## Pull Request Process
-
-1. **Create a branch** from `master` with a descriptive name:
-   - `feature/add-new-encoding` for new features
-   - `fix/observation-bug` for bug fixes
-   - `docs/api-reference` for documentation
-
-2. **Make your changes** with clear, focused commits
-
-3. **Test your changes**:
-   ```bash
-   python -c "from pymahjong.test import test; test()"
-   ```
-
-4. **Update documentation** if you've added or changed public APIs
-
-5. **Open a Pull Request** against the `master` branch with:
-   - A clear description of the change
-   - Any relevant issue references
-   - Test results or screenshots if applicable
-
-## Reporting Issues
-
-When filing a bug report, please include:
-
-- Python version and OS
-- pymahjong version (`pip show pymahjong`)
-- A minimal reproducible example
-- Expected vs. actual behavior
-
-## Project Structure
-
-```
-Mahjong/          C++ game engine (rules, scoring, game logic)
-Pybinder/         pybind11 bindings (C++ -> Python)
-pymahjong/        Python package (environments, models, utilities)
-docs/             Sphinx documentation
+```text
+Mahjong/          Core C++ rules, scoring, and state transitions
+Pybinder/         pybind11 bindings
+pymahjong/        Python APIs, environments, and utilities
+web/              Browser UI and replay tooling
+docs/             Sphinx documentation source
+test/             Native test executable
 ThirdParty/       Vendored dependencies
 ```
 
+## What to Run Before Opening a PR
+
+Run the checks that match your change surface.
+
+### Core Python and binding checks
+
+```bash
+python -c "from pymahjong.test import test_shanten_regressions, test; test_shanten_regressions(); test()"
+```
+
+### Documentation build
+
+```bash
+cd docs
+make html
+```
+
+### Native build smoke test
+
+```bash
+mkdir -p build
+cd build
+cmake ..
+cmake --build . -j
+```
+
+If your change touches the web client, include the exact manual or automated checks you ran in the PR description.
+
+## Coding Expectations
+
+### Python
+
+- Follow PEP 8.
+- Prefer explicit, readable names over compact logic.
+- Keep public APIs documented with docstrings.
+
+### C++
+
+- Target C++14 unless the repository is explicitly upgraded.
+- Keep ownership and lifetime behavior obvious.
+- Add brief comments for non-obvious algorithms or rule edge cases.
+- Avoid introducing dependencies for small, self-contained helpers.
+
+### Tests
+
+- Every bug fix should add or update a regression test.
+- Prefer deterministic repro cases over only relying on random-play smoke tests.
+- If an issue references a specific hand, rule interaction, or replay, turn that into an executable test where possible.
+
+### Documentation
+
+- Update README or docs when changing user-visible workflows or APIs.
+- Keep examples runnable and copy-pasteable.
+
+## Pull Request Workflow
+
+- Open PRs against `master`.
+- Use a focused branch name such as `fix/exact-shanten-search` or `docs/update-demo-guide`.
+- Keep commits scoped and intentional.
+- Include the motivation, user impact, and validation steps in the PR body.
+- Link the relevant issue using `Fixes #...` or `Refs #...` where appropriate.
+
+Draft PRs are welcome when you want early feedback on direction or API shape.
+
+## Reporting Bugs
+
+Good bug reports usually include:
+
+- pymahjong version
+- Python version and OS
+- A minimal reproduction
+- Expected behavior
+- Actual behavior
+- Logs, screenshots, or replay data if relevant
+
+Use the issue templates when possible so maintainers get the right context up front.
+
+## Security
+
+For sensitive security reports, do not open a public issue. Follow [SECURITY.md](SECURITY.md).
+
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [Apache License 2.0](LICENSE).
+By contributing, you agree that your contributions will be released under the [Apache License 2.0](LICENSE).

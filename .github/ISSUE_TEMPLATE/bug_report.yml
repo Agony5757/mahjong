@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a reproducible defect in the engine, bindings, docs, or web UI.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a report. Please provide a minimal reproduction so the issue can be turned into a regression test.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken?
+      placeholder: normal_round_to_win returns 4 for 245568m245568p77s, but the expected result is 3 under the project's round_to_win convention.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Exact steps, code snippet, paipu fragment, or API calls to reproduce the issue.
+      placeholder: |
+        1. Install pymahjong 1.0.x
+        2. Run ...
+        3. Observe ...
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, Python version, pymahjong version, compiler/toolchain if relevant.
+      placeholder: Ubuntu 24.04, Python 3.12.3, pymahjong 1.0.4, GCC 11
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste stack traces, replay logs, screenshots, or links here.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I searched existing issues first.
+          required: true
+        - label: I included a minimal reproduction or replay fragment.
+          required: true

@@ -2,23 +2,20 @@
 #define ROUNDTOWIN_H
 
 #include "Tile.h"
-#include <map>
+#include <array>
 
 namespace_mahjong
 
 class Syanten {
-    std::map<uint32_t, std::tuple<int, int, int, int>> syanten_map;
-    void hand_to_code(const std::vector<Tile*>& hand, /*OUT*/ uint32_t* code);
-    std::string code_to_string(uint32_t code);
-    int _check_normal(const uint32_t* hand_code, int num_副露);
-    void load_syanten_map();
-    bool is_loaded = false;
+    std::array<int, 34> hand_to_counts(const std::vector<Tile*>& hand);
+    int normal_shanten(const std::array<int, 34>& tile_counts, int num_副露);
     Syanten() = default;
 public:
     static Syanten& instance() {
         static Syanten inst;
         return inst;
     }
+    int normal_round_to_win(const std::array<int, 34>& tile_counts, int num_副露);
     int normal_round_to_win(const std::vector<Tile*>& hand, int num_副露);
 };
 
