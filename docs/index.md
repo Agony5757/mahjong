@@ -13,6 +13,7 @@ api/index
 advanced/index
 examples/index
 web_frontend
+glossary
 changelog
 ```
 
