@@ -129,16 +129,6 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 - Security policy: [SECURITY.md](SECURITY.md)
 - Bug reports and feature requests: [GitHub Issues](https://github.com/Agony5757/mahjong/issues)
 
-## Acknowledgements
-
-The shanten rewrite prompted by [issue #30](https://github.com/Agony5757/mahjong/issues/30) benefited from the practical feedback by [Apricot-S](https://github.com/Apricot-S), who explicitly called out the limitations of meld/taatsu-counting shortcuts and pointed to stronger exact approaches.
-
-When revisiting the design, I also consulted the following open-source repositories as algorithm references and prior art surveys. No code from them is vendored into this repository, but they were useful in evaluating tradeoffs and validating direction:
-
-- [tomohxx/shanten-number](https://github.com/tomohxx/shanten-number)
-- [Cryolite/nyanten](https://github.com/Cryolite/nyanten)
-- [Apricot-S/xiangting](https://github.com/Apricot-S/xiangting)
-
 ## Citing
 
 If you use pymahjong in your research, please cite:
@@ -162,3 +152,14 @@ This project is licensed under the [Apache License 2.0](LICENSE).
 
 - Email: hdqhdq58@outlook.com
 - QQ Group: 608064044
+
+## Acknowledgements
+
+The shanten rewrite prompted by [issue #30](https://github.com/Agony5757/mahjong/issues/30) benefited from the practical feedback by [Apricot-S](https://github.com/Apricot-S), who explicitly called out the limitations of meld/taatsu-counting shortcuts and pointed to stronger exact approaches.
+
+When revisiting the design, I also consulted the following open-source repositories as algorithm references and prior art surveys. No code from them is vendored into this repository, but they were useful in evaluating tradeoffs, testing strategy, and validation direction:
+
+- [tomohxx/shanten-number](https://github.com/tomohxx/shanten-number)
+- [Cryolite/nyanten](https://github.com/Cryolite/nyanten)
+- [Apricot-S/xiangting](https://github.com/Apricot-S/xiangting)
+- [MahjongRepository/mahjong](https://github.com/MahjongRepository/mahjong)

@@ -3,6 +3,7 @@
 ```{toctree}
 :maxdepth: 2
 
+shanten_calculation
 custom_agents
 paipu_replay
 cpp_engine
