@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日麻 — 4 AI 对战</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="nav-links">
+    <a href="/">人机对战</a>
+    <a href="/ai_battle" class="active">4 AI 对战</a>
+    <a href="/replay">牌谱复现</a>
+</nav>
+
+<div class="top-bar">
+    <div class="table-meta">
+        <span class="round-info">东一局</span>
+        <span class="honba">本场0</span>
+        <span class="riichibo">供托0</span>
+    </div>
+    <div class="dora-bar">
+        <span>宝牌:</span>
+        <span class="dora-tiles" id="doraTiles"></span>
+    </div>
+    <div class="scores">
+        <div class="score-chip" id="chip0">
+            <span class="pid" id="pname0">AI-0</span>
+            <span class="pts" id="ppts0">25000</span>
+        </div>
+        <div class="score-chip" id="chip1">
+            <span class="pid" id="pname1">AI-1</span>
+            <span class="pts" id="ppts1">25000</span>
+        </div>
+        <div class="score-chip" id="chip2">
+            <span class="pid" id="pname2">AI-2</span>
+            <span class="pts" id="ppts2">25000</span>
+        </div>
+        <div class="score-chip" id="chip3">
+            <span class="pid" id="pname3">AI-3</span>
+            <span class="pts" id="ppts3">25000</span>
+        </div>
+    </div>
+</div>
+
+<div class="game-container">
+    <!-- Follow buttons -->
+    <div class="ai-controls" id="followControls">
+        <span class="text-dim" style="font-size:13px">跟随视角:</span>
+        <button class="speed-btn active" id="btnAll" onclick="setFollow(-1)">全部</button>
+        <button class="speed-btn" id="btnF0" onclick="setFollow(0)">AI-0</button>
+        <button class="speed-btn" id="btnF1" onclick="setFollow(1)">AI-1</button>
+        <button class="speed-btn" id="btnF2" onclick="setFollow(2)">AI-2</button>
+        <button class="speed-btn" id="btnF3" onclick="setFollow(3)">AI-3</button>
+        <span style="flex:1"></span>
+        <span class="text-dim" style="font-size:13px">速度:</span>
+        <button class="speed-btn" id="btnSlow" onclick="setSpeed(0.5)">0.5x</button>
+        <button class="speed-btn active" id="btnNormal" onclick="setSpeed(1)">1x</button>
+        <button class="speed-btn" id="btnFast" onclick="setSpeed(2)">2x</button>
+    </div>
+
+    <canvas id="mahjongCanvas" width="900" height="580"></canvas>
+    <div class="status-msg" id="statusMsg">点击"开始对战"观看4个 AI 对局</div>
+</div>
+
+<div class="log-panel" id="logPanel">
+    <div id="logContent"></div>
+</div>
+
+<!-- Landing -->
+<div class="landing" id="landingOverlay">
+    <h1>4 AI 对战</h1>
+    <p class="subtitle">观看4个随机 AI 进行完整对局</p>
+    <div class="mode-cards">
+        <div class="mode-card" onclick="startBattle()">
+            <div class="icon">🤖</div>
+            <h2>开始对战</h2>
+            <p>4个随机 AI · 随机牌山</p>
+        </div>
+    </div>
+    <div class="mt-16">
+        <label class="text-dim" style="font-size:13px">随机种子:
+            <input type="number" id="seedInput" placeholder="留空=随机" style="margin-left:8px; padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px; width:100px">
+        </label>
+    </div>
+</div>
+
+<script src="/static/js/renderer.js"></script>
+<script src="/static/js/ai_client.js"></script>
+<script>
+    let client = null;
+
+    async function startBattle() {
+        document.getElementById('landingOverlay').style.display = 'none';
+        const seedVal = document.getElementById('seedInput').value;
+        const seed = seedVal ? parseInt(seedVal) : null;
+
+        client = new AIBattleClient('mahjongCanvas');
+        client.resize();
+        window.addEventListener('resize', () => {
+            client.resize();
+            client._render();
+        });
+
+        try {
+            await client.startGame(seed);
+            document.getElementById('statusMsg').textContent = '对局进行中...';
+        } catch (err) {
+            alert('启动失败: ' + err.message);
+        }
+    }
+
+    function setFollow(playerId) {
+        if (!client) return;
+        client.follow(playerId);
+        ['btnAll', 'btnF0', 'btnF1', 'btnF2', 'btnF3'].forEach(id => {
+            document.getElementById(id).classList.remove('active');
+        });
+        if (playerId < 0) {
+            document.getElementById('btnAll').classList.add('active');
+        } else {
+            document.getElementById(`btnF${playerId}`).classList.add('active');
+        }
+    }
+
+    function setSpeed(speed) {
+        if (!client) return;
+        client.setSpeed(speed);
+        ['btnSlow', 'btnNormal', 'btnFast'].forEach(id => {
+            document.getElementById(id).classList.remove('active');
+        });
+        if (speed === 0.5) document.getElementById('btnSlow').classList.add('active');
+        else if (speed === 1) document.getElementById('btnNormal').classList.add('active');
+        else if (speed === 2) document.getElementById('btnFast').classList.add('active');
+    }
+
+    // Initial canvas
+    window.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('mahjongCanvas');
+        const ctx = canvas.getContext('2d');
+        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 1240, maxHeightRatio: 0.7 });
+        window.MahjongRenderer.renderSplash(ctx, canvas.width, canvas.height, '4 AI 对战', '观看完整对局，检查牌河、副露和局面流转');
+    });
+</script>
+</body>
+</html>

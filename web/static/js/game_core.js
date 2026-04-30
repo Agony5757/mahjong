@@ -17,16 +17,18 @@ class MahjongGame {
         this.eventSource = null;
         this.aiSpeed = 1000;  // ms between AI actions
         this._animFrame = null;
+
+        if (window.MahjongRenderer?.setInvalidateHandler) {
+            window.MahjongRenderer.setInvalidateHandler(() => this._render());
+        }
     }
 
     // ─── Canvas Sizing ────────────────────────────────────────────────────
 
     resize() {
-        const container = this.canvas.parentElement;
-        const W = Math.min(container.clientWidth - 16, 900);
-        const H = Math.min(W * 0.65, 600);
-        this.canvas.width = W;
-        this.canvas.height = H;
+        if (window.MahjongRenderer?.resizeCanvasToContainer) {
+            window.MahjongRenderer.resizeCanvasToContainer(this.canvas, { maxWidth: 1240, maxHeightRatio: 0.7 });
+        }
     }
 
     // ─── API Calls ─────────────────────────────────────────────────────────
@@ -157,19 +159,10 @@ class MahjongGame {
         const mx = (e.clientX - rect.left) * scaleX;
         const my = (e.clientY - rect.top) * scaleY;
 
-        const W = this.canvas.width;
-        const H = this.canvas.height;
-        const T = 32, TH = 44, GAP = 2;
-
-        const p0Hand = this.state.players[0]?.hand || [];
-        const p0Y = H - TH - 60;
-        const p0X = W / 2 - (p0Hand.length * (T + GAP)) / 2;
-
-        // Check if click is in our hand
-        for (let i = 0; i < p0Hand.length; i++) {
-            const tx = p0X + i * (T + GAP);
-            if (mx >= tx && mx <= tx + T && my >= p0Y && my <= p0Y + TH) {
-                this._selectTile(i, p0Hand[i]);
+        const hitBoxes = window.MahjongRenderer.getHandHitBoxes(this.canvas.width, this.canvas.height, this.state);
+        for (const hit of hitBoxes) {
+            if (mx >= hit.x && mx <= hit.x + hit.w && my >= hit.y && my <= hit.y + hit.h) {
+                this._selectTile(hit.index, hit.tile);
                 return;
             }
         }
@@ -347,19 +340,26 @@ class MahjongGame {
         // Round info
         const windNames = ['东', '南', '西', '北'];
         document.querySelectorAll('.round-info').forEach(el => {
-            el.textContent = `${windNames[s.game_wind === 'East' ? 0 : s.game_wind === 'South' ? 1 : s.game_wind === 'West' ? 2 : 3]}局`;
+            const wind = windNames[s.game_wind === 'East' ? 0 : s.game_wind === 'South' ? 1 : s.game_wind === 'West' ? 2 : 3];
+            el.textContent = `${wind}${(s.oya ?? 0) + 1}局`;
         });
         document.querySelectorAll('.honba').forEach(el => {
             el.textContent = `本场${s.honba}`;
+        });
+        document.querySelectorAll('.riichibo').forEach(el => {
+            el.textContent = `供托${s.kyoutaku || 0}`;
         });
 
         // Scores
         const chips = document.querySelectorAll('.score-chip');
         s.players.forEach((p, i) => {
             if (chips[i]) {
+                chips[i].querySelector('.pid').textContent = `${i === 0 ? '你' : 'P' + i} · ${windNames[p.wind === 'East' ? 0 : p.wind === 'South' ? 1 : p.wind === 'West' ? 2 : 3]}`;
                 chips[i].querySelector('.pts').textContent = p.score;
                 chips[i].classList.toggle('oya', !!p.is_oya);
                 chips[i].classList.toggle('human', i === 0);
+                chips[i].classList.toggle('active', i === s.turn);
+                chips[i].classList.toggle('riichi', !!p.riichi);
             }
         });
 
@@ -367,7 +367,7 @@ class MahjongGame {
         const doraBar = document.querySelector('.dora-tiles');
         if (doraBar) {
             doraBar.innerHTML = s.dora.map(d =>
-                `<span style="background:#faf8f0;color:#222;padding:1px 4px;border-radius:3px;font-size:12px;margin-left:2px">${d}</span>`
+                `<span class="mini-dora">${d}</span>`
             ).join('');
         }
     }

@@ -12,13 +12,16 @@ class ReplayClient {
         this.isPlaying = false;
         this.playInterval = null;
         this.speed = 800;  // ms per step
+
+        if (window.MahjongRenderer?.setInvalidateHandler) {
+            window.MahjongRenderer.setInvalidateHandler(() => this._renderStep());
+        }
     }
 
     resize() {
-        const W = Math.min(this.canvas.parentElement.clientWidth - 16, 900);
-        const H = Math.min(W * 0.65, 600);
-        this.canvas.width = W;
-        this.canvas.height = H;
+        if (window.MahjongRenderer?.resizeCanvasToContainer) {
+            window.MahjongRenderer.resizeCanvasToContainer(this.canvas, { maxWidth: 1240, maxHeightRatio: 0.7 });
+        }
     }
 
     async _fetch(url, options = {}) {
@@ -47,6 +50,7 @@ class ReplayClient {
     // ─── Load from XML ──────────────────────────────────────────────────────
 
     async loadFromXML(xmlContent) {
+        window._lastXML = xmlContent;
         const resp = await fetch('/api/replay/load', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -64,17 +68,17 @@ class ReplayClient {
     // ─── Build Steps ────────────────────────────────────────────────────────
 
     async _buildSteps() {
-        // Use the Python backend to replay the paipu
-        // We simulate step-by-step by calling the paipu_parser
         const resp = await fetch('/api/replay/steps', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ xml_content: window._lastXML || '' }),
         }).catch(() => null);
-
-        // Fallback: generate steps from paipu data directly via PaipuReplayer
-        this.gameSteps = [];
-        // We'll build steps on-demand in JS using the replayer
+        if (!resp || !resp.ok) {
+            this.gameSteps = [];
+            return;
+        }
+        const data = await resp.json();
+        this.gameSteps = data.steps || [];
     }
 
     // ─── Step Navigation ────────────────────────────────────────────────────
@@ -148,17 +152,11 @@ class ReplayClient {
         // Update timeline
         this._updateTimeline();
         this._updateInfoPanel(step);
+        this._updateTopBar(step.state || step);
     }
 
     _renderEmpty() {
-        const ctx = this.ctx;
-        ctx.fillStyle = '#0d1117';
-        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        ctx.fillStyle = '#555';
-        ctx.font = '20px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('加载牌谱后开始复现', this.canvas.width / 2, this.canvas.height / 2);
+        window.MahjongRenderer.renderSplash(this.ctx, this.canvas.width, this.canvas.height, '牌谱复现', '上传天凤 XML 牌谱或加载内置示例');
     }
 
     _updateTimeline() {
@@ -193,6 +191,35 @@ class ReplayClient {
             <div><strong>动作:</strong> ${step.base_action || '?'}</div>
             <div><strong>分数:</strong> ${(step.scores || []).join(' | ')}</div>
         `;
+    }
+
+    _updateTopBar(state) {
+        if (!state || !state.players) return;
+        const windNames = ['东', '南', '西', '北'];
+        const roundInfo = document.getElementById('roundInfo');
+        const honbaInfo = document.getElementById('honbaInfo');
+        const riichiInfo = document.getElementById('riichiInfo');
+        const doraBar = document.getElementById('doraTiles');
+        if (roundInfo) {
+            const wind = windNames[state.game_wind === 'East' ? 0 : state.game_wind === 'South' ? 1 : state.game_wind === 'West' ? 2 : 3];
+            roundInfo.textContent = `${wind}${(state.oya ?? 0) + 1}局`;
+        }
+        if (honbaInfo) honbaInfo.textContent = `本场${state.honba || 0}`;
+        if (riichiInfo) riichiInfo.textContent = `供托${state.kyoutaku || 0}`;
+        if (doraBar) {
+            doraBar.innerHTML = (state.dora || []).map(d =>
+                `<span class="mini-dora">${d}</span>`
+            ).join('');
+        }
+        state.players.forEach((p, i) => {
+            const chip = document.getElementById(`chip${i}`);
+            if (!chip) return;
+            chip.querySelector('.pid').textContent = `P${i} · ${windNames[p.wind === 'East' ? 0 : p.wind === 'South' ? 1 : p.wind === 'West' ? 2 : 3]}`;
+            chip.querySelector('.pts').textContent = p.score;
+            chip.classList.toggle('oya', !!p.is_oya);
+            chip.classList.toggle('active', i === state.turn);
+            chip.classList.toggle('riichi', !!p.riichi);
+        });
     }
 
     destroy() {

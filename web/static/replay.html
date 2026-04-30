@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日麻 — 牌谱复现</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="nav-links">
+    <a href="/">人机对战</a>
+    <a href="/ai_battle">4 AI 对战</a>
+    <a href="/replay" class="active">牌谱复现</a>
+</nav>
+
+<div class="top-bar">
+    <div class="table-meta">
+        <span class="round-info" id="roundInfo">牌谱复现</span>
+        <span class="honba" id="honbaInfo">本场0</span>
+        <span class="riichibo" id="riichiInfo">供托0</span>
+    </div>
+    <div class="dora-bar">
+        <span>宝牌:</span>
+        <span class="dora-tiles" id="doraTiles"></span>
+    </div>
+    <div class="scores">
+        <div class="score-chip" id="chip0">
+            <span class="pid">P0</span>
+            <span class="pts">25000</span>
+        </div>
+        <div class="score-chip" id="chip1">
+            <span class="pid">P1</span>
+            <span class="pts">25000</span>
+        </div>
+        <div class="score-chip" id="chip2">
+            <span class="pid">P2</span>
+            <span class="pts">25000</span>
+        </div>
+        <div class="score-chip" id="chip3">
+            <span class="pid">P3</span>
+            <span class="pts">25000</span>
+        </div>
+    </div>
+</div>
+
+<div class="game-container" style="gap:4px">
+
+    <!-- Replay Controls -->
+    <div class="replay-controls" id="replayControls">
+        <button class="action-btn btn-pass" id="btnPlay" onclick="replay.play()">▶ 播放</button>
+        <button class="action-btn btn-pass" id="btnStepBack" onclick="replay.stepBackward()">◀ 上一步</button>
+        <button class="action-btn btn-pass" id="btnStepFwd" onclick="replay.stepForward()">下一步 ▶</button>
+
+        <div style="flex:1; display:flex; align-items:center; gap:8px; padding:0 8px">
+            <span class="text-dim" style="font-size:12px; white-space:nowrap">进度:</span>
+            <div class="replay-timeline" id="timeline" onclick="onTimelineClick(event)">
+                <div class="replay-progress" id="timelineProgress" style="width:0%"></div>
+            </div>
+            <input type="range" id="timelineSlider" min="0" max="1" value="0" style="display:none"
+                   oninput="onSliderChange(this.value)">
+            <span class="text-dim" id="stepCounter" style="font-size:12px; white-space:nowrap">0 / 0</span>
+        </div>
+
+        <span class="text-dim" style="font-size:12px">速度:</span>
+        <button class="speed-btn" onclick="replay.setSpeed(1500)">慢</button>
+        <button class="speed-btn active" onclick="replay.setSpeed(800)">中</button>
+        <button class="speed-btn" onclick="replay.setSpeed(300)">快</button>
+    </div>
+
+    <canvas id="mahjongCanvas" width="900" height="580"></canvas>
+
+    <!-- Info Panels -->
+    <div style="display:flex; gap:8px; width:100%; max-width:900px">
+        <div id="stepInfo" class="log-panel" style="flex:1; font-size:12px; max-height:100px; overflow-y:auto">
+            <div class="text-dim">选择牌谱后开始复现</div>
+        </div>
+        <div id="fileInfo" class="log-panel" style="flex:1; font-size:12px; max-height:100px; overflow-y:auto">
+            <div class="text-dim" id="loadedFile">未加载牌谱</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Upload + File List -->
+<div style="max-width:900px; width:100%; padding:8px 8px 16px; display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap">
+
+    <div class="upload-box" style="flex:1; min-width:280px" id="uploadBox">
+        <input type="file" id="fileInput" accept=".txt,.xml" onchange="onFileUpload(event)">
+        <div style="font-size:32px; margin-bottom:8px">📂</div>
+        <div>上传 Tenhou XML 牌谱</div>
+        <div class="hint">支持 .txt 和 .xml 格式的天凤牌谱文件</div>
+    </div>
+
+    <div style="flex:1; min-width:280px">
+        <div class="text-dim" style="font-size:12px; margin-bottom:4px">内置示例牌谱:</div>
+        <div id="builtinList" style="display:flex; flex-wrap:wrap; gap:4px">
+            <button class="action-btn btn-pass" style="font-size:12px; padding:4px 10px" onclick="loadDemo()">加载示例</button>
+        </div>
+    </div>
+
+</div>
+
+<script src="/static/js/renderer.js"></script>
+<script src="/static/js/replay.js"></script>
+<script>
+    let replay = null;
+
+    // Click upload box to trigger file input
+    document.getElementById('uploadBox').onclick = () => document.getElementById('fileInput').click();
+
+    async function onFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const xml = await file.text();
+        window._lastXML = xml;
+        document.getElementById('loadedFile').textContent = `已加载: ${file.name}`;
+
+        replay = new ReplayClient('mahjongCanvas');
+        replay.resize();
+        window.addEventListener('resize', () => { replay.resize(); replay._renderStep(); });
+
+        try {
+            await replay.loadFromXML(xml);
+            replay.stepForward();  // Go to first step
+            replay._renderStep();
+        } catch (err) {
+            alert('加载失败: ' + err.message);
+        }
+    }
+
+    async function loadDemo() {
+        // Try to load first built-in paipu
+        try {
+            const listResp = await fetch('/api/replay/builtin');
+            const listData = await listResp.json();
+            const files = listData.paipu_files || [];
+            if (files.length === 0) {
+                alert('没有找到内置牌谱，请上传XML文件');
+                return;
+            }
+            document.getElementById('loadedFile').textContent = `加载中: ${files[0]}`;
+            replay = new ReplayClient('mahjongCanvas');
+            replay.resize();
+            window.addEventListener('resize', () => { replay.resize(); replay._renderStep(); });
+            await replay.loadBuiltinPaipu(files[0]);
+            replay.stepForward();
+            replay._renderStep();
+        } catch (err) {
+            alert('加载失败: ' + err.message);
+        }
+    }
+
+    function onTimelineClick(e) {
+        if (!replay || !replay.gameSteps.length) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const pct = (e.clientX - rect.left) / rect.width;
+        const step = Math.round(pct * (replay.gameSteps.length - 1));
+        replay.seekTo(step);
+    }
+
+    function onSliderChange(val) {
+        if (!replay) return;
+        replay.seekTo(parseInt(val));
+    }
+
+    // Initial canvas
+    window.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('mahjongCanvas');
+        const ctx = canvas.getContext('2d');
+        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 1240, maxHeightRatio: 0.7 });
+        window.MahjongRenderer.renderSplash(ctx, canvas.width, canvas.height, '牌谱复现', '上传 XML 或加载内置牌谱，按步骤回放局面');
+    });
+</script>
+
+<style>
+    .replay-timeline {
+        position: relative;
+        height: 8px;
+        background: var(--surface2);
+        border-radius: 4px;
+        cursor: pointer;
+        flex: 1;
+    }
+    .replay-progress {
+        position: absolute;
+        left: 0; top: 0;
+        height: 100%;
+        background: var(--accent);
+        border-radius: 4px;
+        pointer-events: none;
+        transition: width 0.1s;
+    }
+</style>
+</body>
+</html>

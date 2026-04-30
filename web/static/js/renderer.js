@@ -1,78 +1,121 @@
 /**
- * Mahjong Canvas Renderer
- * Draws tiles, hands, rivers, and game state on a Canvas element.
+ * Mahjong table renderer.
+ *
+ * The renderer uses a fixed logical board (1600x1000) and scales it to the
+ * canvas viewport. This keeps proportions stable across different resolutions.
  */
 
-// ─── Tile Drawing ────────────────────────────────────────────────────────────
+const BOARD_W = 1600;
+const BOARD_H = 1000;
+const BOARD_ASPECT = BOARD_W / BOARD_H;
 
-const TILE_W = 32;
-const TILE_H = 44;
-const TILE_R = 4;  // corner radius
+const TABLE = {
+    margin: 40,
+    feltInset: 18,
+    centerX: BOARD_W / 2,
+    centerY: BOARD_H / 2,
+};
 
-// Character to color mapping for tile faces
-const TILE_BG = '#faf8f0';
-const TILE_SHADOW = '#ccc';
+const SEAT_ANGLES = [0, -Math.PI / 2, Math.PI, Math.PI / 2];
 
-// Font settings
-const TILE_FONT = `bold ${TILE_W * 0.55}px 'SimHei', 'Microsoft YaHei', 'Hiragino Mincho Pro', serif`;
+const HAND_TILE = { w: 64, h: 88, gap: 4, drawGap: 16 };
+const SIDE_HAND_TILE = { w: 58, h: 80, gap: 3, drawGap: 14 };
+const RIVER_TILE = { w: 50, h: 70, gap: 6, vgap: 8, cols: 6 };
+const MELD_TILE = { w: 48, h: 68, gap: 4, groupGap: 10 };
+const DORA_TILE = { w: 52, h: 72, gap: 8 };
 
-function drawTile(ctx, x, y, tileStr, isRed5, isHighlighted, isSelected, isTaken, options = {}) {
-    const w = options.w || TILE_W;
-    const h = options.h || TILE_H;
+const LOCAL_LAYOUT = {
+    riverY: 114,
+    badgeY: 250,
+    handY: 360,
+};
 
-    // Highlight / selected background
-    if (isSelected) {
-        ctx.fillStyle = '#ffe066';
-    } else if (isHighlighted) {
-        ctx.fillStyle = '#fff3cd';
-    } else if (isTaken) {
-        ctx.fillStyle = '#e8e8e8';
-    } else {
-        ctx.fillStyle = TILE_BG;
-    }
+const TILE_ASSET_ROOT = '/static/assets/tiles/Regular';
+const TILE_ASSET_MAP = {
+    '1m': 'Man1',
+    '2m': 'Man2',
+    '3m': 'Man3',
+    '4m': 'Man4',
+    '5m': 'Man5',
+    '6m': 'Man6',
+    '7m': 'Man7',
+    '8m': 'Man8',
+    '9m': 'Man9',
+    '1p': 'Pin1',
+    '2p': 'Pin2',
+    '3p': 'Pin3',
+    '4p': 'Pin4',
+    '5p': 'Pin5',
+    '6p': 'Pin6',
+    '7p': 'Pin7',
+    '8p': 'Pin8',
+    '9p': 'Pin9',
+    '1s': 'Sou1',
+    '2s': 'Sou2',
+    '3s': 'Sou3',
+    '4s': 'Sou4',
+    '5s': 'Sou5',
+    '6s': 'Sou6',
+    '7s': 'Sou7',
+    '8s': 'Sou8',
+    '9s': 'Sou9',
+    '1z': 'Ton',
+    '2z': 'Nan',
+    '3z': 'Shaa',
+    '4z': 'Pei',
+    '5z': 'Haku',
+    '6z': 'Hatsu',
+    '7z': 'Chun',
+};
 
-    // Draw rounded rect with shadow
-    ctx.shadowColor = 'rgba(0,0,0,0.3)';
-    ctx.shadowBlur = isSelected ? 8 : 3;
-    ctx.shadowOffsetX = 1;
-    ctx.shadowOffsetY = 2;
-    roundRect(ctx, x, y, w, h, TILE_R);
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
+const assetCache = new Map();
+let invalidateRenderer = null;
 
-    // Border
-    ctx.strokeStyle = isSelected ? '#f39c12' : (isHighlighted ? '#e67e22' : '#aaa');
-    ctx.lineWidth = isSelected ? 2 : 1;
-    roundRect(ctx, x, y, w, h, TILE_R);
-    ctx.stroke();
-
-    if (!tileStr) return;
-
-    // Determine color based on tile type
-    const ch = tileStr.charAt(tileStr.length - 1); // 'm', 'p', 's', 'z'
-    let color = '#222';
-    if (ch === 'z') {
-        color = '#1a1a6e'; // 字牌深蓝
-    } else if (ch === 'm') {
-        color = '#1a5276'; // 万子蓝
-    } else if (ch === 'p') {
-        color = '#922b21'; // 筒子红
-    } else if (ch === 's') {
-        color = '#1e8449'; // 索子绿
-    }
-
-    // Red 5 tiles
-    if (isRed5) color = '#e74c3c';
-
-    // Draw tile character(s)
-    ctx.fillStyle = color;
-    ctx.font = TILE_FONT;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(tileStr, x + w / 2, y + h / 2 + 1);
+function setInvalidateHandler(fn) {
+    invalidateRenderer = fn;
 }
 
-// Round rect helper
+function resizeCanvasToContainer(canvas, options = {}) {
+    const dpr = window.devicePixelRatio || 1;
+    const maxWidth = options.maxWidth || 1240;
+    const aspectRatio = options.aspectRatio || BOARD_ASPECT;
+    const containerWidth = Math.max(320, Math.min(canvas.parentElement.clientWidth - 4, maxWidth));
+    const maxHeight = Math.max(320, Math.floor(window.innerHeight * (options.maxHeightRatio || 0.68)));
+
+    let cssWidth = containerWidth;
+    let cssHeight = Math.floor(cssWidth / aspectRatio);
+
+    if (cssHeight > maxHeight) {
+        cssHeight = maxHeight;
+        cssWidth = Math.floor(cssHeight * aspectRatio);
+    }
+
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
+    canvas.width = Math.floor(cssWidth * dpr);
+    canvas.height = Math.floor(cssHeight * dpr);
+
+    return { cssWidth, cssHeight, dpr };
+}
+
+function computeViewport(width, height) {
+    const scale = Math.min(width / BOARD_W, height / BOARD_H);
+    return {
+        scale,
+        offsetX: (width - BOARD_W * scale) / 2,
+        offsetY: (height - BOARD_H * scale) / 2,
+    };
+}
+
+function toCanvasRect(rect, viewport) {
+    return {
+        x: viewport.offsetX + rect.x * viewport.scale,
+        y: viewport.offsetY + rect.y * viewport.scale,
+        w: rect.w * viewport.scale,
+        h: rect.h * viewport.scale,
+    };
+}
+
 function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -87,281 +130,533 @@ function roundRect(ctx, x, y, w, h, r) {
     ctx.closePath();
 }
 
-// ─── Dora Tile ───────────────────────────────────────────────────────────────
-
-function drawDoraTile(ctx, x, y, tileStr, hidden = false) {
-    if (hidden) {
-        ctx.fillStyle = '#4a4a8a';
-        ctx.shadowColor = 'rgba(0,0,0,0.3)';
-        ctx.shadowBlur = 3;
-        roundRect(ctx, x, y, TILE_W, TILE_H, TILE_R);
-        ctx.fill();
-        ctx.shadowColor = 'transparent';
-        ctx.strokeStyle = '#888';
-        ctx.lineWidth = 1;
-        roundRect(ctx, x, y, TILE_W, TILE_H, TILE_R);
+function fillRoundedRect(ctx, x, y, w, h, r, fillStyle, strokeStyle = null, strokeWidth = 1) {
+    ctx.save();
+    roundRect(ctx, x, y, w, h, r);
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+    if (strokeStyle) {
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = strokeWidth;
         ctx.stroke();
-        ctx.fillStyle = '#aaa';
-        ctx.font = '11px sans-serif';
+    }
+    ctx.restore();
+}
+
+function makeGradient(ctx, x0, y0, x1, y1, stops) {
+    const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
+    stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
+    return gradient;
+}
+
+function getTileAssetPath(tileStr, redDora = false, faceDown = false) {
+    if (faceDown) return `${TILE_ASSET_ROOT}/Back.svg`;
+    const key = tileStr || '';
+    const asset = TILE_ASSET_MAP[key];
+    if (!asset) return `${TILE_ASSET_ROOT}/Front.svg`;
+    const suffix = redDora ? '-Dora' : '';
+    return `${TILE_ASSET_ROOT}/${asset}${suffix}.svg`;
+}
+
+function getAssetImage(path) {
+    let entry = assetCache.get(path);
+    if (!entry) {
+        const img = new Image();
+        img.decoding = 'async';
+        img.onload = () => {
+            if (invalidateRenderer) invalidateRenderer();
+        };
+        img.src = path;
+        entry = { img };
+        assetCache.set(path, entry);
+    }
+    return entry.img.complete ? entry.img : null;
+}
+
+function fallbackFaceColor(tileStr) {
+    const suit = String(tileStr || '').slice(-1);
+    if (suit === 'm') return '#a53b34';
+    if (suit === 'p') return '#294d8f';
+    if (suit === 's') return '#1e6a39';
+    if (suit === 'z') return '#2f4294';
+    return '#3a3a3a';
+}
+
+function drawFallbackTile(ctx, x, y, w, h, tileStr, options = {}) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.22)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 6;
+    fillRoundedRect(ctx, x, y, w, h, 10, '#f8f3ea', '#cdbfa7', 1.4);
+    ctx.shadowColor = 'transparent';
+    if (tileStr) {
+        ctx.fillStyle = options.faceDown ? '#b8c6d8' : fallbackFaceColor(tileStr);
+        ctx.font = `${Math.floor(h * 0.36)}px "Hiragino Mincho ProN", "Yu Mincho", serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('?', x + TILE_W / 2, y + TILE_H / 2);
-        return;
+        ctx.fillText(tileStr, x + w / 2, y + h / 2);
     }
-    const isRed = tileStr.startsWith('5') && tileStr.length <= 2;
-    drawTile(ctx, x, y, tileStr, isRed, false, false, false);
+    ctx.restore();
 }
 
-// ─── River Tile ─────────────────────────────────────────────────────────────
+function drawTileImage(ctx, x, y, w, h, tileStr, options = {}) {
+    const {
+        redDora = false,
+        faceDown = false,
+        rotation = 0,
+        selected = false,
+        highlighted = false,
+        dimmed = false,
+        lifted = 0,
+    } = options;
 
-function drawRiverTile(ctx, x, y, tileData, options = {}) {
-    const tileStr = tileData.tile ? tileData.tile.str : (tileData.str || '?');
-    const isRed = tileStr.startsWith('5') && tileStr.length <= 2;
-    const isRiichi = tileData.riichi || false;
-    const isHighlighted = tileData.highlighted || false;
-    drawTile(ctx, x, y, tileStr, isRed, isHighlighted, false, false, options);
-    if (isRiichi) {
-        // Draw riichi indicator (small red bar below tile)
-        ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(x + 2, y + TILE_H + 1, TILE_W - 4, 3);
+    const img = getAssetImage(getTileAssetPath(tileStr, redDora, faceDown));
+    const cx = x + w / 2;
+    const cy = y + h / 2 - lifted;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+
+    if (selected || highlighted) {
+        ctx.shadowColor = selected ? 'rgba(255, 190, 65, 0.65)' : 'rgba(120, 208, 255, 0.45)';
+        ctx.shadowBlur = selected ? 18 : 12;
+        fillRoundedRect(
+            ctx,
+            -w / 2 - 6,
+            -h / 2 - 6,
+            w + 12,
+            h + 12,
+            14,
+            selected ? 'rgba(255, 224, 127, 0.28)' : 'rgba(190, 240, 255, 0.18)',
+            selected ? '#f5c451' : '#8ed2ff',
+            2
+        );
+        ctx.shadowColor = 'transparent';
     }
-}
 
-// ─── Hand Renderer ──────────────────────────────────────────────────────────
+    if (dimmed) ctx.globalAlpha = 0.82;
 
-function renderHand(ctx, tiles, x, y, options = {}) {
-    // tiles: array of {str, red_dora, highlighted, selected}
-    const gap = options.gap || 2;
-    const faceUp = options.faceUp !== false;
-
-    tiles.forEach((t, i) => {
-        const tileX = x + i * (TILE_W + gap);
-        if (faceUp) {
-            const tileStr = t.str || String(t);
-            const isRed = t.red_dora || (typeof t === 'string' && t.startsWith('5') && t.length <= 2);
-            drawTile(ctx, tileX, y, tileStr, isRed, t.highlighted, t.selected, false);
-        } else {
-            // Back of tile
-            drawTileBack(ctx, tileX, y);
-        }
-    });
-}
-
-function drawTileBack(ctx, x, y) {
-    ctx.fillStyle = '#2c3e50';
-    ctx.shadowColor = 'rgba(0,0,0,0.3)';
-    ctx.shadowBlur = 2;
-    roundRect(ctx, x, y, TILE_W, TILE_H, TILE_R);
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    // Cross pattern
-    ctx.strokeStyle = '#34495e';
-    ctx.lineWidth = 1;
-    for (let d = -1; d <= 1; d += 2) {
-        ctx.beginPath();
-        ctx.moveTo(x + 4, y + TILE_H / 2 + d * 8);
-        ctx.lineTo(x + TILE_W - 4, y + TILE_H / 2 - d * 8);
-        ctx.stroke();
+    if (img) {
+        ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    } else {
+        drawFallbackTile(ctx, -w / 2, -h / 2, w, h, faceDown ? '' : tileStr, { faceDown });
     }
+
+    ctx.restore();
 }
 
-// ─── Player Name Label ───────────────────────────────────────────────────────
-
-function drawPlayerLabel(ctx, x, y, label, isActive, isOya, isHuman) {
-    const w = TILE_W * 1.5;
-    const h = 20;
-    ctx.fillStyle = isActive ? '#e94560' : (isHuman ? '#2980b9' : '#555');
+function drawStick(ctx, x, y, length, color, text, rotation = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+    fillRoundedRect(ctx, -length / 2, -6, length, 12, 6, '#f1ede2', '#bbab91', 1);
+    ctx.fillStyle = color;
     ctx.beginPath();
-    roundRect(ctx, x, y, w, h, 4);
+    ctx.arc(-length / 2 + 12, 0, 4.5, 0, Math.PI * 2);
+    ctx.arc(length / 2 - 12, 0, 4.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = '#584940';
+    ctx.font = '12px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label + (isOya ? ' ★' : ''), x + w / 2, y + h / 2);
+    ctx.fillText(text, 0, 0.5);
+    ctx.restore();
 }
 
-// ─── Main Game Renderer ──────────────────────────────────────────────────────
+function windToZh(wind) {
+    return {
+        East: '东',
+        South: '南',
+        West: '西',
+        North: '北',
+    }[wind] || wind || '?';
+}
 
-/**
- * Main render function — renders the full game state on canvas.
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} W canvas width
- * @param {number} H canvas height
- * @param {object} state game state from /api/game/{id}/state
- * @param {object} opts  rendering options
- */
-function renderGame(ctx, W, H, state, opts = {}) {
-    ctx.clearRect(0, 0, W, H);
+function buildRoundLabel(state) {
+    return `${windToZh(state.game_wind)}${(state.oya ?? 0) + 1}局`;
+}
 
-    const T = TILE_W;
-    const TH = TILE_H;
-    const GAP = 2;
-    const RIVER_COLS = 6;
+function getRiverHighlightPlayer(state) {
+    if (!state || state.phase < 4 || state.phase >= 16) return -1;
+    return (state.turn + 3) % 4;
+}
 
-    // ── Dora indicators (top center) ──────────────────────────────────────
-    const doraX = W / 2 - ((state.dora.length + 1) * (T + 3)) / 2;
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    roundRect(ctx, doraX - 10, 8, (state.dora.length + 1) * (T + 3) + 20, TH + 16, 6);
-    ctx.fill();
+function normalizeHand(player) {
+    if (!player || !Array.isArray(player.hand)) return { visible: false, count: 0, tiles: [] };
+    const first = player.hand[0];
+    if (first && typeof first === 'object' && typeof first.count === 'number' && !first.str) {
+        return { visible: false, count: first.count, tiles: [] };
+    }
+    return { visible: true, count: player.hand.length, tiles: player.hand };
+}
 
-    ctx.fillStyle = '#888';
-    ctx.font = '10px sans-serif';
+function computeHandRects(count, centerX, topY, tileSize) {
+    if (!count) return [];
+    const splitLast = count > 1 && count % 3 === 2;
+    const normalCount = splitLast ? count - 1 : count;
+    const totalWidth =
+        normalCount * tileSize.w +
+        Math.max(normalCount - 1, 0) * tileSize.gap +
+        (splitLast ? tileSize.drawGap + tileSize.w : 0);
+    const startX = centerX - totalWidth / 2;
+    const rects = [];
+    let cursor = startX;
+    for (let i = 0; i < normalCount; i++) {
+        rects.push({ x: cursor, y: topY, w: tileSize.w, h: tileSize.h });
+        cursor += tileSize.w + tileSize.gap;
+    }
+    if (splitLast) {
+        cursor += tileSize.drawGap;
+        rects.push({ x: cursor, y: topY, w: tileSize.w, h: tileSize.h });
+    }
+    return rects;
+}
+
+function drawCenterPanel(ctx, state) {
+    const panelW = 380;
+    const panelH = 240;
+    const x = TABLE.centerX - panelW / 2;
+    const y = TABLE.centerY - panelH / 2;
+
+    fillRoundedRect(
+        ctx,
+        x,
+        y,
+        panelW,
+        panelH,
+        26,
+        makeGradient(ctx, x, y, x, y + panelH, [
+            [0, 'rgba(17, 33, 26, 0.92)'],
+            [1, 'rgba(8, 18, 14, 0.96)'],
+        ]),
+        'rgba(255, 255, 255, 0.08)',
+        2
+    );
+
+    ctx.save();
+    ctx.translate(TABLE.centerX, TABLE.centerY);
+    ctx.rotate(Math.PI / 4);
+    fillRoundedRect(ctx, -92, -92, 184, 184, 24, 'rgba(231, 245, 227, 0.05)', 'rgba(255,255,255,0.06)', 1.5);
+    ctx.restore();
+
+    ctx.fillStyle = '#f0e7d2';
+    ctx.font = '600 18px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(buildRoundLabel(state), TABLE.centerX, y + 34);
+
+    ctx.fillStyle = '#cabda0';
+    ctx.font = '13px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.fillText(`剩余巡目 ${state.river_counter ?? 0}`, TABLE.centerX, y + 58);
+
+    const dora = state.dora || [];
+    const doraTotalWidth = dora.length * DORA_TILE.w + Math.max(dora.length - 1, 0) * DORA_TILE.gap;
+    const doraStartX = TABLE.centerX - doraTotalWidth / 2;
+    ctx.fillStyle = '#ceb982';
+    ctx.font = '12px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.fillText('宝牌指示牌', TABLE.centerX, y + 88);
+    dora.forEach((tile, index) => {
+        drawTileImage(ctx, doraStartX + index * (DORA_TILE.w + DORA_TILE.gap), y + 100, DORA_TILE.w, DORA_TILE.h, tile, {});
+    });
+
+    const stickY = y + 192;
+    drawStick(ctx, TABLE.centerX - 72, stickY, 92, '#b7473f', `供托 ${state.kyoutaku ?? 0}`);
+    drawStick(ctx, TABLE.centerX + 72, stickY, 92, '#2d67b3', `本场 ${state.honba ?? 0}`);
+}
+
+function drawSeatBadge(ctx, player, seatIndex, active, revealDetails) {
+    const x = -118;
+    const y = LOCAL_LAYOUT.badgeY;
+    const w = 236;
+    const h = 62;
+    const badgeFill = active ? 'rgba(255, 224, 133, 0.20)' : 'rgba(10, 12, 12, 0.46)';
+    const badgeStroke = active ? '#f0c66e' : 'rgba(255, 255, 255, 0.08)';
+    fillRoundedRect(ctx, x, y, w, h, 18, badgeFill, badgeStroke, active ? 2.4 : 1.4);
+
+    const wind = windToZh(player.wind);
+    const title = `P${seatIndex} · ${wind}${player.is_oya ? '家' : ''}`;
+    ctx.fillStyle = active ? '#fff7dd' : '#ece6d7';
+    ctx.font = '600 15px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('宝牌', doraX - 8, 10);
-    state.dora.forEach((d, i) => {
-        drawDoraTile(ctx, doraX + i * (T + 3), 20, d);
+    ctx.fillText(title, x + 16, y + 11);
+
+    ctx.font = '700 22px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.fillText(String(player.score ?? 0), x + 16, y + 34);
+
+    const rightText = [];
+    if (player.riichi) rightText.push('立直');
+    if (revealDetails && player.tenpai && player.tenpai.length) rightText.push(`听牌 ${player.tenpai.join(' ')}`);
+    ctx.textAlign = 'right';
+    ctx.font = '13px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.fillStyle = '#d6c8ab';
+    ctx.fillText(rightText.join(' · '), x + w - 16, y + 34);
+}
+
+function drawRiverLocal(ctx, river, seatIndex, highlightLast) {
+    const cellW = RIVER_TILE.w + 10;
+    const cellH = RIVER_TILE.h + 10;
+    const totalWidth = RIVER_TILE.cols * cellW - (cellW - RIVER_TILE.w);
+    const startX = -totalWidth / 2;
+    const startY = LOCAL_LAYOUT.riverY;
+
+    river.forEach((tile, index) => {
+        const col = index % RIVER_TILE.cols;
+        const row = Math.floor(index / RIVER_TILE.cols);
+        const cellX = startX + col * cellW;
+        const cellY = startY + row * cellH;
+        const sideways = !!tile.riichi;
+        const w = sideways ? RIVER_TILE.h : RIVER_TILE.w;
+        const h = sideways ? RIVER_TILE.w : RIVER_TILE.h;
+        const x = cellX + (RIVER_TILE.w - w) / 2;
+        const y = cellY + (RIVER_TILE.h - h) / 2;
+        const tileStr = tile.tile?.str || tile.str || '';
+        const isRed = !!tile.tile?.red_dora;
+        drawTileImage(ctx, x, y, w, h, tileStr, {
+            redDora: isRed,
+            rotation: sideways ? Math.PI / 2 : 0,
+            highlighted: highlightLast && index === river.length - 1,
+        });
     });
-    // Uradora
-    if (state.ura_dora && state.ura_dora.length > 0) {
-        ctx.fillStyle = '#888';
-        ctx.fillText('里宝', doraX + (state.dora.length + 0.5) * (T + 3), 10);
-        state.ura_dora.forEach((d, i) => {
-            drawDoraTile(ctx, doraX + (state.dora.length + i) * (T + 3), 20, d);
+}
+
+function meldDescriptors(call) {
+    const tiles = Array.isArray(call.tiles) ? call.tiles : [];
+    const type = call.type || '';
+    const take = Number.isInteger(call.take) ? call.take : -1;
+
+    return tiles.map((tile, index) => ({
+        tile,
+        sideways: index === take && tiles.length > 1 && type !== 'AnKan',
+        faceDown: type === 'AnKan' && tiles.length === 4 && (index === 0 || index === tiles.length - 1),
+    }));
+}
+
+function measureMeldWidth(call) {
+    return meldDescriptors(call).reduce((width, part, index, parts) => {
+        width += part.sideways ? MELD_TILE.h : MELD_TILE.w;
+        if (index < parts.length - 1) width += MELD_TILE.gap;
+        return width;
+    }, 0);
+}
+
+function drawMeldGroup(ctx, call, x, y) {
+    const parts = meldDescriptors(call);
+    let cursor = x;
+    parts.forEach((part, index) => {
+        const w = part.sideways ? MELD_TILE.h : MELD_TILE.w;
+        const h = part.sideways ? MELD_TILE.w : MELD_TILE.h;
+        const tileStr = part.tile?.str || '';
+        drawTileImage(ctx, cursor, y + (MELD_TILE.h - h), w, h, tileStr, {
+            redDora: !!part.tile?.red_dora,
+            faceDown: part.faceDown,
+            rotation: part.sideways ? Math.PI / 2 : 0,
+        });
+        cursor += w + (index < parts.length - 1 ? MELD_TILE.gap : 0);
+    });
+}
+
+function drawMeldsLocal(ctx, player, handWidth) {
+    const calls = Array.isArray(player.calls) ? player.calls : [];
+    if (!calls.length) return;
+
+    const widths = calls.map(measureMeldWidth);
+    const totalWidth = widths.reduce((a, b) => a + b, 0) + Math.max(calls.length - 1, 0) * MELD_TILE.groupGap;
+    let cursor = -handWidth / 2 - 28 - totalWidth;
+
+    calls.forEach((call, index) => {
+        drawMeldGroup(ctx, call, cursor, LOCAL_LAYOUT.handY + (HAND_TILE.h - MELD_TILE.h));
+        cursor += widths[index] + MELD_TILE.groupGap;
+    });
+}
+
+function drawHandLocal(ctx, player, seatIndex, active, regions = null) {
+    const handInfo = normalizeHand(player);
+    const tileSize = seatIndex === 0 ? HAND_TILE : SIDE_HAND_TILE;
+    const rects = computeHandRects(handInfo.count, 0, LOCAL_LAYOUT.handY, tileSize);
+
+    rects.forEach((rect, index) => {
+        const tile = handInfo.visible ? handInfo.tiles[index] : null;
+        const tileStr = tile?.str || '';
+        const redDora = !!tile?.red_dora;
+        const highlighted = !!tile?.highlighted;
+        const selected = !!tile?.selected;
+        const lifted = selected ? 16 : highlighted ? 8 : 0;
+        drawTileImage(ctx, rect.x, rect.y, rect.w, rect.h, tileStr, {
+            redDora,
+            faceDown: !handInfo.visible,
+            selected,
+            highlighted,
+            lifted,
+        });
+    });
+
+    if (regions && handInfo.visible) {
+        rects.forEach((rect, index) => {
+            regions.push({
+                index,
+                rect: {
+                    x: TABLE.centerX + rect.x,
+                    y: TABLE.centerY + rect.y,
+                    w: rect.w,
+                    h: rect.h,
+                },
+            });
         });
     }
 
-    // ── Player info and rivers ─────────────────────────────────────────────
-    const players = state.players;
-    const curr = state.turn;
+    const handWidth = rects.length
+        ? rects[rects.length - 1].x + rects[rects.length - 1].w - rects[0].x
+        : 0;
 
-    // Player 2 (top, across from us) — partial view
-    const p2RiverX = W / 2 - (RIVER_COLS * (T * 0.75 + 1)) / 2;
-    const p2RiverY = TH + 50;
-    drawPlayerLabel(ctx, W / 2 - T * 0.75, p2RiverY - 20, 'P2', curr === 2, players[2].is_oya, false);
-    const p2River = players[2].river || [];
-    for (let i = 0; i < p2River.length; i++) {
-        const col = i % RIVER_COLS;
-        const row = Math.floor(i / RIVER_COLS);
-        const rx = p2RiverX + col * (T * 0.75 + 1);
-        const ry = p2RiverY + row * (TH * 0.6 + 1);
-        drawTileBack(ctx, rx, ry);
-    }
-    // Show P2's hand count
-    if (players[2].hand && players[2].hand.length > 0 && typeof players[2].hand[0] === 'object') {
-        // Full hand — draw face up in smaller tiles
-        const hand = players[2].hand;
-        const handX = W / 2 - (hand.length * (T * 0.6 + 1)) / 2;
-        hand.forEach((t, i) => {
-            const tileStr = t.str || '?';
-            const isRed = t.red_dora;
-            // small tile
-            const sw = T * 0.6, sh = TH * 0.6;
-            ctx.fillStyle = TILE_BG;
-            roundRect(ctx, handX + i * (sw + 1), p2RiverY + (Math.ceil(RIVER_COLS / 6) + 1) * (TH * 0.6 + 1), sw, sh, 3);
-            ctx.fill();
-            ctx.fillStyle = '#1a5276';
-            ctx.font = `bold ${sw * 0.5}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(tileStr, handX + i * (sw + 1) + sw / 2, p2RiverY + (Math.ceil(RIVER_COLS / 6) + 1) * (TH * 0.6 + 1) + sh / 2);
-        });
-    } else {
-        ctx.fillStyle = '#555';
-        ctx.font = '11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`手牌: ${players[2].hand?.[0]?.count || '?'}枚`, W / 2, p2RiverY + (Math.ceil(RIVER_COLS / 6) + 1) * (TH * 0.6 + 1) + TH * 0.6 / 2);
-    }
+    return { handWidth, rects, visible: handInfo.visible };
+}
 
-    // Player 3 (left side)
-    const p3RiverX = 8;
-    const p3RiverY = H / 2 - 3 * (TH + 2) / 2;
-    drawPlayerLabel(ctx, 8, p3RiverY - 22, 'P3', curr === 3, players[3].is_oya, false);
-    const p3River = players[3].river || [];
-    for (let i = 0; i < Math.min(p3River.length, 6); i++) {
-        drawTileBack(ctx, p3RiverX, p3RiverY + i * (TH * 0.75 + 1));
-    }
+function drawSeat(ctx, player, seatIndex, state, options, interactiveRegions) {
+    const highlightRiverPlayer = getRiverHighlightPlayer(state);
+    const handInfo = normalizeHand(player);
+    ctx.save();
+    ctx.translate(TABLE.centerX, TABLE.centerY);
+    ctx.rotate(SEAT_ANGLES[seatIndex]);
 
-    // Player 1 (right side)
-    const p1RiverX = W - T * 0.75 - 8;
-    const p1RiverY = H / 2 - 3 * (TH + 2) / 2;
-    drawPlayerLabel(ctx, W - T * 0.75 - 8, p1RiverY - 22, 'P1', curr === 1, players[1].is_oya, false);
-    const p1River = players[1].river || [];
-    for (let i = 0; i < Math.min(p1River.length, 6); i++) {
-        drawTileBack(ctx, p1RiverX, p1RiverY + i * (TH * 0.75 + 1));
-    }
+    const active = state.turn === seatIndex;
+    drawSeatBadge(ctx, player, seatIndex, active, handInfo.visible);
+    drawRiverLocal(ctx, player.river || [], seatIndex, highlightRiverPlayer === seatIndex);
+    const handRender = drawHandLocal(ctx, player, seatIndex, active, seatIndex === 0 ? interactiveRegions : null);
+    drawMeldsLocal(ctx, player, handRender.handWidth);
 
-    // ── Player 0 — Our hand (bottom center) ────────────────────────────────
-    const p0Hand = players[0]?.hand || [];
-    const p0X = W / 2 - (p0Hand.length * (T + GAP)) / 2;
-    const p0Y = H - TH - 60;
-    drawPlayerLabel(ctx, p0X - T * 0.5, p0Y - 22, '你', curr === 0, players[0]?.is_oya, true);
+    ctx.restore();
+}
 
-    // Sort and draw tiles
-    const sortedHand = [...p0Hand].sort((a, b) => {
-        const order = { m: 0, p: 1, s: 2, z: 3 };
-        const sa = String(a.str || a).slice(-1);
-        const sb = String(b.str || b).slice(-1);
-        return (order[sa] || 0) - (order[sb] || 0) || ((a.str || a) > (b.str || b) ? 1 : -1);
-    });
+function drawBackground(ctx) {
+    const outerGradient = makeGradient(ctx, 0, 0, 0, BOARD_H, [
+        [0, '#533a1f'],
+        [0.22, '#6a4a26'],
+        [1, '#2f2010'],
+    ]);
+    fillRoundedRect(ctx, TABLE.margin, TABLE.margin, BOARD_W - TABLE.margin * 2, BOARD_H - TABLE.margin * 2, 42, outerGradient, '#a57e49', 2);
 
-    sortedHand.forEach((t, i) => {
-        const tileStr = typeof t === 'string' ? t : (t.str || '?');
-        const isRed = typeof t === 'object' ? !!t.red_dora : (tileStr.startsWith('5') && tileStr.length <= 2);
-        const isHl = typeof t === 'object' ? !!t.highlighted : false;
-        const isSel = typeof t === 'object' ? !!t.selected : false;
-        drawTile(ctx, p0X + i * (T + GAP), p0Y, tileStr, isRed, isHl, isSel, false);
-    });
+    const feltX = TABLE.margin + TABLE.feltInset;
+    const feltY = TABLE.margin + TABLE.feltInset;
+    const feltW = BOARD_W - (TABLE.margin + TABLE.feltInset) * 2;
+    const feltH = BOARD_H - (TABLE.margin + TABLE.feltInset) * 2;
+    const feltGradient = makeGradient(ctx, feltX, feltY, feltX, feltY + feltH, [
+        [0, '#2b6d4d'],
+        [0.35, '#1c5f42'],
+        [1, '#144934'],
+    ]);
+    fillRoundedRect(ctx, feltX, feltY, feltW, feltH, 32, feltGradient, 'rgba(255,255,255,0.08)', 2);
 
-    // Highlight atari tiles
-    const atari = players[0]?.tenpai || [];
-    if (atari.length > 0) {
-        ctx.fillStyle = '#f1c40f';
-        ctx.font = '11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`听: ${atari.join(' ')}`, W / 2, p0Y - 4);
-    }
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 2;
+    roundRect(ctx, feltX + 32, feltY + 32, feltW - 64, feltH - 64, 22);
+    ctx.stroke();
 
-    // Player 0 River
-    const p0River = players[0]?.river || [];
-    const p0RiverY = H - TH - 20 - 60;
-    for (let i = 0; i < p0River.length; i++) {
-        const col = i % RIVER_COLS;
-        const row = Math.floor(i / RIVER_COLS);
-        const rx = W / 2 - (RIVER_COLS * (T + GAP)) / 2 + col * (T + GAP);
-        const ry = p0RiverY + row * (TH + 2);
-        drawRiverTile(ctx, rx, ry, p0River[i]);
-    }
-
-    // ── Current turn indicator ─────────────────────────────────────────────
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.setLineDash([12, 16]);
     ctx.beginPath();
-    ctx.arc(W / 2, H / 2, 16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#e94560';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`P${curr}`, W / 2, H / 2);
+    ctx.moveTo(TABLE.centerX - 260, TABLE.centerY);
+    ctx.lineTo(TABLE.centerX + 260, TABLE.centerY);
+    ctx.moveTo(TABLE.centerX, TABLE.centerY - 260);
+    ctx.lineTo(TABLE.centerX, TABLE.centerY + 260);
+    ctx.stroke();
+    ctx.restore();
+}
 
-    // ── Riichi indicator ────────────────────────────────────────────────────
-    if (state.kyoutaku > 0) {
-        ctx.fillStyle = '#f1c40f';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(`立直棒: ${state.kyoutaku}`, 10, H - 10);
+function renderTable(ctx, width, height, state, options = {}, interactiveRegions = []) {
+    const viewport = computeViewport(width, height);
+    ctx.save();
+    ctx.translate(viewport.offsetX, viewport.offsetY);
+    ctx.scale(viewport.scale, viewport.scale);
+
+    drawBackground(ctx);
+    drawCenterPanel(ctx, state);
+
+    const players = state.players || [];
+    for (let seat = 0; seat < 4; seat++) {
+        drawSeat(ctx, players[seat] || {}, seat, state, options, interactiveRegions);
     }
+
+    ctx.restore();
+    return viewport;
 }
 
-// ─── Replay Renderer ─────────────────────────────────────────────────────────
-
-/**
- * Render game state for replay (all 4 hands visible).
- */
-function renderReplay(ctx, W, H, state, opts = {}) {
-    // Same as renderGame but with all 4 hands visible
-    renderGame(ctx, W, H, state, { ...opts, showAllHands: true });
+function renderGame(ctx, width, height, state, options = {}) {
+    ctx.clearRect(0, 0, width, height);
+    if (!state) return;
+    renderTable(ctx, width, height, state, options);
 }
 
-// Export for use in HTML
+function renderReplay(ctx, width, height, state, options = {}) {
+    renderGame(ctx, width, height, state, { ...options, showAllHands: true });
+}
+
+function getHandHitBoxes(width, height, state) {
+    if (!state || !state.players || !state.players[0]) return [];
+    const player = state.players[0];
+    const handInfo = normalizeHand(player);
+    if (!handInfo.visible) return [];
+
+    const baseRects = computeHandRects(handInfo.count, TABLE.centerX, TABLE.centerY + LOCAL_LAYOUT.handY, HAND_TILE);
+    const viewport = computeViewport(width, height);
+    return baseRects.map((rect, index) => {
+        const canvasRect = toCanvasRect(rect, viewport);
+        return {
+            index,
+            tile: handInfo.tiles[index],
+            x: canvasRect.x,
+            y: canvasRect.y,
+            w: canvasRect.w,
+            h: canvasRect.h,
+        };
+    });
+}
+
+function renderSplash(ctx, width, height, title, subtitle = '') {
+    ctx.clearRect(0, 0, width, height);
+    const dummyState = {
+        game_wind: 'East',
+        oya: 0,
+        honba: 0,
+        kyoutaku: 0,
+        river_counter: 70,
+        dora: ['1z'],
+        turn: -1,
+        phase: 16,
+        players: [
+            { wind: 'East', score: 25000, is_oya: true, river: [], calls: [], hand: [{ count: 13 }], tenpai: [] },
+            { wind: 'South', score: 25000, is_oya: false, river: [], calls: [], hand: [{ count: 13 }], tenpai: [] },
+            { wind: 'West', score: 25000, is_oya: false, river: [], calls: [], hand: [{ count: 13 }], tenpai: [] },
+            { wind: 'North', score: 25000, is_oya: false, river: [], calls: [], hand: [{ count: 13 }], tenpai: [] },
+        ],
+    };
+    renderGame(ctx, width, height, dummyState);
+
+    const viewport = computeViewport(width, height);
+    ctx.save();
+    ctx.translate(viewport.offsetX + viewport.scale * TABLE.centerX, viewport.offsetY + viewport.scale * (TABLE.centerY + 20));
+    fillRoundedRect(ctx, -240, -58, 480, 116, 24, 'rgba(6, 15, 11, 0.72)', 'rgba(255,255,255,0.12)', 2);
+    ctx.fillStyle = '#f7f2e7';
+    ctx.font = '700 28px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(title, 0, -8);
+    if (subtitle) {
+        ctx.fillStyle = '#d7ccb7';
+        ctx.font = '14px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+        ctx.fillText(subtitle, 0, 26);
+    }
+    ctx.restore();
+}
+
 window.MahjongRenderer = {
+    BOARD_W,
+    BOARD_H,
+    BOARD_ASPECT,
     renderGame,
     renderReplay,
-    drawTile,
-    drawDoraTile,
-    drawRiverTile,
-    renderHand,
-    TILE_W,
-    TILE_H,
+    renderSplash,
+    resizeCanvasToContainer,
+    getHandHitBoxes,
+    setInvalidateHandler,
 };

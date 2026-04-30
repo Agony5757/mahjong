@@ -11,13 +11,16 @@ class AIBattleClient {
         this.isPaused = false;
         this.followPlayer = -1;  // -1 = all visible, 0-3 = follow specific player
         this.eventSource = null;
+
+        if (window.MahjongRenderer?.setInvalidateHandler) {
+            window.MahjongRenderer.setInvalidateHandler(() => this._render());
+        }
     }
 
     resize() {
-        const W = Math.min(this.canvas.parentElement.clientWidth - 16, 900);
-        const H = Math.min(W * 0.65, 600);
-        this.canvas.width = W;
-        this.canvas.height = H;
+        if (window.MahjongRenderer?.resizeCanvasToContainer) {
+            window.MahjongRenderer.resizeCanvasToContainer(this.canvas, { maxWidth: 1240, maxHeightRatio: 0.7 });
+        }
     }
 
     async _fetch(url, options = {}) {
@@ -96,16 +99,27 @@ class AIBattleClient {
         const s = this.state;
         const windNames = ['东', '南', '西', '北'];
         document.querySelectorAll('.round-info').forEach(el => {
-            el.textContent = `${windNames[0]}一局`;
+            const wind = windNames[s.game_wind === 'East' ? 0 : s.game_wind === 'South' ? 1 : s.game_wind === 'West' ? 2 : 3];
+            el.textContent = `${wind}${(s.oya ?? 0) + 1}局`;
         });
         document.querySelectorAll('.honba').forEach(el => {
             el.textContent = `本场${s.honba}`;
         });
+        document.querySelectorAll('.riichibo').forEach(el => {
+            el.textContent = `供托${s.kyoutaku || 0}`;
+        });
+        const doraBar = document.querySelector('.dora-tiles');
+        if (doraBar) {
+            doraBar.innerHTML = (s.dora || []).map(d => `<span class="mini-dora">${d}</span>`).join('');
+        }
         const chips = document.querySelectorAll('.score-chip');
         s.players.forEach((p, i) => {
             if (chips[i]) {
+                chips[i].querySelector('.pid').textContent = `AI-${i} · ${windNames[p.wind === 'East' ? 0 : p.wind === 'South' ? 1 : p.wind === 'West' ? 2 : 3]}`;
                 chips[i].querySelector('.pts').textContent = p.score;
                 chips[i].classList.toggle('oya', !!p.is_oya);
+                chips[i].classList.toggle('active', i === s.turn);
+                chips[i].classList.toggle('riichi', !!p.riichi);
             }
         });
     }
