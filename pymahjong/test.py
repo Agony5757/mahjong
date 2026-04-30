@@ -5,6 +5,7 @@ from functools import lru_cache
 import numpy as np
 
 from .env_pymahjong import MahjongEnv, SingleAgentMahjongEnv
+from .test_data.xiangting_corpus import XIANGTING_SHANTEN_CORPUS_300
 from MahjongPyWrapper import is_ordinary_agari, normal_round_to_win
 
 
@@ -198,6 +199,14 @@ def _assert_known_cases():
         )
 
 
+def _assert_xiangting_corpus():
+    for hand, expected in XIANGTING_SHANTEN_CORPUS_300:
+        actual = normal_round_to_win(hand, 0)
+        assert actual == expected, (
+            f"xiangting corpus mismatch for {hand}: got {actual}, expected {expected}"
+        )
+
+
 def _assert_direct_boundary_oracle_samples(rng, num_samples):
     for idx in range(num_samples):
         base14 = _build_random_ordinary_win_hand(rng)
@@ -274,6 +283,7 @@ def test_shanten_regressions(num_oracle_samples=64, num_boundary_samples=128, se
 
     rng = random.Random(seed)
     _assert_known_cases()
+    _assert_xiangting_corpus()
     _assert_direct_boundary_oracle_samples(rng, num_oracle_samples)
     _assert_draw_recurrence(rng, num_boundary_samples)
 
