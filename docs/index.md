@@ -11,6 +11,7 @@ quickstart
 api/index
 advanced/index
 examples/index
+web_frontend
 changelog
 ```
 

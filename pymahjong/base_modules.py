@@ -5,6 +5,14 @@ import torch.nn.functional as F
 import torch.distributions as dis
 import warnings
 
+__all__ = [
+    "MinusOneModule",
+    "MahjongNet",
+    "make_cnn",
+    "DiscreteActionQNetwork",
+    "DiscreteActionPolicyNetwork",
+]
+
 
 class MinusOneModule(nn.Module):
     def __init__(self):

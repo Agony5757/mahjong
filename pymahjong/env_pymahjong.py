@@ -170,7 +170,7 @@ class MahjongEnv(gym.Env):
 
         self.t = pm.Table()
         if seed is not None:
-            self.t.seed = seed
+            self.t.set_seed(seed)
 
         if debug_mode is not None:
             self.t.set_debug_mode(debug_mode)

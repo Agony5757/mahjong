@@ -7,11 +7,11 @@ scores and outcomes.
 
 The main entry points are:
     - :func:`paipu_replay`: Batch replay validation of multiple paipu files
-    - :func:`paipu_replay_1`: Single paipu file replay for debugging
+    - :func:`paipu_replay_summary`: Single paipu file replay for debugging
 
 Example:
-    >>> from pymahjong.tenhou_paipu_check import paipu_replay_1
-    >>> replayer = paipu_replay_1("paipu-2020-01-15-12345678.txt")
+    >>> from pymahjong.tenhou_paipu_check import paipu_replay_summary
+    >>> replayer = paipu_replay_summary("paipu-2020-01-15-12345678.txt")
 """
 
 from enum import Flag
@@ -31,6 +31,21 @@ import xml.etree.ElementTree as ET
 import MahjongPyWrapper as mp
 
 # eventlet.monkey_patch()
+
+__all__ = [
+    "game_round",
+    "MahjongException",
+    "ScoreException",
+    "ActionException",
+    "get_tile_from_id",
+    "get_tiles_from_id",
+    "paipu_link",
+    "decodem",
+    "Logger",
+    "PaipuReplay",
+    "paipu_replay",
+    "paipu_replay_summary",
+]
 
 def game_round(game_order, honba):
     """Generate a Chinese string describing the game round.
@@ -824,7 +839,7 @@ def paipu_replay(path = None, write_log = False, mode = 'debug'):
     print(replayer.progress())
     return replayer
 
-def paipu_replay_1(filename, path = None):
+def paipu_replay_summary(filename, path = None):
     """Replay and validate a single Tenhou paipu file.
 
     Useful for debugging individual game replays. Prints detailed

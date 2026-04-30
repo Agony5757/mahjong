@@ -1,0 +1,334 @@
+/* Mahjong Web UI — Global Styles */
+
+:root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #f39c12;
+    --text: #eee;
+    --text-dim: #888;
+    --tile-bg: #faf8f0;
+    --tile-red: #e74c3c;
+    --tile-blue: #2980b9;
+    --tile-green: #27ae60;
+    --tile-center: #1a1a2e;
+    --font: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Courier New', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ── Top Bar ──────────────────────────────────────────── */
+.top-bar {
+    width: 100%;
+    background: var(--surface);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 2px solid var(--surface2);
+    font-size: 14px;
+}
+
+.top-bar .round-info {
+    font-weight: bold;
+    color: var(--accent2);
+}
+
+.top-bar .honba {
+    background: var(--accent);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+
+.top-bar .scores {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.score-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--surface2);
+    min-width: 70px;
+}
+.score-chip .pid { font-size: 11px; color: var(--text-dim); }
+.score-chip .pts { font-weight: bold; font-size: 14px; }
+.score-chip.oya { border: 1px solid var(--accent2); }
+.score-chip.human { border: 1px solid var(--accent); }
+
+/* ── Game Canvas ──────────────────────────────────────── */
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    width: 100%;
+    max-width: 960px;
+}
+
+canvas#mahjongCanvas {
+    border: 2px solid var(--surface2);
+    border-radius: 8px;
+    background: #0d1117;
+    cursor: pointer;
+    max-width: 100%;
+}
+
+/* ── Action Panel ──────────────────────────────────────── */
+.action-panel {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 8px;
+    background: var(--surface);
+    border-radius: 8px;
+    min-height: 50px;
+    width: 100%;
+}
+
+.action-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.1s;
+    font-family: var(--font);
+}
+.action-btn:hover { transform: translateY(-1px); }
+.action-btn:active { transform: translateY(1px); }
+
+.btn-ron     { background: #c0392b; color: white; }
+.btn-pon     { background: #e67e22; color: white; }
+.btn-chi     { background: #27ae60; color: white; }
+.btn-kan     { background: #8e44ad; color: white; }
+.btn-riichi  { background: #f1c40f; color: #222; }
+.btn-pass    { background: #555; color: white; }
+.btn-tsumo   { background: #16a085; color: white; }
+.btn-confirm { background: var(--accent); color: white; }
+.btn-disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+.status-msg {
+    font-size: 13px;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 4px;
+}
+
+/* ── Dora Display ─────────────────────────────────────── */
+.dora-bar {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.dora-bar .dora-tiles { display: flex; gap: 3px; }
+
+/* ── Log Panel ────────────────────────────────────────── */
+.log-panel {
+    width: 100%;
+    max-width: 960px;
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.log-entry { padding: 2px 0; border-bottom: 1px solid var(--surface2); }
+.log-entry:last-child { border-bottom: none; }
+.log-entry .player { color: var(--accent2); }
+.log-entry .action { color: var(--accent); }
+
+/* ── Landing / Mode Select ────────────────────────────── */
+.landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 60px 20px;
+    min-height: 80vh;
+}
+
+.landing h1 {
+    font-size: 48px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(233,69,96,0.3);
+}
+
+.landing .subtitle {
+    color: var(--text-dim);
+    font-size: 18px;
+}
+
+.mode-cards {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.mode-card {
+    background: var(--surface);
+    border: 2px solid var(--surface2);
+    border-radius: 12px;
+    padding: 24px 32px;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+    text-align: center;
+    min-width: 200px;
+}
+.mode-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+.mode-card h2 { font-size: 20px; margin-bottom: 8px; }
+.mode-card p { color: var(--text-dim); font-size: 14px; }
+.mode-card .icon { font-size: 48px; margin-bottom: 8px; }
+
+/* ── AI Battle Controls ───────────────────────────────── */
+.ai-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px;
+    background: var(--surface);
+    border-radius: 8px;
+    font-size: 13px;
+}
+.speed-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--surface2);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--font);
+}
+.speed-btn.active { background: var(--accent); border-color: var(--accent); }
+
+/* ── Replay Controls ───────────────────────────────────── */
+.replay-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px;
+    background: var(--surface);
+    border-radius: 8px;
+}
+
+.replay-timeline {
+    flex: 1;
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+}
+.replay-progress {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.1s;
+}
+
+/* ── Result Modal ──────────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+.modal {
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    min-width: 320px;
+}
+.modal h2 { font-size: 28px; color: var(--accent); margin-bottom: 16px; }
+.modal .result-scores { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+.modal .result-row { display: flex; justify-content: space-between; padding: 4px 0; }
+.modal .result-row.winner { color: var(--accent2); font-weight: bold; }
+
+/* ── Nav ──────────────────────────────────────────────── */
+.nav-links {
+    display: flex;
+    gap: 16px;
+    padding: 8px 16px;
+    background: var(--surface);
+    width: 100%;
+    justify-content: center;
+    border-bottom: 1px solid var(--surface2);
+}
+.nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 14px;
+    padding: 4px 12px;
+    border-radius: 4px;
+}
+.nav-links a:hover, .nav-links a.active {
+    color: var(--accent);
+    background: var(--surface2);
+}
+
+/* ── Upload Box ────────────────────────────────────────── */
+.upload-box {
+    border: 2px dashed var(--surface2);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    max-width: 480px;
+    width: 100%;
+}
+.upload-box:hover { border-color: var(--accent); }
+.upload-box input[type="file"] { display: none; }
+.upload-box .hint { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+/* ── Misc ──────────────────────────────────────────────── */
+.hidden { display: none !important; }
+.text-accent { color: var(--accent); }
+.text-dim { color: var(--text-dim); }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.gap-8 { gap: 8px; }

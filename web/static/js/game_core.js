@@ -1,0 +1,483 @@
+/**
+ * Mahjong Game Core — API client, state management, and event handling.
+ */
+
+class MahjongGame {
+    constructor(canvasId, opts = {}) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.opts = opts;
+
+        this.sessionId = null;
+        this.state = null;
+        this.mode = 'human_ai';  // 'human_ai' or '4ai'
+        this.isMyTurn = false;
+        this.selectedTileIdx = null;
+        this.pendingRiichi = false;
+        this.eventSource = null;
+        this.aiSpeed = 1000;  // ms between AI actions
+        this._animFrame = null;
+    }
+
+    // ─── Canvas Sizing ────────────────────────────────────────────────────
+
+    resize() {
+        const container = this.canvas.parentElement;
+        const W = Math.min(container.clientWidth - 16, 900);
+        const H = Math.min(W * 0.65, 600);
+        this.canvas.width = W;
+        this.canvas.height = H;
+    }
+
+    // ─── API Calls ─────────────────────────────────────────────────────────
+
+    async _fetch(url, options = {}) {
+        const resp = await fetch(url, {
+            headers: { 'Content-Type': 'application/json', ...options.headers },
+            ...options,
+            body: options.body ? JSON.stringify(options.body) : undefined,
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+            throw new Error(err.detail || `HTTP ${resp.status}`);
+        }
+        if (resp.headers.get('content-type')?.includes('application/json')) {
+            return resp.json();
+        }
+        return resp.text();
+    }
+
+    async newGame(mode = 'human_ai', aiModel = null, seed = null) {
+        this.mode = mode;
+        const resp = await this._fetch('/api/game/new', {
+            method: 'POST',
+            body: { mode, ai_model: aiModel, seed }
+        });
+        this.sessionId = resp.session_id;
+        this.state = resp.state;
+        this._startSSE();
+        this._render();
+
+        // Auto AI turn if not human's turn
+        this._scheduleAI();
+
+        return resp;
+    }
+
+    async getState() {
+        if (!this.sessionId) return null;
+        try {
+            const state = await this._fetch(`/api/game/${this.sessionId}/state?for_player=0`);
+            this.state = state;
+            this._render();
+            return state;
+        } catch (e) {
+            console.error('getState failed:', e);
+            return null;
+        }
+    }
+
+    async submitAction(actionIdx) {
+        if (!this.sessionId) return;
+        try {
+            const resp = await this._fetch(`/api/game/${this.sessionId}/action`, {
+                method: 'POST',
+                body: { player_id: 0, action_idx: actionIdx }
+            });
+            this.state = resp.state;
+            this.selectedTileIdx = null;
+            this.pendingRiichi = false;
+            this._render();
+            this._scheduleAI();
+            return resp;
+        } catch (e) {
+            console.error('submitAction failed:', e);
+        }
+    }
+
+    // ─── SSE ───────────────────────────────────────────────────────────────
+
+    _startSSE() {
+        if (this.eventSource) {
+            this.eventSource.close();
+        }
+        this.eventSource = new EventSource(`/api/game/${this.sessionId}/events`);
+
+        this.eventSource.addEventListener('message', (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                if (data.type === 'ai_action' || data.type === 'game_over') {
+                    this.state = data.state;
+                    this._render();
+                    if (data.type === 'ai_action') {
+                        this._showAIMove(data.player, data.action);
+                    }
+                    if (data.type === 'game_over') {
+                        this._onGameOver(data.state);
+                    }
+                }
+            } catch (err) {
+                console.error('SSE parse error:', err);
+            }
+        });
+
+        this.eventSource.onerror = () => {
+            console.warn('SSE connection lost, will retry...');
+        };
+    }
+
+    _stopSSE() {
+        if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
+        }
+    }
+
+    // ─── AI Scheduling ─────────────────────────────────────────────────────
+
+    _scheduleAI() {
+        if (this.mode === '4ai') return;  // Server handles AI in 4ai mode
+        if (!this.state || this.state.is_over) return;
+        const curr = this.state.turn;
+        const isHuman = (curr === 0);
+        if (!isHuman) {
+            // AI turn — wait a bit then the SSE will deliver the result
+        }
+    }
+
+    // ─── Tile Click Handling ───────────────────────────────────────────────
+
+    _onCanvasClick(e) {
+        if (!this.state || this.state.is_over) return;
+        if (this.state.turn !== 0) return;  // Not our turn
+
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const mx = (e.clientX - rect.left) * scaleX;
+        const my = (e.clientY - rect.top) * scaleY;
+
+        const W = this.canvas.width;
+        const H = this.canvas.height;
+        const T = 32, TH = 44, GAP = 2;
+
+        const p0Hand = this.state.players[0]?.hand || [];
+        const p0Y = H - TH - 60;
+        const p0X = W / 2 - (p0Hand.length * (T + GAP)) / 2;
+
+        // Check if click is in our hand
+        for (let i = 0; i < p0Hand.length; i++) {
+            const tx = p0X + i * (T + GAP);
+            if (mx >= tx && mx <= tx + T && my >= p0Y && my <= p0Y + TH) {
+                this._selectTile(i, p0Hand[i]);
+                return;
+            }
+        }
+    }
+
+    _selectTile(idx, tileData) {
+        if (this.pendingRiichi) {
+            // Second click — confirm riichi (submit RIICHI action = index 48)
+            this.pendingRiichi = false;
+            this.submitAction(48);
+            return;
+        }
+
+        // Normal discard or riichi step 1
+        const actionIdx = this._findDiscardAction(tileData);
+        if (actionIdx === null) return;
+
+        // Check if this tile can start riichi
+        const validMask = this.state.valid_actions_mask;
+        const isRiichi = validMask && validMask[48] === true;
+        const isValidDiscard = validMask && validMask[actionIdx] === true;
+
+        if (isRiichi && isValidDiscard) {
+            // Submit riichi step 1: same as discard, server detects riichi tile
+            this._submitRiichiStep1(actionIdx, tileData, idx);
+        } else if (isValidDiscard) {
+            this.submitAction(actionIdx);
+        }
+    }
+
+    _submitRiichiStep1(discardIdx, tileData, tileDisplayIdx) {
+        // Riichi is a two-step process:
+        // Step 1: Player clicks a riichi-eligible tile → submit discard (same as normal)
+        //   The server's MahjongEnvWrapper detects riichi_stage2=True
+        // Step 2: Player confirms → submit action 48 (RIICHI)
+        //
+        // For Step 1, we just submit the discard normally:
+        this.pendingRiichi = true;
+        this._riichiDiscardIdx = discardIdx;
+        this._riichiDisplayIdx = tileDisplayIdx;
+
+        // Visual: highlight selected tile
+        this.state.players[0].hand.forEach((t, i) => {
+            if (typeof t === 'object') t.selected = (i === tileDisplayIdx);
+        });
+        this._render();
+
+        // Submit discard (server will detect riichi and enter stage 2)
+        this.submitAction(discardIdx);
+    }
+
+    _showRiichiConfirm() {
+        // This is now handled by click detection (pendingRiichi flag)
+        // Kept for the button-based fallback
+        const panel = document.getElementById('actionPanel');
+        if (!panel) return;
+        panel.innerHTML = '';
+        panel.className = 'action-panel';
+
+        const confirmBtn = this._makeBtn('确认立直', 'btn-riichi', () => {
+            this.pendingRiichi = false;
+            this.submitAction(48);
+        });
+        const cancelBtn = this._makeBtn('取消立直', 'btn-pass', () => {
+            this.pendingRiichi = false;
+            this.submitAction(this._riichiDiscardIdx);
+        });
+        panel.appendChild(confirmBtn);
+        panel.appendChild(cancelBtn);
+    }
+
+    _findDiscardAction(tileData) {
+        // Map clicked tile to action index
+        // Tiles 0-36 map to basetiles (handling red 5)
+        const tileStr = typeof tileData === 'string' ? tileData : (tileData.str || '');
+        const isRed = tileData.red_dora || false;
+
+        if (isRed) {
+            if (tileStr.startsWith('5m') || tileStr === '5m') return 37;  // red 5m
+            if (tileStr.startsWith('5p') || tileStr === '5p') return 38;  // red 5p
+            if (tileStr.startsWith('5s') || tileStr === '5s') return 39;  // red 5s
+        }
+
+        const basetile = this._strToBasetile(tileStr);
+        if (basetile === null) return null;
+        return basetile;  // 0-36 for basetiles 0-33
+    }
+
+    _strToBasetile(s) {
+        s = String(s);
+        const ch = s.charAt(s.length - 1);
+        const num = parseInt(s);
+        if (ch === 'm') return num - 1;
+        if (ch === 'p') return num - 1 + 9;
+        if (ch === 's') return num - 1 + 18;
+        if (ch === 'z') return num - 1 + 27;
+        return null;
+    }
+
+    // ─── Response Actions ───────────────────────────────────────────────────
+
+    _showResponseActions() {
+        const panel = document.getElementById('actionPanel');
+        if (!panel || !this.state) return;
+        panel.innerHTML = '';
+
+        const validMask = this.state.valid_actions_mask || [];
+        const canRon = validMask[49] === true;
+        const canPon = validMask[43] === true || validMask[44] === true;
+        const canKan = validMask[46] === true;  // Minkan
+        const canChi = validMask[37] || validMask[38] || validMask[39] ||
+                       validMask[40] || validMask[41] || validMask[42];
+
+        if (canRon) {
+            panel.appendChild(this._makeBtn('荣和', 'btn-ron', () => this.submitAction(49)));
+        }
+        if (canPon) {
+            panel.appendChild(this._makeBtn('碰', 'btn-pon', () => this.submitAction(43)));
+        }
+        if (canKan) {
+            panel.appendChild(this._makeBtn('杠', 'btn-kan', () => this.submitAction(46)));
+        }
+        if (canChi) {
+            panel.appendChild(this._makeBtn('吃', 'btn-chi', () => this.submitAction(37)));
+        }
+        panel.appendChild(this._makeBtn('跳过', 'btn-pass', () => this.submitAction(53)));
+
+        this._updateStatus(`P${this.state.turn} 打出了 ${this._getLastDiscardStr() || '?'}`);
+    }
+
+    _getLastDiscardStr() {
+        // Find the last discarded tile by the previous player
+        const prev = (this.state.turn + 3) % 4;
+        const river = this.state.players[prev]?.river || [];
+        if (river.length > 0) {
+            const last = river[river.length - 1];
+            return last.tile?.str || last.str || '?';
+        }
+        return null;
+    }
+
+    // ─── Render Loop ───────────────────────────────────────────────────────
+
+    _render() {
+        if (!this.state) return;
+        const { renderGame } = window.MahjongRenderer;
+        renderGame(this.ctx, this.canvas.width, this.canvas.height, this.state, this.opts);
+        this._updateUI();
+    }
+
+    _updateUI() {
+        this._updateTopBar();
+        this._updateActionPanel();
+
+        const statusEl = document.getElementById('statusMsg');
+        if (statusEl) {
+            if (this.state.is_over) {
+                statusEl.textContent = '对局结束';
+            } else if (this.state.turn === 0) {
+                statusEl.textContent = '你的回合 — 请打出或回应';
+            } else {
+                statusEl.textContent = `P${this.state.turn} 思考中...`;
+            }
+        }
+
+        if (this.state.is_over) {
+            this._showResultModal();
+        }
+    }
+
+    _updateTopBar() {
+        if (!this.state) return;
+        const s = this.state;
+
+        // Round info
+        const windNames = ['东', '南', '西', '北'];
+        document.querySelectorAll('.round-info').forEach(el => {
+            el.textContent = `${windNames[s.game_wind === 'East' ? 0 : s.game_wind === 'South' ? 1 : s.game_wind === 'West' ? 2 : 3]}局`;
+        });
+        document.querySelectorAll('.honba').forEach(el => {
+            el.textContent = `本场${s.honba}`;
+        });
+
+        // Scores
+        const chips = document.querySelectorAll('.score-chip');
+        s.players.forEach((p, i) => {
+            if (chips[i]) {
+                chips[i].querySelector('.pts').textContent = p.score;
+                chips[i].classList.toggle('oya', !!p.is_oya);
+                chips[i].classList.toggle('human', i === 0);
+            }
+        });
+
+        // Dora
+        const doraBar = document.querySelector('.dora-tiles');
+        if (doraBar) {
+            doraBar.innerHTML = s.dora.map(d =>
+                `<span style="background:#faf8f0;color:#222;padding:1px 4px;border-radius:3px;font-size:12px;margin-left:2px">${d}</span>`
+            ).join('');
+        }
+    }
+
+    _updateActionPanel() {
+        if (!this.state || this.state.is_over || this.state.turn !== 0) return;
+
+        const panel = document.getElementById('actionPanel');
+        if (!panel) return;
+        panel.innerHTML = '';
+
+        // Riichi stage 2 — waiting for confirm
+        if (this.state.riichi_stage2 || this.pendingRiichi) {
+            const tileData = this.state.players[0]?.hand?.[this._riichiDisplayIdx ?? 0];
+            panel.appendChild(this._makeBtn('确认立直', 'btn-riichi', () => {
+                this.pendingRiichi = false;
+                this.submitAction(48);
+            }));
+            panel.appendChild(this._makeBtn('取消立直', 'btn-pass', () => {
+                this.pendingRiichi = false;
+                if (this._riichiDiscardIdx !== null) {
+                    this.submitAction(this._riichiDiscardIdx);
+                }
+            }));
+            this._updateStatus('请确认是否立直');
+            return;
+        }
+
+        // Self-action phase
+        const validMask = this.state.valid_actions_mask || [];
+        if (validMask[50]) {
+            panel.appendChild(this._makeBtn('自摸', 'btn-tsumo', () => this.submitAction(50)));
+        }
+        // Discard tiles are handled by canvas click
+    }
+
+    _makeBtn(label, cls, onClick) {
+        const btn = document.createElement('button');
+        btn.className = `action-btn ${cls}`;
+        btn.textContent = label;
+        btn.onclick = onClick;
+        return btn;
+    }
+
+    _updateStatus(msg) {
+        const el = document.getElementById('statusMsg');
+        if (el) el.textContent = msg;
+    }
+
+    _showAIMove(player, actionIdx) {
+        const actionNames = [
+            '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌',
+            '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌',
+            '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌',
+            '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌', '摸牌',
+            '吃(左)', '吃(中)', '吃(右)',
+            '吃+赤(左)', '吃+赤(中)', '吃+赤(右)',
+            '碰', '碰+赤', '暗杠', '大明杠', '加杠', '立直', '荣和', '自摸', '通过', '确认立直', '跳过'
+        ];
+        const name = actionNames[actionIdx] || `动作${actionIdx}`;
+        const el = document.getElementById('statusMsg');
+        if (el) el.textContent = `P${player} 执行: ${name}`;
+    }
+
+    _showResultModal() {
+        if (document.getElementById('resultModal')) return;
+        const r = this.state.result;
+        if (!r) return;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'resultModal';
+        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        const typeNames = {
+            'RonAgari': '荣和',
+            'TsumoAgari': '自摸',
+            'Ryukyouku_9Hai': '九种九牌',
+            'Ryukyouku_4Wind': '四风连打',
+            'Ryukyouku_4Riichi': '四立直',
+            'Ryukyouku_4Kan': '四杠子',
+            'Ryukyouku_Notile': '流局',
+        };
+        modal.innerHTML = `
+            <h2>${typeNames[r.type] || r.type || '对局结束'}</h2>
+            <div class="result-scores">
+                ${r.scores.map((s, i) => `
+                    <div class="result-row ${r.winner?.includes(i) ? 'winner' : ''}">
+                        <span>P${i}${i === r.loser ? ' (放铳)' : ''}</span>
+                        <span>${s}点</span>
+                    </div>
+                `).join('')}
+            </div>
+            ${r.winner?.length ? `<p>胜利: P${r.winner.join(', P')}</p>` : ''}
+            <button class="action-btn btn-confirm mt-16" onclick="document.getElementById('resultModal').remove()">确定</button>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    }
+
+    // ─── Lifecycle ─────────────────────────────────────────────────────────
+
+    destroy() {
+        this._stopSSE();
+        if (this._animFrame) cancelAnimationFrame(this._animFrame);
+    }
+}
+
+// ─── Export ─────────────────────────────────────────────────────────────────
+
+window.MahjongGame = MahjongGame;

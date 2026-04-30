@@ -77,7 +77,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("to_string", &CallGroup::to_string, "Return a string representation.")
 		;
 
-	m.def("CallGroupToString", [](const CallGroup &CallGroup) {return py::bytes(CallGroup.to_string()); },
+	m.def("CallGroupToString", [](const CallGroup &CallGroup) {return py::str(CallGroup.to_string()); },
 		"Convert a CallGroup to a byte string.");
 
 	py::class_<Tile>(m, "Tile", "A Mahjong tile with identity and red dora info.")
@@ -87,7 +87,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("to_string", &Tile::to_string, "Return a string representation.")
 		;
 
-	m.def("TileToString", [](const Tile *tile) {return py::bytes(tile->to_string()); },
+	m.def("TileToString", [](const Tile *tile) {return py::str(tile->to_string()); },
 		"Convert a Tile to a byte string.");
 
 	py::class_<River>(m, "River", "A player's discard pool (river).")
@@ -96,7 +96,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("to_string", &River::to_string, "Return a string representation.")
 		;
 
-	m.def("RiverToString", [](const River& river) {return py::bytes(river.to_string()); },
+	m.def("RiverToString", [](const River& river) {return py::str(river.to_string()); },
 		"Convert a River to a byte string.");
 
 	py::class_<RiverTile>(m, "RiverTile", "A tile in a player's discard pool.")
@@ -138,7 +138,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("to_string", &SelfAction::to_string, "Return a string representation.")
 		;
 
-	m.def("SelfActionToString", [](const SelfAction &sa) {return py::bytes(sa.to_string()); },
+	m.def("SelfActionToString", [](const SelfAction &sa) {return py::str(sa.to_string()); },
 		"Convert a SelfAction to a byte string.");
 
 	py::class_<ResponseAction>(m, "ResponseAction", "An available response action for a player after another's discard/kan.")
@@ -147,7 +147,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("to_string", &ResponseAction::to_string, "Return a string representation.")
 		;
 
-	m.def("ResponseActionToString", [](const ResponseAction &ra) {return py::bytes(ra.to_string()); },
+	m.def("ResponseActionToString", [](const ResponseAction &ra) {return py::str(ra.to_string()); },
 		"Convert a ResponseAction to a byte string.");
 
 	py::class_<Player>(m, "Player", "A Mahjong player with hand, river, and game state.")
@@ -178,7 +178,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("tenpai_to_string", &Player::tenpai_to_string, "Return a string of tenpai (winning) tiles.")
 		;
 
-	m.def("PlayerToString", [](const Player& player) {return py::bytes(player.to_string()); },
+	m.def("PlayerToString", [](const Player& player) {return py::str(player.to_string()); },
 		"Convert a Player to a byte string.");
 
 	py::class_<Table>(m, "Table", "Central game state manager for a Mahjong game.")
@@ -226,9 +226,9 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 			"Get the game result (only valid after GAME_OVER phase).")
 
 		// change to reference will cause error (why?)
-		.def("get_self_actions", &Table::get_self_actions,
+		.def("get_self_actions", &Table::get_self_actions, py::return_value_policy::reference_internal,
 			"Get the list of available self-actions for the current player.")
-		.def("get_response_actions", &Table::get_response_actions,
+		.def("get_response_actions", &Table::get_response_actions, py::return_value_policy::reference_internal,
 			"Get the list of available response-actions for the current player.")
 
 		.def("set_seed", &Table::set_seed,
@@ -242,10 +242,10 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 
 		// 成员变量们
 		.def_readonly("n_active_dora", &Table::n_active_dora, "Number of active dora indicators.")
-		.def_readonly("dora_indicator", &Table::dora_indicator, "List of dora indicator tiles.")
-		.def_readonly("uradora_indicator", &Table::uradora_indicator, "List of uradora indicator tiles.")
-		.def_readonly("yama", &Table::yama, "The tile wall (remaining draw pile).")
-		.def_readonly("players", &Table::players, "List of 4 Player objects.")
+		.def_readonly("dora_indicator", &Table::dora_indicator, py::return_value_policy::reference_internal, "List of dora indicator tiles.")
+		.def_readonly("uradora_indicator", &Table::uradora_indicator, py::return_value_policy::reference_internal, "List of uradora indicator tiles.")
+		.def_readonly("yama", &Table::yama, py::return_value_policy::reference_internal, "The tile wall (remaining draw pile).")
+		.def_readonly("players", &Table::players, py::return_value_policy::reference_internal, "List of 4 Player objects.")
 		.def_readonly("turn", &Table::turn, "Current turn number.")
 		.def_readonly("last_action", &Table::last_action, "The last action taken.")
 		.def_readonly("game_wind", &Table::game_wind, "Current game wind.")
@@ -254,15 +254,17 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("riichibo", &Table::kyoutaku, "Number of riichi deposit sticks on the table.")
 
 		// 辅助函数们
-		.def("get_dora", &Table::get_dora, "Get the list of active dora tiles.")
-		.def("get_ura_dora", &Table::get_ura_dora, "Get the list of uradora tiles (revealed after riichi win).")
+		.def("get_dora", &Table::get_dora, py::return_value_policy::reference_internal, "Get the list of active dora tiles.")
+		.def("get_ura_dora", &Table::get_ura_dora, py::return_value_policy::reference_internal, "Get the list of uradora tiles (revealed after riichi win).")
 		.def("get_remain_kan_tile", &Table::get_remain_kan_tile, "Get remaining kan draw tiles count.")
 		.def("get_remain_tile", &Table::get_remain_tile, "Get remaining tiles in the wall.")
+		.def("get_scores", &Table::get_scores, py::return_value_policy::reference_internal,
+			"Return current scores for all 4 players as a list.")
 		.def("to_string", static_cast<std::string(Table::*)() const>(&Table::to_string),
 			"Return a string representation of the table state.")
 		;
 
-	m.def("TableToString", [](const Table& table) {return py::bytes(table.to_string()); },
+	m.def("TableToString", [](const Table& table) {return py::str(table.to_string()); },
 		"Convert a Table to a byte string.");
 
 	py::enum_<ResultType>(m, "ResultType", "Enum of game result types.")

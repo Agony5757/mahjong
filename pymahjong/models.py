@@ -8,6 +8,8 @@ torch.set_default_dtype(torch.float32)
 
 INFINITY = 1e9
 
+__all__ = ["VLOGMahjong"]
+
 
 class VLOGMahjong(nn.Module):
     """Variational Latent Oracle Guiding (VLOG) model for Mahjong decision-making.
