@@ -83,8 +83,29 @@ Full documentation is available at [https://agony5757.github.io/mahjong/](https:
 
 - [Installation Guide](https://agony5757.github.io/mahjong/installation.html)
 - [Quick Start](https://agony5757.github.io/mahjong/quickstart.html)
+- [Live Demo](https://agony5757.github.io/mahjong/demo.html) — try it in your browser
 - [API Reference](https://agony5757.github.io/mahjong/api/index.html)
 - [Advanced Topics](https://agony5757.github.io/mahjong/advanced/index.html)
+
+## Visualization (Web UI)
+
+A full-featured web interface is included for human vs AI, 4-AI battle, and paipu replay.
+
+```bash
+cd /home/agony/projects/mahjong-dev/web
+pip install -r requirements.txt
+uvicorn server:app --host 0.0.0.0 --port 8000
+```
+
+Then open http://localhost:8000 in your browser:
+
+| Page | Route | Description |
+|------|-------|-------------|
+| Human vs AI | `/` | Play against 3 AI opponents |
+| 4 AI Battle | `/ai_battle` | Watch 4 AI agents compete in real time |
+| Paipu Replay | `/replay` | Step through a Tenhou XML paipu file |
+
+For a quick preview without installing, see the [Live Demo](https://agony5757.github.io/mahjong/demo.html) (embedded in the documentation).
 
 ## Pretrained Models
 
