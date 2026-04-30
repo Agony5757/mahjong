@@ -52,7 +52,7 @@ jobs:
           CIBW_ARCHS_MACOS: x86_64 arm64
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_BUILD_VERBOSITY: 1
-          CIBW_TEST_COMMAND: python -c "import pymahjong as pm; pm.test()"
+          CIBW_TEST_COMMAND: python -c "from pymahjong.test import test_shanten_regressions, test; test_shanten_regressions(); test()"
 
       - uses: actions/upload-artifact@v4
         with:

@@ -1,120 +1,184 @@
 ﻿#include "RoundToWin.h"
-#include <fstream>
-#include <tuple>
+
+#include <algorithm>
 #include <array>
+#include <cstdint>
+#include <stdexcept>
+#include <unordered_map>
 
 namespace_mahjong
 
-// little endian
-constexpr static std::array<uint32_t, 9> tile_to_bit = {
-        0b000000000000000000000000001, // _1
-        0b000000000000000000000001000, // _2
-        0b000000000000000000001000000,
-        0b000000000000000001000000000,
-        0b000000000000001000000000000,
-        0b000000000001000000000000000,
-        0b000000001000000000000000000,
-        0b000001000000000000000000000,
-        0b001000000000000000000000000, // _9
+namespace {
+
+struct SearchKey {
+    std::array<uint8_t, 34> counts{};
+    uint8_t melds = 0;
+    uint8_t taatsu = 0;
+    uint8_t has_pair = 0;
+
+    bool operator==(const SearchKey& other) const {
+        return counts == other.counts &&
+            melds == other.melds &&
+            taatsu == other.taatsu &&
+            has_pair == other.has_pair;
+    }
 };
 
-std::string Syanten::code_to_string(uint32_t code) {
-    std::string result;
-    for (int i = 0; i < 9; i++) {
-        result += std::to_string(0b111 & code);
-        code >>= 3;
+struct SearchKeyHash {
+    size_t operator()(const SearchKey& key) const {
+        size_t hash = key.melds;
+        hash = hash * 131 + key.taatsu;
+        hash = hash * 131 + key.has_pair;
+        for (uint8_t count : key.counts) {
+            hash = hash * 5 + count;
+        }
+        return hash;
     }
-    return result;
+};
+
+inline bool is_number_tile(int tile) {
+    return tile < _1z;
 }
 
-void Syanten::load_syanten_map() {
-    auto& result = syanten_map;
-    std::fstream f;
-    f.open("../resource/syanten.dat", std::ios::in);
-    if (!f.good()) {
-        throw std::runtime_error("open syanten.dat error.\nPlease put \"syanten.dat\" to current path.");
-    }
-    std::string line;
-    while (getline(f, line)) {
-        std::string code_str;
-        std::stringstream ss;
-        ss << line;
-        ss >> code_str;
-        uint32_t key = 0;
-        int value[4];
-        for (int i = 0; i < 9; i++) {
-            key += tile_to_bit[i] * (code_str[i] - '0');
-        }
-        ss >> value[0] >> value[1] >> value[2] >> value[3];
-        result[key] = std::make_tuple(value[0], value[1], value[2], value[3]);
-    }
-    f.close();
-    // for(auto iter=result.cbegin();iter!=result.cend();iter++){
-    //     int value[4];
-    //     std::tie(value[0], value[1], value[2], value[3]) = iter->second;
-    //     std:: cout << code_to_string(iter->first) << ' ' << value[0] << ' ' << value[1]
-    //     << ' ' << value[2] << ' ' << value[3] << std::endl;
-    // }
-    if (result.size() != 405350) {
-        throw std::runtime_error("syanten.dat broken!");
-    }
-    // return result;
+inline bool can_make_sequence(int tile) {
+    return is_number_tile(tile) && tile % 9 <= 6;
 }
 
-void Syanten::hand_to_code(const std::vector<Tile*>& hand, uint32_t* code){
-    // 1m 2m 6m 9m 1s 3s 5s 7s 1p 1p 1p 1p 1z => [110001001, 101010100, 400000000, 100000000]
-    memset(code, 0, 4*sizeof(uint32_t));
-    for (auto iter = hand.cbegin(); iter != hand.cend(); iter++) {
-        BaseTile t = (*iter)->tile;
-        code[t / (_1p - _1m)] += tile_to_bit[t % (_1p - _1m)];
-    }
+inline bool can_make_adjacent_taatsu(int tile) {
+    return is_number_tile(tile) && tile % 9 <= 7;
 }
 
-int Syanten::_check_normal(const uint32_t* hand_code, int n_call_groups) {
-    int ptm = 0, ptt = 0;
-    for (int j = 0; j < 3; j++) {
-        int pt1m, pt1t, pt2m, pt2t;
-        std::tie(pt1m, pt1t, pt2m, pt2t) = syanten_map[hand_code[j]];
-        if (pt1m * 2 + pt1t >= pt2m * 2 + pt2t) {
-            ptm += pt1m;
-            ptt += pt1t;
-        }
-        else {
-            ptm += pt2m;
-            ptt += pt2t;
+class ExactNormalShantenSolver {
+public:
+    explicit ExactNormalShantenSolver(int n_call_groups)
+        : n_call_groups_(n_call_groups),
+        max_closed_groups_(4 - n_call_groups) {
+        if (n_call_groups_ < 0 || n_call_groups_ > 4) {
+            throw std::invalid_argument("The number of open melds must be between 0 and 4.");
         }
     }
 
-    for (int i = 0; i < 7; i++) {
-        int num = 0b111 & (hand_code[3] >> (3 * i));
-        if (num >= 3) {
-            ptm++; // 面子
+    int solve(const std::array<int, 34>& tile_counts) {
+        std::array<uint8_t, 34> counts{};
+        for (size_t i = 0; i < tile_counts.size(); ++i) {
+            if (tile_counts[i] < 0 || tile_counts[i] > 4) {
+                throw std::invalid_argument("Each tile count must be between 0 and 4.");
+            }
+            counts[i] = static_cast<uint8_t>(tile_counts[i]);
         }
-        else if (num >= 2) {
-            ptt++; // 雀头
-        }
+        return dfs(counts, 0, 0, false);
     }
-    while (ptm + ptt > 4 - n_call_groups && ptt > 0) ptt--;
-    while (ptm + ptt > 4 - n_call_groups) ptm--;
-    return 9 - ptm * 2 - ptt - n_call_groups * 2;
+
+private:
+    int n_call_groups_;
+    int max_closed_groups_;
+    std::unordered_map<SearchKey, int, SearchKeyHash> memo_;
+
+    int evaluate(int melds, int taatsu, bool has_pair) const {
+        // Extra taatsu above the remaining meld capacity do not reduce shanten.
+        int capped_taatsu = std::min(taatsu, std::max(0, max_closed_groups_ - melds));
+        return 8 - 2 * (n_call_groups_ + melds) - capped_taatsu - (has_pair ? 1 : 0);
+    }
+
+    int dfs(std::array<uint8_t, 34>& counts, int melds, int taatsu, bool has_pair) {
+        SearchKey key{ counts, static_cast<uint8_t>(melds), static_cast<uint8_t>(taatsu), static_cast<uint8_t>(has_pair) };
+        auto memo_it = memo_.find(key);
+        if (memo_it != memo_.end()) {
+            return memo_it->second;
+        }
+
+        int tile = 0;
+        while (tile < 34 && counts[tile] == 0) {
+            ++tile;
+        }
+        if (tile == 34) {
+            int shanten = evaluate(melds, taatsu, has_pair);
+            memo_[key] = shanten;
+            return shanten;
+        }
+
+        int best = evaluate(melds, taatsu, has_pair);
+
+        // Try consuming the first remaining tile into every productive block type.
+        if (melds < max_closed_groups_) {
+            if (counts[tile] >= 3) {
+                counts[tile] -= 3;
+                best = std::min(best, dfs(counts, melds + 1, taatsu, has_pair));
+                counts[tile] += 3;
+            }
+
+            if (can_make_sequence(tile) && counts[tile + 1] > 0 && counts[tile + 2] > 0) {
+                --counts[tile];
+                --counts[tile + 1];
+                --counts[tile + 2];
+                best = std::min(best, dfs(counts, melds + 1, taatsu, has_pair));
+                ++counts[tile];
+                ++counts[tile + 1];
+                ++counts[tile + 2];
+            }
+        }
+
+        if (counts[tile] >= 2) {
+            counts[tile] -= 2;
+            if (!has_pair) {
+                best = std::min(best, dfs(counts, melds, taatsu, true));
+            }
+            if (taatsu < max_closed_groups_) {
+                best = std::min(best, dfs(counts, melds, taatsu + 1, has_pair));
+            }
+            counts[tile] += 2;
+        }
+
+        if (taatsu < max_closed_groups_) {
+            if (can_make_adjacent_taatsu(tile) && counts[tile + 1] > 0) {
+                --counts[tile];
+                --counts[tile + 1];
+                best = std::min(best, dfs(counts, melds, taatsu + 1, has_pair));
+                ++counts[tile];
+                ++counts[tile + 1];
+            }
+
+            if (can_make_sequence(tile) && counts[tile + 2] > 0) {
+                --counts[tile];
+                --counts[tile + 2];
+                best = std::min(best, dfs(counts, melds, taatsu + 1, has_pair));
+                ++counts[tile];
+                ++counts[tile + 2];
+            }
+        }
+
+        --counts[tile];
+        best = std::min(best, dfs(counts, melds, taatsu, has_pair));
+        ++counts[tile];
+
+        memo_[key] = best;
+        return best;
+    }
+};
+
+}  // namespace
+
+std::array<int, 34> Syanten::hand_to_counts(const std::vector<Tile*>& hand) {
+    std::array<int, 34> counts{};
+    for (const Tile* tile : hand) {
+        ++counts[tile->tile];
+    }
+    return counts;
+}
+
+int Syanten::normal_shanten(const std::array<int, 34>& tile_counts, int n_call_groups) {
+    ExactNormalShantenSolver solver(n_call_groups);
+    return solver.solve(tile_counts);
+}
+
+int Syanten::normal_round_to_win(const std::array<int, 34>& tile_counts, int n_call_groups) {
+    // Historical API contract:
+    // 0 => agari, 1 => tenpai, 2 => 1-shanten, ...
+    return normal_shanten(tile_counts, n_call_groups) + 1;
 }
 
 int Syanten::normal_round_to_win(const std::vector<Tile*>& hand, int n_call_groups) {
-    if (!is_loaded)
-        load_syanten_map();
-    int result = 14;
-    uint32_t hand_code[4];
-    hand_to_code(hand, hand_code);
-    for (int i = _1m; i <= _7z; i++) {
-        int num = 0b111 & (hand_code[i / (_1p - _1m)] >> (3 * (i % (_1p - _1m))));
-        if (num >= 2) {
-            hand_code[i / (_1p - _1m)] -= 2 * tile_to_bit[i % (_1p - _1m)];
-            result = std::min(result, _check_normal(hand_code, n_call_groups) - 1);
-            hand_code[i / (_1p - _1m)] += 2 * tile_to_bit[i % (_1p - _1m)];
-        }
-    }
-    result = std::min(result, _check_normal(hand_code, n_call_groups));
-    return result;
+    return normal_round_to_win(hand_to_counts(hand), n_call_groups);
 }
 
 namespace_mahjong_end

@@ -92,7 +92,7 @@ Full documentation is available at [https://agony5757.github.io/mahjong/](https:
 A full-featured web interface is included for human vs AI, 4-AI battle, and paipu replay.
 
 ```bash
-cd /home/agony/projects/mahjong-dev/web
+cd /home/agony/projects/mahjong-dev/mahjong/web
 pip install -r requirements.txt
 uvicorn server:app --host 0.0.0.0 --port 8000
 ```
@@ -122,6 +122,22 @@ Human demonstration data from Tenhou.net (6 dan+ players) is available for offli
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Project Policies
+
+- Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Security policy: [SECURITY.md](SECURITY.md)
+- Bug reports and feature requests: [GitHub Issues](https://github.com/Agony5757/mahjong/issues)
+
+## Acknowledgements
+
+The shanten rewrite prompted by [issue #30](https://github.com/Agony5757/mahjong/issues/30) benefited from the practical feedback by [Apricot-S](https://github.com/Apricot-S), who explicitly called out the limitations of meld/taatsu-counting shortcuts and pointed to stronger exact approaches.
+
+When revisiting the design, I also consulted the following open-source repositories as algorithm references and prior art surveys. No code from them is vendored into this repository, but they were useful in evaluating tradeoffs and validating direction:
+
+- [tomohxx/shanten-number](https://github.com/tomohxx/shanten-number)
+- [Cryolite/nyanten](https://github.com/Cryolite/nyanten)
+- [Apricot-S/xiangting](https://github.com/Apricot-S/xiangting)
 
 ## Citing
 

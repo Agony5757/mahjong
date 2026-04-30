@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://agony5757.github.io/mahjong/
+    about: Check the docs before opening an issue about setup or public APIs.
+  - name: Contributing Guide
+    url: https://github.com/Agony5757/mahjong/blob/master/CONTRIBUTING.md
+    about: Read the repository workflow and validation expectations before sending a PR.

@@ -4,6 +4,7 @@
 #endif
 
 #include "Table.h"
+#include "RoundToWin.h"
 #include "ScoreCounter.h"
 #include "GamePlay.h"
 #include "tenhou.h"
@@ -13,11 +14,49 @@
 #include "pybind11/complex.h"
 #include "pybind11/functional.h"
 #include "pybind11/operators.h"
+#include <array>
+#include <cctype>
 
 using_mahjong;
 using namespace std;
 using namespace pybind11::literals;
 namespace py = pybind11;
+
+namespace {
+
+std::array<int, 34> parse_compact_tiles(const std::string& hand) {
+	std::array<int, 34> counts{};
+	std::string digits;
+
+	for (char ch : hand) {
+		unsigned char uch = static_cast<unsigned char>(ch);
+		if (std::isdigit(uch)) {
+			digits.push_back(ch);
+			continue;
+		}
+
+		if (digits.empty()) {
+			throw std::invalid_argument("Each suit marker must follow at least one tile digit.");
+		}
+
+		for (char digit : digits) {
+			bool red_dora = false;
+			BaseTile tile = char2_to_basetile(digit, ch, red_dora);
+			if (++counts[tile] > 4) {
+				throw std::invalid_argument("A hand cannot contain more than four copies of the same tile.");
+			}
+		}
+		digits.clear();
+	}
+
+	if (!digits.empty()) {
+		throw std::invalid_argument("The hand string must end with a suit marker.");
+	}
+
+	return counts;
+}
+
+}  // namespace
 
 PYBIND11_MODULE(MahjongPyWrapper, m)
 {
@@ -149,6 +188,33 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 
 	m.def("ResponseActionToString", [](const ResponseAction &ra) {return py::str(ra.to_string()); },
 		"Convert a ResponseAction to a byte string.");
+
+	m.def(
+		"normal_round_to_win",
+		[](const std::string& hand, int num_open_melds) {
+			return Syanten::instance().normal_round_to_win(parse_compact_tiles(hand), num_open_melds);
+		},
+		py::arg("hand"),
+		py::arg("num_open_melds") = 0,
+		"Calculate normal-hand round-to-win for a compact hand string. "
+		"Returns 0 for agari, 1 for tenpai, 2 for 1-shanten, and so on."
+	);
+
+	m.def(
+		"is_ordinary_agari",
+		[](const std::string& hand) {
+			std::vector<BaseTile> tiles;
+			auto counts = parse_compact_tiles(hand);
+			for (int tile = 0; tile < 34; ++tile) {
+				for (int copy = 0; copy < counts[tile]; ++copy) {
+					tiles.push_back(static_cast<BaseTile>(tile));
+				}
+			}
+			return is_ordinary_shape(tiles);
+		},
+		py::arg("hand"),
+		"Check whether a compact hand string is an ordinary 4-meld-1-pair agari shape."
+	);
 
 	py::class_<Player>(m, "Player", "A Mahjong player with hand, river, and game state.")
 		// 成员变量们

@@ -38,6 +38,9 @@ jobs:
       - name: Build package
         run: pip install . -v
 
+      - name: Run shanten regression tests
+        run: python -c "from pymahjong.test import test_shanten_regressions; test_shanten_regressions()"
+
       - name: Run basic tests
         run: python -c "from pymahjong.test import test; test()"
 
