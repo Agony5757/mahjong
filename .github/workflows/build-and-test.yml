@@ -39,7 +39,7 @@ jobs:
         run: pip install . -v
 
       - name: Run basic tests
-        run: python -c "import pymahjong as pm; pm.test()"
+        run: python -c "from pymahjong.test import test; test()"
 
       - name: Download paipu data
         run: wget https://github.com/Agony5757/mahjong/releases/download/v1.0.4/paipuxmls.7z
