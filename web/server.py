@@ -1,16 +1,18 @@
 """
 Mahjong Web Server — FastAPI backend for human vs AI and AI battle modes.
 
-Run: uvicorn server:app --reload --port 8000
+Run: uvicorn server:app --reload --port 8000 --log-level debug
 """
 import asyncio
+import logging
 import os
 import threading
 import time
+import traceback
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +21,10 @@ from sse_starlette.sse import EventSourceResponse
 
 from game_manager import GameManager, GameMode, GameSession
 from ai_player import create_ai_player, BaseAIPlayer
+
+# ─── Logging Setup ───────────────────────────────────────────────────────────
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("mahjong_server")
 
 # ─── App Setup ────────────────────────────────────────────────────────────────
 
@@ -31,6 +37,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log all incoming requests and responses."""
+    logger.debug(f"--> {request.method} {request.url.path}")
+    try:
+        response = await call_next(request)
+        logger.debug(f"<-- {request.method} {request.url.path} -> {response.status_code}")
+        return response
+    except Exception as e:
+        logger.error(f"!!! {request.method} {request.url.path} ERROR: {e}")
+        logger.error(traceback.format_exc())
+        raise
 
 # Serve static files
 WEB_DIR = Path(__file__).parent / "static"
@@ -51,7 +71,8 @@ _listeners_lock = threading.Lock()
 
 def _broadcast(session_id: str, event: dict):
     """Push an event to all SSE subscribers of a session."""
-    payload = f"data: {event}\n\n"
+    from sse_starlette.event import JSONServerSentEvent
+    payload = JSONServerSentEvent(event)
     with _listeners_lock:
         for queue in _session_listeners.get(session_id, []):
             try:
@@ -98,7 +119,7 @@ def _run_ai_turn(session: GameSession):
     with _ais_lock:
         ais = _session_ais.get(session_id, [])
 
-    if curr >= len(ais):
+    if curr >= len(ais) or ais[curr] is None:
         return
 
     ai = ais[curr]
@@ -133,6 +154,7 @@ def _auto_run_ai_battle(session: GameSession):
     session_id = session.session_id
 
     def loop():
+        consecutive_errors = 0
         while not session.env.is_over():
             curr = session.env.get_curr_player()
             with _ais_lock:
@@ -141,9 +163,20 @@ def _auto_run_ai_battle(session: GameSession):
                 break
             ai = ais[curr]
             try:
-                action_idx = ai.select_action(session.env, curr)
+                valid = session.env.get_valid_actions(curr)
+                if not valid:
+                    if session.env.get_phase() >= 4:
+                        action_idx = 53
+                    else:
+                        _broadcast(session_id, {"type": "error", "message": f"No valid actions for P{curr}"})
+                        time.sleep(0.5)
+                        continue
+                else:
+                    action_idx = ai.select_action(session.env, curr)
+
                 state = session.step(curr, action_idx)
                 session.action_log.append({"player": curr, "action": action_idx})
+                consecutive_errors = 0
                 _broadcast(session_id, {
                     "type": "ai_action",
                     "player": curr,
@@ -151,8 +184,13 @@ def _auto_run_ai_battle(session: GameSession):
                     "state": state
                 })
             except Exception as e:
+                consecutive_errors += 1
                 _broadcast(session_id, {"type": "error", "message": str(e)})
-                break
+                if consecutive_errors >= 5:
+                    _broadcast(session_id, {"type": "error", "message": "Too many errors, stopping"})
+                    break
+                time.sleep(0.5)
+                continue
             time.sleep(0.2)  # Thinking delay
         # Game over
         _broadcast(session_id, {
@@ -187,12 +225,13 @@ async def new_game(req: NewGameRequest, background_tasks: BackgroundTasks):
     mode = GameMode.HUMAN_AI if req.mode == "human_ai" else GameMode.FOUR_AI
     session = manager.create_session(mode=mode, ai_model_path=req.ai_model, seed=req.seed)
 
-    # Set up AI players
+    # Set up AI players (indexed by player ID)
     with _ais_lock:
         if mode == GameMode.HUMAN_AI:
-            # 3 AI opponents for player 0
+            # Player 0 is human, Players 1,2,3 are AI
             ai_type = "random" if not req.ai_model else "pretrained"
             ais = [
+                None,
                 create_ai_player(ai_type, req.ai_model),
                 create_ai_player(ai_type, req.ai_model),
                 create_ai_player(ai_type, req.ai_model),
