@@ -140,15 +140,19 @@ class MahjongEnvWrapper:
     # ─── Action Validation ───────────────────────────────────────────────────────
 
     def _build_act_container(self, player_id: int) -> np.ndarray:
+        """Build a 54-dim container with valid actions marked."""
         container = np.zeros(54, dtype=np.int8)
+
+        if self._riichi_stage2:
+            container[48] = 1  # RIICHI
+            container[52] = 1  # PASS_RIICHI
+            return container
+
         pm.encv1_encode_action(self._env.t, player_id, container)
         return container
 
     def get_valid_actions(self, player_id: int) -> list:
         """Returns list of valid action indices."""
-        if self._riichi_stage2:
-            # Only RIICHI (48) or PASS_RIICHI (52)
-            return [48, 52]
         container = self._build_act_container(player_id)
         return [i for i in range(54) if container[i] == 1]
 
@@ -340,7 +344,7 @@ class MahjongEnvWrapper:
 
         # River
         river = []
-        for rt in p.river.river:
+        for rt in p.get_river().river:
             river.append({
                 "tile": self._tile_to_dict(rt.tile),
                 "number": int(rt.number),
@@ -348,11 +352,12 @@ class MahjongEnvWrapper:
                 "fromhand": bool(rt.fromhand)
             })
 
-        # Call groups
+        # Call groups (fuuros)
         calls = []
-        for cg in p.call_groups:
+        for cg in p.get_fuuros():
+            type_str = pm.CallGroupToString(cg)
             calls.append({
-                "type": str(cg.type).split("::")[-1],
+                "type": type_str,
                 "tiles": [self._tile_to_dict(t) for t in cg.tiles],
                 "take": int(cg.take)
             })
@@ -392,12 +397,15 @@ class MahjongEnvWrapper:
         ]
 
         curr = self.get_curr_player()
-        valid = self.get_valid_actions(for_pid)
+        valid = self.get_valid_actions(curr)
         phase_name = phase_names[phase] if phase < 17 else "GAME_OVER"
 
         # Dora
         dora = [self._basetile_to_str(int(d)) for d in t.get_dora()]
         ura_dora = [self._basetile_to_str(int(d)) for d in t.get_ura_dora()]
+
+        # River counter (total discarded tiles)
+        river_counter = sum(p.get_river().size() for p in t.players)
 
         # Players
         hide_hands = (self.mode == GameMode.HUMAN_AI)
@@ -424,13 +432,13 @@ class MahjongEnvWrapper:
             "oya": int(t.oya),
             "game_wind": wind_names[int(t.game_wind)],
             "honba": int(t.honba),
-            "kyoutaku": int(t.kyoutaku),
-            "river_counter": int(t.river_counter),
+            "kyoutaku": int(t.riichibo),
+            "river_counter": river_counter,
             "dora": dora,
             "ura_dora": ura_dora,
             "players": players,
             "valid_actions": valid,
-            "valid_actions_mask": self.get_valid_actions_mask(for_pid).tolist(),
+            "valid_actions_mask": self.get_valid_actions_mask(curr).tolist(),
             "riichi_stage2": self._riichi_stage2,
             "riichi_tile": self._may_riichi_tile_id,
             "is_over": self.is_over(),
@@ -447,19 +455,15 @@ class MahjongEnvWrapper:
     def to_paipu(self) -> dict:
         """Export game as paipu JSON."""
         t = self._env.t
-        gl = t.gamelog
         return {
-            "init_yama": [int(y) for y in gl.init_yama],
+            "init_yama": [int(y) for y in t.yama],
             "init_scores": list(self.get_scores()),
             "oya": int(t.oya),
             "game_wind": int(t.game_wind),
             "honba": int(t.honba),
-            "kyoutaku": int(t.kyoutaku),
-            "result": {
-                "type": str(t.result.result_type).split("::")[-1],
-                "scores": list(t.result.score),
-            } if self.is_over() else None,
-            "action_log": self._env.action_log if hasattr(self._env, 'action_log') else []
+            "kyoutaku": int(t.riichibo),
+            "result": None,
+            "action_log": []
         }
 
 
