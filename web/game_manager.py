@@ -219,18 +219,24 @@ class MahjongEnvAdapter:
         if riichi_idx is None:
             raise ValueError("No pending riichi tile")
         if action_idx == RIICHI:
-            # Engine model: send Riichi self-action first, THEN discard.
+            # The C++ engine has one Riichi self-action per riichi-eligible tile,
+            # each carrying the specific discard tile in correspond_tiles.
+            # Selecting that Riichi action automatically handles the discard.
+            _, basetiles, use_red = self._resolve_discard(riichi_idx)
+            target_bt = basetiles[0]
             self_actions = self.t.get_self_actions()
             for i, a in enumerate(self_actions):
-                if a.action == pm.BaseAction.Riichi:
-                    self.t.make_selection(i)
-                    break
-            d_type, d_tiles, d_red = self._resolve_discard(riichi_idx)
-            self.t.make_selection_from_action_basetile(
-                d_type, [pm.BaseTile(t) for t in d_tiles], d_red
+                if a.action == pm.BaseAction.Riichi and a.correspond_tiles:
+                    ct = a.correspond_tiles[0]
+                    if int(ct.tile) == target_bt and bool(ct.red_dora) == use_red:
+                        self.t.make_selection(i)
+                        self._auto_skip_pass()
+                        return
+            raise ValueError(
+                f"No Riichi action found for basetile={target_bt} red={use_red}"
             )
-            self._auto_skip_pass()
         else:
+            # PASS_RIICHI: discard normally without declaring riichi
             d_type, d_tiles, d_red = self._resolve_discard(riichi_idx)
             self.t.make_selection_from_action_basetile(
                 d_type, [pm.BaseTile(t) for t in d_tiles], d_red
