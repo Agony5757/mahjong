@@ -313,6 +313,13 @@ class MahjongGame {
         const canKan = validMask[46] === true;  // Minkan
         const chiActions = [37, 38, 39, 40, 41, 42].filter(i => validMask[i]);
 
+        // If only pass is available, auto-skip without showing a button.
+        if (!canRon && !canPon && !canKan && chiActions.length === 0) {
+            this._updateStatus(`P${this.state.turn} 打出了 ${this._getLastDiscardStr() || '?'}`);
+            this.submitAction(53);
+            return;
+        }
+
         if (canRon) {
             panel.appendChild(this._makeBtn('荣和', 'btn-ron', () => this.submitAction(49)));
         }
