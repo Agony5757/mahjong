@@ -207,7 +207,11 @@ class MahjongEnvAdapter:
 
         action_type, tiles, use_red = self._resolve_action(player_id, action_idx)
         self._submit_to_engine(action_type, tiles, use_red)
-        self._auto_skip_pass()
+        # Note: do NOT auto-skip here. The C++ engine handles the discarder's
+        # auto-pass internally in _handle_response_action(). Auto-skipping in
+        # Python would consume multiple game steps at once, causing the frontend
+        # to miss intermediate turns (e.g. jumping from P1_RESPONSE straight to
+        # P4_ACTION and showing "P3 thinking" instead of the human's response).
 
     def _is_discard_action(self, action_idx: int) -> bool:
         return action_idx <= 36
