@@ -138,7 +138,7 @@ class MahjongGame {
                         }
                         this.state = data.state;
                         this._render();
-                        if (data.type === 'ai_action') {
+                        if (data.type === 'ai_action' && this.state.turn !== 0) {
                             this._showAIMove(data.player, data.action);
                         }
                         break;
