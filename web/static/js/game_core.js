@@ -131,6 +131,11 @@ class MahjongGame {
                     case 'snapshot':
                     case 'ai_action':
                     case 'kyoku_start':
+                        // Remove kyoku result modal if present
+                        {
+                            const krm = document.getElementById('kyokuResultModal');
+                            if (krm) krm.remove();
+                        }
                         this.state = data.state;
                         this._render();
                         if (data.type === 'ai_action') {
@@ -548,21 +553,54 @@ class MahjongGame {
     }
 
     _showKyokuEndToast(data) {
-        const r = data.result || {};
+        const rec = data.record || {};
         const typeNames = {
             'RonAgari': '荣和', 'TsumoAgari': '自摸',
             'Ryukyouku_Notile': '流局', 'Ryukyouku_9Hai': '九种九牌',
             'Ryukyouku_4Wind': '四风连打', 'Ryukyouku_4Riichi': '四立直',
             'Ryukyouku_4Kan': '四杠子',
         };
-        const t = typeNames[r.type] || r.type || '局结束';
-        const winners = (r.winner || []).map(i => `P${i}`).join(',');
-        const msg = `${data.round_label || ''} ${t}${winners ? ' 胜者:' + winners : ''}`;
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.textContent = msg;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3500);
+        const t = typeNames[rec.result_type] || rec.result_type || '局结束';
+        const winners = (rec.winner || []).map(i => i === 0 ? '你' : `P${i}`).join(',');
+        const losers = rec.loser != null ? (rec.loser === 0 ? '你' : `P${rec.loser}`) : '';
+        let msg = `${data.round_label || ''} ${t}`;
+        if (winners) msg += ` 胜者:${winners}`;
+        if (losers && !t.includes('流局')) msg += ` 放铳:${losers}`;
+        if (rec.renchan) msg += ' (连庄)';
+
+        // Show result modal for a few seconds
+        if (document.getElementById('kyokuResultModal')) {
+            document.getElementById('kyokuResultModal').remove();
+        }
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'kyokuResultModal';
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        const scoreDelta = (rec.scores_out || []).map((s, i) => {
+            const diff = s - (rec.scores_in || [])[i];
+            const sign = diff > 0 ? '+' : '';
+            return `<div class="result-row ${diff > 0 ? 'winner' : diff < 0 ? 'loser' : ''}">
+                <span>${i === 0 ? '你' : 'P' + i}</span>
+                <span>${s}点 (${sign}${diff})</span>
+            </div>`;
+        }).join('');
+        modal.innerHTML = `
+            <h2>${data.round_label || '局结束'} ${t}</h2>
+            ${winners ? `<p>胜者: ${winners}</p>` : ''}
+            ${losers && !t.includes('流局') ? `<p>放铳: ${losers}</p>` : ''}
+            ${rec.renchan ? '<p>连庄</p>' : ''}
+            <div class="result-scores">${scoreDelta}</div>
+            <p style="margin-top:12px;color:#888;font-size:13px">下一局即将开始...</p>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        // Auto-dismiss after 2.5 seconds (backend has 2s delay)
+        setTimeout(() => {
+            const el = document.getElementById('kyokuResultModal');
+            if (el) el.remove();
+        }, 2500);
     }
 
     _onGameOver(state, data) {

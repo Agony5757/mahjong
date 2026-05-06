@@ -22,6 +22,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from game_manager import GameManager, GameMode, GameSession
 from ai_player import create_ai_player, BaseAIPlayer
+from hansou import _WIND_INT_TO_CN
 from verbose_log import configure_root_logging, LOG_DIR
 
 configure_root_logging()
@@ -70,6 +71,12 @@ def _broadcast(session_id: str, event: dict):
                 q.put_nowait(event)
             except Exception:
                 pass
+
+
+def _session_state(session: GameSession) -> dict:
+    """Get state with proper hand hiding for the session mode."""
+    fp = session.human_player_id if session.human_player_id >= 0 else None
+    return session.get_state(for_player=fp)
 
 
 # ─── Models ───────────────────────────────────────────────────────────────────
@@ -152,7 +159,7 @@ def _run_hansou(session: GameSession):
             _broadcast(sid, {
                 "type": "kyoku_start",
                 "kyoku": session.hansou.snapshot(),
-                "state": session.get_state(),
+                "state": _session_state(session),
             })
             ok = _run_one_kyoku(session)
             if not ok:
@@ -176,11 +183,13 @@ def _run_hansou(session: GameSession):
                     "n_honba": rec.n_honba,
                     "n_kyoutaku": rec.n_kyoutaku,
                 },
-                "state": session.get_state(),
+                "round_label": f"{_WIND_INT_TO_CN[rec.game_wind]}{rec.oya + 1}局",
+                "state": _session_state(session),
             })
             if session.hansou.finished:
                 break
             session.hansou.advance_to_next_kyoku()
+            time.sleep(2.0)
         _broadcast(sid, {
             "type": "hansou_end",
             "kyoku_log": [
@@ -190,10 +199,10 @@ def _run_hansou(session: GameSession):
                     "scores_out": r.scores_out,
                     "winner": r.winner,
                 }
-                for r in session.hansou.kyoku_log
+                for r in session.hansou.log
             ],
             "final_scores": session.hansou.scores,
-            "state": session.get_state(),
+            "state": _session_state(session),
         })
     except Exception as e:
         logger.exception(f"Hansou loop error in {sid}")
@@ -254,20 +263,22 @@ def _resume_after_human_action(session: GameSession):
                 "renchan": rec.renchan, "n_honba": rec.n_honba,
                 "n_kyoutaku": rec.n_kyoutaku,
             },
-            "state": session.get_state(),
+            "round_label": f"{_WIND_INT_TO_CN[rec.game_wind]}{rec.oya + 1}局",
+            "state": _session_state(session),
         })
         if session.hansou.finished:
             _broadcast(sid, {
                 "type": "hansou_end",
                 "final_scores": session.hansou.scores,
-                "state": session.get_state(),
+                "state": _session_state(session),
             })
         else:
+            time.sleep(2.0)
             session.hansou.advance_to_next_kyoku()
             _broadcast(sid, {
                 "type": "kyoku_start",
                 "kyoku": session.hansou.snapshot(),
-                "state": session.get_state(),
+                "state": _session_state(session),
             })
             # Recursive drive (current oya may be AI)
             _resume_after_human_action(session)
@@ -323,7 +334,7 @@ async def new_game(req: NewGameRequest, background_tasks: BackgroundTasks):
     return {
         "session_id": sid,
         "mode": session.mode.value,
-        "state": session.get_state(),
+        "state": _session_state(session),
         "log_path": log_path,
         "log_url": f"/api/game/{sid}/log" if log_path else None,
     }
@@ -396,7 +407,7 @@ async def sse_events(session_id: str):
             # Send the current state immediately so the frontend renders.
             yield {"data": __import__("json").dumps({
                 "type": "snapshot",
-                "state": session.get_state(),
+                "state": _session_state(session),
             })}
             while True:
                 evt = await queue.get()
