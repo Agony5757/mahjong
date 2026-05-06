@@ -101,7 +101,7 @@ Full documentation is available at [https://agony5757.github.io/mahjong/](https:
 A full-featured web interface is included for human vs AI, 4-AI battle, and paipu replay.
 
 ```bash
-cd /home/agony/projects/mahjong-dev/mahjong/web
+cd web
 
 # Using uv (recommended)
 uv venv && source .venv/bin/activate
