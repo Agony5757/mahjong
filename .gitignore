@@ -42,3 +42,6 @@ wheelhouse/
 
 # IDE
 .idea/
+
+# AI assistant config
+.github/copilot-instructions.md

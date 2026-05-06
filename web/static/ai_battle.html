@@ -16,73 +16,75 @@
 
 <div class="top-bar">
     <div class="table-meta">
-        <span class="round-info">东一局</span>
-        <span class="honba">本场0</span>
-        <span class="riichibo">供托0</span>
+        <span class="round-info">东1局</span>
+        <span class="honba">本场 0</span>
+        <span class="riichibo">供托 0</span>
+        <span class="tiles-left">牌山 70</span>
     </div>
     <div class="dora-bar">
         <span>宝牌:</span>
         <span class="dora-tiles" id="doraTiles"></span>
     </div>
-    <div class="scores">
-        <div class="score-chip" id="chip0">
-            <span class="pid" id="pname0">AI-0</span>
-            <span class="pts" id="ppts0">25000</span>
-        </div>
-        <div class="score-chip" id="chip1">
-            <span class="pid" id="pname1">AI-1</span>
-            <span class="pts" id="ppts1">25000</span>
-        </div>
-        <div class="score-chip" id="chip2">
-            <span class="pid" id="pname2">AI-2</span>
-            <span class="pts" id="ppts2">25000</span>
-        </div>
-        <div class="score-chip" id="chip3">
-            <span class="pid" id="pname3">AI-3</span>
-            <span class="pts" id="ppts3">25000</span>
-        </div>
-    </div>
 </div>
 
 <div class="game-container">
-    <!-- Follow buttons -->
-    <div class="ai-controls" id="followControls">
-        <span class="text-dim" style="font-size:13px">跟随视角:</span>
-        <button class="speed-btn active" id="btnAll" onclick="setFollow(-1)">全部</button>
-        <button class="speed-btn" id="btnF0" onclick="setFollow(0)">AI-0</button>
-        <button class="speed-btn" id="btnF1" onclick="setFollow(1)">AI-1</button>
-        <button class="speed-btn" id="btnF2" onclick="setFollow(2)">AI-2</button>
-        <button class="speed-btn" id="btnF3" onclick="setFollow(3)">AI-3</button>
-        <span style="flex:1"></span>
-        <span class="text-dim" style="font-size:13px">速度:</span>
-        <button class="speed-btn" id="btnSlow" onclick="setSpeed(0.5)">0.5x</button>
-        <button class="speed-btn active" id="btnNormal" onclick="setSpeed(1)">1x</button>
-        <button class="speed-btn" id="btnFast" onclick="setSpeed(2)">2x</button>
+    <div class="game-main">
+        <div class="ai-controls">
+            <span class="text-dim" style="font-size:13px">视角:</span>
+            <button class="speed-btn active" id="btnAll" onclick="setFollow(-1)">全部</button>
+            <button class="speed-btn" id="btnF0" onclick="setFollow(0)">P0</button>
+            <button class="speed-btn" id="btnF1" onclick="setFollow(1)">P1</button>
+            <button class="speed-btn" id="btnF2" onclick="setFollow(2)">P2</button>
+            <button class="speed-btn" id="btnF3" onclick="setFollow(3)">P3</button>
+            <span style="flex:1"></span>
+            <span class="text-dim" style="font-size:13px">速度:</span>
+            <button class="speed-btn" id="btnSlow" onclick="setSpeed(800)">慢</button>
+            <button class="speed-btn active" id="btnNormal" onclick="setSpeed(200)">中</button>
+            <button class="speed-btn" id="btnFast" onclick="setSpeed(40)">快</button>
+            <button class="speed-btn" id="btnTurbo" onclick="setSpeed(0)">极速</button>
+        </div>
+        <canvas id="mahjongCanvas" width="1200" height="780"></canvas>
+        <div class="status-msg" id="statusMsg">点击"开始对战"观看 4 个 AI 完整半庄</div>
     </div>
 
-    <canvas id="mahjongCanvas" width="900" height="580"></canvas>
-    <div class="status-msg" id="statusMsg">点击"开始对战"观看4个 AI 对局</div>
-</div>
-
-<div class="log-panel" id="logPanel">
-    <div id="logContent"></div>
+    <aside class="side-panel">
+        <div class="panel-card">
+            <h3>累计点数</h3>
+            <div class="scoreboard" id="scoreboard"></div>
+        </div>
+        <div class="panel-card">
+            <h3>半庄进度</h3>
+            <div class="hansou-stepper" id="hansouStepper"></div>
+        </div>
+        <div class="panel-card" style="flex:1; min-height:160px; overflow:hidden; display:flex; flex-direction:column">
+            <h3>动作日志</h3>
+            <div id="logContent" style="flex:1; overflow-y:auto; font-family:'SFMono-Regular',Consolas,monospace; font-size:12px; color:var(--text-dim)"></div>
+        </div>
+    </aside>
 </div>
 
 <!-- Landing -->
 <div class="landing" id="landingOverlay">
     <h1>4 AI 对战</h1>
-    <p class="subtitle">观看4个随机 AI 进行完整对局</p>
-    <div class="mode-cards">
+    <p class="subtitle">观看 4 个随机 AI 自动完成完整半庄（东 1 → 南 4）</p>
+    <div class="mt-16" style="display:flex; gap:20px; align-items:center; flex-wrap:wrap; justify-content:center">
+        <label class="text-dim" style="font-size:13px">局数:
+            <select id="maxRoundSelect" style="margin-left:8px; padding:4px 8px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px">
+                <option value="0">东风战 (4 局)</option>
+                <option value="1" selected>半庄战 (8 局)</option>
+                <option value="2">一庄 (16 局)</option>
+            </select>
+        </label>
+        <label class="text-dim" style="font-size:13px">随机种子:
+            <input type="number" id="seedInput" placeholder="留空=随机" style="margin-left:8px; padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px; width:120px">
+        </label>
+    </div>
+    <div class="mode-cards mt-16">
         <div class="mode-card" onclick="startBattle()">
             <div class="icon">🤖</div>
             <h2>开始对战</h2>
-            <p>4个随机 AI · 随机牌山</p>
+            <p>4 个随机 AI · 自动流转</p>
         </div>
-    </div>
-    <div class="mt-16">
-        <label class="text-dim" style="font-size:13px">随机种子:
-            <input type="number" id="seedInput" placeholder="留空=随机" style="margin-left:8px; padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px; width:100px">
-        </label>
     </div>
 </div>
 
@@ -95,8 +97,9 @@
         document.getElementById('landingOverlay').style.display = 'none';
         const seedVal = document.getElementById('seedInput').value;
         const seed = seedVal ? parseInt(seedVal) : null;
+        const maxRound = parseInt(document.getElementById('maxRoundSelect').value || '1');
 
-        client = new AIBattleClient('mahjongCanvas');
+        client = new window.AIBattleClient('mahjongCanvas');
         client.resize();
         window.addEventListener('resize', () => {
             client.resize();
@@ -104,7 +107,7 @@
         });
 
         try {
-            await client.startGame(seed);
+            await client.startGame({ seed, maxRound });
             document.getElementById('statusMsg').textContent = '对局进行中...';
         } catch (err) {
             alert('启动失败: ' + err.message);
@@ -117,30 +120,25 @@
         ['btnAll', 'btnF0', 'btnF1', 'btnF2', 'btnF3'].forEach(id => {
             document.getElementById(id).classList.remove('active');
         });
-        if (playerId < 0) {
-            document.getElementById('btnAll').classList.add('active');
-        } else {
-            document.getElementById(`btnF${playerId}`).classList.add('active');
-        }
+        document.getElementById(playerId < 0 ? 'btnAll' : `btnF${playerId}`).classList.add('active');
     }
 
-    function setSpeed(speed) {
+    function setSpeed(delayMs) {
         if (!client) return;
-        client.setSpeed(speed);
-        ['btnSlow', 'btnNormal', 'btnFast'].forEach(id => {
+        client.setSpeed(delayMs);
+        ['btnSlow', 'btnNormal', 'btnFast', 'btnTurbo'].forEach(id => {
             document.getElementById(id).classList.remove('active');
         });
-        if (speed === 0.5) document.getElementById('btnSlow').classList.add('active');
-        else if (speed === 1) document.getElementById('btnNormal').classList.add('active');
-        else if (speed === 2) document.getElementById('btnFast').classList.add('active');
+        const map = { 800: 'btnSlow', 200: 'btnNormal', 40: 'btnFast', 0: 'btnTurbo' };
+        const id = map[delayMs];
+        if (id) document.getElementById(id).classList.add('active');
     }
 
-    // Initial canvas
     window.addEventListener('DOMContentLoaded', () => {
         const canvas = document.getElementById('mahjongCanvas');
         const ctx = canvas.getContext('2d');
-        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 1240, maxHeightRatio: 0.7 });
-        window.MahjongRenderer.renderSplash(ctx, canvas.width, canvas.height, '4 AI 对战', '观看完整对局，检查牌河、副露和局面流转');
+        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 1500, maxHeightRatio: 0.78 });
+        window.MahjongRenderer.renderSplash(ctx, canvas.width, canvas.height, '4 AI 对战', '观看 4 个 AI 完成完整半庄，检查牌河、副露和局面流转');
     });
 </script>
 </body>

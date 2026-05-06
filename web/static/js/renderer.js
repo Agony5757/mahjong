@@ -77,10 +77,10 @@ function setInvalidateHandler(fn) {
 
 function resizeCanvasToContainer(canvas, options = {}) {
     const dpr = window.devicePixelRatio || 1;
-    const maxWidth = options.maxWidth || 1240;
+    const maxWidth = options.maxWidth || 1700;
     const aspectRatio = options.aspectRatio || BOARD_ASPECT;
     const containerWidth = Math.max(320, Math.min(canvas.parentElement.clientWidth - 4, maxWidth));
-    const maxHeight = Math.max(320, Math.floor(window.innerHeight * (options.maxHeightRatio || 0.68)));
+    const maxHeight = Math.max(360, Math.floor(window.innerHeight * (options.maxHeightRatio || 0.78)));
 
     let cssWidth = containerWidth;
     let cssHeight = Math.floor(cssWidth / aspectRatio);
@@ -358,7 +358,10 @@ function drawCenterPanel(ctx, state) {
 
     ctx.fillStyle = '#cabda0';
     ctx.font = '11px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
-    ctx.fillText(`剩余巡目 ${state.river_counter ?? 0}`, TABLE.centerX, y + 42);
+    const tilesLeft = (state.tiles_left !== undefined && state.tiles_left !== null)
+        ? state.tiles_left
+        : Math.max(0, 70 - (state.river_counter ?? 0));
+    ctx.fillText(`牌山剩余 ${tilesLeft}`, TABLE.centerX, y + 42);
 
     const dora = state.dora || [];
     const doraTotalWidth = dora.length * DORA_TILE.w + Math.max(dora.length - 1, 0) * DORA_TILE.gap;
@@ -435,18 +438,36 @@ function meldDescriptors(call) {
     const tiles = Array.isArray(call.tiles) ? call.tiles : [];
     const type = call.type || '';
     const take = Number.isInteger(call.take) ? call.take : -1;
+    const isAnKan = /An.?Kan|^Concealed/i.test(type);
+    const isKaKan = /Ka.?Kan|^Added/i.test(type);
 
+    if (isAnKan && tiles.length === 4) {
+        // 暗杠：两端两张背面
+        return tiles.map((tile, index) => ({
+            tile,
+            sideways: false,
+            faceDown: index === 0 || index === tiles.length - 1,
+            stacked: false,
+        }));
+    }
+
+    // For Chi/Pon/MinKan/KaKan, the sideways tile is the one taken from another player.
+    // The frontend uses `take` (index of the called tile in the meld layout from the C++ engine).
     return tiles.map((tile, index) => ({
         tile,
-        sideways: index === take && tiles.length > 1 && type !== 'AnKan',
-        faceDown: type === 'AnKan' && tiles.length === 4 && (index === 0 || index === tiles.length - 1),
+        sideways: index === take && tiles.length > 1,
+        faceDown: false,
+        // For KaKan the engine emits 4 tiles where the added tile sits on top of the
+        // sideways tile from the original Pon. We render that as a stacked tile.
+        stacked: isKaKan && tiles.length === 4 && index === Math.max(0, take + 1),
     }));
 }
 
 function measureMeldWidth(call) {
     return meldDescriptors(call).reduce((width, part, index, parts) => {
+        if (part.stacked) return width;  // stacked tiles don't add to horizontal width
         width += part.sideways ? MELD_TILE.h : MELD_TILE.w;
-        if (index < parts.length - 1) width += MELD_TILE.gap;
+        if (index < parts.length - 1 && !parts[index + 1]?.stacked) width += MELD_TILE.gap;
         return width;
     }, 0);
 }
@@ -454,16 +475,38 @@ function measureMeldWidth(call) {
 function drawMeldGroup(ctx, call, x, y) {
     const parts = meldDescriptors(call);
     let cursor = x;
+    let lastSidewaysX = x;
+    let lastSidewaysW = 0;
     parts.forEach((part, index) => {
         const w = part.sideways ? MELD_TILE.h : MELD_TILE.w;
         const h = part.sideways ? MELD_TILE.w : MELD_TILE.h;
         const tileStr = part.tile?.str || '';
+        if (part.stacked) {
+            // Render stacked above the previous sideways tile (KaKan added tile).
+            drawTileImage(
+                ctx,
+                lastSidewaysX,
+                y + (MELD_TILE.h - h) - MELD_TILE.w,
+                MELD_TILE.h,
+                MELD_TILE.w,
+                tileStr,
+                {
+                    redDora: !!part.tile?.red_dora,
+                    rotation: Math.PI / 2,
+                }
+            );
+            return;
+        }
         drawTileImage(ctx, cursor, y + (MELD_TILE.h - h), w, h, tileStr, {
             redDora: !!part.tile?.red_dora,
             faceDown: part.faceDown,
             rotation: part.sideways ? Math.PI / 2 : 0,
         });
-        cursor += w + (index < parts.length - 1 ? MELD_TILE.gap : 0);
+        if (part.sideways) {
+            lastSidewaysX = cursor;
+            lastSidewaysW = w;
+        }
+        cursor += w + (index < parts.length - 1 && !parts[index + 1]?.stacked ? MELD_TILE.gap : 0);
     });
 }
 

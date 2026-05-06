@@ -8,59 +8,51 @@
 </head>
 <body>
 
-<!-- Nav -->
 <nav class="nav-links">
     <a href="/" class="active">人机对战</a>
     <a href="/ai_battle">4 AI 对战</a>
     <a href="/replay">牌谱复现</a>
 </nav>
 
-<!-- Top Bar -->
 <div class="top-bar" id="topBar">
     <div class="table-meta">
-        <span class="round-info">东一局</span>
-        <span class="honba">本场0</span>
-        <span class="riichibo">供托0</span>
+        <span class="round-info">东1局</span>
+        <span class="honba">本场 0</span>
+        <span class="riichibo">供托 0</span>
+        <span class="tiles-left">牌山 70</span>
     </div>
     <div class="dora-bar">
         <span>宝牌:</span>
         <span class="dora-tiles" id="doraTiles"></span>
     </div>
-    <div class="scores">
-        <div class="score-chip" id="chip0">
-            <span class="pid">你</span>
-            <span class="pts">25000</span>
-        </div>
-        <div class="score-chip" id="chip1">
-            <span class="pid">P1</span>
-            <span class="pts">25000</span>
-        </div>
-        <div class="score-chip" id="chip2">
-            <span class="pid">P2</span>
-            <span class="pts">25000</span>
-        </div>
-        <div class="score-chip" id="chip3">
-            <span class="pid">P3</span>
-            <span class="pts">25000</span>
-        </div>
-    </div>
 </div>
 
-<!-- Game Canvas -->
 <div class="game-container">
-    <canvas id="mahjongCanvas" width="900" height="580"></canvas>
-    <div class="status-msg" id="statusMsg">点击下方按钮开始新游戏</div>
-    <div class="action-panel" id="actionPanel">
-        <button class="action-btn btn-confirm" id="btnNewGame">新建游戏</button>
+    <div class="game-main">
+        <canvas id="mahjongCanvas" width="1200" height="780"></canvas>
+        <div class="status-msg" id="statusMsg">点击下方按钮开始新游戏</div>
+        <div class="action-panel" id="actionPanel">
+            <button class="action-btn btn-confirm" id="btnNewGame">新建游戏</button>
+        </div>
     </div>
+
+    <aside class="side-panel">
+        <div class="panel-card">
+            <h3>累计点数</h3>
+            <div class="scoreboard" id="scoreboard"></div>
+        </div>
+        <div class="panel-card">
+            <h3>半庄进度</h3>
+            <div class="hansou-stepper" id="hansouStepper"></div>
+        </div>
+        <div class="panel-card">
+            <h3>对局日志</h3>
+            <div id="logContent" style="max-height:240px; overflow-y:auto; font-size:12px"></div>
+        </div>
+    </aside>
 </div>
 
-<!-- Game Log -->
-<div class="log-panel" id="logPanel" style="display:none">
-    <div id="logContent"></div>
-</div>
-
-<!-- Landing Overlay (shown before game starts) -->
+<!-- Landing Overlay -->
 <div class="landing" id="landingOverlay">
     <h1>日麻</h1>
     <p class="subtitle">4人立直麻将 · 人机对战</p>
@@ -82,6 +74,13 @@
                     </select>
                 </label>
                 <label style="display:block; margin-bottom:8px">
+                    赛制:
+                    <select id="maxRoundSelect" style="margin-left:8px; padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px">
+                        <option value="0">东风战</option>
+                        <option value="1" selected>半庄</option>
+                    </select>
+                </label>
+                <label style="display:block; margin-bottom:8px">
                     随机种子:
                     <input type="number" id="seedInput" placeholder="留空=随机" style="margin-left:8px; padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px; width:100px">
                 </label>
@@ -99,70 +98,25 @@
         const aiModel = document.getElementById('aiModelSelect').value === 'random' ? null : document.getElementById('aiModelSelect').value;
         const seedVal = document.getElementById('seedInput').value;
         const seed = seedVal ? parseInt(seedVal) : null;
+        const maxRound = parseInt(document.getElementById('maxRoundSelect').value);
 
         document.getElementById('landingOverlay').style.display = 'none';
-        document.getElementById('logPanel').style.display = 'block';
         document.getElementById('btnNewGame').style.display = 'none';
 
         game = new MahjongGame('mahjongCanvas');
         game.resize();
 
-        // Canvas click
         game.canvas.addEventListener('click', (e) => game._onCanvasClick(e));
 
-        // Resize
         window.addEventListener('resize', () => {
             game.resize();
             game._render();
         });
 
-        // New game
-        game.newGame('human_ai', aiModel, seed).catch(err => {
+        game.newGame('human_ai', aiModel, seed, maxRound).catch(err => {
             alert('启动失败: ' + err.message);
         });
-
-        // Update response buttons on phase change
-        const origRender = game._render.bind(game);
-        game._render = function() {
-            origRender();
-            if (this.state && this.state.phase >= 4 && this.state.phase < 16 && this.state.turn !== 0) {
-                this._showResponseActions();
-            }
-        };
-
-        // Listen for SSE updates
-        if (game.eventSource) {
-            game.eventSource.addEventListener('message', (e) => {
-                try {
-                    const data = JSON.parse(e.data);
-                    if (data.type === 'ai_action' || data.type === 'game_over') {
-                        game.state = data.state;
-                        game._render();
-                        if (data.type === 'ai_action' && data.player !== 0) {
-                            game._showAIMove(data.player, data.action);
-                            // Show response buttons if it's now player's turn as responder
-                            if (game.state.phase >= 4 && game.state.phase < 16) {
-                                game._showResponseActions();
-                            }
-                        }
-                        if (data.type === 'game_over') {
-                            game._onGameOver(data.state);
-                        }
-                    }
-                } catch(err) {}
-            });
-        }
     }
-
-    // Initial setup
-    window.addEventListener('DOMContentLoaded', () => {
-        const canvas = document.getElementById('mahjongCanvas');
-        const ctx = canvas.getContext('2d');
-        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 1240, maxHeightRatio: 0.7 });
-        window.MahjongRenderer.renderSplash(ctx, canvas.width, canvas.height, '人机对战', '点击上方卡片开始一局立直麻将');
-    });
-
-    document.getElementById('btnNewGame').onclick = startHumanAI;
 </script>
 </body>
 </html>

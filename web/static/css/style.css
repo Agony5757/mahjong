@@ -16,7 +16,8 @@
     --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
     --font-ui: "Hiragino Sans GB", "PingFang SC", "Yu Gothic", "Microsoft YaHei", sans-serif;
     --font-display: "Hiragino Mincho ProN", "Songti SC", "Yu Mincho", serif;
-    --table-max-width: 1280px;
+    --table-max-width: 1700px;
+    --side-panel-width: 320px;
 }
 
 * {
@@ -120,8 +121,17 @@ a {
     color: var(--text);
 }
 
-.riichibo {
-    color: #f1d7b4;
+.tiles-left {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--surface-border);
+    background: rgba(95, 143, 187, 0.10);
+    color: #c8dcef;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 .dora-bar {
@@ -204,10 +214,119 @@ a {
 .game-container {
     width: min(calc(100% - 24px), var(--table-max-width));
     margin: 12px auto 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--side-panel-width);
+    gap: 14px;
+    align-items: start;
+}
+
+.game-container > .game-main {
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 10px;
+    min-width: 0;
+}
+
+.game-container > .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 32px);
+}
+
+.side-panel .panel-card {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: var(--shadow);
+}
+
+.side-panel .panel-card h3 {
+    color: var(--gold-soft);
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.scoreboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.scoreboard .score-cell {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: 150ms ease;
+}
+
+.scoreboard .score-cell.oya {
+    border-color: rgba(217, 179, 106, 0.55);
+}
+
+.scoreboard .score-cell.active {
+    background: rgba(241, 213, 154, 0.10);
+    border-color: rgba(241, 213, 154, 0.5);
+}
+
+.scoreboard .score-cell.riichi::after {
+    content: "立";
+    position: absolute;
+    color: #f4af61;
+    font-size: 10px;
+}
+
+.scoreboard .score-cell .label {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+}
+
+.scoreboard .score-cell .pts {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.scoreboard .score-cell .delta {
+    font-size: 11px;
+    color: var(--text-soft);
+}
+
+.hansou-stepper {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+}
+
+.hansou-stepper .step {
+    text-align: center;
+    padding: 6px 4px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+    font-size: 11px;
+    color: var(--text-soft);
+}
+
+.hansou-stepper .step.done {
+    color: var(--text-dim);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.hansou-stepper .step.current {
+    color: var(--gold-soft);
+    border-color: rgba(217, 179, 106, 0.5);
+    background: rgba(217, 179, 106, 0.12);
 }
 
 canvas#mahjongCanvas {
@@ -219,6 +338,16 @@ canvas#mahjongCanvas {
     background: #09110e;
     box-shadow: var(--shadow);
     cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+    .game-container {
+        grid-template-columns: 1fr;
+    }
+    .game-container > .side-panel {
+        position: static;
+        max-height: unset;
+    }
 }
 
 .status-msg {
@@ -570,4 +699,25 @@ button {
     .mode-card {
         min-width: min(100%, 300px);
     }
+}
+
+/* ── Toast (transient notifications) ─────────────────────────── */
+.toast {
+    position: fixed;
+    top: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    color: #f1f5f9;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid rgba(99, 102, 241, 0.5);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+    z-index: 5000;
+    animation: toast-in 0.25s ease-out;
+}
+@keyframes toast-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }

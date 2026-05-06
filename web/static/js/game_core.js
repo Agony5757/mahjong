@@ -27,7 +27,7 @@ class MahjongGame {
 
     resize() {
         if (window.MahjongRenderer?.resizeCanvasToContainer) {
-            window.MahjongRenderer.resizeCanvasToContainer(this.canvas, { maxWidth: 1240, maxHeightRatio: 0.7 });
+            window.MahjongRenderer.resizeCanvasToContainer(this.canvas, { maxWidth: 1700, maxHeightRatio: 0.78 });
         }
     }
 
@@ -49,11 +49,11 @@ class MahjongGame {
         return resp.text();
     }
 
-    async newGame(mode = 'human_ai', aiModel = null, seed = null) {
+    async newGame(mode = 'human_ai', aiModel = null, seed = null, maxRound = 1) {
         this.mode = mode;
         const resp = await this._fetch('/api/game/new', {
             method: 'POST',
-            body: { mode, ai_model: aiModel, seed }
+            body: { mode, ai_model: aiModel, seed, max_round: maxRound }
         });
         this.sessionId = resp.session_id;
         this.state = resp.state;
@@ -108,15 +108,29 @@ class MahjongGame {
         this.eventSource.addEventListener('message', (e) => {
             try {
                 const data = JSON.parse(e.data);
-                if (data.type === 'ai_action' || data.type === 'game_over') {
-                    this.state = data.state;
-                    this._render();
-                    if (data.type === 'ai_action') {
-                        this._showAIMove(data.player, data.action);
-                    }
-                    if (data.type === 'game_over') {
-                        this._onGameOver(data.state);
-                    }
+                switch (data.type) {
+                    case 'snapshot':
+                    case 'ai_action':
+                    case 'kyoku_start':
+                        this.state = data.state;
+                        this._render();
+                        if (data.type === 'ai_action') {
+                            this._showAIMove(data.player, data.action);
+                        }
+                        break;
+                    case 'kyoku_end':
+                        this.state = data.state;
+                        this._render();
+                        this._showKyokuEndToast(data);
+                        break;
+                    case 'hansou_end':
+                        this.state = data.state;
+                        this._render();
+                        this._onGameOver(data.state, data);
+                        break;
+                    case 'error':
+                        console.error('server error event:', data);
+                        break;
                 }
             } catch (err) {
                 console.error('SSE parse error:', err);
@@ -329,7 +343,7 @@ class MahjongGame {
         }
 
         if (this.state.is_over) {
-            this._showResultModal();
+            // Kyoku/hansou end is handled by SSE event handlers (toast + modal).
         }
     }
 
@@ -339,22 +353,57 @@ class MahjongGame {
 
         // Round info
         const windNames = ['东', '南', '西', '北'];
+        const windKey = (w) => w === 'East' ? 0 : w === 'South' ? 1 : w === 'West' ? 2 : 3;
         document.querySelectorAll('.round-info').forEach(el => {
-            const wind = windNames[s.game_wind === 'East' ? 0 : s.game_wind === 'South' ? 1 : s.game_wind === 'West' ? 2 : 3];
-            el.textContent = `${wind}${(s.oya ?? 0) + 1}局`;
+            el.textContent = `${windNames[windKey(s.game_wind)]}${(s.oya ?? 0) + 1}局`;
         });
         document.querySelectorAll('.honba').forEach(el => {
-            el.textContent = `本场${s.honba}`;
+            el.textContent = `本场 ${s.honba || 0}`;
         });
         document.querySelectorAll('.riichibo').forEach(el => {
-            el.textContent = `供托${s.kyoutaku || 0}`;
+            el.textContent = `供托 ${s.kyoutaku || 0}`;
+        });
+        document.querySelectorAll('.tiles-left').forEach(el => {
+            el.textContent = `牌山 ${s.tiles_left ?? '?'}`;
         });
 
-        // Scores
+        // Side-panel scoreboard
+        const board = document.getElementById('scoreboard');
+        if (board) {
+            board.innerHTML = s.players.map((p, i) => {
+                const cls = ['score-cell'];
+                if (p.is_oya) cls.push('oya');
+                if (i === s.turn) cls.push('active');
+                if (p.riichi) cls.push('riichi');
+                if (i === 0) cls.push('human');
+                const w = windNames[windKey(p.wind)];
+                return `<div class="${cls.join(' ')}">
+                    <span class="label">${i === 0 ? '你' : 'P' + i} · ${w}${p.is_oya ? '(亲)' : ''}</span>
+                    <span class="pts">${p.score}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // Hansou stepper
+        const stepper = document.getElementById('hansouStepper');
+        if (stepper && s.hansou) {
+            const total = (s.hansou.max_kyoku_index ?? 7) + 1;
+            const curr = s.hansou.kyoku_index ?? 0;
+            stepper.innerHTML = Array.from({ length: total }, (_, i) => {
+                let cls = 'step';
+                if (i < curr) cls += ' done';
+                else if (i === curr) cls += ' current';
+                const wind = windNames[Math.floor(i / 4)];
+                const ki = (i % 4) + 1;
+                return `<div class="${cls}">${wind}${ki}</div>`;
+            }).join('');
+        }
+
+        // Legacy score chips (if any present)
         const chips = document.querySelectorAll('.score-chip');
         s.players.forEach((p, i) => {
             if (chips[i]) {
-                chips[i].querySelector('.pid').textContent = `${i === 0 ? '你' : 'P' + i} · ${windNames[p.wind === 'East' ? 0 : p.wind === 'South' ? 1 : p.wind === 'West' ? 2 : 3]}`;
+                chips[i].querySelector('.pid').textContent = `${i === 0 ? '你' : 'P' + i} · ${windNames[windKey(p.wind)]}`;
                 chips[i].querySelector('.pts').textContent = p.score;
                 chips[i].classList.toggle('oya', !!p.is_oya);
                 chips[i].classList.toggle('human', i === 0);
@@ -366,7 +415,7 @@ class MahjongGame {
         // Dora
         const doraBar = document.querySelector('.dora-tiles');
         if (doraBar) {
-            doraBar.innerHTML = s.dora.map(d =>
+            doraBar.innerHTML = (s.dora || []).map(d =>
                 `<span class="mini-dora">${d}</span>`
             ).join('');
         }
@@ -453,18 +502,63 @@ class MahjongGame {
             'Ryukyouku_4Kan': '四杠子',
             'Ryukyouku_Notile': '流局',
         };
+        const losers = Array.isArray(r.loser) ? r.loser : (r.loser != null ? [r.loser] : []);
         modal.innerHTML = `
             <h2>${typeNames[r.type] || r.type || '对局结束'}</h2>
             <div class="result-scores">
-                ${r.scores.map((s, i) => `
-                    <div class="result-row ${r.winner?.includes(i) ? 'winner' : ''}">
-                        <span>P${i}${i === r.loser ? ' (放铳)' : ''}</span>
+                ${(r.scores || []).map((s, i) => `
+                    <div class="result-row ${(r.winner || []).includes(i) ? 'winner' : ''}">
+                        <span>P${i}${losers.includes(i) ? ' (放铳)' : ''}</span>
                         <span>${s}点</span>
                     </div>
                 `).join('')}
             </div>
             ${r.winner?.length ? `<p>胜利: P${r.winner.join(', P')}</p>` : ''}
             <button class="action-btn btn-confirm mt-16" onclick="document.getElementById('resultModal').remove()">确定</button>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    }
+
+    _showKyokuEndToast(data) {
+        const r = data.result || {};
+        const typeNames = {
+            'RonAgari': '荣和', 'TsumoAgari': '自摸',
+            'Ryukyouku_Notile': '流局', 'Ryukyouku_9Hai': '九种九牌',
+            'Ryukyouku_4Wind': '四风连打', 'Ryukyouku_4Riichi': '四立直',
+            'Ryukyouku_4Kan': '四杠子',
+        };
+        const t = typeNames[r.type] || r.type || '局结束';
+        const winners = (r.winner || []).map(i => `P${i}`).join(',');
+        const msg = `${data.round_label || ''} ${t}${winners ? ' 胜者:' + winners : ''}`;
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3500);
+    }
+
+    _onGameOver(state, data) {
+        if (document.getElementById('resultModal')) return;
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'resultModal';
+        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        const finalScores = (data && data.final_scores) || (state.players || []).map(p => p.score);
+        const ranked = finalScores.map((s, i) => ({ i, s })).sort((a, b) => b.s - a.s);
+        modal.innerHTML = `
+            <h2>半庄结束</h2>
+            <div class="result-scores">
+                ${ranked.map((r, rank) => `
+                    <div class="result-row ${rank === 0 ? 'winner' : ''}">
+                        <span>${rank + 1}位 · P${r.i}${r.i === 0 ? '(你)' : ''}</span>
+                        <span>${r.s}点</span>
+                    </div>
+                `).join('')}
+            </div>
+            <button class="action-btn btn-confirm mt-16" onclick="document.getElementById('resultModal').remove()">关闭</button>
         `;
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
