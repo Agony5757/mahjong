@@ -4,6 +4,15 @@ This example shows how to train a reinforcement learning agent with pymahjong.
 
 ## Setup
 
+Using [`uv`](https://docs.astral.sh/uv/) (recommended):
+
+```bash
+uv venv && source .venv/bin/activate
+uv pip install pymahjong torch gymnasium sb3-contrib
+```
+
+Or using `pip`:
+
 ```bash
 pip install pymahjong torch gymnasium sb3-contrib
 ```

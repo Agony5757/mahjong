@@ -212,11 +212,13 @@ Tenhou XML 文件
 ```bash
 # 安装后端 Python 依赖
 cd /home/agony/projects/mahjong-dev
-pip install -r web/requirements.txt
 
-# 或使用 uv
+# 使用 uv（推荐）
 uv venv && source .venv/bin/activate
 uv pip install -r web/requirements.txt
+
+# 或使用 pip
+pip install -r web/requirements.txt
 ```
 
 `requirements.txt` 内容：

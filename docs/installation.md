@@ -8,6 +8,15 @@
 
 ## Install from PyPI
 
+Using [`uv`](https://docs.astral.sh/uv/) (recommended):
+
+```bash
+uv venv && source .venv/bin/activate
+uv pip install pymahjong
+```
+
+Or using `pip`:
+
 ```bash
 pip install pymahjong
 ```
@@ -38,6 +47,17 @@ Total 100 random-play games, 100 games without error, takes X.XX s
 
 ### Clone and Install
 
+Using `uv` (recommended):
+
+```bash
+git clone https://github.com/Agony5757/mahjong.git
+cd mahjong
+uv venv && source .venv/bin/activate
+uv pip install .
+```
+
+Or using `pip`:
+
 ```bash
 git clone https://github.com/Agony5757/mahjong.git
 cd mahjong
@@ -46,7 +66,15 @@ pip install .
 
 ### Development Installation
 
-For development, install with extra dependencies:
+For development, install with extra dependencies.
+
+Using `uv` (recommended):
+
+```bash
+uv pip install -e ".[dev,docs]"
+```
+
+Or using `pip`:
 
 ```bash
 pip install -e ".[dev,docs]"
@@ -56,7 +84,15 @@ pip install -e ".[dev,docs]"
 
 ### PyTorch (for pretrained models)
 
-To use pretrained opponent models in single-agent mode:
+To use pretrained opponent models in single-agent mode.
+
+Using `uv` (recommended):
+
+```bash
+uv pip install torch
+```
+
+Or using `pip`:
 
 ```bash
 pip install torch
@@ -66,6 +102,14 @@ Download pretrained models from [GitHub Releases](https://github.com/Agony5757/m
 
 ### Development Tools
 
+Using `uv` (recommended):
+
+```bash
+uv pip install -e ".[dev]"
+```
+
+Or using `pip`:
+
 ```bash
 pip install -e ".[dev]"
 ```
@@ -73,6 +117,14 @@ pip install -e ".[dev]"
 Includes: pytest, ruff
 
 ### Documentation Tools
+
+Using `uv` (recommended):
+
+```bash
+uv pip install -e ".[docs]"
+```
+
+Or using `pip`:
 
 ```bash
 pip install -e ".[docs]"

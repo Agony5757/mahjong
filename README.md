@@ -19,6 +19,15 @@ A Japanese Riichi Mahjong environment for decision AI research, featuring a high
 
 ## Installation
 
+Using [`uv`](https://docs.astral.sh/uv/) (recommended):
+
+```bash
+uv venv && source .venv/bin/activate
+uv pip install pymahjong
+```
+
+Or using `pip`:
+
 ```bash
 pip install pymahjong
 ```
@@ -93,7 +102,14 @@ A full-featured web interface is included for human vs AI, 4-AI battle, and paip
 
 ```bash
 cd /home/agony/projects/mahjong-dev/mahjong/web
+
+# Using uv (recommended)
+uv venv && source .venv/bin/activate
+uv pip install -r requirements.txt
+
+# Or using pip
 pip install -r requirements.txt
+
 uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 

@@ -14,6 +14,15 @@ while in the multi-agent version, 4 agents play with each other: at each step, a
 
 Require Python 3.6 or higher, currently tested on Ubuntu 18.04 and 20.04
 
+Using [`uv`](https://docs.astral.sh/uv/) (recommended):
+
+```
+uv venv && source .venv/bin/activate
+uv pip install pymahjong
+```
+
+Or using `pip`:
+
 ```
 pip install pymahjong
 ```
