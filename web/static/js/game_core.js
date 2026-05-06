@@ -585,7 +585,7 @@ class MahjongGame {
                     </div>
                 `).join('')}
             </div>
-            <button class="action-btn btn-confirm mt-16" onclick="document.getElementById('resultModal').remove()">关闭</button>
+            <button class="action-btn btn-confirm mt-16" onclick="document.getElementById('resultModal').remove(); if(typeof showLanding==='function') showLanding();">返回主页</button>
         `;
         overlay.appendChild(modal);
         document.body.appendChild(overlay);

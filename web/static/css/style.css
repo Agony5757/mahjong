@@ -446,72 +446,86 @@ canvas#mahjongCanvas {
     border-bottom: 0;
 }
 
-.landing {
+/* ── Landing Overlay ───────────────────────────────────────────── */
+
+.landing-overlay {
     width: min(calc(100% - 24px), var(--table-max-width));
     margin: 26px auto 40px;
-    padding: 34px 20px 24px;
+    display: flex;
+    justify-content: center;
+}
+
+.landing-card {
+    width: 100%;
+    max-width: 480px;
+    padding: 40px 32px 32px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 24px;
     background: var(--surface-strong);
     border: 1px solid var(--surface-border);
     border-radius: 30px;
     box-shadow: var(--shadow);
 }
 
-.landing h1 {
+.landing-card h1 {
     font-family: var(--font-display);
-    font-size: clamp(34px, 6vw, 56px);
+    font-size: clamp(34px, 6vw, 52px);
     color: var(--gold-soft);
     letter-spacing: 0.1em;
+    margin: 0;
 }
 
-.landing .subtitle {
+.landing-card .subtitle {
     color: var(--text-dim);
-    font-size: 16px;
+    font-size: 15px;
     text-align: center;
+    margin: -12px 0 0;
 }
 
-.mode-cards {
+.landing-options {
+    width: 100%;
     display: flex;
-    gap: 18px;
-    justify-content: center;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.mode-card {
-    min-width: 240px;
-    padding: 26px 28px;
-    border-radius: 22px;
-    background:
-        linear-gradient(180deg, rgba(255, 241, 212, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%),
-        rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    cursor: pointer;
-    text-align: center;
-    transition: 180ms ease;
-}
-
-.mode-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(217, 179, 106, 0.48);
-    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
-}
-
-.mode-card .icon {
-    font-size: 42px;
-    margin-bottom: 10px;
-}
-
-.mode-card h2 {
-    font-size: 22px;
-    margin-bottom: 8px;
-}
-
-.mode-card p {
+.option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     font-size: 14px;
     color: var(--text-dim);
+}
+
+.option-row select,
+.option-row input {
+    flex: 1;
+    max-width: 180px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--text);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: right;
+}
+
+.option-row input::placeholder {
+    color: var(--text-soft);
+}
+
+.landing-start-btn {
+    width: 100%;
+    padding: 14px 24px !important;
+    font-size: 17px !important;
+    letter-spacing: 0.06em;
 }
 
 .replay-timeline {
@@ -692,12 +706,8 @@ button {
         padding: 9px 14px;
     }
 
-    .landing {
-        padding-top: 28px;
-    }
-
-    .mode-card {
-        min-width: min(100%, 300px);
+    .landing-card {
+        padding: 28px 20px 24px;
     }
 }
 

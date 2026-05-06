@@ -14,7 +14,37 @@
     <a href="/replay">牌谱复现</a>
 </nav>
 
-<div class="top-bar" id="topBar">
+<!-- Landing Overlay -->
+<div class="landing-overlay" id="landingOverlay">
+    <div class="landing-card">
+        <h1>日麻</h1>
+        <p class="subtitle">4人立直麻将 · 人机对战</p>
+
+        <div class="landing-options">
+            <label class="option-row">
+                <span>赛制</span>
+                <select id="maxRoundSelect">
+                    <option value="0">东风战</option>
+                    <option value="1" selected>半庄</option>
+                </select>
+            </label>
+            <label class="option-row">
+                <span>AI 模型</span>
+                <select id="aiModelSelect">
+                    <option value="random">随机 AI（默认）</option>
+                </select>
+            </label>
+            <label class="option-row">
+                <span>随机种子</span>
+                <input type="number" id="seedInput" placeholder="留空 = 随机">
+            </label>
+        </div>
+
+        <button class="action-btn btn-confirm landing-start-btn" onclick="startHumanAI()">开始游戏</button>
+    </div>
+</div>
+
+<div class="top-bar" id="topBar" style="display:none">
     <div class="table-meta">
         <span class="round-info">东1局</span>
         <span class="honba">本场 0</span>
@@ -27,13 +57,11 @@
     </div>
 </div>
 
-<div class="game-container">
+<div class="game-container" id="gameContainer" style="display:none">
     <div class="game-main">
         <canvas id="mahjongCanvas" width="1200" height="780"></canvas>
-        <div class="status-msg" id="statusMsg">点击下方按钮开始新游戏</div>
-        <div class="action-panel" id="actionPanel">
-            <button class="action-btn btn-confirm" id="btnNewGame">新建游戏</button>
-        </div>
+        <div class="status-msg" id="statusMsg">准备中...</div>
+        <div class="action-panel" id="actionPanel"></div>
     </div>
 
     <aside class="side-panel">
@@ -52,43 +80,6 @@
     </aside>
 </div>
 
-<!-- Landing Overlay -->
-<div class="landing" id="landingOverlay">
-    <h1>日麻</h1>
-    <p class="subtitle">4人立直麻将 · 人机对战</p>
-    <div class="mode-cards">
-        <div class="mode-card" onclick="startHumanAI()">
-            <div class="icon">🎴</div>
-            <h2>人机对战</h2>
-            <p>你 vs 3个 AI（随机策略）</p>
-        </div>
-    </div>
-    <div class="text-dim mt-16" style="font-size:13px">
-        <details>
-            <summary>高级选项</summary>
-            <div style="margin-top:12px; text-align:left; display:inline-block">
-                <label style="display:block; margin-bottom:8px">
-                    AI 模型:
-                    <select id="aiModelSelect" style="margin-left:8px; padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px">
-                        <option value="random">随机 AI（默认）</option>
-                    </select>
-                </label>
-                <label style="display:block; margin-bottom:8px">
-                    赛制:
-                    <select id="maxRoundSelect" style="margin-left:8px; padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px">
-                        <option value="0">东风战</option>
-                        <option value="1" selected>半庄</option>
-                    </select>
-                </label>
-                <label style="display:block; margin-bottom:8px">
-                    随机种子:
-                    <input type="number" id="seedInput" placeholder="留空=随机" style="margin-left:8px; padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px; width:100px">
-                </label>
-            </div>
-        </details>
-    </div>
-</div>
-
 <script src="/static/js/renderer.js"></script>
 <script src="/static/js/game_core.js"></script>
 <script>
@@ -100,23 +91,63 @@
         const seed = seedVal ? parseInt(seedVal) : null;
         const maxRound = parseInt(document.getElementById('maxRoundSelect').value);
 
+        // Show game UI, hide landing
         document.getElementById('landingOverlay').style.display = 'none';
-        document.getElementById('btnNewGame').style.display = 'none';
+        document.getElementById('topBar').style.display = '';
+        document.getElementById('gameContainer').style.display = '';
+
+        // Destroy previous game if any
+        if (game) {
+            game.destroy();
+            game = null;
+        }
 
         game = new MahjongGame('mahjongCanvas');
         game.resize();
 
-        game.canvas.addEventListener('click', (e) => game._onCanvasClick(e));
+        // Remove old click listeners by replacing canvas
+        const oldCanvas = game.canvas;
+        const newCanvas = oldCanvas.cloneNode(true);
+        oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
+        game.canvas = newCanvas;
+        game.ctx = newCanvas.getContext('2d');
+        newCanvas.addEventListener('click', (e) => game._onCanvasClick(e));
 
         window.addEventListener('resize', () => {
-            game.resize();
-            game._render();
+            if (game) {
+                game.resize();
+                game._render();
+            }
         });
 
         game.newGame('human_ai', aiModel, seed, maxRound).catch(err => {
             alert('启动失败: ' + err.message);
         });
     }
+
+    function showLanding() {
+        if (game) {
+            game.destroy();
+            game = null;
+        }
+        document.getElementById('landingOverlay').style.display = '';
+        document.getElementById('topBar').style.display = 'none';
+        document.getElementById('gameContainer').style.display = 'none';
+    }
+
+    // Override _onGameOver to show restart button
+    const _origOnGameOver = MahjongGame.prototype._onGameOver;
+    MahjongGame.prototype._onGameOver = function(state, data) {
+        _origOnGameOver.call(this, state, data);
+        const panel = document.getElementById('actionPanel');
+        if (panel) {
+            const btn = document.createElement('button');
+            btn.className = 'action-btn btn-confirm';
+            btn.textContent = '返回主页';
+            btn.onclick = showLanding;
+            panel.appendChild(btn);
+        }
+    };
 </script>
 </body>
 </html>
