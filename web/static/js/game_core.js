@@ -279,9 +279,9 @@ class MahjongGame {
         const isRed = tileData.red_dora || false;
 
         if (isRed) {
-            if (tileStr.startsWith('5m') || tileStr === '5m') return 37;  // red 5m
-            if (tileStr.startsWith('5p') || tileStr === '5p') return 38;  // red 5p
-            if (tileStr.startsWith('5s') || tileStr === '5s') return 39;  // red 5s
+            if (tileStr.startsWith('5m') || tileStr === '5m') return 34;  // red 5m
+            if (tileStr.startsWith('5p') || tileStr === '5p') return 35;  // red 5p
+            if (tileStr.startsWith('5s') || tileStr === '5s') return 36;  // red 5s
         }
 
         const basetile = this._strToBasetile(tileStr);

@@ -216,6 +216,14 @@ def _start_hansou_thread(session: GameSession):
     t.start()
 
 
+def _start_resume_thread(session: GameSession):
+    """Run _resume_after_human_action in a background thread so the event loop stays free."""
+    sid = session.session_id
+    t = threading.Thread(target=_resume_after_human_action, args=(session,), daemon=True)
+    _session_threads[sid] = t
+    t.start()
+
+
 def _resume_after_human_action(session: GameSession):
     """For human_ai: after the human acts, drive AI until the next human turn or kyoku end."""
     sid = session.session_id
@@ -324,7 +332,7 @@ async def new_game(req: NewGameRequest, background_tasks: BackgroundTasks):
         background_tasks.add_task(_start_hansou_thread, session)
     else:
         # If human is not the first to act (oya != 0), drive AI until human turn.
-        background_tasks.add_task(_resume_after_human_action, session)
+        background_tasks.add_task(_start_resume_thread, session)
 
     log_path = None
     if session.logger and session.logger.path is not None:
@@ -362,7 +370,7 @@ async def post_action(session_id: str, req: ActionRequest, background_tasks: Bac
             session.logger.log_exception("http_action_value_error", e,
                                          player=req.player_id, action_idx=req.action_idx)
         raise HTTPException(400, str(e))
-    background_tasks.add_task(_resume_after_human_action, session)
+    background_tasks.add_task(_start_resume_thread, session)
     return {"ok": True, "state": state}
 
 
