@@ -344,6 +344,7 @@ def _player_dict(t: pm.Table, pid: int, hide_hand: bool) -> dict:
             "tile": _tile_dict(rt.tile),
             "number": int(rt.number),
             "riichi": bool(rt.riichi),
+            "remain": bool(rt.remain),
             "fromhand": bool(rt.fromhand),
         })
 

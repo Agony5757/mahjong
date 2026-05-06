@@ -418,6 +418,7 @@ function drawRiverLocal(ctx, river, seatIndex, highlightLast) {
     const startY = LOCAL_LAYOUT.riverY;
 
     river.forEach((tile, index) => {
+        if (tile.remain === false) return;  // called tile (pon/chi/kan) — skip
         const col = index % RIVER_TILE.cols;
         const row = Math.floor(index / RIVER_TILE.cols);
         const cellX = startX + col * cellW;

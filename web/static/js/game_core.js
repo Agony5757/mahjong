@@ -306,20 +306,20 @@ class MahjongGame {
         const canRon = validMask[49] === true;
         const canPon = validMask[43] === true || validMask[44] === true;
         const canKan = validMask[46] === true;  // Minkan
-        const canChi = validMask[37] || validMask[38] || validMask[39] ||
-                       validMask[40] || validMask[41] || validMask[42];
+        const chiActions = [37, 38, 39, 40, 41, 42].filter(i => validMask[i]);
 
         if (canRon) {
             panel.appendChild(this._makeBtn('荣和', 'btn-ron', () => this.submitAction(49)));
         }
         if (canPon) {
-            panel.appendChild(this._makeBtn('碰', 'btn-pon', () => this.submitAction(43)));
+            const ponIdx = validMask[43] ? 43 : 44;
+            panel.appendChild(this._makeBtn('碰', 'btn-pon', () => this.submitAction(ponIdx)));
         }
         if (canKan) {
             panel.appendChild(this._makeBtn('杠', 'btn-kan', () => this.submitAction(46)));
         }
-        if (canChi) {
-            panel.appendChild(this._makeBtn('吃', 'btn-chi', () => this.submitAction(37)));
+        if (chiActions.length > 0) {
+            panel.appendChild(this._makeBtn('吃', 'btn-chi', () => this.submitAction(chiActions[0])));
         }
         panel.appendChild(this._makeBtn('跳过', 'btn-pass', () => this.submitAction(53)));
 
@@ -330,9 +330,10 @@ class MahjongGame {
         // Find the last discarded tile by the previous player
         const prev = (this.state.turn + 3) % 4;
         const river = this.state.players[prev]?.river || [];
-        if (river.length > 0) {
-            const last = river[river.length - 1];
-            return last.tile?.str || last.str || '?';
+        for (let i = river.length - 1; i >= 0; i--) {
+            if (river[i].remain !== false) {
+                return river[i].tile?.str || river[i].str || '?';
+            }
         }
         return null;
     }
@@ -461,6 +462,13 @@ class MahjongGame {
                 }
             }));
             this._updateStatus('请确认是否立直');
+            return;
+        }
+
+        // Response phase (Chi/Pon/Kan/Ron/Pass)
+        const phase = this.state.phase || 0;
+        if (phase >= 4 && phase < 16) {
+            this._showResponseActions();
             return;
         }
 
