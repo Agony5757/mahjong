@@ -45,3 +45,4 @@ wheelhouse/
 
 # AI assistant config
 .github/copilot-instructions.md
+web/logs

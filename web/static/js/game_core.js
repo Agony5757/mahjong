@@ -57,6 +57,11 @@ class MahjongGame {
         });
         this.sessionId = resp.session_id;
         this.state = resp.state;
+        this.logUrl = resp.log_url || null;
+        if (this.logUrl) {
+            console.info('[mahjong] verbose log →', this.logUrl, '(server path:', resp.log_path, ')');
+            this._renderLogLink();
+        }
         this._startSSE();
         this._render();
 
@@ -64,6 +69,20 @@ class MahjongGame {
         this._scheduleAI();
 
         return resp;
+    }
+
+    _renderLogLink() {
+        if (!this.logUrl) return;
+        let el = document.getElementById('verboseLogLink');
+        if (!el) {
+            el = document.createElement('a');
+            el.id = 'verboseLogLink';
+            el.textContent = '⬇ 下载本局日志';
+            el.style.cssText = 'position:fixed;right:14px;bottom:12px;z-index:30;background:#1a2638;color:#cfd8e7;padding:6px 12px;border-radius:6px;font-size:12px;text-decoration:none;border:1px solid #3a4a66;';
+            document.body.appendChild(el);
+        }
+        el.href = this.logUrl;
+        el.download = '';
     }
 
     async getState() {

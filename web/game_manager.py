@@ -19,6 +19,7 @@ import numpy as np
 import MahjongPyWrapper as pm
 
 from hansou import HansouSession
+from verbose_log import SessionLogger
 
 
 class GameMode(str, Enum):
@@ -463,6 +464,7 @@ class GameSession:
     hansou: HansouSession
     human_player_id: int = -1
     action_log: list = field(default_factory=list)
+    logger: Optional[SessionLogger] = None
 
     def get_state(self, for_player: Optional[int] = None) -> dict:
         hide = None
@@ -471,8 +473,42 @@ class GameSession:
         return build_state(self.adapter, self.hansou, hide_hands_except=hide)
 
     def step(self, player_id: int, action_idx: int) -> dict:
-        self.adapter.step(player_id, action_idx)
+        # Snapshot pre-step context for verbose log.
+        if self.logger is not None:
+            try:
+                pre_phase = self.adapter.get_phase()
+                pre_curr = self.adapter.get_curr_player()
+                pre_valid = self.adapter.get_valid_actions(player_id)
+                self.logger.log("step_in", {
+                    "player": player_id,
+                    "action_idx": action_idx,
+                    "phase": pre_phase,
+                    "curr_player": pre_curr,
+                    "valid_actions": pre_valid,
+                    "riichi_stage2": self.adapter._riichi_stage2,
+                    "tiles_left": int(self.adapter.t.get_remain_tile()),
+                })
+            except Exception as e:
+                self.logger.log_exception("step_in_snapshot_fail", e)
+        try:
+            self.adapter.step(player_id, action_idx)
+        except Exception as e:
+            if self.logger is not None:
+                self.logger.log_exception("step_error", e,
+                                          player=player_id, action_idx=action_idx)
+            raise
         self.action_log.append({"player": player_id, "action": action_idx})
+        if self.logger is not None:
+            try:
+                self.logger.log("step_out", {
+                    "player": player_id,
+                    "action_idx": action_idx,
+                    "phase": self.adapter.get_phase(),
+                    "curr_player": self.adapter.get_curr_player() if not self.adapter.is_over() else -1,
+                    "is_over": self.adapter.is_over(),
+                })
+            except Exception as e:
+                self.logger.log_exception("step_out_snapshot_fail", e)
         return self.get_state(for_player=self.human_player_id if self.human_player_id >= 0 else None)
 
 
@@ -493,12 +529,19 @@ class GameManager:
         hansou = HansouSession(env=adapter, max_round=max_round)
         hansou.start_first_kyoku(seed=seed)
         sid = str(uuid.uuid4())
+        slogger = SessionLogger(sid, mode.value, seed, max_round)
+        slogger.log("kyoku_init", {
+            "kyoku": hansou.snapshot(),
+            "phase": adapter.get_phase(),
+            "curr_player": adapter.get_curr_player(),
+        })
         session = GameSession(
             session_id=sid,
             mode=mode,
             adapter=adapter,
             hansou=hansou,
             human_player_id=0 if mode == GameMode.HUMAN_AI else -1,
+            logger=slogger,
         )
         with self._lock:
             self._sessions[sid] = session
@@ -519,4 +562,9 @@ class GameManager:
 
     def close_session(self, session_id: str) -> bool:
         with self._lock:
-            return self._sessions.pop(session_id, None) is not None
+            sess = self._sessions.pop(session_id, None)
+        if sess is None:
+            return False
+        if sess.logger is not None:
+            sess.logger.close()
+        return True

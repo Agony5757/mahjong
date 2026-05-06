@@ -22,8 +22,9 @@ from sse_starlette.sse import EventSourceResponse
 
 from game_manager import GameManager, GameMode, GameSession
 from ai_player import create_ai_player, BaseAIPlayer
+from verbose_log import configure_root_logging, LOG_DIR
 
-logging.basicConfig(level=logging.INFO)
+configure_root_logging()
 logger = logging.getLogger("mahjong_server")
 
 app = FastAPI(title="Mahjong Web Server", version="2.0.0")
@@ -98,20 +99,28 @@ def _run_one_kyoku(session: GameSession) -> bool:
     """Drive AI players through one kyoku. Returns True if completed normally."""
     sid = session.session_id
     consecutive_errors = 0
+    slog = session.logger
+    if slog: slog.log("kyoku_loop_start", {"phase": session.adapter.get_phase()})
     while not session.adapter.is_over():
         ais = _session_ais.get(sid, [])
         curr = session.adapter.get_curr_player()
         if curr < 0 or curr >= len(ais):
+            if slog: slog.log("kyoku_loop_abort", {"reason": "bad_curr", "curr": curr, "n_ai": len(ais)})
             return False
         ai = ais[curr]
         if ai is None:
+            if slog: slog.log("kyoku_loop_pause", {"reason": "human_turn", "curr": curr})
             # Human turn — return so the caller stops driving
             return False
         try:
             valid = session.adapter.get_valid_actions(curr)
             if not valid:
+                if slog: slog.log("kyoku_loop_abort", {"reason": "no_valid_actions", "curr": curr,
+                                                       "phase": session.adapter.get_phase()})
                 return False
             action_idx = ai.select_action(session.adapter, curr)
+            if slog: slog.log("ai_select", {"player": curr, "action_idx": action_idx,
+                                            "valid": valid, "phase": session.adapter.get_phase()})
             state = session.step(curr, action_idx)
             consecutive_errors = 0
             _broadcast(sid, {
@@ -124,11 +133,14 @@ def _run_one_kyoku(session: GameSession) -> bool:
         except Exception as e:
             consecutive_errors += 1
             logger.exception(f"AI step error in {sid}")
+            if slog: slog.log_exception("ai_step_error", e, curr=curr, consecutive=consecutive_errors)
             _broadcast(sid, {"type": "error", "message": str(e)})
             if consecutive_errors >= 5:
+                if slog: slog.log("kyoku_loop_abort", {"reason": "too_many_errors"})
                 _broadcast(sid, {"type": "error", "message": "Too many errors, stopping"})
                 return False
             time.sleep(0.3)
+    if slog: slog.log("kyoku_loop_end", {"phase": session.adapter.get_phase()})
     return True
 
 
@@ -198,17 +210,27 @@ def _start_hansou_thread(session: GameSession):
 def _resume_after_human_action(session: GameSession):
     """For human_ai: after the human acts, drive AI until the next human turn or kyoku end."""
     sid = session.session_id
+    slog = session.logger
+    if slog: slog.log("resume_enter", {"phase": session.adapter.get_phase(),
+                                       "curr": session.adapter.get_curr_player()})
     try:
         # Run AI within the current kyoku
         while not session.adapter.is_over():
             curr = session.adapter.get_curr_player()
             if session.mode == GameMode.HUMAN_AI and curr == session.human_player_id:
+                if slog: slog.log("resume_pause", {"reason": "human_turn", "curr": curr,
+                                                   "phase": session.adapter.get_phase(),
+                                                   "valid": session.adapter.get_valid_actions(curr)})
                 return  # Wait for human input
             ai = _session_ais.get(sid, [None]*4)[curr]
             if ai is None:
+                if slog: slog.log("resume_pause", {"reason": "no_ai", "curr": curr})
                 return
             try:
+                valid = session.adapter.get_valid_actions(curr)
                 action_idx = ai.select_action(session.adapter, curr)
+                if slog: slog.log("ai_select", {"player": curr, "action_idx": action_idx,
+                                                "valid": valid, "phase": session.adapter.get_phase()})
                 state = session.step(curr, action_idx)
                 _broadcast(sid, {
                     "type": "ai_action",
@@ -216,6 +238,8 @@ def _resume_after_human_action(session: GameSession):
                 })
                 time.sleep(_session_speed.get(sid, 0.3))
             except Exception as e:
+                logger.exception(f"AI step error in {sid}")
+                if slog: slog.log_exception("ai_step_error", e, curr=curr)
                 _broadcast(sid, {"type": "error", "message": str(e)})
                 return
 
@@ -291,10 +315,17 @@ async def new_game(req: NewGameRequest, background_tasks: BackgroundTasks):
         # If human is not the first to act (oya != 0), drive AI until human turn.
         background_tasks.add_task(_resume_after_human_action, session)
 
+    log_path = None
+    if session.logger and session.logger.path is not None:
+        log_path = str(session.logger.path)
+        logger.info("Session %s verbose log → %s", sid, log_path)
+
     return {
         "session_id": sid,
         "mode": session.mode.value,
         "state": session.get_state(),
+        "log_path": log_path,
+        "log_url": f"/api/game/{sid}/log" if log_path else None,
     }
 
 
@@ -311,12 +342,32 @@ async def post_action(session_id: str, req: ActionRequest, background_tasks: Bac
     session = manager.get_session(session_id)
     if not session:
         raise HTTPException(404, "Session not found")
+    if session.logger:
+        session.logger.log("http_action_in", {"player": req.player_id, "action_idx": req.action_idx})
     try:
         state = session.step(req.player_id, req.action_idx)
     except ValueError as e:
+        if session.logger:
+            session.logger.log_exception("http_action_value_error", e,
+                                         player=req.player_id, action_idx=req.action_idx)
         raise HTTPException(400, str(e))
     background_tasks.add_task(_resume_after_human_action, session)
     return {"ok": True, "state": state}
+
+
+@app.get("/api/game/{session_id}/log")
+async def get_session_log(session_id: str):
+    """Download the verbose NDJSON log for a session (useful for bug reports)."""
+    session = manager.get_session(session_id)
+    if not session or session.logger is None or session.logger.path is None:
+        raise HTTPException(404, "Log not available")
+    if not session.logger.path.exists():
+        raise HTTPException(404, "Log file missing")
+    return FileResponse(
+        str(session.logger.path),
+        media_type="application/x-ndjson",
+        filename=session.logger.path.name,
+    )
 
 
 @app.post("/api/game/{session_id}/speed")
