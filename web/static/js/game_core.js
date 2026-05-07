@@ -495,6 +495,15 @@ class MahjongGame {
 
         // Self-action phase
         const validMask = this.state.valid_actions_mask || [];
+        if (validMask[45]) {
+            panel.appendChild(this._makeBtn('暗杠', 'btn-ankan', () => this.submitAction(45)));
+        }
+        if (validMask[46]) {
+            panel.appendChild(this._makeBtn('大明杠', 'btn-minken', () => this.submitAction(46)));
+        }
+        if (validMask[47]) {
+            panel.appendChild(this._makeBtn('加杠', 'btn-kakan', () => this.submitAction(47)));
+        }
         if (validMask[50]) {
             panel.appendChild(this._makeBtn('自摸', 'btn-tsumo', () => this.submitAction(50)));
         }
