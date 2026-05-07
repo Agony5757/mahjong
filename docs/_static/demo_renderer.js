@@ -5,8 +5,8 @@
  * canvas viewport. This keeps proportions stable across different resolutions.
  */
 
-const BOARD_W = 1600;
-const BOARD_H = 1000;
+const BOARD_W = 2200;
+const BOARD_H = 1400;
 const BOARD_ASPECT = BOARD_W / BOARD_H;
 
 const TABLE = {
@@ -18,19 +18,22 @@ const TABLE = {
 
 const SEAT_ANGLES = [0, -Math.PI / 2, Math.PI, Math.PI / 2];
 
-const HAND_TILE = { w: 64, h: 88, gap: 4, drawGap: 16 };
-const SIDE_HAND_TILE = { w: 58, h: 80, gap: 3, drawGap: 14 };
-const RIVER_TILE = { w: 50, h: 70, gap: 6, vgap: 8, cols: 6 };
-const MELD_TILE = { w: 48, h: 68, gap: 4, groupGap: 10 };
-const DORA_TILE = { w: 52, h: 72, gap: 8 };
+const HAND_TILE = { w: 40, h: 56, gap: 4, drawGap: 14 };
+const SIDE_HAND_TILE = { w: 34, h: 48, gap: 2, drawGap: 10 };
+// 日麻惯例：牌河每行 6 张，最多 4 行 (24 张可覆盖任何实际情况)
+const RIVER_TILE = { w: 32, h: 44, gap: 5, vgap: 6, cols: 6 };
+const MELD_TILE = { w: 32, h: 44, gap: 3, groupGap: 10 };
+const DORA_TILE = { w: 32, h: 44, gap: 6 };
 
+// y 坐标在每个座位的局部坐标系下从中心向外延伸。
+// 中心面板半高 ~110，因此 riverY 必须 >= 120。
 const LOCAL_LAYOUT = {
-    riverY: 114,
-    badgeY: 250,
-    handY: 360,
+    riverY: 130,
+    badgeY: 360,
+    handY: 440,
 };
 
-const TILE_ASSET_ROOT = window.__MAHJONG_TILE_ASSET_ROOT__ || '/static/assets/tiles/Regular';
+const TILE_ASSET_ROOT = (typeof window !== 'undefined' && window.__MAHJONG_TILE_ASSET_ROOT__) || '/static/assets/tiles/Regular';
 const TILE_ASSET_MAP = {
     '1m': 'Man1',
     '2m': 'Man2',
@@ -77,10 +80,10 @@ function setInvalidateHandler(fn) {
 
 function resizeCanvasToContainer(canvas, options = {}) {
     const dpr = window.devicePixelRatio || 1;
-    const maxWidth = options.maxWidth || 1240;
+    const maxWidth = options.maxWidth || 1700;
     const aspectRatio = options.aspectRatio || BOARD_ASPECT;
     const containerWidth = Math.max(320, Math.min(canvas.parentElement.clientWidth - 4, maxWidth));
-    const maxHeight = Math.max(320, Math.floor(window.innerHeight * (options.maxHeightRatio || 0.68)));
+    const maxHeight = Math.max(360, Math.floor(window.innerHeight * (options.maxHeightRatio || 0.78)));
 
     let cssWidth = containerWidth;
     let cssHeight = Math.floor(cssWidth / aspectRatio);
@@ -158,17 +161,6 @@ function getTileAssetPath(tileStr, redDora = false, faceDown = false) {
     return `${TILE_ASSET_ROOT}/${asset}${suffix}.svg`;
 }
 
-function tileStrOf(tile) {
-    if (!tile) return '';
-    if (typeof tile === 'string') return tile;
-    return tile.str || '';
-}
-
-function redDoraOf(tile) {
-    if (!tile || typeof tile === 'string') return false;
-    return !!tile.red_dora;
-}
-
 function getAssetImage(path) {
     let entry = assetCache.get(path);
     if (!entry) {
@@ -225,38 +217,44 @@ function drawTileImage(ctx, x, y, w, h, tileStr, options = {}) {
     const img = getAssetImage(getTileAssetPath(tileStr, redDora, faceDown));
     const cx = x + w / 2;
     const cy = y + h / 2 - lifted;
+    const r = Math.max(3, Math.round(h * 0.08));
 
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(rotation);
 
-    if (selected || highlighted) {
-        ctx.shadowColor = selected ? 'rgba(255, 190, 65, 0.65)' : 'rgba(120, 208, 255, 0.45)';
-        ctx.shadowBlur = selected ? 18 : 12;
-        fillRoundedRect(
-            ctx,
-            -w / 2 - 6,
-            -h / 2 - 6,
-            w + 12,
-            h + 12,
-            14,
-            selected ? 'rgba(255, 224, 127, 0.28)' : 'rgba(190, 240, 255, 0.18)',
-            selected ? '#f5c451' : '#8ed2ff',
-            2
-        );
-        ctx.shadowColor = 'transparent';
-    }
-
     if (dimmed) ctx.globalAlpha = 0.82;
 
-    // Tile SVG assets have transparent backgrounds, so paint an explicit tile
-    // body underneath to keep every tile readable on the felt.
-    fillRoundedRect(ctx, -w / 2, -h / 2, w, h, Math.max(8, Math.min(w, h) * 0.12), '#fbf7ef', '#d5cab4', 1.2);
+    // Draw tile base (cream background) so tiles stand out against felt
+    ctx.shadowColor = 'rgba(0,0,0,0.15)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 3;
+    fillRoundedRect(ctx, -w / 2, -h / 2, w, h, r, '#f5f0eb', '#cdbfab', 1);
+    ctx.shadowColor = 'transparent';
 
     if (img) {
         ctx.drawImage(img, -w / 2, -h / 2, w, h);
     } else {
         drawFallbackTile(ctx, -w / 2, -h / 2, w, h, faceDown ? '' : tileStr, { faceDown });
+    }
+
+    // Selection / highlight glow on top
+    if (selected || highlighted) {
+        ctx.globalAlpha = 1;
+        ctx.shadowColor = selected ? 'rgba(255, 190, 65, 0.65)' : 'rgba(120, 208, 255, 0.45)';
+        ctx.shadowBlur = selected ? 12 : 8;
+        fillRoundedRect(
+            ctx,
+            -w / 2 - 4,
+            -h / 2 - 4,
+            w + 8,
+            h + 8,
+            10,
+            selected ? 'rgba(255, 224, 127, 0.28)' : 'rgba(190, 240, 255, 0.18)',
+            selected ? '#f5c451' : '#8ed2ff',
+            1.5
+        );
     }
 
     ctx.restore();
@@ -266,17 +264,17 @@ function drawStick(ctx, x, y, length, color, text, rotation = 0) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rotation);
-    fillRoundedRect(ctx, -length / 2, -6, length, 12, 6, '#f1ede2', '#bbab91', 1);
+    fillRoundedRect(ctx, -length / 2, -5, length, 10, 5, '#f1ede2', '#bbab91', 1);
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(-length / 2 + 12, 0, 4.5, 0, Math.PI * 2);
-    ctx.arc(length / 2 - 12, 0, 4.5, 0, Math.PI * 2);
+    ctx.arc(-length / 2 + 10, 0, 3.5, 0, Math.PI * 2);
+    ctx.arc(length / 2 - 10, 0, 3.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#584940';
-    ctx.font = '12px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.font = '10px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, 0, 0.5);
+    ctx.fillText(text, 0, 0.4);
     ctx.restore();
 }
 
@@ -330,8 +328,8 @@ function computeHandRects(count, centerX, topY, tileSize) {
 }
 
 function drawCenterPanel(ctx, state) {
-    const panelW = 380;
-    const panelH = 240;
+    const panelW = 300;
+    const panelH = 200;
     const x = TABLE.centerX - panelW / 2;
     const y = TABLE.centerY - panelH / 2;
 
@@ -357,83 +355,96 @@ function drawCenterPanel(ctx, state) {
     ctx.restore();
 
     ctx.fillStyle = '#f0e7d2';
-    ctx.font = '600 18px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.font = '600 17px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(buildRoundLabel(state), TABLE.centerX, y + 34);
+    ctx.fillText(buildRoundLabel(state), TABLE.centerX, y + 28);
 
     ctx.fillStyle = '#cabda0';
-    ctx.font = '13px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
-    ctx.fillText(`剩余巡目 ${state.river_counter ?? 0}`, TABLE.centerX, y + 58);
+    ctx.font = '12px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    const tilesLeft = (state.tiles_left !== undefined && state.tiles_left !== null)
+        ? state.tiles_left
+        : Math.max(0, 70 - (state.river_counter ?? 0));
+    ctx.fillText(`牌山剩余 ${tilesLeft}`, TABLE.centerX, y + 50);
 
     const dora = state.dora || [];
     const doraTotalWidth = dora.length * DORA_TILE.w + Math.max(dora.length - 1, 0) * DORA_TILE.gap;
     const doraStartX = TABLE.centerX - doraTotalWidth / 2;
     ctx.fillStyle = '#ceb982';
-    ctx.font = '12px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
-    ctx.fillText('宝牌指示牌', TABLE.centerX, y + 88);
+    ctx.font = '11px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.fillText('宝牌', TABLE.centerX, y + 74);
     dora.forEach((tile, index) => {
-        drawTileImage(ctx, doraStartX + index * (DORA_TILE.w + DORA_TILE.gap), y + 100, DORA_TILE.w, DORA_TILE.h, tile, {});
+        drawTileImage(ctx, doraStartX + index * (DORA_TILE.w + DORA_TILE.gap), y + 84, DORA_TILE.w, DORA_TILE.h, tile, {});
     });
 
-    const stickY = y + 192;
-    drawStick(ctx, TABLE.centerX - 72, stickY, 92, '#b7473f', `供托 ${state.kyoutaku ?? 0}`);
-    drawStick(ctx, TABLE.centerX + 72, stickY, 92, '#2d67b3', `本场 ${state.honba ?? 0}`);
+    const stickY = y + panelH - 28;
+    drawStick(ctx, TABLE.centerX - 60, stickY, 84, '#b7473f', `供托 ${state.kyoutaku ?? 0}`);
+    drawStick(ctx, TABLE.centerX + 60, stickY, 84, '#2d67b3', `本场 ${state.honba ?? 0}`);
 }
 
 function drawSeatBadge(ctx, player, seatIndex, active, revealDetails) {
-    const x = -118;
+    const x = -82;
     const y = LOCAL_LAYOUT.badgeY;
-    const w = 236;
-    const h = 62;
+    const w = 164;
+    const h = 44;
     const badgeFill = active ? 'rgba(255, 224, 133, 0.20)' : 'rgba(10, 12, 12, 0.46)';
     const badgeStroke = active ? '#f0c66e' : 'rgba(255, 255, 255, 0.08)';
-    fillRoundedRect(ctx, x, y, w, h, 18, badgeFill, badgeStroke, active ? 2.4 : 1.4);
+    fillRoundedRect(ctx, x, y, w, h, 14, badgeFill, badgeStroke, active ? 2.4 : 1.4);
 
     const wind = windToZh(player.wind);
-    const title = `P${seatIndex} · ${wind}${player.is_oya ? '家' : ''}`;
+    const title = `P${seatIndex}·${wind}${player.is_oya ? '家' : ''}`;
     ctx.fillStyle = active ? '#fff7dd' : '#ece6d7';
-    ctx.font = '600 15px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.font = '600 12px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(title, x + 16, y + 11);
+    ctx.fillText(title, x + 10, y + 7);
 
-    ctx.font = '700 22px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
-    ctx.fillText(String(player.score ?? 0), x + 16, y + 34);
+    ctx.font = '700 16px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.fillText(String(player.score ?? 0), x + 10, y + 24);
 
     const rightText = [];
     if (player.riichi) rightText.push('立直');
-    if (revealDetails && player.tenpai && player.tenpai.length) rightText.push(`听牌 ${player.tenpai.join(' ')}`);
+    if (revealDetails && player.tenpai && player.tenpai.length) rightText.push(`听 ${player.tenpai.join(' ')}`);
     ctx.textAlign = 'right';
-    ctx.font = '13px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    ctx.font = '11px "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
     ctx.fillStyle = '#d6c8ab';
-    ctx.fillText(rightText.join(' · '), x + w - 16, y + 34);
+    ctx.fillText(rightText.join('·'), x + w - 10, y + 24);
 }
 
 function drawRiverLocal(ctx, river, seatIndex, highlightLast) {
-    const cellW = RIVER_TILE.w + 10;
-    const cellH = RIVER_TILE.h + 10;
-    const totalWidth = RIVER_TILE.cols * cellW - (cellW - RIVER_TILE.w);
+    const cellW = RIVER_TILE.w + RIVER_TILE.gap;
+    const cellH = RIVER_TILE.h + RIVER_TILE.vgap;
+    const totalWidth = RIVER_TILE.cols * cellW - RIVER_TILE.gap;
     const startX = -totalWidth / 2;
     const startY = LOCAL_LAYOUT.riverY;
 
     river.forEach((tile, index) => {
+        if (tile.remain === false) return;  // called tile (pon/chi/kan) — skip
         const col = index % RIVER_TILE.cols;
         const row = Math.floor(index / RIVER_TILE.cols);
         const cellX = startX + col * cellW;
         const cellY = startY + row * cellH;
         const sideways = !!tile.riichi;
-        const w = sideways ? RIVER_TILE.h : RIVER_TILE.w;
-        const h = sideways ? RIVER_TILE.w : RIVER_TILE.h;
-        const x = cellX + (RIVER_TILE.w - w) / 2;
-        const y = cellY + (RIVER_TILE.h - h) / 2;
-        const tilePayload = tile?.tile || tile;
-        const tileStr = tileStrOf(tilePayload);
-        const isRed = redDoraOf(tilePayload);
-        drawTileImage(ctx, x, y, w, h, tileStr, {
-            redDora: isRed,
-            rotation: sideways ? Math.PI / 2 : 0,
-            highlighted: highlightLast && index === river.length - 1,
-        });
+        // Always pass natural tile dimensions; rotation lays the tile
+        // sideways. Position the tile so it occupies the cell footprint.
+        const occW = sideways ? RIVER_TILE.h : RIVER_TILE.w;
+        const occH = sideways ? RIVER_TILE.w : RIVER_TILE.h;
+        const cx = cellX + occW / 2;
+        const cy = cellY + occH / 2;
+        const tileStr = tile.tile?.str || tile.str || '';
+        const isRed = !!tile.tile?.red_dora;
+        drawTileImage(
+            ctx,
+            cx - RIVER_TILE.w / 2,
+            cy - RIVER_TILE.h / 2,
+            RIVER_TILE.w,
+            RIVER_TILE.h,
+            tileStr,
+            {
+                redDora: isRed,
+                rotation: sideways ? Math.PI / 2 : 0,
+                highlighted: highlightLast && index === river.length - 1,
+            }
+        );
     });
 }
 
@@ -441,35 +452,85 @@ function meldDescriptors(call) {
     const tiles = Array.isArray(call.tiles) ? call.tiles : [];
     const type = call.type || '';
     const take = Number.isInteger(call.take) ? call.take : -1;
+    const isAnKan = /An.?Kan|^Concealed/i.test(type);
+    const isKaKan = /Ka.?Kan|^Added/i.test(type);
 
+    if (isAnKan && tiles.length === 4) {
+        // 暗杠：两端两张背面
+        return tiles.map((tile, index) => ({
+            tile,
+            sideways: false,
+            faceDown: index === 0 || index === tiles.length - 1,
+            stacked: false,
+        }));
+    }
+
+    // For Chi/Pon/MinKan/KaKan, the sideways tile is the one taken from another player.
+    // The frontend uses `take` (index of the called tile in the meld layout from the C++ engine).
     return tiles.map((tile, index) => ({
         tile,
-        sideways: index === take && tiles.length > 1 && type !== 'AnKan',
-        faceDown: type === 'AnKan' && tiles.length === 4 && (index === 0 || index === tiles.length - 1),
+        sideways: index === take && tiles.length > 1,
+        faceDown: false,
+        // For KaKan the engine emits 4 tiles where the added tile sits on top of the
+        // sideways tile from the original Pon. We render that as a stacked tile.
+        stacked: isKaKan && tiles.length === 4 && index === Math.max(0, take + 1),
     }));
 }
 
 function measureMeldWidth(call) {
     return meldDescriptors(call).reduce((width, part, index, parts) => {
+        if (part.stacked) return width;  // stacked tiles don't add to horizontal width
         width += part.sideways ? MELD_TILE.h : MELD_TILE.w;
-        if (index < parts.length - 1) width += MELD_TILE.gap;
+        if (index < parts.length - 1 && !parts[index + 1]?.stacked) width += MELD_TILE.gap;
         return width;
     }, 0);
 }
 
-function drawMeldGroup(ctx, call, x, y) {
+function drawMeldGroup(ctx, call, x, baselineY) {
+    // baselineY = the bottom y where every tile in this meld is aligned.
+    // Sideways tiles occupy MELD_TILE.h (40) wide × MELD_TILE.w (28) tall on screen.
+    // Normal tiles occupy MELD_TILE.w (28) wide × MELD_TILE.h (40) tall.
+    // KaKan added tile sits on top of the previously-drawn sideways tile,
+    // also rotated.
     const parts = meldDescriptors(call);
     let cursor = x;
+    let lastSideways = null;
     parts.forEach((part, index) => {
-        const w = part.sideways ? MELD_TILE.h : MELD_TILE.w;
-        const h = part.sideways ? MELD_TILE.w : MELD_TILE.h;
-        const tileStr = tileStrOf(part.tile);
-        drawTileImage(ctx, cursor, y + (MELD_TILE.h - h), w, h, tileStr, {
-            redDora: redDoraOf(part.tile),
+        const tw = MELD_TILE.w; // natural tile width
+        const th = MELD_TILE.h; // natural tile height
+        const tileStr = part.tile?.str || '';
+        const opts = {
+            redDora: !!part.tile?.red_dora,
             faceDown: part.faceDown,
-            rotation: part.sideways ? Math.PI / 2 : 0,
-        });
-        cursor += w + (index < parts.length - 1 ? MELD_TILE.gap : 0);
+            rotation: part.sideways || part.stacked ? Math.PI / 2 : 0,
+        };
+
+        if (part.stacked && lastSideways) {
+            // Place stacked (KaKan added) tile directly above the previous
+            // sideways tile, with the same orientation.
+            const cx = lastSideways.cx;
+            const cy = lastSideways.cy - tw; // shift up by sideways visual height (= tw=28)
+            drawTileImage(ctx, cx - tw / 2, cy - th / 2, tw, th, tileStr, opts);
+            return;
+        }
+
+        const occW = part.sideways ? th : tw; // visual width on screen
+        const occH = part.sideways ? tw : th; // visual height on screen
+        const cx = cursor + occW / 2;
+        const cy = baselineY - occH / 2;
+        // drawTileImage centers at (x+w/2, y+h/2), then rotates around that
+        // center and draws an asset of size (w, h). Pass the *natural* size so
+        // the rotation produces a proper sideways orientation.
+        drawTileImage(ctx, cx - tw / 2, cy - th / 2, tw, th, tileStr, opts);
+
+        if (part.sideways) {
+            lastSideways = { cx, cy };
+        }
+
+        cursor += occW;
+        if (index < parts.length - 1 && !parts[index + 1]?.stacked) {
+            cursor += MELD_TILE.gap;
+        }
     });
 }
 
@@ -479,10 +540,12 @@ function drawMeldsLocal(ctx, player, handWidth) {
 
     const widths = calls.map(measureMeldWidth);
     const totalWidth = widths.reduce((a, b) => a + b, 0) + Math.max(calls.length - 1, 0) * MELD_TILE.groupGap;
-    let cursor = -handWidth / 2 - 28 - totalWidth;
+    let cursor = -handWidth / 2 - 32 - totalWidth;
 
+    // Bottom-align meld tiles with the bottom of the hand row.
+    const baselineY = LOCAL_LAYOUT.handY + HAND_TILE.h;
     calls.forEach((call, index) => {
-        drawMeldGroup(ctx, call, cursor, LOCAL_LAYOUT.handY + (HAND_TILE.h - MELD_TILE.h));
+        drawMeldGroup(ctx, call, cursor, baselineY);
         cursor += widths[index] + MELD_TILE.groupGap;
     });
 }
@@ -494,11 +557,11 @@ function drawHandLocal(ctx, player, seatIndex, active, regions = null) {
 
     rects.forEach((rect, index) => {
         const tile = handInfo.visible ? handInfo.tiles[index] : null;
-        const tileStr = tileStrOf(tile);
-        const redDora = redDoraOf(tile);
+        const tileStr = tile?.str || '';
+        const redDora = !!tile?.red_dora;
         const highlighted = !!tile?.highlighted;
         const selected = !!tile?.selected;
-        const lifted = selected ? 16 : highlighted ? 8 : 0;
+        const lifted = selected ? 10 : highlighted ? 5 : 0;
         drawTileImage(ctx, rect.x, rect.y, rect.w, rect.h, tileStr, {
             redDora,
             faceDown: !handInfo.visible,
@@ -570,12 +633,12 @@ function drawBackground(ctx) {
     roundRect(ctx, feltX + 32, feltY + 32, feltW - 64, feltH - 64, 22);
     ctx.stroke();
 
-    ctx.setLineDash([12, 16]);
+    ctx.setLineDash([14, 18]);
     ctx.beginPath();
-    ctx.moveTo(TABLE.centerX - 260, TABLE.centerY);
-    ctx.lineTo(TABLE.centerX + 260, TABLE.centerY);
-    ctx.moveTo(TABLE.centerX, TABLE.centerY - 260);
-    ctx.lineTo(TABLE.centerX, TABLE.centerY + 260);
+    ctx.moveTo(TABLE.centerX - 360, TABLE.centerY);
+    ctx.lineTo(TABLE.centerX + 360, TABLE.centerY);
+    ctx.moveTo(TABLE.centerX, TABLE.centerY - 360);
+    ctx.lineTo(TABLE.centerX, TABLE.centerY + 360);
     ctx.stroke();
     ctx.restore();
 }

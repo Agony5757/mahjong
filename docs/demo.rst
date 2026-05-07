@@ -69,7 +69,7 @@ This is a short pre-recorded browser replay. It uses a fixed logical table size 
    </style>
 
    <div class="demo-shell">
-     <canvas id="docs-demo-canvas" width="1600" height="1000"></canvas>
+     <canvas id="docs-demo-canvas" width="2200" height="1400"></canvas>
      <div class="demo-meta">
        <span id="docs-demo-round">东一局 · 本场 0 · 供托 0</span>
        <span id="docs-demo-step">Step 0 / 0</span>
