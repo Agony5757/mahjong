@@ -231,16 +231,17 @@ class MahjongGame {
         }
     }
 
-    _submitRiichiStep1(discardIdx, tileData, tileDisplayIdx) {
+    async _submitRiichiStep1(discardIdx, tileData, tileDisplayIdx) {
         // Riichi is a two-step process:
         // Step 1: Player clicks a riichi-eligible tile → submit discard (same as normal)
         //   The server's MahjongEnvWrapper detects riichi_stage2=True
-        // Step 2: Player confirms → submit action 48 (RIICHI)
-        //
-        // For Step 1, we just submit the discard normally:
+        // Step 2: Auto-confirm riichi → submit action 48 (RIICHI)
+        //   Since the player already chose the riichi tile by clicking it,
+        //   we skip the manual confirm step and auto-discard.
         this.pendingRiichi = true;
         this._riichiDiscardIdx = discardIdx;
         this._riichiDisplayIdx = tileDisplayIdx;
+        this._autoConfirmRiichi = true;
 
         // Visual: highlight selected tile
         this.state.players[0].hand.forEach((t, i) => {
@@ -249,7 +250,15 @@ class MahjongGame {
         this._render();
 
         // Submit discard (server will detect riichi and enter stage 2)
-        this.submitAction(discardIdx);
+        await this.submitAction(discardIdx);
+
+        // If server entered riichi stage 2, auto-confirm immediately.
+        if (this._autoConfirmRiichi && this.state && this.state.riichi_stage2) {
+            this._autoConfirmRiichi = false;
+            await this.submitAction(48);
+        } else {
+            this._autoConfirmRiichi = false;
+        }
     }
 
     _showRiichiConfirm() {
@@ -542,12 +551,14 @@ class MahjongGame {
             'Ryukyouku_Notile': '流局',
         };
         const losers = Array.isArray(r.loser) ? r.loser : (r.loser != null ? [r.loser] : []);
+        const isTsumo = r.type === 'TsumoAgari';
+        const showLoserBadge = !isTsumo;
         modal.innerHTML = `
             <h2>${typeNames[r.type] || r.type || '对局结束'}</h2>
             <div class="result-scores">
                 ${(r.scores || []).map((s, i) => `
                     <div class="result-row ${(r.winner || []).includes(i) ? 'winner' : ''}">
-                        <span>P${i}${losers.includes(i) ? ' (放铳)' : ''}</span>
+                        <span>P${i}${showLoserBadge && losers.includes(i) ? ' (放铳)' : ''}</span>
                         <span>${s}点</span>
                     </div>
                 `).join('')}
@@ -568,11 +579,13 @@ class MahjongGame {
             'Ryukyouku_4Kan': '四杠子',
         };
         const t = typeNames[rec.result_type] || rec.result_type || '局结束';
+        const isTsumo = rec.result_type === 'TsumoAgari';
+        const showLoser = !isTsumo && !t.includes('流局');
         const winners = (rec.winner || []).map(i => i === 0 ? '你' : `P${i}`).join(',');
         const losers = rec.loser != null ? (rec.loser === 0 ? '你' : `P${rec.loser}`) : '';
         let msg = `${data.round_label || ''} ${t}`;
         if (winners) msg += ` 胜者:${winners}`;
-        if (losers && !t.includes('流局')) msg += ` 放铳:${losers}`;
+        if (losers && showLoser) msg += ` 放铳:${losers}`;
         if (rec.renchan) msg += ' (连庄)';
 
         // Show result modal for a few seconds
@@ -595,7 +608,7 @@ class MahjongGame {
         modal.innerHTML = `
             <h2>${data.round_label || '局结束'} ${t}</h2>
             ${winners ? `<p>胜者: ${winners}</p>` : ''}
-            ${losers && !t.includes('流局') ? `<p>放铳: ${losers}</p>` : ''}
+            ${losers && showLoser ? `<p>放铳: ${losers}</p>` : ''}
             ${rec.renchan ? '<p>连庄</p>' : ''}
             <div class="result-scores">${scoreDelta}</div>
             <p style="margin-top:12px;color:#888;font-size:13px">下一局即将开始...</p>
