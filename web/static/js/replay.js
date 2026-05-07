@@ -36,7 +36,7 @@
 
         resize() {
             window.MahjongRenderer?.resizeCanvasToContainer(this.canvas, {
-                maxWidth: 1500, maxHeightRatio: 0.78,
+                maxWidth: 2200, maxHeightRatio: 1.10,
             });
         }
 

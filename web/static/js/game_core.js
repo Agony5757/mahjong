@@ -27,7 +27,7 @@ class MahjongGame {
 
     resize() {
         if (window.MahjongRenderer?.resizeCanvasToContainer) {
-            window.MahjongRenderer.resizeCanvasToContainer(this.canvas, { maxWidth: 1700, maxHeightRatio: 0.78 });
+            window.MahjongRenderer.resizeCanvasToContainer(this.canvas, { maxWidth: 2400, maxHeightRatio: 1.10 });
         }
     }
 

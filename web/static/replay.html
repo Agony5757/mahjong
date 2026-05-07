@@ -158,7 +158,7 @@
     window.addEventListener('DOMContentLoaded', () => {
         const canvas = document.getElementById('mahjongCanvas');
         const ctx = canvas.getContext('2d');
-        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 1500, maxHeightRatio: 0.78 });
+        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 2200, maxHeightRatio: 1.10 });
         window.MahjongRenderer.renderSplash(ctx, canvas.width, canvas.height, '牌谱复现', '加载内置牌谱或上传天凤 XML');
     });
 </script>

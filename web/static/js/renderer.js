@@ -80,10 +80,10 @@ function setInvalidateHandler(fn) {
 
 function resizeCanvasToContainer(canvas, options = {}) {
     const dpr = window.devicePixelRatio || 1;
-    const maxWidth = options.maxWidth || 1700;
+    const maxWidth = options.maxWidth || 2400;
     const aspectRatio = options.aspectRatio || BOARD_ASPECT;
     const containerWidth = Math.max(320, Math.min(canvas.parentElement.clientWidth - 4, maxWidth));
-    const maxHeight = Math.max(360, Math.floor(window.innerHeight * (options.maxHeightRatio || 0.78)));
+    const maxHeight = Math.max(540, Math.floor(window.innerHeight * (options.maxHeightRatio || 1.10)));
 
     let cssWidth = containerWidth;
     let cssHeight = Math.floor(cssWidth / aspectRatio);

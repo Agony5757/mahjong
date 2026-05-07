@@ -137,7 +137,7 @@
     window.addEventListener('DOMContentLoaded', () => {
         const canvas = document.getElementById('mahjongCanvas');
         const ctx = canvas.getContext('2d');
-        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 1500, maxHeightRatio: 0.78 });
+        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 2200, maxHeightRatio: 1.10 });
         window.MahjongRenderer.renderSplash(ctx, canvas.width, canvas.height, '4 AI 对战', '观看 4 个 AI 完成完整半庄，检查牌河、副露和局面流转');
     });
 </script>

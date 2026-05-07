@@ -67,7 +67,7 @@
     }
 
     function renderCurrent() {
-        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 1320, maxHeightRatio: 0.74 });
+        window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 1900, maxHeightRatio: 1.10 });
         const ctx = canvas.getContext('2d');
         if (!states.length) {
             window.MahjongRenderer.renderSplash(ctx, canvas.width, canvas.height, '4 AI Demo', 'Documentation replay is loading');
