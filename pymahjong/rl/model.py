@@ -28,6 +28,7 @@ from .tokenization import (
     ACTION_DIM,
     FIELD_VOCAB,
     MAX_SEQ_LEN,
+    SCALAR_DIM,
     TOKEN_FEATURES,
 )
 
@@ -78,6 +79,11 @@ class MahjongTransformer(nn.Module):
         self.action_dim = action_dim
 
         self.embed = FieldEmbedding(cfg.d_model)
+        # Project the per-token scalar features into the model dim and add
+        # to the embedding sum. This is the channel that carries true
+        # numeric magnitudes (score / 25000, remaining / 70, ...).
+        self.scalar_proj = nn.Linear(SCALAR_DIM, cfg.d_model, bias=False)
+        nn.init.zeros_(self.scalar_proj.weight)
         if cfg.use_cls:
             self.cls = nn.Parameter(torch.zeros(1, 1, cfg.d_model))
             nn.init.trunc_normal_(self.cls, std=0.02)
@@ -107,6 +113,7 @@ class MahjongTransformer(nn.Module):
         self,
         tokens: torch.Tensor,
         attention_mask: torch.Tensor,
+        scalars: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Run the transformer encoder.
 
@@ -114,6 +121,8 @@ class MahjongTransformer(nn.Module):
         pooled state representation (CLS token + mean of valid tokens).
         """
         x = self.embed(tokens)  # (B, L, D)
+        if scalars is not None:
+            x = x + self.scalar_proj(scalars)
         if self.cfg.use_cls:
             cls = self.cls.expand(x.size(0), -1, -1)
             x = torch.cat([cls, x], dim=1)
@@ -144,6 +153,7 @@ class MahjongTransformer(nn.Module):
         tokens: torch.Tensor,
         attention_mask: torch.Tensor,
         action_mask: torch.Tensor | None = None,
+        scalars: torch.Tensor | None = None,
     ):
         """Compute (policy logits, value) given a batch of observations.
 
@@ -151,12 +161,13 @@ class MahjongTransformer(nn.Module):
             tokens: ``(B, L, 5)`` int tensor.
             attention_mask: ``(B, L)`` bool tensor (True = valid).
             action_mask: optional ``(B, ACTION_DIM)`` bool tensor.
+            scalars: optional ``(B, L, SCALAR_DIM)`` float tensor.
 
         Returns:
             A tuple ``(logits, value)``. ``logits`` is masked with
             ``-inf`` on disallowed actions (if a mask was provided).
         """
-        h = self.encode(tokens, attention_mask)
+        h = self.encode(tokens, attention_mask, scalars=scalars)
         logits = self.policy_head(h)
         value = self.value_head(h).squeeze(-1)
         if action_mask is not None:
@@ -174,8 +185,9 @@ class MahjongTransformer(nn.Module):
         attention_mask: torch.Tensor,
         action_mask: torch.Tensor,
         deterministic: bool = False,
+        scalars: torch.Tensor | None = None,
     ):
-        logits, value = self.forward(tokens, attention_mask, action_mask)
+        logits, value = self.forward(tokens, attention_mask, action_mask, scalars=scalars)
         if deterministic:
             action = logits.argmax(dim=-1)
             log_prob = F.log_softmax(logits, dim=-1).gather(-1, action.unsqueeze(-1)).squeeze(-1)
@@ -192,13 +204,12 @@ class MahjongTransformer(nn.Module):
         attention_mask: torch.Tensor,
         action_mask: torch.Tensor,
         actions: torch.Tensor,
+        scalars: torch.Tensor | None = None,
     ):
         """For PPO updates: compute log-prob and entropy of given actions."""
-        logits, value = self.forward(tokens, attention_mask, action_mask)
+        logits, value = self.forward(tokens, attention_mask, action_mask, scalars=scalars)
         log_probs = F.log_softmax(logits, dim=-1)
         action_log_prob = log_probs.gather(-1, actions.unsqueeze(-1)).squeeze(-1)
-        # Entropy (computed over valid actions only)
         probs = log_probs.exp()
-        # Mask invalid action probabilities to 0 so they don't affect entropy
         entropy = -(probs * log_probs.masked_fill(~action_mask, 0.0)).sum(dim=-1)
         return action_log_prob, entropy, value

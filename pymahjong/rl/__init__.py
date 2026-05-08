@@ -30,6 +30,9 @@ from .tokenization import (
     TILE_VOCAB_SIZE,
     NUM_SEGMENTS,
     MAX_SEQ_LEN,
+    SCALAR_DIM,
+    state_to_string,
+    tokens_to_string,
 )
 from .env_v2 import TokenizedMahjongEnv, TokenizedMultiAgentEnv
 from .cache import (
@@ -48,6 +51,9 @@ __all__ = [
     "TILE_VOCAB_SIZE",
     "NUM_SEGMENTS",
     "MAX_SEQ_LEN",
+    "SCALAR_DIM",
+    "state_to_string",
+    "tokens_to_string",
     "TokenizedMahjongEnv",
     "TokenizedMultiAgentEnv",
     "CACHE_SCHEMA_VERSION",

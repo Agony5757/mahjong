@@ -120,6 +120,7 @@ def train_bc(
             batch["tokens"],
             batch["attention_mask"],
             batch["action_mask"],
+            scalars=batch.get("scalars"),
         )
         loss = F.cross_entropy(logits, batch["action"])
 

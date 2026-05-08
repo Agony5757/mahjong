@@ -30,6 +30,8 @@ from pymahjong.rl.cached_dataset import CachedTokenDataset, cached_collate  # no
 from pymahjong.rl.tokenization import (  # noqa: E402
     ACTION_DIM,
     MAX_SEQ_LEN,
+    SCALAR_DIM,
+    TILE_PAD,
     TOKEN_FEATURES,
 )
 
@@ -37,17 +39,22 @@ from pymahjong.rl.tokenization import (  # noqa: E402
 def _fake_sample(rng: np.random.Generator, max_seq_len: int = MAX_SEQ_LEN) -> dict:
     seq_len = int(rng.integers(8, max_seq_len))
     tokens = np.zeros((max_seq_len, TOKEN_FEATURES), dtype=np.uint8)
+    # Fill PAD rows with TILE_PAD so the suit-permute LUT keeps them invariant.
+    tokens[:, 1] = TILE_PAD
     tokens[:seq_len, 0] = rng.integers(0, 16, size=seq_len)        # segment
-    tokens[:seq_len, 1] = rng.integers(0, 38, size=seq_len)        # tile
+    tokens[:seq_len, 1] = rng.integers(0, TILE_PAD, size=seq_len)  # tile (no PAD)
     tokens[:seq_len, 2] = rng.integers(0, 5, size=seq_len)         # count
     tokens[:seq_len, 3] = rng.integers(0, 5, size=seq_len)         # who
     tokens[:seq_len, 4] = rng.integers(0, 64, size=seq_len)        # extra
+    scalars = np.zeros((max_seq_len, SCALAR_DIM), dtype=np.float32)
+    scalars[:seq_len] = rng.standard_normal((seq_len, SCALAR_DIM)).astype(np.float32)
     attn = np.zeros(max_seq_len, dtype=bool)
     attn[:seq_len] = True
     amask = np.zeros(ACTION_DIM, dtype=bool)
     amask[rng.integers(0, ACTION_DIM, size=3)] = True
     return {
         "tokens": tokens,
+        "scalars": scalars,
         "attention_mask": attn,
         "action_mask": amask,
         "action": int(rng.integers(0, ACTION_DIM)),
@@ -82,6 +89,8 @@ def test_writer_then_reader_roundtrip():
         sample = ds[0]
         assert sample["tokens"].shape == (MAX_SEQ_LEN, TOKEN_FEATURES)
         assert sample["tokens"].dtype == torch.long
+        assert sample["scalars"].shape == (MAX_SEQ_LEN, SCALAR_DIM)
+        assert sample["scalars"].dtype == torch.float32
         assert sample["attention_mask"].shape == (MAX_SEQ_LEN,)
         assert sample["action_mask"].shape == (ACTION_DIM,)
         assert sample["action"].dtype == torch.long
@@ -93,6 +102,7 @@ def test_writer_then_reader_roundtrip():
         # Collate works.
         batch = cached_collate([ds[i] for i in range(4)])
         assert batch["tokens"].shape == (4, MAX_SEQ_LEN, TOKEN_FEATURES)
+        assert batch["scalars"].shape == (4, MAX_SEQ_LEN, SCALAR_DIM)
         assert batch["action"].shape == (4,)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -141,10 +151,8 @@ def test_suit_permutation_preserves_pad():
         for _ in range(20):
             s = ds[0]
             tile_col = s["tokens"][:, 1].numpy()
-            # PAD tile (37) must map to itself under all 6 perms.
             attn = s["attention_mask"].numpy()
-            assert np.all(tile_col[~attn] == 37) or np.all(tile_col[~attn] == 0)
-            # (Synthetic test data may use 0 for inactive rows; either is fine
-            # as long as we never accidentally map PAD into a real tile id.)
+            # TILE_PAD must map to itself under all 6 perms.
+            assert np.all(tile_col[~attn] == TILE_PAD)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

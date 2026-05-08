@@ -111,6 +111,7 @@ def _yield_selfplay(
             )
             yield {
                 "tokens": tok.tokens.copy(),
+                "scalars": tok.scalars.copy(),
                 "attention_mask": tok.attention_mask.copy(),
                 "action_mask": tok.action_mask.copy(),
                 "action": int(unified),
@@ -161,6 +162,7 @@ def _yield_paipu(
             unified = SelfPlayImitationDataset._engine_idx_to_unified(table, truth)
             yield {
                 "tokens": tok.tokens.copy(),
+                "scalars": tok.scalars.copy(),
                 "attention_mask": tok.attention_mask.copy(),
                 "action_mask": tok.action_mask.copy(),
                 "action": int(unified),

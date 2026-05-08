@@ -23,7 +23,7 @@ from .cache import (
     load_manifest,
     open_shard_arrays,
 )
-from .tokenization import MAX_SEQ_LEN, TILE_VOCAB_SIZE
+from .tokenization import MAX_SEQ_LEN, NUM_BASE_TILES, TILE_VOCAB_SIZE
 
 
 class CachedTokenDataset(Dataset):
@@ -101,6 +101,7 @@ class CachedTokenDataset(Dataset):
         arrays = self._arrays_for(shard_idx)
 
         tokens = np.array(arrays["tokens"][local], dtype=np.int64, copy=True)
+        scalars = np.array(arrays["scalars"][local], dtype=np.float32, copy=True)
         attn = np.array(arrays["attention_mask"][local], dtype=np.bool_, copy=True)
         amask = np.array(arrays["action_mask"][local], dtype=np.bool_, copy=True)
         label = int(arrays["labels"][local])
@@ -110,6 +111,7 @@ class CachedTokenDataset(Dataset):
 
         return {
             "tokens": torch.from_numpy(tokens),
+            "scalars": torch.from_numpy(scalars),
             "attention_mask": torch.from_numpy(attn),
             "action_mask": torch.from_numpy(amask),
             "action": torch.tensor(label, dtype=torch.long),
@@ -119,32 +121,34 @@ class CachedTokenDataset(Dataset):
 
     @staticmethod
     def _build_suit_perms() -> List[np.ndarray]:
-        """Return all 6 permutations of {man, pin, sou} as tile-id LUTs."""
-        # Identity LUT covering 0..37 (vocab size).
+        """Return all 6 permutations of {man, pin, sou} as tile-id LUTs.
+
+        Tile id layout (post-V2):
+          0..8   = man (1m..9m)
+          9..17  = pin
+          18..26 = sou
+          27..33 = honors (z; never permuted)
+          34     = PAD
+        Aka (red-five) is encoded as a *bit* in extra, so the LUT only
+        needs to swap the suit ranges -- the aka bit moves with the tile
+        automatically.
+        """
         base = np.arange(TILE_VOCAB_SIZE, dtype=np.uint8)
-        suit_blocks = [(0, 9), (9, 18), (18, 27)]   # numbered tiles
-        red_ids = [34, 35, 36]                       # red5m, red5p, red5s
+        suit_blocks = [(0, 9), (9, 18), (18, 27)]
         perms = []
         from itertools import permutations
         for order in permutations(range(3)):
             lut = base.copy()
-            # number tiles
             for src, dst in enumerate(order):
                 s_lo, s_hi = suit_blocks[src]
                 d_lo, _ = suit_blocks[dst]
                 lut[s_lo:s_hi] = np.arange(d_lo, d_lo + 9, dtype=np.uint8)
-            # red fives follow the same permutation
-            for src, dst in enumerate(order):
-                lut[red_ids[src]] = red_ids[dst]
             perms.append(lut)
         return perms
 
     def _apply_suit_permutation(self, tokens: np.ndarray) -> None:
         lut = self._suit_perms[np.random.randint(6)]
-        # tile field is column 1
         tile_col = tokens[:, 1]
-        # Only permute valid token rows; PAD rows have tile=37 (PAD) which
-        # the LUT keeps fixed because lut[37] == 37.
         np.copyto(tile_col, lut[tile_col])
 
 
@@ -152,6 +156,7 @@ def cached_collate(batch):
     """Stack a list of dicts (already torch tensors) into a batched dict."""
     out = {
         "tokens": torch.stack([b["tokens"] for b in batch], dim=0),
+        "scalars": torch.stack([b["scalars"] for b in batch], dim=0),
         "attention_mask": torch.stack([b["attention_mask"] for b in batch], dim=0),
         "action_mask": torch.stack([b["action_mask"] for b in batch], dim=0),
         "action": torch.stack([b["action"] for b in batch], dim=0),

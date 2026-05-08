@@ -37,12 +37,13 @@ from .tokenization import (
     ACTION_DIM,
     FIELD_VOCAB,
     MAX_SEQ_LEN,
+    SCALAR_DIM,
     TOKEN_FEATURES,
 )
 
 # Bump whenever the tokenizer output layout changes in a way that
 # invalidates previously written caches.
-CACHE_SCHEMA_VERSION = 1
+CACHE_SCHEMA_VERSION = 3
 
 
 # ---------------------------------------------------------------------------
@@ -56,10 +57,12 @@ def schema_fingerprint(max_seq_len: int = MAX_SEQ_LEN) -> Dict:
         "schema_version": CACHE_SCHEMA_VERSION,
         "max_seq_len": int(max_seq_len),
         "token_features": int(TOKEN_FEATURES),
+        "scalar_dim": int(SCALAR_DIM),
         "action_dim": int(ACTION_DIM),
         "field_vocab": {k: int(v) for k, v in FIELD_VOCAB.items()},
         "dtypes": {
             "tokens": "uint8",
+            "scalars": "float32",
             "attention_mask": "uint8",
             "action_mask": "uint8",
             "labels": "int16",
@@ -70,7 +73,10 @@ def schema_fingerprint(max_seq_len: int = MAX_SEQ_LEN) -> Dict:
 def assert_schema_compatible(loaded: Dict, max_seq_len: int = MAX_SEQ_LEN) -> None:
     """Raise ValueError if a cache's manifest does not match the current code."""
     expected = schema_fingerprint(max_seq_len)
-    for key in ("schema_version", "token_features", "action_dim", "field_vocab", "dtypes"):
+    for key in (
+        "schema_version", "token_features", "scalar_dim",
+        "action_dim", "field_vocab", "dtypes",
+    ):
         if loaded.get(key) != expected[key]:
             raise ValueError(
                 f"cache schema mismatch on '{key}': "
@@ -153,6 +159,7 @@ class ShardWriter:
         self.shard_dir = shard_dir
         self.max_seq_len = int(max_seq_len)
         self._tokens: List[np.ndarray] = []
+        self._scalars: List[np.ndarray] = []
         self._attn: List[np.ndarray] = []
         self._amask: List[np.ndarray] = []
         self._labels: List[int] = []
@@ -170,6 +177,7 @@ class ShardWriter:
 
     def add(self, sample: Dict) -> None:
         tokens = np.asarray(sample["tokens"])
+        scalars = np.asarray(sample["scalars"])
         attn = np.asarray(sample["attention_mask"])
         amask = np.asarray(sample["action_mask"])
         if tokens.shape != (self.max_seq_len, TOKEN_FEATURES):
@@ -177,14 +185,19 @@ class ShardWriter:
                 f"tokens shape {tokens.shape} != "
                 f"({self.max_seq_len}, {TOKEN_FEATURES})"
             )
+        if scalars.shape != (self.max_seq_len, SCALAR_DIM):
+            raise ValueError(
+                f"scalars shape {scalars.shape} != "
+                f"({self.max_seq_len}, {SCALAR_DIM})"
+            )
         if attn.shape != (self.max_seq_len,):
             raise ValueError(f"attention_mask shape {attn.shape}")
         if amask.shape != (ACTION_DIM,):
             raise ValueError(f"action_mask shape {amask.shape}")
-        # Bounds check: tokenizer must respect FIELD_VOCAB.
         if tokens.min() < 0 or tokens.max() > 255:
             raise ValueError("token value out of uint8 range")
         self._tokens.append(tokens.astype(np.uint8, copy=True))
+        self._scalars.append(scalars.astype(np.float32, copy=True))
         self._attn.append(attn.astype(np.uint8, copy=True))
         self._amask.append(amask.astype(np.uint8, copy=True))
         self._labels.append(int(sample["action"]))
@@ -194,11 +207,13 @@ class ShardWriter:
             return ShardEntry(path=os.path.basename(self.shard_dir), n_rows=0, cumulative=0)
         os.makedirs(self.shard_dir, exist_ok=True)
         tokens = np.stack(self._tokens, axis=0)
+        scalars = np.stack(self._scalars, axis=0)
         attn = np.stack(self._attn, axis=0)
         amask = np.stack(self._amask, axis=0)
         labels = np.asarray(self._labels, dtype=np.int16)
 
         np.save(os.path.join(self.shard_dir, "tokens.npy"), tokens)
+        np.save(os.path.join(self.shard_dir, "scalars.npy"), scalars)
         np.save(os.path.join(self.shard_dir, "attention_mask.npy"), attn)
         np.save(os.path.join(self.shard_dir, "action_mask.npy"), amask)
         np.save(os.path.join(self.shard_dir, "labels.npy"), labels)
@@ -211,8 +226,8 @@ class ShardWriter:
         with open(os.path.join(self.shard_dir, "meta.json"), "w") as f:
             json.dump(meta, f)
 
-        # Drop in-memory buffers to free RAM eagerly.
         self._tokens.clear()
+        self._scalars.clear()
         self._attn.clear()
         self._amask.clear()
         self._labels.clear()
@@ -270,6 +285,7 @@ def open_shard_arrays(cache_dir: str, shard_path: str) -> Dict[str, np.ndarray]:
     sub = os.path.join(cache_dir, shard_path)
     return {
         "tokens": np.load(os.path.join(sub, "tokens.npy"), mmap_mode="r"),
+        "scalars": np.load(os.path.join(sub, "scalars.npy"), mmap_mode="r"),
         "attention_mask": np.load(
             os.path.join(sub, "attention_mask.npy"), mmap_mode="r"
         ),

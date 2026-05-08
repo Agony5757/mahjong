@@ -109,10 +109,18 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.value("_7z", BaseTile::_7z)
 		;
 
+	py::enum_<CallGroup::Type>(m, "CallGroupType", "Type of a called meld (chi/pon/kan/ankan/kakan).")
+		.value("Chi", CallGroup::Type::Chi)
+		.value("Pon", CallGroup::Type::Pon)
+		.value("DaiMinKan", CallGroup::Type::DaiMinKan)
+		.value("KaKan", CallGroup::Type::KaKan)
+		.value("AnKan", CallGroup::Type::AnKan)
+		;
+
 	py::class_<CallGroup>(m, "CallGroup", "A called meld (chi/pon/kan) group.")
 		.def_readonly("type", &CallGroup::type, "Action type of this call.")
 		.def_readonly("tiles", &CallGroup::tiles, "Tiles in the called meld.")
-		.def_readonly("take", &CallGroup::take, "Tile taken from another player's discard.")
+		.def_readonly("take", &CallGroup::take, "Position of the taken tile within the meld (0=left, 1=middle, 2=right).")
 		.def("to_string", &CallGroup::to_string, "Return a string representation.")
 		;
 

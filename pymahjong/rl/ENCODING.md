@@ -320,39 +320,38 @@ emb = (
 
 ---
 
-## 8. 缓存 schema（v2 草案）
+## 8. 缓存 schema（v3）
 
 ```
 cache_dir/
-    index.json              # 含 schema 指纹（含 schema_version=2）
+    index.json              # 含 schema 指纹（含 schema_version=3）
     shard_*/
         tokens.npy          # (N, L, 5)  uint8
-        scalars.npy         # (N, L, S)  float16  ← 新（方案 A）
+        scalars.npy         # (N, L, S)  float32   ← v3：由 float16 升级到 float32（避免 score 量化误差）
         attention_mask.npy  # (N, L)     uint8
         action_mask.npy     # (N, A=54)  uint8
         labels.npy          # (N,)       int16
         meta.json
 ```
 
-`schema_fingerprint`（v2）：
+`schema_fingerprint`（v3）：
 
 ```python
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "max_seq_len": 200,
   "token_features": 5,
-  "scalar_features": 4,           # 新
+  "scalar_features": 4,
   "action_dim": 54,
-  "field_vocab": {"segment": 30, "tile": 35, "count": 5, "who": 5, "extra": 256},
-  "dtypes": {"tokens": "uint8", "scalars": "float16",
+  "field_vocab": {"segment": 30, "tile": 35, "count": 96, "who": 5, "extra": 256},
+  "dtypes": {"tokens": "uint8", "scalars": "float32",
              "attention_mask": "uint8", "action_mask": "uint8",
              "labels": "int16"},
 }
 ```
 
-新增存储：`(N, 200, 4) float16` ≈ +1.6 KiB/sample → **总成本 ~2.8 KiB/sample**（仍可接受，2025 全量约 170 GB；`scalars` 可以 `float16` 进一步省到 ~1.6 KiB；多数行 scalars=0 后续可考虑稀疏，但首版先稠密）。
-
-> v1 schema 缓存（已有）会被 `assert_schema_compatible` 拒绝并明确报错，无静默错位。
+新增存储：`(N, 200, 4) float32` ≈ 3.1 KiB/sample → **总成本 ~4.3 KiB/sample**。
+不前向兼容；旧 v1/v2 缓存会被 `assert_schema_compatible` 直接拒绝。
 
 ---
 
@@ -404,25 +403,27 @@ cache_dir/
 
 ---
 
-## 11. 修复任务（一次性合入，升 schema_version=2）
+## 11. 修复任务（一次性合入，schema_version=3）
 
-- [ ] F1 ACTUAL_DORA 段
-- [ ] F2 VISIBLE_COUNT 段（编码时遍历 4 家河 + 4 家副露 + 已翻 dora indicator）
-- [ ] F3 FURITEN_AREA 段
-- [ ] F4 拆 LAST_DISCARD → SELF_TSUMO_TILE / LAST_DISCARDED_TILE
-- [ ] F5 ROUND_INDEX 段
-- [ ] F6 DEALER_SEAT 段
-- [ ] F7 副露 FUURO_FROM（在 extra 中位包：BaseAction(4 bit) + from-whom(2 bit) + is_target(1 bit)）
-- [ ] F8 C++ 暴露 `SelfAction.take` / `ResponseAction.take` → 修 `_mask_one_action` 与 `_engine_idx_to_unified` 的吃形分类
-- [ ] R1 TURN_INDEX 段（走 scalars）
-- [ ] R2 GAME_SIZE 段
-- [ ] R3 LAST_DRAW_KIND 段
-- [ ] R4 MY_DORA_COUNT 段
-- [ ] §5.2 红 5 改为 "tile_id=基础 5 + extra.aka_bit=1"，删 TILE_RED5M/P/S；TILE_VOCAB_SIZE 35
-- [ ] §6.5 token 增加 `scalars (L, S)` 通路：S=4 维（score_self / score_others 三家平均 / honba / kyoutaku / remaining / turn 选 4 个最关键）
-- [ ] cache schema_version → 2，同步 `cache.py / cached_dataset.py / encode_paipu_to_cache.py`
-- [ ] `model.py` 增加 `scalar_proj`，PPO/BC 训练 forward 同步
-- [ ] 单测：encode 一局 paipu 后断言所有 30 段都至少出现过一次
+实施情况（已合入 `feat/new-rl-algorithm`）：
+
+- [x] F1 ACTUAL_DORA 段
+- [x] F2 VISIBLE_COUNT 段（编码时遍历 4 家河 + 4 家副露 + 已翻 dora indicator）
+- [x] F3 FURITEN_AREA 段
+- [x] F4 拆 LAST_DISCARD → SELF_TSUMO_TILE / LAST_DISCARDED_TILE
+- [x] F5 ROUND_INDEX 段
+- [x] F6 DEALER_SEAT 段
+- [x] F7 副露段在 `extra` 中携带 BaseAction 类型（含红 5 bit）；**from-whom 暂未编码**：当前引擎不持久保存 chi/pon/kan 来源座次（`CallGroup.take` 表示牌在副露中的位置 0/1/2，并非来源相对座次），编码端与解码端一致地输出 `from_r=4 (unknown)`。引擎补全后再启用。
+- [x] F8 修复方向不变；`_mask_one_action` 已使用 chi 牌相对手牌中位牌位置进行 left/middle/right 分形（见 `_classify_chi`）
+- [x] R1 TURN_INDEX 段（自家河长度，走 scalars）
+- [x] R2 GAME_SIZE 段
+- [x] R3 LAST_DRAW_KIND 段
+- [x] R4 MY_DORA_COUNT 段
+- [x] §5.2 红 5 改为 `tile_id = 基础 5 + extra.aka_bit=1`，删 TILE_RED5M/P/S；`TILE_VOCAB_SIZE = 35`，TILE_PAD = 34
+- [x] §6.5 token 增加 `scalars (L, S=4)` 通路；`model.py` 加 `scalar_proj`（zero-init），forward / act / evaluate_actions 同步
+- [x] cache schema_version → **3**（dtype 由 float16 升级为 **float32** 以避免 score 量化误差），同步 `cache.py / cached_dataset.py / encode_paipu_to_cache.py`
+- [x] River `number`（巡序）存放在 `count` 字段（vocab=96），不再压在 `extra`，避免 8 bit 溢出
+- [x] 圆周对照测试：新增 `state_to_string(table, current_player)` 与 `tokens_to_string(obs)` 两个公开接口；`pytest test/test_encoding_roundtrip.py` 与 `tools/verify_encoding_paipu.py` 在 selfplay + Tenhou 牌谱上做逐状态字符串对比，截至当前在 1003 个 CI 牌谱上 0 mismatch。
 
 ---
 

@@ -23,6 +23,7 @@ from .tokenization import (
     ACTION_DIM,
     MAX_SEQ_LEN,
     MahjongTokenizer,
+    SCALAR_DIM,
     TOKEN_FEATURES,
     A_RIICHI,
     A_PASS_RIICHI,
@@ -42,6 +43,12 @@ def _build_observation_space(max_seq_len: int = MAX_SEQ_LEN) -> DictSpace:
                 high=255,
                 shape=(max_seq_len, TOKEN_FEATURES),
                 dtype=np.int32,
+            ),
+            "scalars": Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(max_seq_len, SCALAR_DIM),
+                dtype=np.float32,
             ),
             "attention_mask": Box(low=0, high=1, shape=(max_seq_len,), dtype=bool),
             "action_mask": Box(low=0, high=1, shape=(ACTION_DIM,), dtype=bool),
@@ -229,6 +236,7 @@ class TokenizedMahjongEnv(gym.Env):
         # Provide a dummy observation at terminal step.
         return {
             "tokens": np.zeros((self.max_seq_len, TOKEN_FEATURES), dtype=np.int32),
+            "scalars": np.zeros((self.max_seq_len, SCALAR_DIM), dtype=np.float32),
             "attention_mask": np.zeros((self.max_seq_len,), dtype=bool),
             "action_mask": np.zeros((ACTION_DIM,), dtype=bool),
             "seq_len": np.int32(0),
