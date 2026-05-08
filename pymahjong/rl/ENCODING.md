@@ -1,251 +1,439 @@
-# 编码方案设计文档（待审）
+# 状态/动作编码方案设计文档（v2 草案，待审）
 
-> 本文档描述 `pymahjong.rl` 子包的状态/动作编码方案，并标注**当前实现已覆盖 ✅、计划补齐 🟡、显式不做 ❌**。请按"是否覆盖了所有决策必需信息"来审。
+> 本文是 `pymahjong.rl` 的编码设计 + **逐项自检报告**。审阅重点：
 >
-> 目标：纯 Python 即可生成 token 序列，避免对 C++ 编码器的依赖；同时让 Transformer 友好（变长、稀疏、可掩码）。
+> 1. 是否完整覆盖了原 C++ `TrainingDataEncoding::v2` 暴露给模型的所有信息（4 家鸣牌、立直状态、牌河、furiten、可见牌张数等）；
+> 2. 数值字段是否都在合理范围内、是否存在"把 raw 数值塞给模型当连续变量"的隐患；
+> 3. 红 5（赤ドラ）的编码方式。
+
+代码涉及：`pymahjong/rl/tokenization.py`、`Mahjong/Encoding/TrainingDataEncodingV2.{h,cpp}`、`Mahjong/Encoding/TrainingDataEncodingV1.h`。
+
+---
 
 ## 0. TL;DR
 
-- 状态 = 变长 token 序列 `[L, 5]`，每行 `(segment, tile, count, who, extra)`。
-- 动作 = 54 维离散，与 `MahjongEnv.ACTION_DIM` 完全兼容。
-- 缓存 dtypes 全部 `uint8` / `int16`，1 sample ≈ 1.1 KB。
-- 数据增强：**仅花色置换 ×6**（man/pin/sou），座次旋转**禁止**（场风/自风/亲是决策关键）。
+- 状态 = 变长 token 序列 `tokens[L, 5]` + `attention_mask[L]`，每行 `(segment, tile, count, who, extra)` 全部 `uint8`；模型对 5 个字段各学一张 embedding，求和送 Transformer。
+- 动作 = 54 维离散，与 `MahjongEnv.ACTION_DIM` 完全兼容，附 `action_mask[54]`。
+- 缓存：`uint8` token + `int16` label，1 sample ≈ 1.23 KiB。
+- 数据增强：仅花色置换 ×6（man/pin/sou），座次旋转**禁止**。
+- **本次自检发现的 8 个必修缺口与 4 个推荐补**列在 §11，含修复后 token/段计数。
 
 ---
 
-## 1. Token 字段总览
+## 1. Token 5 个字段
 
-| 字段 | 含义 | 当前 vocab | 缓存 dtype |
-|---|---|---|---|
-| `segment` | 段落类型（PAD/SELF_HAND/SELF_FUURO/...） | 见 §2，目前 21（PAD=0 起） | `uint8` |
-| `tile`    | 牌 id：0–33 = 34 基础牌；34/35/36 = 红 5m/p/s；37 = PAD | 38 | `uint8` |
-| `count`   | 该 tile 的张数 0–4；非牌 token 时复用为 small-int payload | 96 | `uint8` |
-| `who`     | 相对座次：0=自家，1=下家，2=对家，3=上家，4=N/A（场面） | 5 | `uint8` |
-| `extra`   | 段内附加 payload（见各段说明） | 256 | `uint8` |
+| 字段 | 类型 | 当前 vocab | 缓存 dtype | 取值约束 |
+|---|---|---|---|---|
+| `segment`  | 段 id（PAD/SELF_HAND/...） | 21 → 修后 30 | `uint8` (0..255) | 类别 |
+| `tile`     | 牌 id：0–33 = 基础牌；34/35/36 = 红 5m/p/s；37 = PAD | 38 | `uint8` | 类别 |
+| `count`    | tile 张数 0–4，或段内小整数 payload | 96 | `uint8` | 类别 / 小整数索引 |
+| `who`      | 相对座次：0=自家 / 1=下家 / 2=对家 / 3=上家 / 4=N/A | 5 | `uint8` | 类别 |
+| `extra`    | 段内附加 payload（位包等） | 256 | `uint8` | 类别 / 小整数索引 |
 
-**牌 id 编码细节（重要）**：
-
-- 0..8   = 1m..9m
-- 9..17  = 1p..9p
-- 18..26 = 1s..9s
-- 27..30 = 东南西北
-- 31..33 = 白发中
-- 34/35/36 = 赤 5m / 5p / 5s（独立 id，可与普通 5 在 `count` 上分开统计）
-- 37    = PAD
-
-> 这样 dora 表示牌 / 弃牌 / 副露牌都可以共用同一个 vocab，而花色置换 LUT 也只需要在 0..26 + 34..36 上动手。
+> **重要约定**：5 个字段全部以**类别 id（embedding 查表索引）**进入模型，绝不作为连续数值参与运算。这一原则隔离了"raw value 范围"问题：tile_id=4 对模型而言不是"4 单位"，而是"embedding 表第 4 行"。详见 §6。
 
 ---
 
-## 2. 段落（Segment）一览
+## 2. 当前段（Segment）总表
 
-| ID | 段名 | 是否实现 | 含义 / `count` / `who` / `extra` 用法 |
+| ID | 段名 | 当前是否填 | `count` 含义 | `who` 含义 | `extra` 含义 |
+|---:|---|---|---|---|---|
+| 0  | PAD                 | 自动 | 0 | 0 | 0 |
+| 1  | SELF_HAND           | ✅ | 张数 0..4 | 0 | 0 |
+| 2  | SELF_TSUMO          | 🟡 已定义未用 | — | — | — |
+| 3  | SELF_FUURO          | ✅ | 1 | 0 | `BaseAction` 类型 |
+| 4  | OPP_FUURO           | ✅ | 1 | 1/2/3 | `BaseAction` 类型 |
+| 5  | SELF_RIVER          | ✅ | 1 | 0 | 位包：bit0=立直宣言, bit1=fromhand, bits2-7=巡序 |
+| 6  | OPP_RIVER           | ✅ | 1 | 1/2/3 | 同上 |
+| 7  | DORA_INDICATOR      | ✅ | 1 | 4 | 0 |
+| 8  | URA_DORA_INDICATOR  | 🟡 仅胡牌后才填 | 1 | 4 | 0 |
+| 9  | PLAYER_RIICHI       | ✅ | 0/1 | 0..3 | double_riichi |
+| 10 | PLAYER_IPPATSU      | ✅ | 0/1 | 0..3 | 0 |
+| 11 | PLAYER_MENZEN       | ✅ | 0/1 | 0..3 | 0 |
+| 12 | PLAYER_SCORE        | ✅ | 1k 桶 0..80 | 0..3 | 0 |
+| 13 | GAME_WIND           | ✅ | 风 id 0..3 | 4 | 0 |
+| 14 | SELF_WIND           | ✅ | 风 id 0..3 | 0 | 0 |
+| 15 | HONBA               | ✅ | 0..255（&0xFF） | 4 | 0 |
+| 16 | KYOUTAKU            | ✅ | 0..255（&0xFF） | 4 | 0 |
+| 17 | REMAINING_TILES     | ✅ | 0..70 | 4 | 0 |
+| 18 | LAST_DISCARD        | ⚠️ 语义混用 | 1 | 来源相对座次 | 0 |
+| 19 | PHASE               | ✅ | engine phase id | 4 | riichi 第 2 步标志 |
+| 20 | ACTION_HINT         | ✅ | 0/1/2 | 4 | 0 |
+
+**当前未实现的段（必修，详见 §4）**：ROUND_INDEX、DEALER_SEAT、SELF_TSUMO_TILE、LAST_DISCARDED_TILE、ACTUAL_DORA、VISIBLE_COUNT、FURITEN_AREA、FUURO_FROM、TURN_INDEX。
+
+---
+
+## 3. **EncodingV2 完整对照表（自检主表）**
+
+`TrainingDataEncoding::v2` 把状态拆成三块：
+
+- **`self_info[18, 34]`** — 每位玩家一份的"自家可见信息矩阵"
+- **`global_info[15]`** — 每位玩家一份的"全局标量信息向量"
+- **`records[N]`** — 每个动作 1 条 `(tile_idx_with_aka + action_one_hot + player_one_hot)` 共 53 维
+
+下表把 V2 的**每一个槽**与本编码的**对应方式或缺口**逐一列出。
+
+### 3.1 V2 self_info 18 个 row（每个 row 长度 34=tile types）
+
+| V2 row | V2 含义 | 本编码对应 | 状态 |
 |---:|---|---|---|
-| 0  | PAD | ✅ | 占位，不入 attention |
-| 1  | SELF_HAND | ✅ | 自家暗手；按 tile 聚合，`count`=张数，`who=0`，`extra=0` |
-| 2  | SELF_TSUMO | 🟡 已定义未使用 | 自家刚摸的牌单独 1 token（区分"暗手 + 摸牌"） |
-| 3  | SELF_FUURO | ✅ | 自家副露每张 1 token；`extra` = `BaseAction` 类型（吃/碰/明杠/暗杠/加杠） |
-| 4  | OPP_FUURO | ✅ | 他家副露；`who` 标对手；`extra` 同上 |
-| 5  | SELF_RIVER | ✅ | 自家河每张 1 token；`extra` 位包：bit0=立直宣言牌，bit1=fromhand，bits2-7=巡序 |
-| 6  | OPP_RIVER | ✅ | 他家河；`who` 标对手 |
-| 7  | DORA_INDICATOR | ✅ | 当前已翻 dora 表示牌（含杠后翻牌）；`who=4` |
-| 8  | URA_DORA_INDICATOR | 🟡 已定义未使用 | 立直胡牌后才公开；当前未填 |
-| 9  | PLAYER_RIICHI | ✅ | 每家 1 token；`count`=立直与否，`extra`=double_riichi |
-| 10 | PLAYER_IPPATSU | ✅ | 每家 1 token；`count`=一发与否 |
-| 11 | PLAYER_MENZEN | ✅ | 每家 1 token；`count`=门前清与否 |
-| 12 | PLAYER_SCORE | ✅ | 每家 1 token；`count` = 1k 桶分数（-5000..75000 → 0..80） |
-| 13 | GAME_WIND | ✅ | 场风（东=0/南=1/...）；`count`=风 id，`who=4` |
-| 14 | SELF_WIND | ✅ | 自风；`count`=风 id，`who=0` |
-| 15 | HONBA | ✅ | 本场数（`count` 取低 8 位） |
-| 16 | KYOUTAKU | ✅ | 立直棒数量 |
-| 17 | REMAINING_TILES | ✅ | 剩余山牌数（0..70） |
-| 18 | LAST_DISCARD | ⚠️ 语义混用 | **当前同时被自摸和上家弃牌复用**（`encode()` 第 264–269 行）；需要拆 |
-| 19 | PHASE | ✅ | 引擎 phase id；`extra`=riichi 第 2 步标志 |
-| 20 | ACTION_HINT | ✅ | 0=self / 1=response / 2=终局 |
+| 0..3 `pos_hand_1..4` | 自家手牌中各 tile_type 的第 1/2/3/4 张（4 通道堆叠 one-hot） | `SELF_HAND` 段每个 tile_id 一 token，`count` = 张数 | ✅ 等价 |
+| 4 `pos_dora_1` | **实际 dora 牌**（由 indicator+1 计算） | 当前缺！只有 `DORA_INDICATOR` | ❌ **必修**：增 `ACTUAL_DORA` 段 |
+| 5 `pos_dora_indicator_1` | 已翻 dora 表示牌（含杠后） | `DORA_INDICATOR` 段 | ✅ |
+| 6 `pos_aka_dora` | **自家手牌中的赤ドラ标志**（每 tile_type 一位） | `SELF_HAND` 用独立 tile_id（34/35/36）表示赤 5 | ✅ 等价（细节差异，见 §5） |
+| 7 `pos_game_wind` | 场风（在 7 张字牌位置上 one-hot） | `GAME_WIND` 段，`count`=风 id | ✅ |
+| 8 `pos_self_wind` | 自风（同上） | `SELF_WIND` 段 | ✅ |
+| 9 `pos_tsumo_tile` | 自家刚摸的那张（仅当 `is_self_acting && hand%3==2`） | 当前 `LAST_DISCARD` 段语义被复用（在 self-action 时也填这里） | ⚠️ **必修**：拆出独立 `SELF_TSUMO_TILE` 段 |
+| 10..13 `pos_discarded_by_player_1..4` | **furiten 区**：4 家分别"打过哪些 tile_type"（位图，无序，相对座次排列） | 可由 `SELF_RIVER`/`OPP_RIVER` 推导，但当前未显式聚合 | ❌ **必修**：增 `FURITEN_AREA` 段（每家 1 张位图，用 token 表示） |
+| 14..17 `pos_discarded_number_1..4` | **可见牌张数**：所有可见的 tile_type 各被见到 1/2/3/4 次（4 通道堆叠 one-hot） | 当前没有显式总和；模型必须自己从河 + 副露 + dora 表示牌里数 | ❌ **必修**：增 `VISIBLE_COUNT` 段（每个被见到的 tile_id 一 token，`count`=已可见次数） |
 
-### 🟡 计划新增段（修复信息缺口）
+### 3.2 V2 global_info 15 个槽
 
-| 新 ID | 段名 | 必要性 | 说明 |
+| V2 idx | V2 含义 | 本编码对应 | 状态 |
 |---:|---|---|---|
-| 21 | ROUND_INDEX | **必须** | 局数 0..3（东 1=0..东 4=3，南 1=0..），与 GAME_WIND 组合得到完整"东 1 局~南 4 局"。当前缺！|
-| 22 | DEALER_SEAT | **必须** | 亲家相对座次 0..3。当前只能由 `SELF_WIND==东` 推出，模型还得学 |
-| 23 | TURN_INDEX | 推荐 | 巡目 0..24（自家河长度即可，bucketed） |
-| 24 | LAST_DISCARDED_TILE | **必须** | response 阶段才填：被讨论的那张弃牌 + 来自哪家（`who`） |
-| 25 | SELF_TSUMO_TILE | **必须** | self-action 阶段刚摸那张 |
-| 26 | FUURO_FROM | 推荐 | 鳴き来源座次：碰/明杠/吃从谁打来。当前 fuuro 没标，对防御决策重要 |
-| 27 | MY_DORA_COUNT | 可选 | 自家手牌 + 副露中 dora（含赤）数；可由模型推但显式更省参 |
+| 0 `pos_game_number` | `(game_wind-East)*4 + oya` 范围 0..7 | 当前缺局数与亲家 | ❌ **必修**：增 `ROUND_INDEX` + `DEALER_SEAT` |
+| 1 `pos_game_size` | 半庄/东风：V2 写死 7（？）— 本编码用半庄/东风室号代替 | 缺：未编码"半庄 vs 东风" | 🟡 **推荐**：增 `GAME_SIZE` |
+| 2 `pos_honba` | 本场 raw int | `HONBA` 段，低 8 位 | ✅（一般 honba<256） |
+| 3 `pos_kyoutaku` | 立直棒 raw int | `KYOUTAKU` 段，低 8 位 | ✅ |
+| 4 `pos_self_wind` | 自风 0..3 | `SELF_WIND.count` | ✅ |
+| 5 `pos_game_wind` | 场风 0..3 | `GAME_WIND.count` | ✅ |
+| 6..9 `pos_player_{0..3}_point` | 4 家持点（**单位是 / 100**），相对座次 0=self,1=prev,2=opp,3=next | `PLAYER_SCORE` 段每家 1 token，**1k 桶**（0..80） | ⚠️ 粒度比 V2 粗 10 倍；详见 §6.3 |
+| 10..13 `pos_player_{0..3}_ippatsu` | 4 家一发（相对座次） | `PLAYER_IPPATSU` 段每家 1 token | ✅ |
+| 14 `pos_remaining_tiles` | 剩余山数 raw int | `REMAINING_TILES` 段 | ✅ |
 
-> 重申 §1：以上新增只占用 `segment` vocab 的 7 个 id（27 < 256），`uint8` 仍然够用，**不影响缓存 schema 兼容性后**重新编码即可。
+### 3.3 V2 records[N]（每个动作 1 条向量）
 
----
+每条 record 由三段拼接：
 
-## 3. 当前实现 vs 应有信息：审查清单
+```
+record[0..36]   = tile_one_hot (含赤 5m/p/s 共 37 维)
+record[37..50]  = action_one_hot (14 种 LogAction)
+record[51..54]  = player_one_hot (4 家，相对座次)
+```
 
-按"决策需要什么"逐项核对：
+V2 的 14 种 action：DrawNormal、DrawRinshan、DiscardFromHand、DiscardFromTsumo、ChiLeft、ChiMiddle、ChiRight、Pon、Kan、Ankan、Kakan、RiichiFromHand、RiichiFromTsumo、RiichiSuccess。
 
-| 决策必需信息 | 是否覆盖 | 在哪里 |
+| V2 records 用途 | 本编码对应 | 状态 |
 |---|---|---|
-| 自家手牌（含赤 5） | ✅ | SELF_HAND，赤 5 用独立 tile id |
-| 自家副露（含杠类型） | ✅ | SELF_FUURO，extra=BaseAction |
-| 三家副露 | ✅ | OPP_FUURO + who |
-| 四家牌河（含立直宣言牌、是否手切） | ✅ | SELF_RIVER / OPP_RIVER + extra 位包 |
-| 摸牌 / 上家弃牌（这一步要决策的对象） | ⚠️ | LAST_DISCARD 段被复用，**需要拆**为 SELF_TSUMO_TILE / LAST_DISCARDED_TILE |
-| ドラ表示牌（含杠后） | ✅ | DORA_INDICATOR，按 `n_active_dora` 截断 |
-| 裏ドラ | 🟡 | URA_DORA_INDICATOR 已留段，胡牌后训练时才填 |
-| 立直状态（每家） | ✅ | PLAYER_RIICHI |
-| 双立直（每家） | ✅ | PLAYER_RIICHI.extra |
-| 一発（每家） | ✅ | PLAYER_IPPATSU |
-| 门前清（每家） | ✅ | PLAYER_MENZEN |
-| **持点（每家）** | ✅ | PLAYER_SCORE，1k 桶 |
-| **场风** | ✅ | GAME_WIND |
-| **自风** | ✅ | SELF_WIND |
-| **亲家是谁** | 🟡 | 仅可由 SELF_WIND==东 推得；建议加 DEALER_SEAT 显式 token |
-| **局数（东 1 局/南 2 局…）** | ❌ | 当前缺！必须加 ROUND_INDEX |
-| **本場** | ✅ | HONBA |
-| **供託 / 立直棒** | ✅ | KYOUTAKU |
-| 残山 | ✅ | REMAINING_TILES |
-| 巡目 | 🟡 | 隐含于 SELF_RIVER.extra 的 number 字段，建议增显式 TURN_INDEX |
-| 鳴き的来源（碰/明杠/吃从谁） | ❌ | fuuro 仅记录类型 + 牌；建议加 FUURO_FROM |
-| 引擎 phase / response 标志 | ✅ | PHASE / ACTION_HINT |
-| 立直选择第 2 步标志 | ✅ | PHASE.extra |
-| Oracle（他家暗手） | ✅ | 仅 oracle 训练时启用 |
+| 还原一局完整动作流（draw/discard/chi 区分左中右/riichi 状态机） | 当前**无**对应；只有 snapshot（手牌、河、副露） | ❌ **必修**（部分）：见下 |
 
-**结论**：当前实现已覆盖大多数关键信息，但有 **3 个必修**：
-1. 加 ROUND_INDEX（局数）
-2. 加 DEALER_SEAT（亲家相对座次）
-3. 拆 LAST_DISCARD → SELF_TSUMO_TILE + LAST_DISCARDED_TILE
+> 注：V2 的 records 既包含**当前盘面信息的来源轨迹**，也包含"碰/吃/杠是从谁那里来的"信息（通过 player_one_hot）。
 
-以及 **2 个推荐补**：FUURO_FROM、TURN_INDEX。
+#### records 的覆盖策略
+
+完整 records 在长游戏里可达 ~150 条，按 1 token/record 至少 +150 tokens，会爆 `MAX_SEQ_LEN=200` 预算。我们做**信息压缩**：
+
+| V2 records 中携带的关键信息 | 是否必须 | 在本编码里如何还原 |
+|---|---|---|
+| 河里每张牌（含赤 5、立直宣言、手切/摸切） | ✅ 已有 | `SELF_RIVER` / `OPP_RIVER`，extra 位包了立直宣言 + fromhand |
+| 河里每张的巡序 | ✅ 已有 | `SELF_RIVER.extra` 高 6 位 = number |
+| 副露的牌、类型 | ✅ 已有 | `SELF_FUURO` / `OPP_FUURO`，`extra`=BaseAction 类型 |
+| **副露是从谁吃/碰/杠来的（chi-left/middle/right、pon-from-whom）** | ❌ 缺 | **必修**：在 `*_FUURO.extra` 增加 from-whom 编码（见 §5.4） |
+| Draw / Rinshan 区分（自摸 vs 杠摸） | 🟡 可选 | 可由"是否触发 dora reveal"间接体现；推荐增 `LAST_DRAW_KIND` 单 token |
+| Riichi 状态机三步（DiscardFromHand/Tsumo + RiichiSuccess） | ✅ 已有 | `PLAYER_RIICHI` 段 + `SELF_RIVER.extra` 立直宣言 bit |
+
+**结论**：records 的全部决策相关信息都可以用现有 + 新增的少量段还原，无需把整段历史塞进 token 序列。
+
+### 3.4 V2 visible_tiles（隐式跨 self_info 共享）
+
+V2 的 `visible_tiles[4 * 34]` 在每次 update 后会 `memcpy` 到 `self_info` 的最后 4 行（`pos_discarded_number_*`）。它累计了**所有 4 家河 + 所有 4 家副露 + 所有翻开的 dora 表示牌** 中每种 tile 出现了多少张（最多 4 张，按 0/1/2/3 通道一一 set）。
+
+➜ 对应本编码的 `VISIBLE_COUNT` 段（必修）。
+
+### 3.5 V1 额外信息（V2 已舍弃但值得注意）
+
+V1 没有 V2 没有的语义增量。结论：**V2 是 V1 的超集 + 重排**，按 V2 对照即可。
 
 ---
 
-## 4. 动作空间（54 维）
+## 4. 自检结论：必修缺口（按 V2 对照）
 
-完全沿用 `MahjongEnv.ACTION_DIM`，方便复用旧检查点：
+| # | 缺口 | 当前替代 | 修复方案 |
+|---:|---|---|---|
+| F1 | **实际 dora 牌**（不仅 indicator） | 仅 indicator | 新增 `ACTUAL_DORA` 段；每个已翻 indicator 算出 next-tile，1 token |
+| F2 | **可见牌张数**（每 tile_type 累计 0..4） | 无 | 新增 `VISIBLE_COUNT` 段；编码时遍历 4 家河 + 4 家副露 + 已翻 dora indicator，按 tile_id 累计 |
+| F3 | **Furiten 区**（每家打过的 tile_type 集合） | 河里有，但模型要自己聚合 | 新增 `FURITEN_AREA` 段，每家 1 段；只列**唯一 tile_type 集合**（≤34 token / 家，实际通常 ≤24） |
+| F4 | **拆 LAST_DISCARD** → `SELF_TSUMO_TILE`（self-action 阶段）+ `LAST_DISCARDED_TILE`（response 阶段） | 当前一段语义混用 | 删 `LAST_DISCARD`，新增上述两段；who 字段标"上家弃牌来自谁" |
+| F5 | **局数 ROUND_INDEX**（东 1 / 南 4 …） | 缺 | 新增 `ROUND_INDEX` 段，count = 0..7（半庄）或 0..3（东风） |
+| F6 | **亲家 DEALER_SEAT** | 仅可由 SELF_WIND 推 | 新增 `DEALER_SEAT` 段，count=相对座次 0..3 |
+| F7 | **副露来源 FUURO_FROM** | 缺；V2 通过 records 的 player_one_hot 给 | 在 `SELF_FUURO`/`OPP_FUURO` 的 `extra` 中增加 from-whom；**重新设计 extra 字段位包**：bits 0-3 = BaseAction 类型, bits 4-5 = from-whom relative seat, bit 6 = is_target_tile（是被叫的那张）；总长 7 bit，在 8 bit 内 |
+| F8 | **吃左/中/右** mask | 当前 mask 同时点亮 3 个 | 需要 C++ 侧暴露 `SelfAction.take` / `ResponseAction.take`；修复后 `_resolve_action` 与 `_mask_one_action` 都能精确分形 |
 
-| 索引区间 | 含义 |
+### 推荐补（可选但有意义）
+
+| # | 缺口 | 修复方案 |
+|---:|---|---|
+| R1 | **TURN_INDEX** | 新增段 `count` = 当前巡目（自家河长度） |
+| R2 | **GAME_SIZE**（半庄/东风/番战） | 新增段 `count` = 0..2 |
+| R3 | **LAST_DRAW_KIND**（normal/rinshan） | 1 token |
+| R4 | **MY_DORA_COUNT**（自家手牌+副露+赤的 dora 总数） | 1 token，速学特征 |
+
+修后 `SegmentType` 从 21 → **30**（仍 < 256，`uint8` 不变）。
+
+---
+
+## 5. 红 5（赤ドラ）编码
+
+V2 的做法：
+
+- 在 self_info **手牌区**用 4 个 row 堆 one-hot 表示 1/2/3/4 张普通 5；**额外**在 `pos_aka_dora` row 用 1 位标"该 tile_type 在我手里有赤 5"。
+- 在 records 与 visible_tiles 中用**独立 tile_idx**（n_tile_types + 0/1/2 = 34/35/36）表示赤 5。
+
+我现在的做法：**所有位置都用独立 `tile_id` 34/35/36**（即 V2 records 的方式），手牌段不再分通道。
+
+### 5.1 取舍分析
+
+| 维度 | 独立 tile_id（本方案） | V2 self_info 的 aka flag |
+|---|---|---|
+| 一致性 | 河、副露、dora、手牌、动作空间共享同一 vocab | self_info 手牌特殊，records / visible_tiles 又用独立 id |
+| 表达力 | 一张 token 即可同时回答"是 5m？是赤？" | 需要先看 5m 通道再看 aka_dora 通道 |
+| 模型负担 | 多 3 个 embedding row | 多 1 个二进制特征 |
+| 数张数（统计 5m 总数） | `count(5m) + count(red5m)` | one-hot 列加和 |
+| **缺陷** | 需要做"红 5 也 implies 5m"映射；模型要学"red5m 与 5m 共享某些性质（比如 5m 雀头）" | 需要额外通道，但语义清晰 |
+
+### 5.2 选择
+
+**保留独立 tile_id，但同时在 `count` 字段编码 aka 标志**，得到两全：
+
+- 仍然用 tile_id 0..33 表示基础 5；
+- 红 5 出现时，同样 push 一个 tile_id=4（5m）的 token，**但 `extra` 的 bit0 设为 1**（aka flag）；
+- 对手牌段而言，"我手里有 1 张普通 5m + 1 张赤 5m"会得到 1 个 `(SELF_HAND, tile=4, count=2, extra=aka_bit=1)`，简洁；
+- 对河/副露/弃牌段，每张牌独立 token，`extra` 里加 aka bit。
+- 为了向后兼容动作空间 54 维（包含赤 5 的弃牌位 34/35/36 与吃赤变体），**动作 mask 不变**。
+
+> 即：**取消独立 tile_id 34/35/36**，让 vocab 缩到 35（0..33 基础 + 34=PAD），更紧凑、可学性更好（5m 与赤 5m 自动共享 embedding 主轴，aka 是一个独立维度）。这是相对 §1 的修正。
+
+后续修复一并实施（与 schema_version 升级同步）。
+
+---
+
+## 6. 数值字段的取值范围与归一化策略
+
+> 用户关切："不能直接把点数 encode 进去，应该 encode 点数/25000；不能直接把牌的具体值编码进去。"
+
+本节明确每个字段的语义（**类别 vs 数值**）以及处理策略。
+
+### 6.1 大原则：分两条路
+
+| 通路 | 输入 | 处理 | 适用字段 |
+|---|---|---|---|
+| **类别（embedding 查表）** | int 索引 | `nn.Embedding(vocab, d_model)` | `segment` / `tile` / `who`，以及一切「无数值序」的 id |
+| **标量（连续特征）** | float | 归一化到 ~`[-1, 1]` 后用 `nn.Linear(1, d_model)` 投影或位置/RoPE 编码 | `score / 25000.`、`remaining_tiles / 70.`、`turn_index / 18.` 等 |
+
+> tile_id=4 不代表"4"，是一个类别索引；放进 embedding 完全没有数值刻度问题。
+> score 字段必须**先除以 25000 再喂模型**才有数值意义；当前用 1k 桶整数走 embedding，模型只能学到"哪个桶领先"，做不到"差 13000 与差 26000 是 2:1 的关系"。
+
+### 6.2 当前实现的问题清单（按字段）
+
+| 字段 | 当前处理 | 是否合理 | 修复 |
+|---|---|---|---|
+| tile_id | embedding 索引 | ✅ | — |
+| count（手牌张数 0..4） | embedding 索引 | ✅（小类别） | — |
+| who（相对座次 0..4） | embedding 索引 | ✅ | — |
+| extra（位包） | embedding 索引（256 类） | ✅ 类别可，但有信息密度浪费 | 建议拆成多个独立小字段（见 §6.4） |
+| **score** | 1k 桶 → 81 类 embedding | ❌ 失去数值刻度 + 桶过粗 | **改走标量通路**：`score / 25000.0`，每家一个 float；同时保留 `PLAYER_SCORE_RANK` 一个类别 token（顺位 0..3） |
+| **remaining_tiles** | 0..70 → 71 类 embedding | ⚠️ 类别也能学，但同样失去刻度 | 改走标量通路：`remaining / 70.0` |
+| **honba** | low 8 bits → 256 类 | ⚠️ 同上 + 数据范围其实 0..30 | 改走标量通路：`honba / 8.0`（8 倍本场已是极限） |
+| **kyoutaku** | low 8 bits → 256 类 | ⚠️ 实际 0..10 | 改走标量通路：`kyoutaku / 4.0` |
+| **turn_index** | （新增） | — | 走标量通路：`turn / 18.0` |
+| **round_index** | （新增） | 类别 0..7 | 类别通路 |
+| **风（self / game / dealer）** | 类别 0..3 | ✅ | — |
+| **VISIBLE_COUNT 的可见次数** | （新增） | 类别 0..4 | 类别通路 |
+
+### 6.3 score 粒度的影响估计
+
+天凤一局点数差异常以 **百点为最小单位**。当前 1k 桶把 1500 点和 2000 点视为相邻，**100 点和 900 点视为同桶**——这影响"喂铳危险性 vs 收益"判断。改成标量后取消这个限制。
+
+### 6.4 extra 字段的位包问题
+
+当前 `SELF_RIVER.extra` 把 `bit0=riichi | bit1=fromhand | bits2-7=number<<2` 塞进 8 bit；模型用 256 大小的 embedding 学。**问题**：number 高 6 位（0..63）和 riichi/fromhand 共享同一 embedding 表，模型必须把"巡序 5 + 立直"和"巡序 5 + 不立直"看成两个完全无关的索引。
+
+**修复**：把 `extra` 拆成 3 个独立的小整数字段，每个字段一张 embedding，**仍然在每条 token 一行内**（增加 token 维度从 5 → 7）：
+
+```
+token = (segment, tile, count, who, ext_kind, ext_a, ext_b)
+                                   ^ 新       ^ 拆位 1  ^ 拆位 2
+```
+
+或者更简单：保留 5 字段，但**为高基数 extra 字段（如 number）切到标量通路**：把巡序作为标量 `number / 24.0` 加到 token 的标量旁路。具体方案待 §6.5 选择。
+
+### 6.5 修订后的 token 接口（待审）
+
+**方案 A（保 5 字段 + 全标量旁路）**：
+
+```python
+TokenizedObservation:
+    tokens:         (L, 5)  uint8   # 类别字段
+    scalars:        (L, S)  float32 # 每 token 的标量旁路（多数为 0）
+    attention_mask: (L,)    bool
+    action_mask:    (54,)   bool
+```
+
+`scalars` 可以预留 4 维（per-token 的"巡序 / 各家 score / kyoutaku / honba"等），未填写位置全 0。模型把 `embed(tokens).sum(-2) + Linear(scalars)` 作为每 token 输入。
+
+**方案 B（拆 token 字段到 7 维）**：
+
+```python
+tokens: (L, 7) uint8
+# (segment, tile, count, who, ext_a, ext_b, ext_c)
+```
+
+不引入新通路，但所有 extra 子字段必须走类别 embedding（小数值仍是类别）。
+
+**推荐方案 A**：score/honba/kyoutaku/remaining/turn 走标量更符合天然语义；类别该类别该走 embedding 的不变。
+
+### 6.6 modeling 端的影响
+
+`MahjongTransformer` 当前只读 `tokens`+`attention_mask`+`action_mask`。改 A 后增加 `scalars` 输入：
+
+```python
+emb = (
+    self.seg_emb(tokens[..., 0]) + self.tile_emb(tokens[..., 1])
+  + self.count_emb(tokens[..., 2]) + self.who_emb(tokens[..., 3])
+  + self.extra_emb(tokens[..., 4]) + self.scalar_proj(scalars)
+)
+```
+
+代码影响仅 `model.py` 一处与 `tokenization.py`/`cache.py` 的 schema。
+
+---
+
+## 7. 动作空间（54 维，不变）
+
+| 索引 | 含义 |
 |---|---|
 | 0..33 | 弃 34 种基本牌 |
 | 34/35/36 | 弃 红 5m / 5p / 5s |
-| 37/38/39 | 吃（左/中/右） |
-| 40/41/42 | 吃带赤（左/中/右） |
-| 43/44 | 碰 / 碰带赤 |
+| 37/38/39 | 吃 左/中/右 |
+| 40/41/42 | 吃 左/中/右 + 用赤 |
+| 43/44 | 碰 / 碰 + 用赤 |
 | 45/46/47 | 暗杠 / 明杠 / 加杠 |
 | 48 | 立直 |
 | 49 | 荣和 |
 | 50 | 自摸 |
 | 51 | 九種九牌 |
-| 52 | PassRiichi（立直阶段不立直） |
-| 53 | PassResponse（响应阶段过） |
+| 52 | PassRiichi |
+| 53 | PassResponse |
 
-**已知瑕疵（当前实现）**：
-- 吃的"左/中/右"细分需要 `take` tile 与 `correspond_tiles` 两边比对才能判，pybind 当前不暴露 `take`。`_mask_one_action` 暂时一次点亮三个吃位（含赤 6 位）。
-- BC 标签生成 `_engine_idx_to_unified` 也对所有吃统一返回 `CHIMIDDLE`/`CHIMIDDLE_USERED`，会让 BC 学到的"吃"动作不分形状。
-- **建议在 C++ 侧给 `SelfAction`/`ResponseAction` 增加一个 `take` 字段**（即吃来的那张），pure Python 侧就能精确区分；这是预计在编码定稿后顺带做的小改动。
+**已知问题（F8）**：吃的左/中/右细分需要 `take` 字段；C++ 端补完后 mask 与 BC 标签即可精确。
 
 ---
 
-## 5. 缓存 schema
-
-落盘格式（`pymahjong.rl.cache`）：
+## 8. 缓存 schema（v2 草案）
 
 ```
 cache_dir/
-    index.json                # 含 schema 指纹
-    shard_w00_00000/
-        tokens.npy            # (N, L, 5) uint8
-        attention_mask.npy    # (N, L)    uint8
-        action_mask.npy       # (N, A=54) uint8
-        labels.npy            # (N,)      int16
+    index.json              # 含 schema 指纹（含 schema_version=2）
+    shard_*/
+        tokens.npy          # (N, L, 5)  uint8
+        scalars.npy         # (N, L, S)  float16  ← 新（方案 A）
+        attention_mask.npy  # (N, L)     uint8
+        action_mask.npy     # (N, A=54)  uint8
+        labels.npy          # (N,)       int16
         meta.json
 ```
 
-`schema_fingerprint` 包含：
+`schema_fingerprint`（v2）：
 
 ```python
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "max_seq_len": 200,
   "token_features": 5,
+  "scalar_features": 4,           # 新
   "action_dim": 54,
-  "field_vocab": {"segment": 21, "tile": 38, "count": 96, "who": 5, "extra": 256},
-  "dtypes": {"tokens": "uint8", "attention_mask": "uint8",
-             "action_mask": "uint8", "labels": "int16"}
+  "field_vocab": {"segment": 30, "tile": 35, "count": 5, "who": 5, "extra": 256},
+  "dtypes": {"tokens": "uint8", "scalars": "float16",
+             "attention_mask": "uint8", "action_mask": "uint8",
+             "labels": "int16"},
 }
 ```
 
-**新增 ROUND_INDEX/DEALER_SEAT 等段时，`segment` vocab 涨到 28**，`field_vocab["segment"]` 变化 → schema 指纹自动 mismatch，旧缓存会被显式拒绝（ValueError），不会出现"参数不变但语义错位"。
+新增存储：`(N, 200, 4) float16` ≈ +1.6 KiB/sample → **总成本 ~2.8 KiB/sample**（仍可接受，2025 全量约 170 GB；`scalars` 可以 `float16` 进一步省到 ~1.6 KiB；多数行 scalars=0 后续可考虑稀疏，但首版先稠密）。
 
-存储成本：
-- 每条样本 = 200×5 + 200 + 54 + 2 = **1256 B** ≈ **1.23 KiB**
-- 6e7 条决策（2025 凤凰桌全量预估） ≈ **70 GB**
-- 单个 shard 65 536 条 ≈ 80 MB，便于并发写 / 顺序读
+> v1 schema 缓存（已有）会被 `assert_schema_compatible` 拒绝并明确报错，无静默错位。
 
 ---
 
-## 6. 数据增强方案
+## 9. 数据增强
 
-### ✅ 花色置换 ×6（应用）
-
-把 `{man, pin, sou}` 任一排列映射到 token 的 `tile` 字段：
-
-- 0..8 / 9..17 / 18..26 三段块按排列搬迁；
-- 赤 5（34/35/36）跟随其 5 所在的花色一起置换；
-- 字牌 27..33、PAD 37 保持不变；
-- LUT 长度 38，预先算好 6 张表，`__getitem__` 时随机选一张。
-
-**理由**：花色之间无对称破缺（既无场风/自风涉及到 m/p/s，也无役种区分），完美对称增强。每个样本带 6 倍有效信息。
-
-### ❌ 座次旋转（禁止应用）
-
-> 用户明确指示：东南西北的位置对决策关键，不能旋转。
-
-技术理由也成立：
-- 场风（GAME_WIND）+ 自风（SELF_WIND）一起决定**亲家是谁**、**自风牌役种是否成立**（自风的字牌做雀头/刻子能成役）。
-- 亲家加分规则（出冲赔率 1.5×、连庄维持等）依赖座次。
-- 模型已经看的是"相对座次"（who 字段已经是 `(seat - me) % 4`），但**绝对的场风/自风/局数**是不能动的。
-
-实现上：`CachedTokenDataset` **不再暴露** `seat_rotate` 参数；`BCConfig` 同步移除该字段。
-
-### 🟡 其他可考虑（暂不做）
-
-- 顺位/分数置换：把 4 家分数顺序置换。在 BC 阶段会让"压制对手"类决策学坏；不做。
-- 红 5 屏蔽：训练时随机丢弃赤 5 信息。无明显收益；不做。
+| 方案 | 是否启用 | 理由 |
+|---|---|---|
+| **花色置换 ×6（man↔pin↔sou）** | ✅ | 完全对称（无场风/役种区分 m/p/s），PAD/字牌/赤标志安全 |
+| **座次旋转** | ❌ | 场风/自风/亲家位置都是决策关键，旋转会污染 label。`who` 已是相对座次，无需再做对称处理 |
+| 顺位/分数置换 | ❌ | 影响"压制对手"决策 |
+| 红 5 屏蔽 | ❌ | 收益不明 |
 
 ---
 
-## 7. 兼容性 & 迁移
+## 10. 修复后段总览（共 30 段）
 
-- **当前 commit (`5cd1577`) 的 schema_version=1**，但段定义只到 ID 20。
-- 一旦按 §2 / §3 增加 ROUND_INDEX 等新段，会：
-  1. 修改 `tokenization.py` 的 `SegmentType` 枚举与 `encode()` 逻辑；
-  2. `NUM_SEGMENTS` / `FIELD_VOCAB["segment"]` 自动变化；
-  3. schema 指纹改变，旧缓存被 `assert_schema_compatible` 拒绝；
-  4. 重跑 `tools/encode_paipu_to_cache.py` 生成新缓存。
-- 因此审查通过后，建议先把所有补丁一次性合入 → 统一升 `CACHE_SCHEMA_VERSION=2` → 再跑大规模编码。
+```
+ 0 PAD
+ 1 SELF_HAND
+ 2 SELF_TSUMO_TILE          [新, F4]
+ 3 LAST_DISCARDED_TILE      [新, F4]
+ 4 SELF_FUURO               [extra 重新位包: F7]
+ 5 OPP_FUURO                [extra 重新位包: F7]
+ 6 SELF_RIVER               [extra 走 scalars: §6.4]
+ 7 OPP_RIVER                [extra 走 scalars: §6.4]
+ 8 DORA_INDICATOR
+ 9 ACTUAL_DORA              [新, F1]
+10 URA_DORA_INDICATOR
+11 PLAYER_RIICHI            [count: 立直/双立直 二选一]
+12 PLAYER_IPPATSU
+13 PLAYER_MENZEN
+14 PLAYER_SCORE             [类别 token + scalars 旁路: §6.5]
+15 GAME_WIND
+16 SELF_WIND
+17 ROUND_INDEX              [新, F5]
+18 DEALER_SEAT              [新, F6]
+19 HONBA                    [scalars 旁路]
+20 KYOUTAKU                 [scalars 旁路]
+21 REMAINING_TILES          [scalars 旁路]
+22 TURN_INDEX               [新, R1, scalars 旁路]
+23 VISIBLE_COUNT            [新, F2]
+24 FURITEN_AREA             [新, F3]
+25 GAME_SIZE                [新, R2]
+26 LAST_DRAW_KIND           [新, R3]
+27 MY_DORA_COUNT            [新, R4]
+28 PHASE
+29 ACTION_HINT
+```
 
 ---
 
-## 8. 待办（编码层，等审）
+## 11. 修复任务（一次性合入，升 schema_version=2）
 
-- [ ] 加 `ROUND_INDEX` segment（必须）
-- [ ] 加 `DEALER_SEAT` segment（必须）
-- [ ] 拆 `LAST_DISCARD` → `SELF_TSUMO_TILE` / `LAST_DISCARDED_TILE`（必须）
-- [ ] 加 `FUURO_FROM` extra 字段（推荐）
-- [ ] 加 `TURN_INDEX` segment（推荐）
-- [ ] 在 C++ 侧暴露 `SelfAction.take` / `ResponseAction.take` 以精确解析吃的形状
-- [ ] 升 `CACHE_SCHEMA_VERSION` → 2 并重新编码
-- [ ] 单元测试：「编码一局 paipu，检查所有 28 个 segment 至少出现过一次」
+- [ ] F1 ACTUAL_DORA 段
+- [ ] F2 VISIBLE_COUNT 段（编码时遍历 4 家河 + 4 家副露 + 已翻 dora indicator）
+- [ ] F3 FURITEN_AREA 段
+- [ ] F4 拆 LAST_DISCARD → SELF_TSUMO_TILE / LAST_DISCARDED_TILE
+- [ ] F5 ROUND_INDEX 段
+- [ ] F6 DEALER_SEAT 段
+- [ ] F7 副露 FUURO_FROM（在 extra 中位包：BaseAction(4 bit) + from-whom(2 bit) + is_target(1 bit)）
+- [ ] F8 C++ 暴露 `SelfAction.take` / `ResponseAction.take` → 修 `_mask_one_action` 与 `_engine_idx_to_unified` 的吃形分类
+- [ ] R1 TURN_INDEX 段（走 scalars）
+- [ ] R2 GAME_SIZE 段
+- [ ] R3 LAST_DRAW_KIND 段
+- [ ] R4 MY_DORA_COUNT 段
+- [ ] §5.2 红 5 改为 "tile_id=基础 5 + extra.aka_bit=1"，删 TILE_RED5M/P/S；TILE_VOCAB_SIZE 35
+- [ ] §6.5 token 增加 `scalars (L, S)` 通路：S=4 维（score_self / score_others 三家平均 / honba / kyoutaku / remaining / turn 选 4 个最关键）
+- [ ] cache schema_version → 2，同步 `cache.py / cached_dataset.py / encode_paipu_to_cache.py`
+- [ ] `model.py` 增加 `scalar_proj`，PPO/BC 训练 forward 同步
+- [ ] 单测：encode 一局 paipu 后断言所有 30 段都至少出现过一次
 
 ---
 
-## 9. 等待审查的关键决定
+## 12. 等待审阅的关键决定
 
-请确认以下几个判断：
+请确认以下 5 项：
 
-1. **`tile` 总 vocab = 38（含赤 5）** — 是否可接受？另一种方案是把赤标志放到 `extra` 一位，让 `tile` 保持 34；但目前红 5 在很多状态（手牌、副露、河、弃牌）里都要查 dora，独立 id 处理一致性更好。
-2. **PLAYER_SCORE 用 1000 点桶（81 个 bucket）** — 是否够细？精确分数必要时可改 100 点桶（vocab 仍 ≤256）。
-3. **巡目用 SELF_RIVER 长度推断 vs 单独 token** — 我建议加单独 TURN_INDEX。
-4. **Stage 2 RL 阶段是否要换更密的 reward**（当前只在终局给 `payoffs/25000`） — 这一项虽然不在编码层，但相关；编码层无须改动。
+1. **scalars 通路（方案 A）vs 全部走 embedding（方案 B）** — 推荐 A，分数等连续语义保留刻度。
+2. **红 5 编码切到 "5m + aka bit"**（删独立 tile_id 34/35/36，TILE_VOCAB_SIZE 由 38 → 35）—— 是否 OK？动作空间的"弃红 5"位 34/35/36 不变。
+3. **VISIBLE_COUNT** 用 1 token / tile_type（最多 34 token）vs 用 1 token 共 4 个通道压缩 —— 推荐前者，可读性强。
+4. **scalars 维度 S** —— 推荐 4：`score_self / score_lead_gap / honba_norm / remaining_norm`。需要更多再调。
+5. 是否一次性把 R1–R4 一并合入（建议是，否则会导致两次 schema bump）。
 
-请审查并指出补充/调整。
+审阅通过后，我将把 §11 的所有任务在一次提交里完成，并升 `CACHE_SCHEMA_VERSION` → 2。
