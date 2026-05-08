@@ -32,6 +32,14 @@ from .tokenization import (
     MAX_SEQ_LEN,
 )
 from .env_v2 import TokenizedMahjongEnv, TokenizedMultiAgentEnv
+from .cache import (
+    CACHE_SCHEMA_VERSION,
+    CacheManifest,
+    ShardWriter,
+    load_manifest,
+    rebuild_manifest,
+    save_manifest,
+)
 
 __all__ = [
     "MahjongTokenizer",
@@ -42,6 +50,12 @@ __all__ = [
     "MAX_SEQ_LEN",
     "TokenizedMahjongEnv",
     "TokenizedMultiAgentEnv",
+    "CACHE_SCHEMA_VERSION",
+    "CacheManifest",
+    "ShardWriter",
+    "load_manifest",
+    "rebuild_manifest",
+    "save_manifest",
 ]
 
 

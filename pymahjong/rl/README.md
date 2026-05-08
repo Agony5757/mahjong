@@ -31,10 +31,64 @@ with the existing engine and pretrained models.
 | `tokenization.py` | `MahjongTokenizer` — pure Python, no C++ encoding dep. |
 | `env_v2.py` | `TokenizedMahjongEnv` (single-agent, gym), `TokenizedMultiAgentEnv` (4-player). |
 | `model.py` | `MahjongTransformer` — policy + value transformer. |
-| `dataset.py` | `SelfPlayImitationDataset`, `PaipuReplayDataset`. |
-| `bc.py` | Stage 1: behavior cloning trainer (`train_bc`). |
+| `dataset.py` | `SelfPlayImitationDataset`, `PaipuReplayDataset` (online tokenization). |
+| `cache.py` | On-disk shard format (memmap-friendly, schema-versioned). |
+| `cached_dataset.py` | `CachedTokenDataset` — random-access map-style dataset over a cache, with optional suit / seat augmentation. |
+| `bc.py` | Stage 1: behavior cloning trainer (`train_bc`); supports both online datasets and `--cache-dir`. |
 | `buffers.py` | `RolloutBuffer` with masks + GAE. |
 | `ppo.py` | Stage 2: PPO + self-play trainer (`train_ppo`). |
+
+## Caching tokenized BC data
+
+For long supervised runs you almost always want to **encode once, train
+many times** rather than re-running the tokenizer on every epoch. Use
+`tools/encode_paipu_to_cache.py`:
+
+```bash
+# Smoke fill from random self-play (no paipu needed):
+python tools/encode_paipu_to_cache.py selfplay \
+    --out cache/smoke --games 200 --workers 4
+
+# Real BC data from already-downloaded paipu XMLs:
+python tools/encode_paipu_to_cache.py paipu \
+    --paipu-dir paipuxmls --out cache/houou \
+    --workers 8 --shard-rows 65536
+```
+
+Then train against the cache:
+
+```python
+from pymahjong.rl.bc import BCConfig, train_bc
+train_bc(config=BCConfig(
+    cache_dir="cache/houou",
+    batch_size=256,
+    num_workers=4,
+    suit_permute=True,   # 6× data augmentation across man/pin/sou
+    seat_rotate=True,    # 4× rotation across seats
+))
+```
+
+Cache layout (see `cache.py` for full spec):
+
+```
+cache_dir/
+    index.json                 # manifest + schema fingerprint
+    shard_w00_00000/
+        tokens.npy             # (N, L, 5) uint8
+        attention_mask.npy     # (N, L)    uint8
+        action_mask.npy        # (N, A)    uint8
+        labels.npy             # (N,)      int16
+        meta.json
+    shard_w00_00001/
+        ...
+```
+
+A shard's arrays are loaded with `np.load(..., mmap_mode='r')`, so the
+OS page cache is shared across DataLoader workers. The schema is
+versioned (`CACHE_SCHEMA_VERSION`) and the fingerprint includes
+`max_seq_len`, `action_dim`, `field_vocab` and dtypes — incompatible
+caches are rejected at load time instead of silently producing bad
+gradients.
 
 ## Two-stage training
 

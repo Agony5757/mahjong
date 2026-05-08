@@ -26,6 +26,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
+from .cached_dataset import CachedTokenDataset, cached_collate
 from .dataset import SelfPlayImitationDataset, collate_fn
 from .model import MahjongTransformer, TransformerConfig
 
@@ -41,6 +42,12 @@ class BCConfig:
     save_interval: int = 5_000
     save_path: str = "bc.pt"
     device: Optional[str] = None  # auto
+    # Cache-loader specific knobs (ignored when an explicit ``dataset`` is passed).
+    cache_dir: Optional[str] = None
+    num_workers: int = 0
+    suit_permute: bool = False
+    seat_rotate: bool = False
+    pin_memory: bool = True
 
 
 def _device(cfg: BCConfig) -> torch.device:
@@ -77,13 +84,25 @@ def train_bc(
     model.train()
 
     if dataset is None:
-        dataset = SelfPlayImitationDataset(oracle=False)
+        if cfg.cache_dir:
+            dataset = CachedTokenDataset(
+                cfg.cache_dir,
+                suit_permute=cfg.suit_permute,
+                seat_rotate=cfg.seat_rotate,
+            )
+        else:
+            dataset = SelfPlayImitationDataset(oracle=False)
 
+    is_map_style = hasattr(dataset, "__len__")
     loader = DataLoader(
         dataset,
         batch_size=cfg.batch_size,
-        collate_fn=collate_fn,
-        num_workers=0,  # IterableDataset; multi-worker requires sharding logic
+        collate_fn=cached_collate if is_map_style else collate_fn,
+        num_workers=cfg.num_workers if is_map_style else 0,
+        shuffle=is_map_style,
+        pin_memory=cfg.pin_memory and torch.cuda.is_available(),
+        drop_last=is_map_style,
+        persistent_workers=is_map_style and cfg.num_workers > 0,
     )
 
     optim = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
