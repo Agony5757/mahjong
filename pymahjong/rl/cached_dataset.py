@@ -35,10 +35,14 @@ class CachedTokenDataset(Dataset):
         max_seq_len: must be <= the cache's recorded max length.
         suit_permute: if True, sample a random permutation of the
             three numbered suits (man/pin/sou) per example to augment
-            data 6x. Honors red-five tile ids.
-        seat_rotate: if True, randomly rotate the "who" field by 0..3
-            (the absolute seat is irrelevant once observations are
-            already viewer-relative).
+            data 6x. Honors red-five tile ids and PAD.
+
+    Note:
+        Seat rotation is **intentionally not exposed** — round wind /
+        seat wind / dealer position are decision-relevant in Riichi
+        Mahjong, so rotating seat ids would silently corrupt labels.
+        The token's ``who`` field is already viewer-relative (0=self,
+        1=next, ...), so no rotation is needed for invariance.
     """
 
     def __init__(
@@ -46,12 +50,10 @@ class CachedTokenDataset(Dataset):
         cache_dir: str,
         max_seq_len: int = MAX_SEQ_LEN,
         suit_permute: bool = False,
-        seat_rotate: bool = False,
     ):
         self.cache_dir = cache_dir
         self.max_seq_len = int(max_seq_len)
         self.suit_permute = bool(suit_permute)
-        self.seat_rotate = bool(seat_rotate)
 
         manifest: CacheManifest = load_manifest(cache_dir)
         assert_schema_compatible(manifest.schema, max_seq_len=self.max_seq_len)
@@ -105,8 +107,6 @@ class CachedTokenDataset(Dataset):
 
         if self.suit_permute:
             self._apply_suit_permutation(tokens)
-        if self.seat_rotate:
-            self._apply_seat_rotation(tokens)
 
         return {
             "tokens": torch.from_numpy(tokens),
@@ -146,15 +146,6 @@ class CachedTokenDataset(Dataset):
         # Only permute valid token rows; PAD rows have tile=37 (PAD) which
         # the LUT keeps fixed because lut[37] == 37.
         np.copyto(tile_col, lut[tile_col])
-
-    def _apply_seat_rotation(self, tokens: np.ndarray) -> None:
-        # who field is column 3; values 0..3 = seat, 4 = N/A.
-        shift = np.random.randint(4)
-        if shift == 0:
-            return
-        col = tokens[:, 3]
-        seats = col < 4
-        col[seats] = (col[seats] + shift) % 4
 
 
 def cached_collate(batch):

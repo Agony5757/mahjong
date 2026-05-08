@@ -137,7 +137,7 @@ def test_suit_permutation_preserves_pad():
                 w.add(_fake_sample(rng))
         rebuild_manifest(tmp)
 
-        ds = CachedTokenDataset(tmp, suit_permute=True, seat_rotate=True)
+        ds = CachedTokenDataset(tmp, suit_permute=True)
         for _ in range(20):
             s = ds[0]
             tile_col = s["tokens"][:, 1].numpy()

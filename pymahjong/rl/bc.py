@@ -45,8 +45,7 @@ class BCConfig:
     # Cache-loader specific knobs (ignored when an explicit ``dataset`` is passed).
     cache_dir: Optional[str] = None
     num_workers: int = 0
-    suit_permute: bool = False
-    seat_rotate: bool = False
+    suit_permute: bool = False  # 6x augment across man/pin/sou; PAD-safe
     pin_memory: bool = True
 
 
@@ -88,7 +87,6 @@ def train_bc(
             dataset = CachedTokenDataset(
                 cfg.cache_dir,
                 suit_permute=cfg.suit_permute,
-                seat_rotate=cfg.seat_rotate,
             )
         else:
             dataset = SelfPlayImitationDataset(oracle=False)

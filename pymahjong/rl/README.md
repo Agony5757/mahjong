@@ -64,9 +64,12 @@ train_bc(config=BCConfig(
     batch_size=256,
     num_workers=4,
     suit_permute=True,   # 6× data augmentation across man/pin/sou
-    seat_rotate=True,    # 4× rotation across seats
 ))
 ```
+
+> Seat rotation is **deliberately not offered** — round wind, seat
+> wind and dealer position are decision-relevant, so rotating seats
+> would corrupt labels. See `ENCODING.md` §6 for the full rationale.
 
 Cache layout (see `cache.py` for full spec):
 
