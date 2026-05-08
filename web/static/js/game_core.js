@@ -309,6 +309,33 @@ class MahjongGame {
         return null;
     }
 
+    _basetileToStr(bt) {
+        if (bt == null || bt < 0 || bt >= 34) return '?';
+        if (bt < 9) return `${bt + 1}m`;
+        if (bt < 18) return `${bt - 9 + 1}p`;
+        if (bt < 27) return `${bt - 18 + 1}s`;
+        return `${bt - 27 + 1}z`;
+    }
+
+    _chiActionLabel(actionIdx, discardBt) {
+        // 37=ChiLeft, 38=ChiMid, 39=ChiRight, 40-42 = same with red dora used
+        const useRed = actionIdx >= 40;
+        const kind = (actionIdx - 37) % 3;
+        if (discardBt == null) return useRed ? '吃(赤)' : '吃';
+        let a, b;
+        if (kind === 0) { a = discardBt + 1; b = discardBt + 2; }
+        else if (kind === 1) { a = discardBt - 1; b = discardBt + 1; }
+        else { a = discardBt - 2; b = discardBt - 1; }
+        const fmt = (bt) => {
+            const s = this._basetileToStr(bt);
+            // Mark red 5 (bt 4=5m, 13=5p, 22=5s) when red dora variant chosen
+            if (useRed && (bt === 4 || bt === 13 || bt === 22)) return `${s[0]}*${s[1]}`;
+            return s;
+        };
+        const dStr = this._basetileToStr(discardBt);
+        return `吃 ${fmt(a)}${fmt(b)}+(${dStr})`;
+    }
+
     // ─── Response Actions ───────────────────────────────────────────────────
 
     _showResponseActions() {
@@ -340,7 +367,12 @@ class MahjongGame {
             panel.appendChild(this._makeBtn('杠', 'btn-kan', () => this.submitAction(46)));
         }
         if (chiActions.length > 0) {
-            panel.appendChild(this._makeBtn('吃', 'btn-chi', () => this.submitAction(chiActions[0])));
+            const lastStr = this._getLastDiscardStr();
+            const bt = this._strToBasetile(lastStr);
+            for (const idx of chiActions) {
+                const label = this._chiActionLabel(idx, bt);
+                panel.appendChild(this._makeBtn(label, 'btn-chi', () => this.submitAction(idx)));
+            }
         }
         panel.appendChild(this._makeBtn('跳过', 'btn-pass', () => this.submitAction(53)));
 
@@ -348,15 +380,24 @@ class MahjongGame {
     }
 
     _getLastDiscardStr() {
-        // Find the last discarded tile by the previous player
-        const prev = (this.state.turn + 3) % 4;
-        const river = this.state.players[prev]?.river || [];
-        for (let i = river.length - 1; i >= 0; i--) {
-            if (river[i].remain !== false) {
-                return river[i].tile?.str || river[i].str || '?';
+        // Find the most recently discarded (still-visible) tile across all rivers.
+        // Cannot rely on (turn+3)%4 because in response phase `turn` is the
+        // responder, who may be 2 or 3 seats from the discarder.
+        const players = this.state?.players || [];
+        let best = null;
+        let bestNum = -1;
+        for (const p of players) {
+            const river = p?.river || [];
+            for (let i = river.length - 1; i >= 0; i--) {
+                const t = river[i];
+                if (!t || t.remain === false) continue;
+                const n = typeof t.number === 'number' ? t.number : i;
+                if (n > bestNum) { bestNum = n; best = t; }
+                break;
             }
         }
-        return null;
+        if (!best) return null;
+        return best.tile?.str || best.str || '?';
     }
 
     // ─── Render Loop ───────────────────────────────────────────────────────

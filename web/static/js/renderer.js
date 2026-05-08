@@ -293,7 +293,23 @@ function buildRoundLabel(state) {
 
 function getRiverHighlightPlayer(state) {
     if (!state || state.phase < 4 || state.phase >= 16) return -1;
-    return (state.turn + 3) % 4;
+    // Find the player whose river contains the most recently discarded tile.
+    // We can't simply use (turn+3)%4 because in the response phase `turn` is
+    // the responder, who may be 2 or 3 seats away from the discarder.
+    let best = -1;
+    let bestNum = -1;
+    const players = state.players || [];
+    for (let pid = 0; pid < players.length; pid++) {
+        const river = players[pid]?.river || [];
+        for (let i = river.length - 1; i >= 0; i--) {
+            const t = river[i];
+            if (!t || t.remain === false) continue;
+            const n = typeof t.number === 'number' ? t.number : i;
+            if (n > bestNum) { bestNum = n; best = pid; }
+            break;
+        }
+    }
+    return best;
 }
 
 function normalizeHand(player) {
@@ -417,10 +433,19 @@ function drawRiverLocal(ctx, river, seatIndex, highlightLast) {
     const startX = -totalWidth / 2;
     const startY = LOCAL_LAYOUT.riverY;
 
+    // Find the index of the last still-visible tile so we highlight the
+    // most-recently-discarded tile even when later entries have been called away.
+    let lastVisibleIdx = -1;
+    for (let i = river.length - 1; i >= 0; i--) {
+        if (river[i] && river[i].remain !== false) { lastVisibleIdx = i; break; }
+    }
+
+    let slot = 0;  // sequential layout index (skips called tiles to remove gaps)
     river.forEach((tile, index) => {
-        if (tile.remain === false) return;  // called tile (pon/chi/kan) — skip
-        const col = index % RIVER_TILE.cols;
-        const row = Math.floor(index / RIVER_TILE.cols);
+        if (tile.remain === false) return;  // called tile (pon/chi/kan) — skip and close gap
+        const col = slot % RIVER_TILE.cols;
+        const row = Math.floor(slot / RIVER_TILE.cols);
+        slot++;
         const cellX = startX + col * cellW;
         const cellY = startY + row * cellH;
         const sideways = !!tile.riichi;
@@ -442,7 +467,7 @@ function drawRiverLocal(ctx, river, seatIndex, highlightLast) {
             {
                 redDora: isRed,
                 rotation: sideways ? Math.PI / 2 : 0,
-                highlighted: highlightLast && index === river.length - 1,
+                highlighted: highlightLast && index === lastVisibleIdx,
             }
         );
     });
