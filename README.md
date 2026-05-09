@@ -135,6 +135,38 @@ env = pymahjong.SingleAgentMahjongEnv(opponent_agent="path/to/model.pth")
 
 Human demonstration data from Tenhou.net (6 dan+ players) is available for offline RL research. [Download from releases](https://github.com/Agony5757/mahjong/releases/tag/v1.0.4).
 
+### Incremental paipu pipeline
+
+To build your own training cache from raw Tenhou paipu, use the resumable
+pipeline driven by a single append-only manifest:
+
+```bash
+# Download year zip → fetch XMLs → encode to token shards
+python tools/paipu_pipeline.py run --work data/tenhou --year 2024 \
+    --shard-rows 65536
+
+# Inspect / verify state at any time
+python tools/paipu_pipeline.py status --work data/tenhou
+python tools/paipu_pipeline.py check  --work data/tenhou           # dry run
+python tools/paipu_pipeline.py check  --work data/tenhou --repair  # delete corrupt XMLs
+```
+
+Properties:
+
+- **Resumable**: re-running `run` is a no-op once everything is encoded.
+  Each shard is flushed atomically and only then recorded in the manifest,
+  so a crash mid-shard simply re-encodes the affected paipu next time.
+- **Integrity**: every paipu is hashed with sha256 on every startup and
+  compared against the manifest; identical content under different game
+  ids is recorded as `duplicate` and the redundant XML is removed.
+- **Self-healing**: `check --repair` deletes corrupt XMLs and emits
+  `corrupt` events; the next `run` will re-fetch / re-encode them.
+- **Hand-dropped XMLs**: drop files into `<work>/xml/<game_id>.txt` and
+  they will be adopted automatically.
+
+See [`docs/advanced/paipu_pipeline.md`](docs/advanced/paipu_pipeline.md)
+for the full manifest schema, layout on disk, and recovery flows.
+
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

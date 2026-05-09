@@ -6,6 +6,7 @@
 shanten_calculation
 custom_agents
 paipu_replay
+paipu_pipeline
 cpp_engine
 state_machine
 ```
