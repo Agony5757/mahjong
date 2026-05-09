@@ -123,7 +123,14 @@ def _yield_paipu(
     paths: Iterable[str],
     tokenizer: MahjongTokenizer,
 ) -> Iterator[dict]:
-    """Yield tokenized samples by replaying Tenhou paipu XMLs."""
+    """Yield tokenized samples by replaying Tenhou paipu XMLs.
+
+    Uses :class:`pymahjong.tenhou_paipu_check.PaipuReplay` (the existing
+    XML-driven orchestrator) and intercepts every ``make_selection`` call
+    via a proxy. At each true decision point we tokenize the table state
+    *before* the engine consumes the action, capturing the ground-truth
+    selection index used as the BC label.
+    """
     if pm is None:
         raise RuntimeError(f"MahjongPyWrapper not importable: {_PM_IMPORT_ERR}")
     if not hasattr(pm, "PaipuReplayer"):
@@ -131,46 +138,58 @@ def _yield_paipu(
             "MahjongPyWrapper.PaipuReplayer not exposed; cannot encode paipu cache yet."
         )
 
+    from pymahjong import tenhou_paipu_check as tpc
     from pymahjong.rl.dataset import SelfPlayImitationDataset
 
-    for path in paths:
-        try:
-            rep = pm.PaipuReplayer()
-            rep.init(path)
-        except Exception:  # noqa: BLE001
-            continue
-        if not (hasattr(rep, "table") and hasattr(rep, "step")
-                and hasattr(rep, "next_action")):
-            raise RuntimeError(
-                "PaipuReplayer is missing next_action/step; rebuild C++ "
-                "bindings or fall back to --source selfplay for now."
-            )
-        table = rep.table
-        while True:
-            phase = table.get_phase()
-            if phase == 16:
-                break
-            actions = _engine_actions(table)
-            if not actions:
-                break
-            seat = table.who_make_selection()
-            tok = tokenizer.encode(table, current_player=seat)
+    pending: list[dict] = []
+
+    class _Proxy:
+        __slots__ = ("_inner",)
+
+        def __init__(self, inner):
+            object.__setattr__(self, "_inner", inner)
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+        def make_selection(self, idx):
+            table = self._inner.table
+            phase = int(table.get_phase())
+            if phase < 16:
+                seat = phase % 4
+                try:
+                    tok = tokenizer.encode(table, current_player=seat)
+                    unified = SelfPlayImitationDataset._engine_idx_to_unified(table, idx)
+                    pending.append({
+                        "tokens": tok.tokens.copy(),
+                        "scalars": tok.scalars.copy(),
+                        "attention_mask": tok.attention_mask.copy(),
+                        "action_mask": tok.action_mask.copy(),
+                        "action": int(unified),
+                    })
+                except Exception:  # noqa: BLE001
+                    pass
+            return self._inner.make_selection(idx)
+
+    orig_ctor = pm.PaipuReplayer
+    pm.PaipuReplayer = lambda *a, **kw: _Proxy(orig_ctor(*a, **kw))  # type: ignore[assignment]
+    try:
+        for path in paths:
+            replay = tpc.PaipuReplay()
+            replay.logger = tpc.Logger()
+            replay.write_log = False
+            directory = os.path.dirname(path) or "."
+            filename = os.path.basename(path)
             try:
-                truth = int(rep.next_action())
+                replay._paipu_replay(directory, filename)
             except Exception:  # noqa: BLE001
-                break
-            unified = SelfPlayImitationDataset._engine_idx_to_unified(table, truth)
-            yield {
-                "tokens": tok.tokens.copy(),
-                "scalars": tok.scalars.copy(),
-                "attention_mask": tok.attention_mask.copy(),
-                "action_mask": tok.action_mask.copy(),
-                "action": int(unified),
-            }
-            try:
-                rep.step()
-            except Exception:  # noqa: BLE001
-                break
+                # Engine-level error during a single game; skip its remaining samples
+                # but yield whatever we already collected before the error.
+                pass
+            while pending:
+                yield pending.pop(0)
+    finally:
+        pm.PaipuReplayer = orig_ctor  # type: ignore[assignment]
 
 
 # ---------------------------------------------------------------------------
