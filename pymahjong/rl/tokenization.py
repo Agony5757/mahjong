@@ -168,6 +168,35 @@ def _safe(fn, default=None):
         return default
 
 
+# CallGroup::Type values (must match Mahjong/Tile.h)
+_MELD_CHI = 0
+_MELD_PON = 1
+_MELD_DAIMINKAN = 2
+_MELD_KAKAN = 3
+_MELD_ANKAN = 4
+
+
+def _fuuro_from_r(meld_type: int, take: int) -> int:
+    """Infer the relative seat of the discarder for a call group.
+
+    Riichi mahjong rules:
+      - Chi can only be called from kamicha (上家, relative seat 3).
+      - Pon / DaiMinKan / KaKan: ``take`` is the position of the called
+        tile in the meld and uniquely identifies the source seat —
+        0 = kamicha (r=3), 1 = toimen (r=2), 2 = shimocha (r=1).
+        (KaKan is added on top of an existing pon, so the original
+        pon's ``take`` still indicates the source.)
+      - AnKan is concealed, so there is no source. We emit r=4
+        (sentinel for "no source / unknown").
+    """
+    if meld_type == _MELD_CHI:
+        return 3
+    if meld_type == _MELD_ANKAN:
+        return 4
+    # Pon / DaiMinKan / KaKan: take ∈ {0,1,2} → r ∈ {3,2,1}
+    return {0: 3, 1: 2, 2: 1}.get(int(take), 4)
+
+
 def _norm_score(score: int) -> float:
     """Map a raw score to a roughly zero-mean float (0 at 25000, ~+/-1 around 0/50000)."""
     return (float(score) - 25000.0) / 25000.0
@@ -348,8 +377,7 @@ class MahjongTokenizer:
             owner_r = rel(seat)
             for cg in fuuros:
                 meld_type = int(cg.type)
-                from_seat = -1  # not currently tracked by the engine
-                from_r = 4
+                from_r = _fuuro_from_r(meld_type, getattr(cg, "take", 0))
                 idx = self._push(
                     idx,
                     SegmentType.FUURO_FROM,
@@ -777,11 +805,8 @@ def state_to_string(table, current_player: int, riichi_stage2: bool = False) -> 
         parts = []
         for cg in cgs:
             mt = int(cg.type)
-            # NOTE: cg.take is the *position within the meld* (0=left,
-            # 1=middle, 2=right), NOT the from-whom seat. The engine does
-            # not currently store the discarder's seat on CallGroup, so
-            # we report from_r as 4 (=unknown).
-            from_r = 4
+            # Infer source seat from CallGroup.take using riichi rules.
+            from_r = _fuuro_from_r(mt, getattr(cg, "take", 0))
             tiles = " ".join(tile_str(*_tile_id_and_aka(t)) for t in cg.tiles)
             parts.append(f"[type={mt} from_r={from_r} tiles={tiles}]")
         lines.append(f"FUURO[r={r}]: " + (" ".join(parts) if parts else "-"))

@@ -413,7 +413,7 @@ cache_dir/
 - [x] F4 拆 LAST_DISCARD → SELF_TSUMO_TILE / LAST_DISCARDED_TILE
 - [x] F5 ROUND_INDEX 段
 - [x] F6 DEALER_SEAT 段
-- [x] F7 副露段在 `extra` 中携带 BaseAction 类型（含红 5 bit）；**from-whom 暂未编码**：当前引擎不持久保存 chi/pon/kan 来源座次（`CallGroup.take` 表示牌在副露中的位置 0/1/2，并非来源相对座次），编码端与解码端一致地输出 `from_r=4 (unknown)`。引擎补全后再启用。
+- [x] F7 副露段在 `extra` 中携带 BaseAction 类型（含红 5 bit）；**from-whom 已编码**：基于日麻规则从 `CallGroup.take` 推断 — Chi 只能来自上家(r=3)；Pon/DaiMinKan/KaKan 的 `take` ∈ {0,1,2} 唯一对应 上家/对家/下家 (r=3/2/1)；AnKan 暗杠没有来源(r=4)。见 `_fuuro_from_r`。
 - [x] F8 修复方向不变；`_mask_one_action` 已使用 chi 牌相对手牌中位牌位置进行 left/middle/right 分形（见 `_classify_chi`）
 - [x] R1 TURN_INDEX 段（自家河长度，走 scalars）
 - [x] R2 GAME_SIZE 段
