@@ -43,6 +43,10 @@ wheelhouse/
 # IDE
 .idea/
 
+# Python package manager
+uv.lock
+cache/
+
 # AI assistant config
 .github/copilot-instructions.md
 web/logs

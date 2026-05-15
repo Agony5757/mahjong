@@ -72,6 +72,7 @@ import hashlib
 import json
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -143,6 +144,7 @@ class Manifest:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._records: Dict[str, dict] = {}
         self._sha_to_gid: Dict[str, str] = {}
+        self._lock = threading.Lock()
         self._reload()
 
     def _reload(self) -> None:
@@ -180,8 +182,14 @@ class Manifest:
     def is_done(self, gid: str) -> bool:
         return self.status_of(gid) in ("encoded", "failed", "evicted", "duplicate")
 
-    def is_downloaded(self, gid: str) -> bool:
-        return self.status_of(gid) == "downloaded"
+    def is_downloaded(self, gid: str, xml_dir: Optional[Path] = None) -> bool:
+        if self.status_of(gid) == "downloaded":
+            return True
+        # Also check filesystem: if XML exists but wasn't in the manifest
+        # snapshot yet, treat it as downloaded (avoids re-processing).
+        if xml_dir is not None:
+            return (xml_dir / f"{gid}.txt").exists()
+        return False
 
     def gid_for_sha(self, sha: str) -> Optional[str]:
         return self._sha_to_gid.get(sha)
@@ -190,16 +198,15 @@ class Manifest:
     def append(self, rec: dict) -> None:
         rec.setdefault("ts", dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
         line = json.dumps(rec, separators=(",", ":"), sort_keys=True)
-        with self.path.open("a") as f:
-            f.write(line + "\n")
-            f.flush()
-            os.fsync(f.fileno())
-        gid = rec.get("gid")
-        if gid:
-            self._records[gid] = rec
-            sha = rec.get("sha256")
-            if sha and rec.get("status") in ("downloaded", "encoded"):
-                self._sha_to_gid[sha] = gid
+        with self._lock:
+            with open(self.path, "a") as f:
+                f.write(line + "\n")
+            gid = rec.get("gid")
+            if gid:
+                self._records[gid] = rec
+                sha = rec.get("sha256")
+                if sha and rec.get("status") in ("downloaded", "encoded"):
+                    self._sha_to_gid[sha] = gid
 
 
 # =========================================================================
@@ -376,7 +383,214 @@ def ensure_year_ids(work_dir: Path, year: int, room_codes: Iterable[str] = ("00a
 
 
 # =========================================================================
-# Download stage
+# Download + encode (async producer-consumer)
+# =========================================================================
+
+import queue
+import sys
+import threading
+
+def puts(msg: str) -> None:
+    """Thread-safe print to stdout (no buffering)."""
+    sys.stdout.write(msg + "\n")
+    sys.stdout.flush()
+
+def stage_download_and_encode(
+    work_dir: Path,
+    man: Manifest,
+    game_ids: List[str],
+    delay: float,
+    max_new: Optional[int],
+    shard_rows: int,
+    max_encode: Optional[int],
+) -> Tuple[int, int, int, int, int, int]:
+    """Producer (download thread) + Consumer (main thread) pipeline.
+
+    Returns (n_done, n_skip, n_dedup, n_paipu, n_fail, n_samples).
+    """
+    xml_dir = work_dir / "xml"
+    xml_dir.mkdir(parents=True, exist_ok=True)
+
+    # Build todo list (mirrors stage_download logic)
+    todo: List[str] = []
+    n_skip = 0
+    for gid in game_ids:
+        if man.is_done(gid):
+            n_skip += 1
+            continue
+        if man.is_downloaded(gid, xml_dir):
+            n_skip += 1
+            continue
+        todo.append(gid)
+    if max_new is not None:
+        todo = todo[: max_new]
+
+    puts(f"download+encode: {len(todo)} game-ids to fetch (skipping {n_skip} already done)")
+
+    result_queue: queue.Queue = queue.Queue(maxsize=8)
+    n_done = 0
+    n_dedup = 0
+
+    # --- Producer: download thread ---
+    def download_worker():
+        nonlocal n_done, n_dedup
+        for gid in todo:
+            target = xml_dir / f"{gid}.txt"
+            if not target.exists():
+                data = _fetch_xml(gid, target, delay)
+                if data is None:
+                    man.append({"gid": gid, "status": "failed", "error": "download failed"})
+                    continue
+            # Verify and dedup
+            try:
+                data = target.read_bytes()
+            except OSError as e:
+                man.append({"gid": gid, "status": "failed", "error": f"read: {e}"})
+                continue
+            if not is_valid_paipu_payload(data):
+                try:
+                    target.unlink()
+                except OSError:
+                    pass
+                man.append({"gid": gid, "status": "failed", "error": "bad payload"})
+                continue
+            sha = hashlib.sha256(data).hexdigest()
+            existing = man.gid_for_sha(sha)
+            if existing and existing != gid:
+                try:
+                    target.unlink()
+                except OSError:
+                    pass
+                man.append({"gid": gid, "status": "duplicate", "sha256": sha, "alias_of": existing})
+                n_dedup += 1
+                continue
+            man.append({"gid": gid, "status": "downloaded", "sha256": sha, "size": len(data)})
+            n_done += 1
+            # Block if queue is full (back-pressure); consumer processes while we wait
+            result_queue.put((gid, target))
+        result_queue.put(None)  # sentinel: download done
+
+    t = threading.Thread(target=download_worker, daemon=True)
+    t.start()
+
+    # --- Consumer: encode in main thread (avoids GIL issues with pybind11) ---
+    cache_dir = work_dir / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    tokenizer = MahjongTokenizer()
+
+    existing_shards = sorted(p.name for p in cache_dir.glob("shard_*") if p.is_dir())
+    next_idx = 0
+    if existing_shards:
+        next_idx = max(int(n.split("_")[1]) for n in existing_shards) + 1
+
+    n_paipu = 0
+    n_fail = 0
+    n_samples = 0
+    buf_writer: Optional[ShardWriter] = None
+    buf_assignments: List[Tuple[str, int]] = []
+    buf_shard_name: Optional[str] = None
+
+    def open_new_shard():
+        nonlocal buf_writer, buf_shard_name, next_idx
+        buf_shard_name = f"shard_{next_idx:05d}"
+        next_idx += 1
+        buf_writer = ShardWriter(str(cache_dir / buf_shard_name))
+
+    def flush_shard():
+        nonlocal buf_writer, buf_assignments, buf_shard_name
+        if buf_writer is None or buf_writer.n_rows == 0:
+            buf_writer = None
+            buf_assignments = []
+            buf_shard_name = None
+            return
+        entry = buf_writer.close()
+        for gid, count in buf_assignments:
+            man.append({
+                "gid": gid,
+                "sha256": (man.get(gid) or {}).get("sha256"),
+                "status": "encoded",
+                "shard": buf_shard_name,
+                "n_samples": int(count),
+            })
+        puts(f"  flushed {buf_shard_name}: {entry.n_rows} rows, "
+              f"{len(buf_assignments)} paipus")
+        buf_writer = None
+        buf_assignments = []
+        buf_shard_name = None
+
+    open_new_shard()
+
+    try:
+        consumed = 0
+
+        while True:
+            item = result_queue.get()  # blocks; sentinel unblocks
+            if item is None:
+                # Download thread finished; drain any remaining items
+                while True:
+                    try:
+                        item = result_queue.get_nowait()
+                        if item is None:
+                            break
+                    except queue.Empty:
+                        break
+                break
+
+            gid, xml_path = item
+            consumed += 1
+
+            # Dynamically check manifest: only encode items with "downloaded" status.
+            # Checking live (not a snapshot) ensures items downloaded by the worker
+            # thread during this run are picked up immediately.
+            if man.status_of(gid) != "downloaded":
+                result_queue.task_done()
+                continue
+
+            if not xml_path.exists():
+                man.append({"gid": gid, "status": "failed", "error": "xml missing"})
+                n_fail += 1
+                result_queue.task_done()
+                continue
+            try:
+                samples = _encode_one_paipu(xml_path, tokenizer)
+            except Exception as e:  # noqa: BLE001
+                man.append({"gid": gid, "status": "failed", "error": f"replay: {e!r}"})
+                n_fail += 1
+                result_queue.task_done()
+                continue
+            if samples is None:
+                man.append({"gid": gid, "status": "failed", "error": "unsupported game type"})
+                n_fail += 1
+                result_queue.task_done()
+                continue
+            if not samples:
+                man.append({"gid": gid, "status": "failed", "error": "no samples"})
+                n_fail += 1
+                result_queue.task_done()
+                continue
+            for s in samples:
+                buf_writer.add(s)
+            buf_assignments.append((gid, len(samples)))
+            n_paipu += 1
+            n_samples += len(samples)
+            if buf_writer.n_rows >= shard_rows:
+                flush_shard()
+                open_new_shard()
+            result_queue.task_done()
+
+            if consumed % 25 == 0:
+                puts(f"  [consumed={consumed}] paipu={n_paipu} samples={n_samples} fail={n_fail}")
+        flush_shard()
+    finally:
+        if buf_writer is not None and buf_writer.n_rows > 0:
+            flush_shard()
+
+    t.join()
+    return n_done, n_skip, n_dedup, n_paipu, n_fail, n_samples
+
+
+# =========================================================================
+# Download stage (standalone, kept for compatibility / --dry-run use)
 # =========================================================================
 
 def stage_download(
@@ -440,7 +654,7 @@ def stage_download(
         })
         n_done += 1
         if i % 20 == 0 or i == len(todo):
-            print(f"  [{i}/{len(todo)}] downloaded={n_done} dedup={n_dedup}")
+            puts(f"  [{i}/{len(todo)}] downloaded={n_done} dedup={n_dedup}")
     return n_done, n_skip, n_dedup
 
 
@@ -448,10 +662,53 @@ def stage_download(
 # Encode stage
 # =========================================================================
 
+def _unsupported_game_type(xml_path: Path) -> bool:
+    """Return True if this XML's GO type is unsupported by the encoder.
+
+    Unsupported types (mirrors PaipuReplay GO handler breaks):
+      - is_pro=0  (bit 5 = 0): 上级卓 / 非プロ雀庄
+      - is_3ma=1  (bit 4 = 1): 三人麻将
+      - is_fast=1 (bit 6 = 1): 速卓
+
+    Note: is_fast=1 causes PaipuReplay to break before the replayer is
+    initialized, so make_selection is never called and 0 samples are
+    produced. The error message would be "no samples" without this filter.
+
+    Parses the full XML tree (games are only a few KB — negligible cost).
+    """
+    try:
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(str(xml_path))
+        for elem in tree.getroot():
+            if elem.tag == "GO":
+                t = int(elem.get("type", "0"))
+                # bit 5 (0x20): is_pro — must be 1
+                # bit 4 (0x10): is_3ma — must be 0
+                # bit 6 (0x40): is_fast — must be 0
+                if t & 0x20 == 0 or t & 0x10 != 0 or t & 0x40 != 0:
+                    return True
+                return False
+            if elem.tag not in ("SHUFFLE",):
+                # GO appears after SHUFFLE; stop early
+                break
+        return False
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _encode_one_paipu(
     xml_path: Path, tokenizer: MahjongTokenizer
-) -> List[dict]:
-    """Replay one paipu and return a list of token samples."""
+) -> Optional[List[dict]]:
+    """Replay one paipu and return a list of token samples.
+
+    Returns None when the game type is unsupported (caller should mark
+    ``error="unsupported game type"``). Returns an empty list when the
+    replay ran but produced no samples (caller should mark
+    ``error="no samples"``).
+    """
+    if _unsupported_game_type(xml_path):
+        return None
+
     samples: List[dict] = []
 
     class _Proxy:
@@ -550,7 +807,7 @@ def stage_encode(
                 "shard": buf_shard_name,
                 "n_samples": int(count),
             })
-        print(f"  flushed {buf_shard_name}: {entry.n_rows} rows, "
+        puts(f"  flushed {buf_shard_name}: {entry.n_rows} rows, "
               f"{len(buf_assignments)} paipus")
         buf_writer = None
         buf_assignments = []
@@ -570,6 +827,10 @@ def stage_encode(
                 man.append({"gid": gid, "status": "failed", "error": f"replay: {e!r}"})
                 n_fail += 1
                 continue
+            if samples is None:
+                man.append({"gid": gid, "status": "failed", "error": "unsupported game type"})
+                n_fail += 1
+                continue
             if not samples:
                 man.append({"gid": gid, "status": "failed", "error": "no samples"})
                 n_fail += 1
@@ -583,7 +844,7 @@ def stage_encode(
                 flush_shard()
                 open_new_shard()
             if i % 25 == 0 or i == len(todo):
-                print(f"  [{i}/{len(todo)}] paipu={n_paipu} samples={n_samples} fail={n_fail}")
+                puts(f"  [{i}/{len(todo)}] paipu={n_paipu} samples={n_samples} fail={n_fail}")
         flush_shard()
     finally:
         # On exception we still flush whatever was already encoded so we
@@ -684,17 +945,12 @@ def cmd_run(args) -> int:
         # Encode-only mode: just process whatever is already downloaded
         ids = []
 
-    # Download
-    if ids:
-        n_done, n_skip, n_dedup = stage_download(
-            work_dir, man, ids, delay=args.delay, max_new=args.max_new
-        )
-        print(f"download summary: new={n_done} dedup={n_dedup} skipped={n_skip}")
-
-    # Encode
-    n_paipu, n_fail, n_samples = stage_encode(
-        work_dir, man, shard_rows=args.shard_rows, max_paipu=args.max_encode
+    # Download + encode concurrently (single producer, single consumer)
+    n_done, n_skip, n_dedup, n_paipu, n_fail, n_samples = stage_download_and_encode(
+        work_dir, man, ids, delay=args.delay, max_new=args.max_new,
+        shard_rows=args.shard_rows, max_encode=args.max_encode
     )
+    print(f"download summary: new={n_done} dedup={n_dedup} skipped={n_skip}")
     print(f"encode summary  : paipu={n_paipu} fail={n_fail} samples={n_samples}")
 
     # Rebuild cache index
@@ -740,8 +996,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="source: download/parse the scraw<YEAR>.zip and use its game IDs")
     pr.add_argument("--game-ids", default=None,
                     help="source: a text file with one game ID per line (overrides --year)")
-    pr.add_argument("--delay", type=float, default=6.0,
-                    help="seconds between Tenhou XML downloads (default 6)")
+    pr.add_argument("--delay", type=float, default=5.0,
+                    help="seconds between Tenhou XML downloads (default 5)")
     pr.add_argument("--max-new", type=int, default=None,
                     help="cap on number of NEW downloads this run")
     pr.add_argument("--max-encode", type=int, default=None,
