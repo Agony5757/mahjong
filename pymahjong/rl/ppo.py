@@ -1,6 +1,6 @@
 """Stage 2: PPO + self-play reinforcement learning.
 
-The trainer runs N parallel :class:`TokenizedMultiAgentEnv` instances and
+The trainer runs N parallel :class:`EncodingMultiAgentEnv` instances and
 collects per-seat trajectories. At episode end, the final payoff (in
 points / 25000) is back-propagated as the terminal reward; intermediate
 steps receive zero reward.
@@ -29,8 +29,9 @@ import torch
 import torch.nn.functional as F
 
 from .buffers import RolloutBuffer
-from .env_v2 import TokenizedMultiAgentEnv
-from .model import MahjongTransformer, TransformerConfig
+from .encoding import EncodingVersion, get_strategy
+from . import encodings  # noqa: F401 -- trigger strategy registration
+from .envs import EncodingMultiAgentEnv
 
 
 @dataclass
@@ -50,6 +51,7 @@ class PPOConfig:
     save_interval: int = 50_000
     save_path: str = "ppo.pt"
     device: Optional[str] = None
+    encoding: str = "v3"
 
 
 def _device(cfg: PPOConfig) -> torch.device:
@@ -58,15 +60,7 @@ def _device(cfg: PPOConfig) -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def _obs_to_torch(obs, device):
-    return (
-        torch.as_tensor(obs["tokens"], device=device, dtype=torch.long).unsqueeze(0),
-        torch.as_tensor(obs["attention_mask"], device=device, dtype=torch.bool).unsqueeze(0),
-        torch.as_tensor(obs["action_mask"], device=device, dtype=torch.bool).unsqueeze(0),
-    )
-
-
-def collect_rollout(envs, model, buffer: RolloutBuffer, device, n_steps: int):
+def collect_rollout(envs, model, buffer: RolloutBuffer, device, n_steps: int, strategy=None):
     """Collect ``n_steps`` transitions across env instances using self-play.
 
     Each transition is associated with the *acting* seat at that step.
@@ -78,7 +72,6 @@ def collect_rollout(envs, model, buffer: RolloutBuffer, device, n_steps: int):
     payoff and mark its done flag.
     """
     model.eval()
-    pending: list = []  # list of (env_idx, seat, buffer_idx_for_last_transition)
     obs_per_env = [None] * len(envs)
     last_transition_idx = [
         {seat: -1 for seat in range(4)} for _ in envs
@@ -108,9 +101,9 @@ def collect_rollout(envs, model, buffer: RolloutBuffer, device, n_steps: int):
 
             obs = obs_per_env[i]
             seat = env.current_player
-            t_tokens, t_attn, t_mask = _obs_to_torch(obs, device)
+            t_feat, t_attn, t_mask = strategy.obs_to_tensor(obs, device)
             with torch.no_grad():
-                action, log_prob, value = model.act(t_tokens, t_attn, t_mask)
+                action, log_prob, value = model.act(t_feat, t_attn, t_mask)
             a = int(action.item())
             lp = float(log_prob.item())
             v = float(value.item())
@@ -135,12 +128,23 @@ def collect_rollout(envs, model, buffer: RolloutBuffer, device, n_steps: int):
 def train_ppo(
     bc_checkpoint: Optional[str] = None,
     config: Optional[PPOConfig] = None,
-    transformer_config: Optional[TransformerConfig] = None,
+    transformer_config=None,
+    encoding: str = "v3",
 ):
+    """Train a policy with PPO + self-play.
+
+    Args:
+        bc_checkpoint: path to a BC checkpoint to warm-start from.
+        config: :class:`PPOConfig`.
+        transformer_config: transformer architecture config.
+        encoding: encoding version (``"v3"`` or ``"v4"``).
+    """
     cfg = config or PPOConfig()
     device = _device(cfg)
 
-    model = MahjongTransformer(config=transformer_config).to(device)
+    strategy = get_strategy(EncodingVersion(encoding))
+    model = strategy.create_model(transformer_config=transformer_config).to(device)
+
     if bc_checkpoint and os.path.exists(bc_checkpoint):
         ckpt = torch.load(bc_checkpoint, map_location=device)
         model.load_state_dict(ckpt["model"], strict=False)
@@ -148,13 +152,15 @@ def train_ppo(
 
     optim = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
 
-    envs = [TokenizedMultiAgentEnv() for _ in range(cfg.n_envs)]
+    envs = [EncodingMultiAgentEnv(encoding=encoding) for _ in range(cfg.n_envs)]
     buffer = RolloutBuffer(capacity=cfg.rollout_steps + cfg.n_envs * 32, device=str(device))
+
+    collate_obs = strategy.collate_fn
 
     total_collected = 0
     while total_collected < cfg.total_steps:
         buffer.reset()
-        collect_rollout(envs, model, buffer, device, cfg.rollout_steps)
+        collect_rollout(envs, model, buffer, device, cfg.rollout_steps, strategy=strategy)
         total_collected += buffer.size
 
         # Normalize advantages
@@ -164,9 +170,9 @@ def train_ppo(
 
         model.train()
         for _ in range(cfg.n_epochs):
-            for mb in buffer.iterate_minibatches(cfg.batch_size):
-                new_log_prob, entropy, value = model.evaluate_actions(
-                    mb["tokens"], mb["attention_mask"], mb["action_mask"], mb["actions"],
+            for mb in buffer.iterate_minibatches(cfg.batch_size, collate_obs):
+                new_log_prob, entropy, value = strategy.evaluate_actions_from_batch(
+                    model, mb, mb["actions"],
                 )
                 ratio = torch.exp(new_log_prob - mb["old_log_probs"])
                 surr1 = ratio * mb["advantages"]

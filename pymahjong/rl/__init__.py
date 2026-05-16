@@ -1,29 +1,25 @@
 """Modern Transformer-based RL stack for pymahjong.
 
-This subpackage provides a fully Python-side, transformer-friendly
-encoding of Mahjong game states + action spaces, a Gymnasium-compatible
-environment exposing structured (Dict) observations, and two-stage
-training utilities:
+This subpackage provides encoding-agnostic environments, training
+utilities, and a strategy registry that lets you switch between V1-V4
+observation encodings at runtime:
 
-* Stage 1 (supervised): :mod:`pymahjong.rl.bc` — behavior cloning.
-* Stage 2 (reinforcement): :mod:`pymahjong.rl.ppo` — masked PPO with
-  multi-agent self-play.
-
-Top-level imports:
-
-* :class:`MahjongTokenizer` -- builds tokenized observations from the
-  C++-engine ``pm.Table``.
-* :class:`TokenizedMahjongEnv` -- single-agent gymnasium env.
-* :class:`TokenizedMultiAgentEnv` -- 4-player multi-agent env wrapper.
-* :class:`MahjongTransformer` -- transformer policy/value model (torch).
+* :class:`EncodingVersion` -- enum of supported encodings.
+* :func:`get_strategy` -- retrieve an :class:`EncodingStrategy` by version.
+* :class:`EncodingMahjongEnv` / :class:`EncodingMultiAgentEnv` --
+  encoding-agnostic gymnasium environments.
+* :class:`ActionEncoder` -- unified 54-action space.
 * :func:`train_bc`, :func:`train_ppo` -- top-level training entry points.
 
-The encoding deliberately avoids depending on the C++ V1/V2 dense matrix
-encoders (``encv1_*``, ``TableEncoder``) so that researchers can extend
-the feature set in pure Python.
+Legacy aliases are preserved for backward compatibility:
+* :class:`TokenizedMahjongEnv` / :class:`TokenizedMultiAgentEnv`
+* :class:`MahjongTokenizer`, :class:`MahjongTransformer`
 """
 
-from .tokenization import (
+from .action_space import ActionEncoder, ACTION_DIM
+from .encoding import EncodingVersion, get_strategy, available_versions
+from .envs import EncodingMahjongEnv, EncodingMultiAgentEnv
+from .v3.tokenization import (
     MahjongTokenizer,
     SegmentType,
     TILE_PAD,
@@ -35,7 +31,7 @@ from .tokenization import (
     tokens_to_string,
 )
 from .env_v2 import TokenizedMahjongEnv, TokenizedMultiAgentEnv
-from .cache import (
+from .v3.cache import (
     CACHE_SCHEMA_VERSION,
     CacheManifest,
     ShardWriter,
@@ -44,7 +40,19 @@ from .cache import (
     save_manifest,
 )
 
+# Trigger strategy registration.
+from . import encodings  # noqa: F401
+
 __all__ = [
+    # Core API
+    "EncodingVersion",
+    "get_strategy",
+    "available_versions",
+    "EncodingMahjongEnv",
+    "EncodingMultiAgentEnv",
+    "ActionEncoder",
+    "ACTION_DIM",
+    # Tokenizer (V3)
     "MahjongTokenizer",
     "SegmentType",
     "TILE_PAD",
@@ -54,8 +62,10 @@ __all__ = [
     "SCALAR_DIM",
     "state_to_string",
     "tokens_to_string",
+    # Legacy aliases
     "TokenizedMahjongEnv",
     "TokenizedMultiAgentEnv",
+    # Cache
     "CACHE_SCHEMA_VERSION",
     "CacheManifest",
     "ShardWriter",
@@ -74,7 +84,7 @@ def _torch_only(name):
                 f"{name} requires PyTorch. Install with `pip install torch`."
             ) from exc
         if name == "MahjongTransformer":
-            from .model import MahjongTransformer
+            from .v3.model import MahjongTransformer
             return MahjongTransformer(*args, **kwargs)
         if name == "train_bc":
             from .bc import train_bc
