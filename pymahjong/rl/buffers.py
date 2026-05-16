@@ -116,14 +116,5 @@ class RolloutBuffer:
             yield obs_tensors
 
 
-def ppo_obs_collate(batch):
-    """Collate V3 observation dicts (numpy arrays) into batched tensors."""
-    return {
-        "tokens": torch.as_tensor(np.stack([b["tokens"] for b in batch]), dtype=torch.long),
-        "attention_mask": torch.as_tensor(
-            np.stack([b["attention_mask"] for b in batch]), dtype=torch.bool
-        ),
-        "action_mask": torch.as_tensor(
-            np.stack([b["action_mask"] for b in batch]), dtype=torch.bool
-        ),
-    }
+# Backward compatibility re-export.
+from .v3.collate import ppo_obs_collate  # noqa: E402,F401

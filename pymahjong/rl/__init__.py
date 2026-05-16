@@ -19,7 +19,7 @@ Legacy aliases are preserved for backward compatibility:
 from .action_space import ActionEncoder, ACTION_DIM
 from .encoding import EncodingVersion, get_strategy, available_versions
 from .envs import EncodingMahjongEnv, EncodingMultiAgentEnv
-from .tokenization import (
+from .v3.tokenization import (
     MahjongTokenizer,
     SegmentType,
     TILE_PAD,
@@ -31,7 +31,7 @@ from .tokenization import (
     tokens_to_string,
 )
 from .env_v2 import TokenizedMahjongEnv, TokenizedMultiAgentEnv
-from .cache import (
+from .v3.cache import (
     CACHE_SCHEMA_VERSION,
     CacheManifest,
     ShardWriter,
@@ -84,7 +84,7 @@ def _torch_only(name):
                 f"{name} requires PyTorch. Install with `pip install torch`."
             ) from exc
         if name == "MahjongTransformer":
-            from .model import MahjongTransformer
+            from .v3.model import MahjongTransformer
             return MahjongTransformer(*args, **kwargs)
         if name == "train_bc":
             from .bc import train_bc

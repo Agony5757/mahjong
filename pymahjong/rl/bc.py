@@ -21,13 +21,10 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
-import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from .cached_dataset import CachedTokenDataset, cached_collate
-from .dataset import SelfPlayImitationDataset, collate_fn
 from .encoding import EncodingVersion, get_strategy
 from . import encodings  # noqa: F401 -- trigger strategy registration
 
@@ -67,13 +64,13 @@ def _paipu_xml_from_config() -> Optional[str]:
         return None
 
 
-def _resolve_collate(dataset, encoding: str):
-    """Return an appropriate collate function for *dataset*."""
-    collate = getattr(dataset, "collate_fn", None)
-    if collate is not None:
-        return collate
-    strategy = get_strategy(EncodingVersion(encoding))
-    return strategy.collate_fn
+def _resolve_dataset_mode(cfg: BCConfig) -> str:
+    """Determine dataset mode ('cached', 'streaming', 'selfplay') from config."""
+    if cfg.cache_dir:
+        return "cached"
+    if cfg.paipu_dir or _paipu_xml_from_config():
+        return "streaming"
+    return "selfplay"
 
 
 def train_bc(
@@ -110,50 +107,11 @@ def train_bc(
     model.train()
 
     if dataset is None:
-        if cfg.cache_dir:
-            if encoding == "v4":
-                from .cached_dataset_v4 import CachedEventDataset
-                dataset = CachedEventDataset(cfg.cache_dir)
-            else:
-                dataset = CachedTokenDataset(
-                    cfg.cache_dir,
-                    suit_permute=cfg.suit_permute,
-                )
-        elif cfg.paipu_dir or _paipu_xml_from_config():
-            if encoding == "v4":
-                from .tokenization_v4 import StreamingPaipuDatasetV4
-                import glob as _glob
-                paipu_dir = cfg.paipu_dir or _paipu_xml_from_config()
-                paths = sorted(
-                    p
-                    for p in _glob.glob(os.path.join(paipu_dir, "**", "*"), recursive=True)
-                    if os.path.isfile(p) and (p.endswith(".xml") or p.endswith(".txt"))
-                )
-                dataset = StreamingPaipuDatasetV4(
-                    paipu_paths=paths,
-                    prefetch_n=cfg.paipu_prefetch,
-                )
-            else:
-                from .streaming_dataset import StreamingPaipuDataset
-
-                paipu_dir = cfg.paipu_dir or _paipu_xml_from_config()
-                import glob as _glob
-
-                paths = sorted(
-                    p
-                    for p in _glob.glob(os.path.join(paipu_dir, "**", "*"), recursive=True)
-                    if os.path.isfile(p) and (p.endswith(".xml") or p.endswith(".txt"))
-                )
-                dataset = StreamingPaipuDataset(
-                    paths,
-                    prefetch_n=cfg.paipu_prefetch,
-                    suit_permute=cfg.suit_permute,
-                )
-        else:
-            dataset = SelfPlayImitationDataset(oracle=False)
+        mode = _resolve_dataset_mode(cfg)
+        dataset = strategy.create_dataset(mode, config=cfg)
 
     is_map_style = hasattr(dataset, "__len__")
-    _collate = _resolve_collate(dataset, encoding)
+    _collate = getattr(dataset, "collate_fn", None) or strategy.collate_fn
     loader = DataLoader(
         dataset,
         batch_size=cfg.batch_size,
@@ -179,20 +137,7 @@ def train_bc(
             batch = next(iterator)
         batch = {k: v.to(device) for k, v in batch.items()}
 
-        # V3 uses "tokens", V4 uses "features".
-        if "tokens" in batch:
-            logits, _ = model(
-                batch["tokens"],
-                batch["attention_mask"],
-                batch["action_mask"],
-                scalars=batch.get("scalars"),
-            )
-        else:
-            logits, _ = model(
-                batch["features"],
-                batch["attention_mask"],
-                batch["action_mask"],
-            )
+        logits, _ = strategy.forward_from_batch(model, batch)
         loss = F.cross_entropy(logits, batch["action"])
 
         optim.zero_grad(set_to_none=True)

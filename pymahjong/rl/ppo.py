@@ -28,8 +28,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from .action_space import ACTION_DIM
-from .buffers import RolloutBuffer, ppo_obs_collate
+from .buffers import RolloutBuffer
 from .encoding import EncodingVersion, get_strategy
 from . import encodings  # noqa: F401 -- trigger strategy registration
 from .envs import EncodingMultiAgentEnv
@@ -61,28 +60,7 @@ def _device(cfg: PPOConfig) -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def _obs_to_tensors(obs: dict, device: torch.device):
-    """Convert a single observation dict to model-ready tensors.
-
-    Works with V3 (``tokens`` key) and V4 (``features`` key).
-    """
-    if "tokens" in obs:
-        return (
-            torch.as_tensor(obs["tokens"], device=device, dtype=torch.long).unsqueeze(0),
-            torch.as_tensor(obs["attention_mask"], device=device, dtype=torch.bool).unsqueeze(0),
-            torch.as_tensor(obs["action_mask"], device=device, dtype=torch.bool).unsqueeze(0),
-        )
-    feat = torch.as_tensor(obs["features"], device=device).unsqueeze(0)
-    if feat.is_floating_point() is False:
-        feat = feat.float()
-    return (
-        feat,
-        torch.as_tensor(obs["attention_mask"], device=device, dtype=torch.bool).unsqueeze(0),
-        torch.as_tensor(obs["action_mask"], device=device, dtype=torch.bool).unsqueeze(0),
-    )
-
-
-def collect_rollout(envs, model, buffer: RolloutBuffer, device, n_steps: int):
+def collect_rollout(envs, model, buffer: RolloutBuffer, device, n_steps: int, strategy=None):
     """Collect ``n_steps`` transitions across env instances using self-play.
 
     Each transition is associated with the *acting* seat at that step.
@@ -123,7 +101,7 @@ def collect_rollout(envs, model, buffer: RolloutBuffer, device, n_steps: int):
 
             obs = obs_per_env[i]
             seat = env.current_player
-            t_feat, t_attn, t_mask = _obs_to_tensors(obs, device)
+            t_feat, t_attn, t_mask = strategy.obs_to_tensor(obs, device)
             with torch.no_grad():
                 action, log_prob, value = model.act(t_feat, t_attn, t_mask)
             a = int(action.item())
@@ -177,12 +155,12 @@ def train_ppo(
     envs = [EncodingMultiAgentEnv(encoding=encoding) for _ in range(cfg.n_envs)]
     buffer = RolloutBuffer(capacity=cfg.rollout_steps + cfg.n_envs * 32, device=str(device))
 
-    collate_obs = ppo_obs_collate if encoding == "v3" else strategy.collate_fn
+    collate_obs = strategy.collate_fn
 
     total_collected = 0
     while total_collected < cfg.total_steps:
         buffer.reset()
-        collect_rollout(envs, model, buffer, device, cfg.rollout_steps)
+        collect_rollout(envs, model, buffer, device, cfg.rollout_steps, strategy=strategy)
         total_collected += buffer.size
 
         # Normalize advantages
@@ -193,11 +171,8 @@ def train_ppo(
         model.train()
         for _ in range(cfg.n_epochs):
             for mb in buffer.iterate_minibatches(cfg.batch_size, collate_obs):
-                new_log_prob, entropy, value = model.evaluate_actions(
-                    mb["tokens"] if "tokens" in mb else mb["features"],
-                    mb["attention_mask"],
-                    mb["action_mask"],
-                    mb["actions"],
+                new_log_prob, entropy, value = strategy.evaluate_actions_from_batch(
+                    model, mb, mb["actions"],
                 )
                 ratio = torch.exp(new_log_prob - mb["old_log_probs"])
                 surr1 = ratio * mb["advantages"]

@@ -76,6 +76,35 @@ class EncodingStrategy(Protocol):
         """Return an ``IterableDataset`` that streams from paipu files."""
         ...
 
+    # -- Training integration --------------------------------------------------
+
+    def create_dataset(self, mode: str, config: Any = None, **kwargs) -> Any:
+        """Create a training dataset.
+
+        Args:
+            mode: one of ``"cached"``, ``"streaming"``, or ``"selfplay"``.
+            config: a ``BCConfig`` or similar dataclass with ``cache_dir``,
+                ``paipu_dir``, ``suit_permute``, etc.
+        """
+        ...
+
+    def obs_to_tensor(self, obs: Dict[str, Any], device) -> tuple:
+        """Convert a single observation dict to model-ready tensors.
+
+        Returns ``(features, attention_mask, action_mask)``.
+        """
+        ...
+
+    def forward_from_batch(self, model, batch: Dict[str, Any]) -> tuple:
+        """Dispatch *batch* through *model* → ``(logits, value)``."""
+        ...
+
+    def evaluate_actions_from_batch(
+        self, model, batch: Dict[str, Any], actions
+    ) -> tuple:
+        """Dispatch *batch* through ``model.evaluate_actions`` → ``(log_prob, entropy, value)``."""
+        ...
+
 
 # ---------------------------------------------------------------------------
 # Registry
