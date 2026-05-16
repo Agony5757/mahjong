@@ -47,7 +47,7 @@ import time
 import urllib.request
 import zipfile
 from pathlib import Path
-from typing import Iterable, List, Set
+from typing import Iterable, List, Optional, Set
 
 
 LIST_URL = "https://tenhou.net/sc/raw/list.cgi"
@@ -227,7 +227,7 @@ def cmd_daily(args):
 
 def download_xml(game_id: str, out_dir: Path, delay: float, force: bool = False) -> bool:
     out_dir.mkdir(parents=True, exist_ok=True)
-    target = out_dir / f"{game_id}.xml"
+    target = out_dir / f"{game_id}.txt"
     if target.exists() and not force and target.stat().st_size > 0:
         return False
     url = LOG_URL.format(game_id=game_id)
@@ -246,17 +246,35 @@ def download_xml(game_id: str, out_dir: Path, delay: float, force: bool = False)
 
 def cmd_xml(args):
     ids = [ln.strip() for ln in Path(args.ids).read_text().splitlines() if ln.strip()]
+
+    # Filter out unsupported room codes (e.g. 00e1=fast table, 00b9=3-player).
+    if args.room_codes:
+        allowed = set(args.room_codes.split(","))
+        filtered = []
+        for gid in ids:
+            m = re.match(r"\d{10}gm-([0-9a-f]{4})-", gid)
+            if m and m.group(1) not in allowed:
+                continue
+            filtered.append(gid)
+        n_filtered = len(ids) - len(filtered)
+        ids = filtered
+        if n_filtered:
+            print(f"Filtered {n_filtered} IDs with unsupported room codes")
+
     if args.max > 0:
         ids = ids[: args.max]
-    xml_dir = Path(args.out) / "xml"
+    xml_dir = Path(args.out)
     print(f"Stage XML: downloading {len(ids)} logs (delay={args.delay}s)")
     n_done = 0
+    n_skip = 0
     for i, gid in enumerate(ids, 1):
         if download_xml(gid, xml_dir, args.delay, force=args.force):
             n_done += 1
+        else:
+            n_skip += 1
         if i % 10 == 0 or i == len(ids):
-            print(f"  [{i}/{len(ids)}] downloaded={n_done}")
-    print(f"Done. {n_done} fresh logs in {xml_dir}.")
+            print(f"  [{i}/{len(ids)}] downloaded={n_done} skipped={n_skip}")
+    print(f"Done. {n_done} fresh, {n_skip} skipped in {xml_dir}.")
 
 
 # ---------------------------------------------------------------------------
@@ -268,10 +286,23 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
 
+    # Resolve config defaults
+    _here = os.path.dirname(os.path.abspath(__file__))
+    _root = os.path.dirname(_here)
+    if _root not in sys.path:
+        sys.path.insert(0, _root)
+    from pymahjong.config import get_config
+    cfg = get_config()
+    _xml_path = cfg.paipu_xml_path
+    _default_xml_out = _xml_path or "paipuxmls/houou"
+    # year/daily write game_ids.txt to parent of xml dir
+    _default_workspace = str(Path(_xml_path).parent) if _xml_path else "paipuxmls/houou"
+    _default_ids = (cfg.paipu_game_ids or [None])[0]
+
     # year
     py = sub.add_parser("year", help="bulk-download year archive(s)")
     py.add_argument("years", type=int, nargs="+", help="year(s) to download (e.g. 2024 2025)")
-    py.add_argument("--out", default="paipuxmls/houou")
+    py.add_argument("--out", default=_default_workspace)
     py.add_argument("--room-codes", default="00a9,00e1",
                     help="comma-separated 4-char room codes; empty=all (default: 4p houou hanchan + tonpu)")
     py.add_argument("--keep-summary", action="store_true",
@@ -284,7 +315,7 @@ def main(argv=None):
     pd = sub.add_parser("daily", help="download per-day summary files via the live index")
     pd.add_argument("--since", type=lambda s: dt.date.fromisoformat(s), default=today - dt.timedelta(days=7))
     pd.add_argument("--until", type=lambda s: dt.date.fromisoformat(s), default=today)
-    pd.add_argument("--out", default="paipuxmls/houou")
+    pd.add_argument("--out", default=_default_workspace)
     pd.add_argument("--summary-prefixes", default="scc")
     pd.add_argument("--room-codes", default="00a9,00e1")
     pd.add_argument("--force", action="store_true")
@@ -292,14 +323,18 @@ def main(argv=None):
 
     # xml
     px = sub.add_parser("xml", help="download XML game logs given an ID list")
-    px.add_argument("--ids", required=True, help="path to game_ids.txt")
-    px.add_argument("--out", default="paipuxmls/houou")
+    px.add_argument("--ids", default=_default_ids, help="path to game_ids.txt")
+    px.add_argument("--out", default=_default_xml_out)
+    px.add_argument("--room-codes", default="00a9",
+                    help="comma-separated room codes to keep; empty=accept all (default: 00a9 only)")
     px.add_argument("--max", type=int, default=0)
     px.add_argument("--delay", type=float, default=6.0)
     px.add_argument("--force", action="store_true")
     px.set_defaults(func=cmd_xml)
 
     args = p.parse_args(argv)
+    if args.cmd == "xml" and args.ids is None:
+        p.error("--ids is required (no game_ids path in config)")
     args.func(args)
 
 

@@ -3,6 +3,7 @@
 
 #include "Encoding/TrainingDataEncodingV1.h"
 #include "Encoding/TrainingDataEncodingV2.h"
+#include "Encoding/TrainingDataEncodingV4.h"
 #include "pybind11/numpy.h"
 #include "Table.h"
 
@@ -17,8 +18,14 @@ namespace TrainingDataEncoding {
 		void py_encode_action(const mahjong::Table& table, int pid, pybind11::array_t<dtype> arr);
 
 		void py_encode_action_riichi_step2(pybind11::array_t<dtype> arr);
-	
+
 		std::vector<BaseTile> py_get_riichi_tiles(const Table& table);
+	}
+
+	namespace v4
+	{
+		pybind11::array_t<bool> py_events(const v4::HandTrackEncoder& enc);
+		pybind11::list py_decide_points(const v4::HandTrackEncoder& enc);
 	}
 }
 

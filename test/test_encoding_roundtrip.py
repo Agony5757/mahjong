@@ -105,10 +105,16 @@ def test_selfplay_meldheavy_roundtrip(seed):
 # ---------------------------------------------------------------------------
 
 def _find_paipu():
+    from pymahjong.config import get_config
+    cfg = get_config()
     candidates = []
-    for root in ("paipuxmls", "test_paipu", os.path.expanduser("~/paipuxmls")):
+    roots = ["paipuxmls", "test_paipu", os.path.expanduser("~/paipuxmls")]
+    if cfg.paipu_xml_path:
+        roots.insert(0, cfg.paipu_xml_path)
+    for root in roots:
         if os.path.isdir(root):
             candidates.extend(glob(os.path.join(root, "**/*.xml"), recursive=True))
+            candidates.extend(glob(os.path.join(root, "**/*.txt"), recursive=True))
     return candidates
 
 

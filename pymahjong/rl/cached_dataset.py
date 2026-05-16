@@ -33,9 +33,9 @@ class CachedTokenDataset(Dataset):
         cache_dir: directory written by :class:`pymahjong.rl.cache.ShardWriter`
             (must contain ``index.json``).
         max_seq_len: must be <= the cache's recorded max length.
-        suit_permute: if True, sample a random permutation of the
-            three numbered suits (man/pin/sou) per example to augment
-            data 6x. Honors red-five tile ids and PAD.
+        suit_permute: if True, randomly swap man↔pin per example to
+            augment data 2x. Sou is kept fixed due to 绿一色 (All Green).
+            Honors and PAD are unchanged.
 
     Note:
         Seat rotation is **intentionally not exposed** — round wind /
@@ -121,7 +121,7 @@ class CachedTokenDataset(Dataset):
 
     @staticmethod
     def _build_suit_perms() -> List[np.ndarray]:
-        """Return all 6 permutations of {man, pin, sou} as tile-id LUTs.
+        """Return tile-id LUTs that swap man↔pin only (keep sou fixed).
 
         Tile id layout (post-V2):
           0..8   = man (1m..9m)
@@ -132,22 +132,21 @@ class CachedTokenDataset(Dataset):
         Aka (red-five) is encoded as a *bit* in extra, so the LUT only
         needs to swap the suit ranges -- the aka bit moves with the tile
         automatically.
+
+        Sou (bamboo) cannot be swapped with man/pin because of 绿一色
+        (Ryuuiisou, "All Green" yaku) which only uses sou tiles
+        (2s, 3s, 4s, 6s, 8s + hatsu).  Only man↔pin are fully symmetric.
         """
         base = np.arange(TILE_VOCAB_SIZE, dtype=np.uint8)
-        suit_blocks = [(0, 9), (9, 18), (18, 27)]
-        perms = []
-        from itertools import permutations
-        for order in permutations(range(3)):
-            lut = base.copy()
-            for src, dst in enumerate(order):
-                s_lo, s_hi = suit_blocks[src]
-                d_lo, _ = suit_blocks[dst]
-                lut[s_lo:s_hi] = np.arange(d_lo, d_lo + 9, dtype=np.uint8)
-            perms.append(lut)
+        perms = [base.copy()]  # identity
+        swapped = base.copy()
+        swapped[0:9] = np.arange(9, 18, dtype=np.uint8)   # man → pin
+        swapped[9:18] = np.arange(0, 9, dtype=np.uint8)    # pin → man
+        perms.append(swapped)
         return perms
 
     def _apply_suit_permutation(self, tokens: np.ndarray) -> None:
-        lut = self._suit_perms[np.random.randint(6)]
+        lut = self._suit_perms[np.random.randint(2)]
         tile_col = tokens[:, 1]
         np.copyto(tile_col, lut[tile_col])
 

@@ -179,6 +179,25 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.value("Kyushukyuhai", BaseAction::Kyushukyuhai)
 		;
 
+	py::enum_<LogAction>(m, "LogAction", "Game log action types.")
+		.value("AnKan", LogAction::AnKan)
+		.value("Pon", LogAction::Pon)
+		.value("Chi", LogAction::Chi)
+		.value("Kan", LogAction::Kan)
+		.value("KaKan", LogAction::KaKan)
+		.value("DiscardFromHand", LogAction::DiscardFromHand)
+		.value("DiscardFromTsumo", LogAction::DiscardFromTsumo)
+		.value("RiichiDiscardFromHand", LogAction::RiichiDiscardFromHand)
+		.value("RiichiDiscardFromTsumo", LogAction::RiichiDiscardFromTsumo)
+		.value("RiichiSuccess", LogAction::RiichiSuccess)
+		.value("DrawNormal", LogAction::DrawNormal)
+		.value("DrawRinshan", LogAction::DrawRinshan)
+		.value("DoraReveal", LogAction::DoraReveal)
+		.value("Kyushukyuhai", LogAction::Kyushukyuhai)
+		.value("Ron", LogAction::Ron)
+		.value("Tsumo", LogAction::Tsumo)
+		;
+
 	py::class_<SelfAction>(m, "SelfAction", "An available self-action (draw phase) for a player.")
 		.def_readonly("action", &SelfAction::action, "The BaseAction type.")
 		.def_readonly("correspond_tiles", &SelfAction::correspond_tiles, "Tiles involved in this action.")
@@ -326,6 +345,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("oya", &Table::oya, "Current dealer (oya) player ID.")
 		.def_readonly("honba", &Table::honba, "Number of repeat counters (honba).")
 		.def_readonly("riichibo", &Table::kyoutaku, "Number of riichi deposit sticks on the table.")
+		.def_readonly("gamelog", &Table::gamelog, py::return_value_policy::reference_internal, "Game event log.")
 
 		// 辅助函数们
 		.def("get_dora", &Table::get_dora, py::return_value_policy::reference_internal, "Get the list of active dora tiles.")
@@ -620,6 +640,57 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("encode_ippatsu_states", &encv2::PassiveTableEncoder::encode_ippatsu_states,
 			"Encode the ippatsu possibility states.", py::arg("ippatsu_states"))
 		;
+
+	// ---- V4 Encoding ----
+	namespace encv4 = TrainingDataEncoding::v4;
+
+	py::class_<encv4::HandTrackEncoder>(m, "encv4_TrackEncoder")
+		.def("events", &encv4::py_events, "Get events as (N, EVENT_DIM) bool array.")
+		.def("decide_points", &encv4::py_decide_points,
+		     "Get decide points as list of dicts.")
+		.def("viewer", &encv4::HandTrackEncoder::viewer)
+		.def("clear", &encv4::HandTrackEncoder::clear)
+		;
+
+	py::class_<encv4::HandEncoder>(m, "encv4_HandEncoder")
+		.def(py::init<Table*>(), py::arg("table"))
+		.def("encode_init", &encv4::HandEncoder::encode_init)
+		.def("on_draw", &encv4::HandEncoder::on_draw,
+		     py::arg("player"), py::arg("tile"), py::arg("aka"))
+		.def("on_discard", &encv4::HandEncoder::on_discard,
+		     py::arg("player"), py::arg("tile"), py::arg("aka"), py::arg("flags"))
+		.def("on_chi", &encv4::HandEncoder::on_chi,
+		     py::arg("player"), py::arg("lowest"), py::arg("chi_type"),
+		     py::arg("from_who"), py::arg("aka_bits"))
+		.def("on_pon", &encv4::HandEncoder::on_pon,
+		     py::arg("player"), py::arg("tile"), py::arg("from_who"), py::arg("aka"))
+		.def("on_daiminkan", &encv4::HandEncoder::on_daiminkan,
+		     py::arg("player"), py::arg("tile"), py::arg("from_who"), py::arg("aka"))
+		.def("on_ankan", &encv4::HandEncoder::on_ankan,
+		     py::arg("player"), py::arg("tile"))
+		.def("on_kakan", &encv4::HandEncoder::on_kakan,
+		     py::arg("player"), py::arg("tile"), py::arg("aka"))
+		.def("on_riichi", &encv4::HandEncoder::on_riichi,
+		     py::arg("player"), py::arg("tile"), py::arg("flags"))
+		.def("on_riichi_success", &encv4::HandEncoder::on_riichi_success,
+		     py::arg("player"))
+		.def("on_dora_reveal", &encv4::HandEncoder::on_dora_reveal,
+		     py::arg("tile"), py::arg("aka"))
+		.def("on_ron", &encv4::HandEncoder::on_ron,
+		     py::arg("winner"), py::arg("from_who"))
+		.def("on_tsumo", &encv4::HandEncoder::on_tsumo,
+		     py::arg("winner"))
+		.def("on_ryuukyoku", &encv4::HandEncoder::on_ryuukyoku)
+		.def("on_decide", &encv4::HandEncoder::on_decide,
+		     py::arg("player"), py::arg("action_mask"), py::arg("action_label"))
+		.def("track", &encv4::HandEncoder::track,
+		     py::return_value_policy::reference, py::arg("player"))
+		.def("clear", &encv4::HandEncoder::clear)
+		;
+
+	m.attr("encv4_EVENT_DIM") = encv4::EVENT_DIM;
+	m.attr("encv4_N_ACTION_DIM") = encv4::N_ACTION_DIM;
+	m.attr("encv4_MAX_SEQ_LEN") = encv4::MAX_SEQ_LEN;
 }
 
 #ifdef __GNUC__

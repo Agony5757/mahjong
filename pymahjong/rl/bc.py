@@ -45,14 +45,25 @@ class BCConfig:
     # Cache-loader specific knobs (ignored when an explicit ``dataset`` is passed).
     cache_dir: Optional[str] = None
     num_workers: int = 0
-    suit_permute: bool = False  # 6x augment across man/pin/sou; PAD-safe
+    suit_permute: bool = False  # 2x augment (man↔pin swap; sou fixed for 绿一色)
     pin_memory: bool = True
+    # Streaming paipu dataset knobs.
+    paipu_dir: Optional[str] = None  # directory of paipu XML files (uses config if None)
+    paipu_prefetch: int = 4  # number of paipu files to prefetch
 
 
 def _device(cfg: BCConfig) -> torch.device:
     if cfg.device:
         return torch.device(cfg.device)
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def _paipu_xml_from_config() -> Optional[str]:
+    try:
+        from pymahjong.config import get_config
+        return get_config().paipu_xml_path
+    except Exception:
+        return None
 
 
 def train_bc(
@@ -88,14 +99,33 @@ def train_bc(
                 cfg.cache_dir,
                 suit_permute=cfg.suit_permute,
             )
+        elif cfg.paipu_dir or _paipu_xml_from_config():
+            from .streaming_dataset import StreamingPaipuDataset
+
+            paipu_dir = cfg.paipu_dir or _paipu_xml_from_config()
+            import glob as _glob
+
+            paths = sorted(
+                p
+                for p in _glob.glob(os.path.join(paipu_dir, "**", "*"), recursive=True)
+                if os.path.isfile(p) and (p.endswith(".xml") or p.endswith(".txt"))
+            )
+            dataset = StreamingPaipuDataset(
+                paths,
+                prefetch_n=cfg.paipu_prefetch,
+                suit_permute=cfg.suit_permute,
+            )
         else:
             dataset = SelfPlayImitationDataset(oracle=False)
 
     is_map_style = hasattr(dataset, "__len__")
+    _collate = getattr(dataset, "collate_fn", None)
+    if _collate is None:
+        _collate = cached_collate if is_map_style else collate_fn
     loader = DataLoader(
         dataset,
         batch_size=cfg.batch_size,
-        collate_fn=cached_collate if is_map_style else collate_fn,
+        collate_fn=_collate,
         num_workers=cfg.num_workers if is_map_style else 0,
         shuffle=is_map_style,
         pin_memory=cfg.pin_memory and torch.cuda.is_available(),

@@ -752,13 +752,13 @@ class PaipuReplay:
 
         # ----------------- start ---------------------
         if not path:
-            basepath = os.getcwd()
-            path = basepath + "/paipuxmls"
+            from pymahjong.config import get_config
+            path = get_config().paipu_xml_path or os.path.join(os.getcwd(), "paipuxmls")
 
         if mode == 'mark':
-            from datetime import datetime 
+            from datetime import datetime
             timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
-            logfilename = basepath + '/error_logs/error_'+timestr+'.log'
+            logfilename = os.path.join(os.getcwd(), 'error_logs', 'error_'+timestr+'.log')
             fp = open(logfilename, 'w+')
             fp.close()
         files = os.listdir(path)  # 得到文件夹下的所有文件名称
@@ -805,8 +805,8 @@ class PaipuReplay:
 
     def paipu_replay_1(self, paipu_name, path = None):
         if not path:
-            basepath = os.getcwd()
-            path = basepath + "/paipuxmls"
+            from pymahjong.config import get_config
+            path = get_config().paipu_xml_path or os.path.join(os.getcwd(), "paipuxmls")
         self._paipu_replay(path, paipu_name)
 
 def paipu_replay(path = None, write_log = False, mode = 'debug'):

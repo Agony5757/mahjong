@@ -98,8 +98,11 @@ def _wrap_replayer_for_check(replayer, verifier: _Verifier):
 
 
 def main() -> int:
+    from pymahjong.config import get_config
+    _default_path = get_config().paipu_xml_path or "paipuxmls"
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("path", nargs="?", default="paipuxmls")
+    parser.add_argument("path", nargs="?", default=_default_path)
     parser.add_argument("--max", type=int, default=50)
     parser.add_argument("--fail-fast", action="store_true")
     args = parser.parse_args()

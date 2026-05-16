@@ -156,19 +156,24 @@ def _yield_paipu(
             table = self._inner.table
             phase = int(table.get_phase())
             if phase < 16:
-                seat = phase % 4
-                try:
-                    tok = tokenizer.encode(table, current_player=seat)
-                    unified = SelfPlayImitationDataset._engine_idx_to_unified(table, idx)
-                    pending.append({
-                        "tokens": tok.tokens.copy(),
-                        "scalars": tok.scalars.copy(),
-                        "attention_mask": tok.attention_mask.copy(),
-                        "action_mask": tok.action_mask.copy(),
-                        "action": int(unified),
-                    })
-                except Exception:  # noqa: BLE001
-                    pass
+                actions = (
+                    table.get_self_actions() if phase < 4
+                    else table.get_response_actions()
+                )
+                if len(actions) > 1:
+                    seat = phase % 4
+                    try:
+                        tok = tokenizer.encode(table, current_player=seat)
+                        unified = SelfPlayImitationDataset._engine_idx_to_unified(table, idx)
+                        pending.append({
+                            "tokens": tok.tokens.copy(),
+                            "scalars": tok.scalars.copy(),
+                            "attention_mask": tok.attention_mask.copy(),
+                            "action_mask": tok.action_mask.copy(),
+                            "action": int(unified),
+                        })
+                    except Exception:  # noqa: BLE001
+                        pass
             return self._inner.make_selection(idx)
 
     orig_ctor = pm.PaipuReplayer
@@ -379,6 +384,9 @@ def cmd_inspect(args: argparse.Namespace) -> int:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    from pymahjong.config import get_config
+    _default_paipu_dir = get_config().paipu_xml_path
+
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -396,7 +404,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     p_paipu = sub.add_parser("paipu", help="encode Tenhou paipu XML logs")
     p_paipu.add_argument("--out", required=True)
-    p_paipu.add_argument("--paipu-dir", default=None,
+    p_paipu.add_argument("--paipu-dir", default=_default_paipu_dir,
                          help="directory containing *.xml / *.txt paipu logs")
     p_paipu.add_argument("--paipu-list", default=None,
                          help="text file with one paipu path per line")

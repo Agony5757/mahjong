@@ -719,19 +719,24 @@ def _encode_one_paipu(
             t = self._inner.table
             phase = int(t.get_phase())
             if phase < 16:
-                seat = phase % 4
-                try:
-                    tok = tokenizer.encode(t, current_player=seat)
-                    unified = SelfPlayImitationDataset._engine_idx_to_unified(t, idx)
-                    samples.append({
-                        "tokens": tok.tokens.copy(),
-                        "scalars": tok.scalars.copy(),
-                        "attention_mask": tok.attention_mask.copy(),
-                        "action_mask": tok.action_mask.copy(),
-                        "action": int(unified),
-                    })
-                except Exception:  # noqa: BLE001
-                    pass
+                actions = (
+                    t.get_self_actions() if phase < 4
+                    else t.get_response_actions()
+                )
+                if len(actions) > 1:
+                    seat = phase % 4
+                    try:
+                        tok = tokenizer.encode(t, current_player=seat)
+                        unified = SelfPlayImitationDataset._engine_idx_to_unified(t, idx)
+                        samples.append({
+                            "tokens": tok.tokens.copy(),
+                            "scalars": tok.scalars.copy(),
+                            "attention_mask": tok.attention_mask.copy(),
+                            "action_mask": tok.action_mask.copy(),
+                            "action": int(unified),
+                        })
+                    except Exception:  # noqa: BLE001
+                        pass
             return self._inner.make_selection(idx)
 
     orig_ctor = pm.PaipuReplayer
@@ -987,6 +992,10 @@ def cmd_status(args) -> int:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    from pymahjong.config import get_config
+    cfg = get_config()
+    _default_game_ids = (cfg.paipu_game_ids or [None])[0]
+
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -994,7 +1003,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     pr.add_argument("--work", required=True, help="working directory")
     pr.add_argument("--year", type=int, default=None,
                     help="source: download/parse the scraw<YEAR>.zip and use its game IDs")
-    pr.add_argument("--game-ids", default=None,
+    pr.add_argument("--game-ids", default=_default_game_ids,
                     help="source: a text file with one game ID per line (overrides --year)")
     pr.add_argument("--delay", type=float, default=5.0,
                     help="seconds between Tenhou XML downloads (default 5)")

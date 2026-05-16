@@ -452,8 +452,13 @@ async def list_sessions():
 
 # ─── Replay API ──────────────────────────────────────────────────────────────
 def _paipu_dirs() -> list[Path]:
+    from pymahjong.config import get_config
     repo_root = Path(__file__).parent.parent
-    return [repo_root / "paipuxmls", repo_root / "pymahjong" / "paipuxmls"]
+    dirs = [repo_root / "paipuxmls", repo_root / "pymahjong" / "paipuxmls"]
+    cfg_path = get_config().paipu_xml_path
+    if cfg_path:
+        dirs.insert(0, Path(cfg_path))
+    return dirs
 
 
 @app.get("/api/replay/builtin")
