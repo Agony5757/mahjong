@@ -641,6 +641,28 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 			"Encode the ippatsu possibility states.", py::arg("ippatsu_states"))
 		;
 
+	// ---- V3 Encoding (snapshot tokenizer) ----
+	namespace encv3 = TrainingDataEncoding::v3;
+
+	py::class_<encv3::TableTokenizer>(m, "encv3_TableTokenizer",
+		"V3 snapshot tokenizer: produces a fixed-length token sequence from a Table state.")
+		.def(py::init<Table*, int, bool>(),
+		     "Create a TableTokenizer.",
+		     py::arg("table"),
+		     py::arg("max_seq_len") = encv3::MAX_SEQ_LEN,
+		     py::arg("include_oracle") = false)
+		.def("encode", &encv3::py_encode,
+		     "Encode the current table state into a dict of numpy arrays.",
+		     py::arg("current_player"),
+		     py::arg("riichi_stage2") = false)
+		;
+
+	m.attr("encv3_MAX_SEQ_LEN") = encv3::MAX_SEQ_LEN;
+	m.attr("encv3_TOKEN_FEATURES") = encv3::TOKEN_FEATURES;
+	m.attr("encv3_SCALAR_DIM") = encv3::SCALAR_DIM;
+	m.attr("encv3_ACTION_DIM") = encv3::ACTION_DIM;
+	m.attr("encv3_NUM_SEGMENTS") = encv3::NUM_SEGMENTS;
+
 	// ---- V4 Encoding ----
 	namespace encv4 = TrainingDataEncoding::v4;
 
