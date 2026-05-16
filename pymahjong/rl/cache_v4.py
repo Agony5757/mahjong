@@ -5,19 +5,20 @@ A cache directory looks like::
     cache_dir/
         index.json              # manifest
         shard_00000/
-            features.npy        # (N_total_events, EVENT_DIM) bool — concatenated
-            lengths.npy         # (N_samples,) int32 — event count per sample
-            action_mask.npy     # (N_samples, 54)     bool
-            labels.npy          # (N_samples,)         int16
-            track_ids.npy       # (N_samples,)         int64
+            features.packbits.npy  # (N_total_events, ceil(EVENT_DIM/8)) uint8
+            lengths.npy            # (N_samples,) int32
+            action_mask.packbits.npy  # (N_samples, ceil(54/8)) uint8
+            labels.npy             # (N_samples,)  int16
+            track_ids.npy          # (N_samples,)  int64
             meta.json
         shard_00001/
             ...
 
 Features for all samples in a shard are concatenated into a single flat
 array along axis 0, with ``lengths.npy`` recording the per-sample event
-count.  This avoids the massive memory waste of padding variable-length
-sequences to a fixed max length.
+count.  Bool arrays (features, action_mask) are packed with ``np.packbits``
+to save 8x disk space; ``open_shard_arrays_v4`` transparently unpacks them.
+Original (unpacked) shapes are stored in ``meta.json["packed"]``.
 
 Loading uses ``np.load(..., mmap_mode='r')`` for zero-copy access.
 Individual samples are sliced out via cumulative-sum indexing over
@@ -36,6 +37,23 @@ import numpy as np
 from .tokenization_v4 import EVENT_DIM
 
 CACHE_SCHEMA_VERSION = 1
+
+
+# ---------------------------------------------------------------------------
+# Packbits helpers
+# ---------------------------------------------------------------------------
+
+
+def pack_bool(arr: np.ndarray) -> np.ndarray:
+    """Pack a bool array into uint8 via ``np.packbits`` (last axis)."""
+    return np.packbits(arr, axis=-1)
+
+
+def unpack_bool(packed: np.ndarray, orig_shape: tuple) -> np.ndarray:
+    """Reverse ``np.packbits`` and truncate to *orig_shape*."""
+    flat = np.unpackbits(packed, axis=-1)
+    # orig_shape[1] may not be a multiple of 8; unpackbits pads with zeros
+    return flat[..., : orig_shape[1]].reshape(orig_shape).astype(np.bool_)
 
 
 def schema_fingerprint() -> Dict:
@@ -161,9 +179,11 @@ class V4ShardWriter:
         labels = np.asarray(self._labels, dtype=np.int16)
         track_ids = np.asarray(self._track_ids, dtype=np.int64)
 
-        np.save(os.path.join(self.shard_dir, "features.npy"), features)
+        np.save(os.path.join(self.shard_dir, "features.packbits.npy"),
+                pack_bool(features))
         np.save(os.path.join(self.shard_dir, "lengths.npy"), lengths)
-        np.save(os.path.join(self.shard_dir, "action_mask.npy"), action_masks)
+        np.save(os.path.join(self.shard_dir, "action_mask.packbits.npy"),
+                pack_bool(action_masks))
         np.save(os.path.join(self.shard_dir, "labels.npy"), labels)
         np.save(os.path.join(self.shard_dir, "track_ids.npy"), track_ids)
 
@@ -171,6 +191,10 @@ class V4ShardWriter:
             "n_rows": int(self.n_rows),
             "schema_version": CACHE_SCHEMA_VERSION,
             "total_events": int(features.shape[0]),
+            "packed": {
+                "features.orig_shape": list(features.shape),
+                "action_mask.orig_shape": list(action_masks.shape),
+            },
         }
         with open(os.path.join(self.shard_dir, "meta.json"), "w") as f:
             json.dump(meta, f)
@@ -225,13 +249,30 @@ def rebuild_manifest(cache_dir: str) -> CacheManifest:
 
 
 def open_shard_arrays_v4(cache_dir: str, shard_path: str) -> Dict[str, np.ndarray]:
+    """Load all shard arrays, transparently unpacking any packbits files."""
     sub = os.path.join(cache_dir, shard_path)
+
+    with open(os.path.join(sub, "meta.json")) as f:
+        meta = json.load(f)
+    packed = meta.get("packed", {})
+
+    def _load_bool(raw_name: str, packed_name: str, orig_key: str) -> np.ndarray:
+        pk_path = os.path.join(sub, packed_name)
+        if os.path.exists(pk_path):
+            return unpack_bool(
+                np.load(pk_path, mmap_mode="r"),
+                tuple(packed[orig_key]),
+            )
+        return np.load(os.path.join(sub, raw_name), mmap_mode="r")
+
     return {
-        "features": np.load(os.path.join(sub, "features.npy"), mmap_mode="r"),
-        "lengths": np.load(os.path.join(sub, "lengths.npy"), mmap_mode="r"),
-        "action_mask": np.load(os.path.join(sub, "action_mask.npy"), mmap_mode="r"),
-        "labels": np.load(os.path.join(sub, "labels.npy"), mmap_mode="r"),
-        "track_ids": np.load(os.path.join(sub, "track_ids.npy"), mmap_mode="r"),
+        "features":    _load_bool("features.npy",    "features.packbits.npy",
+                                  "features.orig_shape"),
+        "action_mask": _load_bool("action_mask.npy", "action_mask.packbits.npy",
+                                  "action_mask.orig_shape"),
+        "lengths":     np.load(os.path.join(sub, "lengths.npy"),     mmap_mode="r"),
+        "labels":      np.load(os.path.join(sub, "labels.npy"),      mmap_mode="r"),
+        "track_ids":   np.load(os.path.join(sub, "track_ids.npy"),   mmap_mode="r"),
     }
 
 
@@ -240,6 +281,8 @@ __all__ = [
     "CacheManifest",
     "ShardEntry",
     "V4ShardWriter",
+    "pack_bool",
+    "unpack_bool",
     "schema_fingerprint",
     "assert_schema_compatible",
     "load_manifest",
