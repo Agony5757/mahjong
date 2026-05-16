@@ -1,36 +1,55 @@
-"""Rollout buffer with action masks (PPO + GAE)."""
+"""Rollout buffer with action masks (PPO + GAE).
+
+Encoding-agnostic: observations are stored as raw dicts and collated
+into tensors at minibatch iteration time via a caller-supplied
+``collate_obs`` function.  This lets the same buffer work with V3
+(token-based) and V4 (event-stream) observation formats.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Dict
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List
 
 import numpy as np
 import torch
 
-from .tokenization import ACTION_DIM, MAX_SEQ_LEN, TOKEN_FEATURES
+from .action_space import ACTION_DIM
 
 
 @dataclass
 class RolloutBuffer:
     """Fixed-size rollout buffer for masked PPO.
 
-    All arrays are pre-allocated. Use :meth:`add` to append a transition
-    and :meth:`compute_gae` once the rollout is collected.
+    Observations are stored as raw dicts (the format returned by the
+    environment).  Scalar arrays (actions, rewards, etc.) are
+    pre-allocated for fast random access.
+
+    Args:
+        capacity: maximum number of transitions.
+        gamma: discount factor for GAE.
+        lam: lambda for GAE.
+        device: torch device string for minibatch tensors.
     """
 
     capacity: int
-    max_seq_len: int = MAX_SEQ_LEN
     gamma: float = 0.99
     lam: float = 0.95
     device: str = "cpu"
 
+    _obs: List[Dict] = field(default_factory=list, init=False, repr=False)
+    actions: np.ndarray = field(init=False, repr=False)
+    log_probs: np.ndarray = field(init=False, repr=False)
+    values: np.ndarray = field(init=False, repr=False)
+    rewards: np.ndarray = field(init=False, repr=False)
+    dones: np.ndarray = field(init=False, repr=False)
+    advantages: np.ndarray = field(init=False, repr=False)
+    returns: np.ndarray = field(init=False, repr=False)
+    size: int = field(default=0, init=False, repr=False)
+
     def __post_init__(self):
         c = self.capacity
-        L = self.max_seq_len
-        self.tokens = np.zeros((c, L, TOKEN_FEATURES), dtype=np.int32)
-        self.attn_mask = np.zeros((c, L), dtype=bool)
-        self.action_mask = np.zeros((c, ACTION_DIM), dtype=bool)
+        self._obs = []
         self.actions = np.zeros((c,), dtype=np.int64)
         self.log_probs = np.zeros((c,), dtype=np.float32)
         self.values = np.zeros((c,), dtype=np.float32)
@@ -38,7 +57,6 @@ class RolloutBuffer:
         self.dones = np.zeros((c,), dtype=bool)
         self.advantages = np.zeros((c,), dtype=np.float32)
         self.returns = np.zeros((c,), dtype=np.float32)
-        self.size = 0
 
     def add(
         self,
@@ -50,9 +68,7 @@ class RolloutBuffer:
         done: bool,
     ):
         i = self.size
-        self.tokens[i] = obs["tokens"]
-        self.attn_mask[i] = obs["attention_mask"]
-        self.action_mask[i] = obs["action_mask"]
+        self._obs.append(obs)
         self.actions[i] = action
         self.log_probs[i] = log_prob
         self.values[i] = value
@@ -61,6 +77,7 @@ class RolloutBuffer:
         self.size += 1
 
     def reset(self):
+        self._obs.clear()
         self.size = 0
 
     def compute_gae(self, last_value: float = 0.0):
@@ -74,21 +91,39 @@ class RolloutBuffer:
             self.advantages[t] = adv
         self.returns[: self.size] = self.advantages[: self.size] + self.values[: self.size]
 
-    def iterate_minibatches(self, batch_size: int):
+    def iterate_minibatches(self, batch_size: int, collate_obs: Callable):
+        """Yield minibatches as torch tensor dicts.
+
+        Args:
+            batch_size: number of transitions per minibatch.
+            collate_obs: ``fn(list[obs_dict]) -> dict[str, Tensor]``
+                that converts a list of raw observation dicts into a
+                batched tensor dict (e.g. :func:`ppo_obs_collate` for V3
+                or ``cached_event_collate`` for V4).
+        """
         idxs = np.random.permutation(self.size)
         for start in range(0, self.size, batch_size):
             mb = idxs[start : start + batch_size]
-            yield self._to_torch(mb)
+            obs_batch = [self._obs[i] for i in mb]
+            obs_tensors = collate_obs(obs_batch)
+            d = self.device
+            obs_tensors = {k: v.to(d) for k, v in obs_tensors.items()}
+            obs_tensors["actions"] = torch.as_tensor(self.actions[mb], device=d, dtype=torch.long)
+            obs_tensors["old_log_probs"] = torch.as_tensor(self.log_probs[mb], device=d, dtype=torch.float32)
+            obs_tensors["old_values"] = torch.as_tensor(self.values[mb], device=d, dtype=torch.float32)
+            obs_tensors["advantages"] = torch.as_tensor(self.advantages[mb], device=d, dtype=torch.float32)
+            obs_tensors["returns"] = torch.as_tensor(self.returns[mb], device=d, dtype=torch.float32)
+            yield obs_tensors
 
-    def _to_torch(self, mb):
-        d = self.device
-        return {
-            "tokens": torch.as_tensor(self.tokens[mb], device=d, dtype=torch.long),
-            "attention_mask": torch.as_tensor(self.attn_mask[mb], device=d, dtype=torch.bool),
-            "action_mask": torch.as_tensor(self.action_mask[mb], device=d, dtype=torch.bool),
-            "actions": torch.as_tensor(self.actions[mb], device=d, dtype=torch.long),
-            "old_log_probs": torch.as_tensor(self.log_probs[mb], device=d, dtype=torch.float32),
-            "old_values": torch.as_tensor(self.values[mb], device=d, dtype=torch.float32),
-            "advantages": torch.as_tensor(self.advantages[mb], device=d, dtype=torch.float32),
-            "returns": torch.as_tensor(self.returns[mb], device=d, dtype=torch.float32),
-        }
+
+def ppo_obs_collate(batch):
+    """Collate V3 observation dicts (numpy arrays) into batched tensors."""
+    return {
+        "tokens": torch.as_tensor(np.stack([b["tokens"] for b in batch]), dtype=torch.long),
+        "attention_mask": torch.as_tensor(
+            np.stack([b["attention_mask"] for b in batch]), dtype=torch.bool
+        ),
+        "action_mask": torch.as_tensor(
+            np.stack([b["action_mask"] for b in batch]), dtype=torch.bool
+        ),
+    }

@@ -23,8 +23,9 @@ import numpy as np
 import torch
 from torch.utils.data import IterableDataset
 
-from .env_v2 import _resolve_action  # noqa: F401  (kept for reuse)
-from .tokenization import ACTION_DIM, MahjongTokenizer
+from .action_space import ActionEncoder, ACTION_DIM
+from .env_v2 import _resolve_action  # noqa: F401  (kept for backward compat)
+from .tokenization import MahjongTokenizer
 
 try:
     import MahjongPyWrapper as pm
@@ -75,46 +76,12 @@ class SelfPlayImitationDataset(IterableDataset):
 
     @staticmethod
     def _engine_idx_to_unified(table, engine_idx: int) -> int:
-        """Map engine selection-list index to the 54-action space."""
-        from pymahjong.env_pymahjong import MahjongEnv
+        """Map engine selection-list index to the 54-action space.
 
-        phase = table.get_phase()
-        actions = table.get_self_actions() if phase < 4 else table.get_response_actions()
-        sel = actions[engine_idx]
-        BA = pm.BaseAction
-        ba = int(sel.action)
-        tiles = sel.correspond_tiles
-        if ba == int(BA.Discard):
-            t = tiles[0]
-            base = int(t.tile)
-            if getattr(t, "red_dora", False):
-                if base == 4:
-                    return MahjongEnv.CHILEFT_USERED  # placeholder unused
-                # fallthrough handled below
-            return base
-        if ba == int(BA.Chi):
-            used_red = any(getattr(t, "red_dora", False) for t in tiles)
-            return MahjongEnv.CHIMIDDLE_USERED if used_red else MahjongEnv.CHIMIDDLE
-        if ba == int(BA.Pon):
-            used_red = any(getattr(t, "red_dora", False) for t in tiles)
-            return MahjongEnv.PON_USERED if used_red else MahjongEnv.PON
-        if ba == int(BA.AnKan):
-            return MahjongEnv.ANKAN
-        if ba == int(BA.Kan):
-            return MahjongEnv.MINKAN
-        if ba == int(BA.KaKan):
-            return MahjongEnv.KAKAN
-        if ba == int(BA.Riichi):
-            return MahjongEnv.RIICHI
-        if ba == int(BA.Ron):
-            return MahjongEnv.RON
-        if ba == int(BA.Tsumo):
-            return MahjongEnv.TSUMO
-        if ba == int(BA.Kyushukyuhai):
-            return MahjongEnv.PUSH
-        if ba == int(BA.Pass):
-            return MahjongEnv.PASS_RESPONSE
-        raise ValueError(f"unknown base action {ba}")
+        Delegates to :meth:`ActionEncoder.engine_to_unified` which fixes
+        red-5 discard and chi disambiguation bugs present in the old impl.
+        """
+        return ActionEncoder.engine_to_unified(table, engine_idx)
 
     def __iter__(self):
         if self.seed is not None:

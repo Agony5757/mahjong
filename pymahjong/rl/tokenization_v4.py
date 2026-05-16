@@ -133,15 +133,15 @@ def _unsupported_game_type(xml_path: str) -> bool:
 
 def _engine_action_mask(table, player: int) -> np.ndarray:
     """Compute 54-dim action mask from table's current action list."""
+    from pymahjong.rl.action_space import ActionEncoder
     mask = np.zeros(54, dtype=np.uint8)
     phase = table.get_phase()
     if phase < 4:
         actions = table.get_self_actions()
     else:
         actions = table.get_response_actions()
-    from pymahjong.rl.dataset import SelfPlayImitationDataset
     for i in range(len(actions)):
-        unified = SelfPlayImitationDataset._engine_idx_to_unified(table, i)
+        unified = ActionEncoder.engine_to_unified(table, i)
         if 0 <= unified < 54:
             mask[unified] = 1
     return mask
@@ -149,8 +149,8 @@ def _engine_action_mask(table, player: int) -> np.ndarray:
 
 def _engine_action_label(table, engine_idx: int) -> int:
     """Convert engine action index to unified action label."""
-    from pymahjong.rl.dataset import SelfPlayImitationDataset
-    return int(SelfPlayImitationDataset._engine_idx_to_unified(table, engine_idx))
+    from pymahjong.rl.action_space import ActionEncoder
+    return int(ActionEncoder.engine_to_unified(table, engine_idx))
 
 
 # ---------------------------------------------------------------

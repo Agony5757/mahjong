@@ -1,6 +1,6 @@
 """Stage 1: Behavior cloning (supervised) trainer.
 
-Supervised cross-entropy training of :class:`MahjongTransformer` on
+Supervised cross-entropy training of a transformer policy on
 ``(obs, action)`` pairs from self-play imitation or paipu replays.
 
 Example::
@@ -28,7 +28,8 @@ from torch.utils.data import DataLoader
 
 from .cached_dataset import CachedTokenDataset, cached_collate
 from .dataset import SelfPlayImitationDataset, collate_fn
-from .model import MahjongTransformer, TransformerConfig
+from .encoding import EncodingVersion, get_strategy
+from . import encodings  # noqa: F401 -- trigger strategy registration
 
 
 @dataclass
@@ -66,62 +67,93 @@ def _paipu_xml_from_config() -> Optional[str]:
         return None
 
 
+def _resolve_collate(dataset, encoding: str):
+    """Return an appropriate collate function for *dataset*."""
+    collate = getattr(dataset, "collate_fn", None)
+    if collate is not None:
+        return collate
+    strategy = get_strategy(EncodingVersion(encoding))
+    return strategy.collate_fn
+
+
 def train_bc(
     dataset=None,
-    model: Optional[MahjongTransformer] = None,
+    model=None,
     config: Optional[BCConfig] = None,
-    transformer_config: Optional[TransformerConfig] = None,
+    transformer_config=None,
+    encoding: str = "v3",
 ):
     """Train a transformer policy by behavior cloning.
 
     Args:
-        dataset: a torch ``IterableDataset`` yielding ``{tokens, attention_mask,
-            action_mask, action}`` dicts. Defaults to
-            :class:`SelfPlayImitationDataset` (random expert) for smoke tests.
+        dataset: a torch ``Dataset`` or ``IterableDataset`` yielding
+            observation dicts.  Defaults to
+            :class:`CachedTokenDataset` (V3 cache), a
+            :class:`StreamingPaipuDataset` (V3 paipu), or
+            :class:`SelfPlayImitationDataset` (random expert).
         model: optional pre-existing model to continue training.
         config: :class:`BCConfig`.
-        transformer_config: :class:`TransformerConfig` for a fresh model.
+        transformer_config: transformer architecture config.
+        encoding: encoding version (``"v3"`` or ``"v4"``).
 
     Returns:
-        The trained :class:`MahjongTransformer`.
+        The trained model.
     """
     cfg = config or BCConfig()
     device = _device(cfg)
 
+    strategy = get_strategy(EncodingVersion(encoding))
+
     if model is None:
-        model = MahjongTransformer(config=transformer_config)
+        model = strategy.create_model(transformer_config=transformer_config)
     model = model.to(device)
     model.train()
 
     if dataset is None:
         if cfg.cache_dir:
-            dataset = CachedTokenDataset(
-                cfg.cache_dir,
-                suit_permute=cfg.suit_permute,
-            )
+            if encoding == "v4":
+                from .cached_dataset_v4 import CachedEventDataset
+                dataset = CachedEventDataset(cfg.cache_dir)
+            else:
+                dataset = CachedTokenDataset(
+                    cfg.cache_dir,
+                    suit_permute=cfg.suit_permute,
+                )
         elif cfg.paipu_dir or _paipu_xml_from_config():
-            from .streaming_dataset import StreamingPaipuDataset
+            if encoding == "v4":
+                from .tokenization_v4 import StreamingPaipuDatasetV4
+                import glob as _glob
+                paipu_dir = cfg.paipu_dir or _paipu_xml_from_config()
+                paths = sorted(
+                    p
+                    for p in _glob.glob(os.path.join(paipu_dir, "**", "*"), recursive=True)
+                    if os.path.isfile(p) and (p.endswith(".xml") or p.endswith(".txt"))
+                )
+                dataset = StreamingPaipuDatasetV4(
+                    paipu_paths=paths,
+                    prefetch_n=cfg.paipu_prefetch,
+                )
+            else:
+                from .streaming_dataset import StreamingPaipuDataset
 
-            paipu_dir = cfg.paipu_dir or _paipu_xml_from_config()
-            import glob as _glob
+                paipu_dir = cfg.paipu_dir or _paipu_xml_from_config()
+                import glob as _glob
 
-            paths = sorted(
-                p
-                for p in _glob.glob(os.path.join(paipu_dir, "**", "*"), recursive=True)
-                if os.path.isfile(p) and (p.endswith(".xml") or p.endswith(".txt"))
-            )
-            dataset = StreamingPaipuDataset(
-                paths,
-                prefetch_n=cfg.paipu_prefetch,
-                suit_permute=cfg.suit_permute,
-            )
+                paths = sorted(
+                    p
+                    for p in _glob.glob(os.path.join(paipu_dir, "**", "*"), recursive=True)
+                    if os.path.isfile(p) and (p.endswith(".xml") or p.endswith(".txt"))
+                )
+                dataset = StreamingPaipuDataset(
+                    paths,
+                    prefetch_n=cfg.paipu_prefetch,
+                    suit_permute=cfg.suit_permute,
+                )
         else:
             dataset = SelfPlayImitationDataset(oracle=False)
 
     is_map_style = hasattr(dataset, "__len__")
-    _collate = getattr(dataset, "collate_fn", None)
-    if _collate is None:
-        _collate = cached_collate if is_map_style else collate_fn
+    _collate = _resolve_collate(dataset, encoding)
     loader = DataLoader(
         dataset,
         batch_size=cfg.batch_size,
@@ -146,12 +178,21 @@ def train_bc(
             iterator = iter(loader)
             batch = next(iterator)
         batch = {k: v.to(device) for k, v in batch.items()}
-        logits, _ = model(
-            batch["tokens"],
-            batch["attention_mask"],
-            batch["action_mask"],
-            scalars=batch.get("scalars"),
-        )
+
+        # V3 uses "tokens", V4 uses "features".
+        if "tokens" in batch:
+            logits, _ = model(
+                batch["tokens"],
+                batch["attention_mask"],
+                batch["action_mask"],
+                scalars=batch.get("scalars"),
+            )
+        else:
+            logits, _ = model(
+                batch["features"],
+                batch["attention_mask"],
+                batch["action_mask"],
+            )
         loss = F.cross_entropy(logits, batch["action"])
 
         optim.zero_grad(set_to_none=True)

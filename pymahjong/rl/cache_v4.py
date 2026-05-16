@@ -29,11 +29,18 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import asdict, dataclass
 from typing import Dict, List, Optional
 
 import numpy as np
 
+from .cache import (
+    CacheManifest,
+    ShardEntry,
+    load_manifest,
+    manifest_path,
+    save_manifest,
+    rebuild_manifest as _rebuild_base,
+)
 from .tokenization_v4 import EVENT_DIM
 
 CACHE_SCHEMA_VERSION = 1
@@ -74,55 +81,8 @@ def assert_schema_compatible(loaded: Dict) -> None:
             )
 
 
-# ---------------------------------------------------------------------------
-# Manifest
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class ShardEntry:
-    path: str
-    n_rows: int
-    cumulative: int
-
-
-@dataclass
-class CacheManifest:
-    schema: Dict
-    total_rows: int
-    shards: List[ShardEntry]
-
-    def to_dict(self) -> Dict:
-        return {
-            "schema": self.schema,
-            "total_rows": int(self.total_rows),
-            "shards": [asdict(s) for s in self.shards],
-        }
-
-    @classmethod
-    def from_dict(cls, d: Dict) -> "CacheManifest":
-        return cls(
-            schema=d["schema"],
-            total_rows=int(d["total_rows"]),
-            shards=[ShardEntry(**s) for s in d["shards"]],
-        )
-
-
-def manifest_path(cache_dir: str) -> str:
-    return os.path.join(cache_dir, "index.json")
-
-
-def load_manifest(cache_dir: str) -> CacheManifest:
-    with open(manifest_path(cache_dir), "r") as f:
-        return CacheManifest.from_dict(json.load(f))
-
-
-def save_manifest(cache_dir: str, manifest: CacheManifest) -> None:
-    os.makedirs(cache_dir, exist_ok=True)
-    tmp = manifest_path(cache_dir) + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(manifest.to_dict(), f, indent=2)
-    os.replace(tmp, manifest_path(cache_dir))
+# Manifest helpers are imported from cache.py (ShardEntry, CacheManifest,
+# manifest_path, load_manifest, save_manifest).
 
 
 # ---------------------------------------------------------------------------
@@ -217,30 +177,8 @@ class V4ShardWriter:
 
 
 def rebuild_manifest(cache_dir: str) -> CacheManifest:
-    entries: List[ShardEntry] = []
-    cum = 0
-    for name in sorted(os.listdir(cache_dir)):
-        sub = os.path.join(cache_dir, name)
-        if not (name.startswith("shard_") and os.path.isdir(sub)):
-            continue
-        try:
-            with open(os.path.join(sub, "meta.json")) as f:
-                m = json.load(f)
-        except FileNotFoundError:
-            continue
-        n = int(m.get("n_rows", 0))
-        if n <= 0:
-            continue
-        cum += n
-        entries.append(ShardEntry(path=name, n_rows=n, cumulative=cum))
-
-    manifest = CacheManifest(
-        schema=schema_fingerprint(),
-        total_rows=cum,
-        shards=entries,
-    )
-    save_manifest(cache_dir, manifest)
-    return manifest
+    """Rebuild V4 manifest, delegating to the shared implementation."""
+    return _rebuild_base(cache_dir, schema_fn=schema_fingerprint)
 
 
 # ---------------------------------------------------------------------------

@@ -112,32 +112,34 @@ SCALAR_DIM = 4
 
 
 # ---------------------------------------------------------------------------
-# Action space (mirrors env_pymahjong.MahjongEnv.ACTION_DIM = 54)
+# Action space -- re-exported from the single source of truth
 # ---------------------------------------------------------------------------
 
-ACTION_DIM = 54
-
-A_DISCARD_BASE = 0           # 0..33
-A_DISCARD_RED5M = 34
-A_DISCARD_RED5P = 35
-A_DISCARD_RED5S = 36
-A_CHILEFT = 37
-A_CHIMIDDLE = 38
-A_CHIRIGHT = 39
-A_CHILEFT_USERED = 40
-A_CHIMIDDLE_USERED = 41
-A_CHIRIGHT_USERED = 42
-A_PON = 43
-A_PON_USERED = 44
-A_ANKAN = 45
-A_MINKAN = 46
-A_KAKAN = 47
-A_RIICHI = 48
-A_RON = 49
-A_TSUMO = 50
-A_PUSH = 51                  # kyushukyuhai
-A_PASS_RIICHI = 52
-A_PASS_RESPONSE = 53
+from .action_space import (  # noqa: E402
+    ACTION_DIM,
+    A_DISCARD_BASE,
+    A_DISCARD_RED5M,
+    A_DISCARD_RED5P,
+    A_DISCARD_RED5S,
+    A_CHILEFT,
+    A_CHIMIDDLE,
+    A_CHIRIGHT,
+    A_CHILEFT_USERED,
+    A_CHIMIDDLE_USERED,
+    A_CHIRIGHT_USERED,
+    A_PON,
+    A_PON_USERED,
+    A_ANKAN,
+    A_MINKAN,
+    A_KAKAN,
+    A_RIICHI,
+    A_RON,
+    A_TSUMO,
+    A_PUSH,
+    A_PASS_RIICHI,
+    A_PASS_RESPONSE,
+    ActionEncoder,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -599,105 +601,15 @@ class MahjongTokenizer:
     # ------------------------------------------------------------------
 
     def _fill_action_mask(self, table, current_player, riichi_stage2, last_discard_tile):
-        m = self._action_mask
-        if riichi_stage2:
-            m[A_RIICHI] = True
-            m[A_PASS_RIICHI] = True
-            return
+        ActionEncoder.fill_action_mask(
+            table, current_player, riichi_stage2,
+            self._action_mask, last_discard_tile=last_discard_tile,
+        )
 
-        phase = int(table.get_phase())
-        if is_self_phase(phase):
-            actions = table.get_self_actions()
-            is_self = True
-        elif is_response_phase(phase) or is_chankan_phase(phase):
-            actions = table.get_response_actions()
-            is_self = False
-        else:
-            return
-
-        # last discarded tile (the one being responded to). For chi disambig:
-        chi_tile_id = None
-        if last_discard_tile is not None and not is_self:
-            chi_tile_id = int(last_discard_tile.tile)
-
-        for sel in actions:
-            self._mask_one_action(sel, m, is_self=is_self, chi_tile_id=chi_tile_id)
-
+    # Kept for backward compatibility; delegates to ActionEncoder.
     @staticmethod
     def _classify_chi(chi_tile_id: int, hand_tiles) -> int:
-        """Return ChiLeft=0 / ChiMiddle=1 / ChiRight=2 from (taken, hand_pair).
-
-        Mirrors :file:`Mahjong/Encoding/TrainingDataEncodingV1.cpp` line ~150::
-
-            if (chi_tile > hand0) {
-                if (chi_tile < hand1) middle
-                else                  right
-            } else                    left
-        """
-        h = sorted(int(t.tile) for t in hand_tiles)
-        if chi_tile_id < h[0]:
-            return 0  # left
-        if chi_tile_id > h[1]:
-            return 2  # right
-        return 1  # middle
-
-    def _mask_one_action(self, sel, m, is_self: bool, chi_tile_id: Optional[int]):
-        try:
-            base = int(sel.action)
-            tiles = list(sel.correspond_tiles)
-        except Exception:  # noqa: BLE001
-            return
-        BA = pm.BaseAction
-        if is_self and base == int(BA.Discard):
-            if not tiles:
-                return
-            t = tiles[0]
-            base_t = int(t.tile)
-            m[A_DISCARD_BASE + base_t] = True
-            if getattr(t, "red_dora", False):
-                if base_t == 4:
-                    m[A_DISCARD_RED5M] = True
-                elif base_t == 13:
-                    m[A_DISCARD_RED5P] = True
-                elif base_t == 22:
-                    m[A_DISCARD_RED5S] = True
-        elif base == int(BA.Chi):
-            if chi_tile_id is None or len(tiles) < 2:
-                # Conservatively allow all three chi variants
-                m[A_CHILEFT] = m[A_CHIMIDDLE] = m[A_CHIRIGHT] = True
-                if any(getattr(t, "red_dora", False) for t in tiles):
-                    m[A_CHILEFT_USERED] = m[A_CHIMIDDLE_USERED] = m[A_CHIRIGHT_USERED] = True
-                return
-            kind = self._classify_chi(chi_tile_id, tiles)
-            slot = (A_CHILEFT, A_CHIMIDDLE, A_CHIRIGHT)[kind]
-            slot_red = (A_CHILEFT_USERED, A_CHIMIDDLE_USERED, A_CHIRIGHT_USERED)[kind]
-            used_red = any(getattr(t, "red_dora", False) for t in tiles)
-            if used_red:
-                m[slot_red] = True
-            else:
-                m[slot] = True
-        elif base == int(BA.Pon):
-            used_red = any(getattr(t, "red_dora", False) for t in tiles)
-            if used_red:
-                m[A_PON_USERED] = True
-            else:
-                m[A_PON] = True
-        elif base == int(BA.AnKan):
-            m[A_ANKAN] = True
-        elif base == int(BA.Kan):
-            m[A_MINKAN] = True
-        elif base == int(BA.KaKan):
-            m[A_KAKAN] = True
-        elif base == int(BA.Riichi):
-            m[A_RIICHI] = True
-        elif base == int(BA.Ron) or base == int(BA.ChanKan) or base == int(BA.ChanAnKan):
-            m[A_RON] = True
-        elif base == int(BA.Tsumo):
-            m[A_TSUMO] = True
-        elif base == int(BA.Kyushukyuhai):
-            m[A_PUSH] = True
-        elif base == int(BA.Pass):
-            m[A_PASS_RESPONSE] = True
+        return ActionEncoder.classify_chi(chi_tile_id, hand_tiles)
 
 
 # ---------------------------------------------------------------------------

@@ -244,10 +244,21 @@ class ShardWriter:
 # ---------------------------------------------------------------------------
 
 
-def rebuild_manifest(cache_dir: str, max_seq_len: int = MAX_SEQ_LEN) -> CacheManifest:
+def rebuild_manifest(
+    cache_dir: str,
+    max_seq_len: int = MAX_SEQ_LEN,
+    schema_fn=None,
+) -> CacheManifest:
     """Scan ``cache_dir`` for ``shard_*`` directories and rewrite ``index.json``.
 
     Useful after parallel writers have produced shards independently.
+
+    Args:
+        cache_dir: path to the cache root.
+        max_seq_len: forwarded to the default ``schema_fingerprint``.
+        schema_fn: optional callable returning the schema dict.  Defaults
+            to ``schema_fingerprint(max_seq_len)`` (V3).  V4 callers
+            pass their own ``schema_fingerprint``.
     """
     entries: List[ShardEntry] = []
     cum = 0
@@ -266,8 +277,13 @@ def rebuild_manifest(cache_dir: str, max_seq_len: int = MAX_SEQ_LEN) -> CacheMan
         cum += n
         entries.append(ShardEntry(path=name, n_rows=n, cumulative=cum))
 
+    if schema_fn is not None:
+        schema = schema_fn()
+    else:
+        schema = schema_fingerprint(max_seq_len)
+
     manifest = CacheManifest(
-        schema=schema_fingerprint(max_seq_len),
+        schema=schema,
         total_rows=cum,
         shards=entries,
     )
