@@ -92,6 +92,9 @@ def _torch_only(name):
         if name == "train_ppo":
             from .ppo import train_ppo
             return train_ppo(*args, **kwargs)
+        if name == "train_selfplay_v4":
+            from .v4.selfplay import train_selfplay_v4
+            return train_selfplay_v4(*args, **kwargs)
         raise AssertionError(f"unknown lazy target {name}")
     return _factory
 
@@ -99,3 +102,4 @@ def _torch_only(name):
 MahjongTransformer = _torch_only("MahjongTransformer")
 train_bc = _torch_only("train_bc")
 train_ppo = _torch_only("train_ppo")
+train_selfplay_v4 = _torch_only("train_selfplay_v4")
