@@ -328,6 +328,25 @@ async def new_game(req: NewGameRequest, background_tasks: BackgroundTasks):
         _session_ais[sid] = ais
         _session_speed[sid] = 0.2
 
+    # Wire AI lifecycle hooks so stateful AIs (e.g. V4 transformer) stay
+    # in sync with the engine across hand transitions and inter-AI steps.
+    adapter = session.adapter
+    adapter.clear_callbacks()
+
+    def _kyoku_cb():
+        for a in ais:
+            if a is not None:
+                a.on_hand_start(adapter)
+    adapter.add_on_kyoku_start(_kyoku_cb)
+    # The first kyoku was already initialized in session creation, fire now.
+    _kyoku_cb()
+
+    def _step_cb():
+        for a in ais:
+            if a is not None:
+                a.on_action_executed(adapter)
+    adapter.add_on_step(_step_cb)
+
     if mode == GameMode.FOUR_AI:
         background_tasks.add_task(_start_hansou_thread, session)
     else:

@@ -99,6 +99,37 @@ class MahjongEnvAdapter:
         self.t: pm.Table = pm.Table()
         self._riichi_stage2 = False
         self._may_riichi_tile_id: Optional[int] = None
+        # Lifecycle callbacks (post-reset_kyoku and post-step).
+        self._on_kyoku_start_cbs: list = []
+        self._on_step_cbs: list = []
+
+    # ─── Callback registration ───────────────────────────────────────────────
+
+    def add_on_kyoku_start(self, cb) -> None:
+        """Register a no-arg callback fired after each ``reset_kyoku``."""
+        self._on_kyoku_start_cbs.append(cb)
+
+    def add_on_step(self, cb) -> None:
+        """Register a no-arg callback fired after each successful ``step``."""
+        self._on_step_cbs.append(cb)
+
+    def clear_callbacks(self) -> None:
+        self._on_kyoku_start_cbs.clear()
+        self._on_step_cbs.clear()
+
+    def _fire_kyoku_start(self) -> None:
+        for cb in self._on_kyoku_start_cbs:
+            try:
+                cb()
+            except Exception:  # noqa: BLE001
+                pass  # don't let AI bookkeeping break the engine loop
+
+    def _fire_on_step(self) -> None:
+        for cb in self._on_step_cbs:
+            try:
+                cb()
+            except Exception:  # noqa: BLE001
+                pass
 
     # ─── Lifecycle ───────────────────────────────────────────────────────────
 
@@ -130,6 +161,7 @@ class MahjongEnvAdapter:
         self._riichi_stage2 = False
         self._may_riichi_tile_id = None
         self._auto_skip_pass()
+        self._fire_kyoku_start()
 
     def _auto_skip_pass(self) -> None:
         """Auto-advance through phases that have only a single forced action (pass)."""
@@ -207,6 +239,7 @@ class MahjongEnvAdapter:
 
         action_type, tiles, use_red = self._resolve_action(player_id, action_idx)
         self._submit_to_engine(action_type, tiles, use_red)
+        self._fire_on_step()
         # Note: do NOT auto-skip here. The C++ engine handles the discarder's
         # auto-pass internally in _handle_response_action(). Auto-skipping in
         # Python would consume multiple game steps at once, causing the frontend
@@ -235,6 +268,7 @@ class MahjongEnvAdapter:
                     if int(ct.tile) == target_bt and bool(ct.red_dora) == use_red:
                         self.t.make_selection(i)
                         self._auto_skip_pass()
+                        self._fire_on_step()
                         return
             raise ValueError(
                 f"No Riichi action found for basetile={target_bt} red={use_red}"
@@ -246,6 +280,7 @@ class MahjongEnvAdapter:
                 d_type, [pm.BaseTile(t) for t in d_tiles], d_red
             )
             self._auto_skip_pass()
+            self._fire_on_step()
 
     def _resolve_discard(self, action_idx: int) -> tuple:
         if action_idx < 34:

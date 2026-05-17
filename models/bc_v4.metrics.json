@@ -1,0 +1,17 @@
+{
+  "train_size": 8242799,
+  "val_size": 458275,
+  "test_size": 457522,
+  "test_loss": 0.17422390115762854,
+  "test_acc": 0.9264144675010163,
+  "test_n": 457522,
+  "n_steps": 10000,
+  "batch_size": 128,
+  "lr": 0.0003,
+  "weight_decay": 0.0001,
+  "split_by": "track-id",
+  "train_shards": [],
+  "val_shards": [],
+  "test_shards": [],
+  "wall_time_s": 224.7646647469992
+}
