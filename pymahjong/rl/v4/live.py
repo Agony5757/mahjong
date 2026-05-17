@@ -45,6 +45,14 @@ class LiveV4Encoder:
     is). Within a hand, call :meth:`sync` after every ``make_selection``
     so newly-logged events get routed to the encoder. The cost of
     :meth:`sync` is O(new gamelog entries) — typically one or two.
+
+    Each of the four per-player tracks is an independent view of the
+    visible game: public events (discards / calls / dora reveal) are
+    broadcast to all four tracks, draws only enter the drawing
+    player's own track, and DECIDE events are written only to the
+    deciding player's own track. This matches
+    :func:`encode_paipu_file_v4` so training and inference see the
+    same per-track event stream.
     """
 
     def __init__(self, table):
@@ -95,10 +103,9 @@ class LiveV4Encoder:
         Args:
             player_id: seat (0-3) currently being asked to act.
             register_decide: if True (default), emit a DECIDE event to
-                the encoder before snapshotting so the model sees the
-                same per-decision marker it was trained against. The
-                emitted decide carries the engine action mask and a
-                placeholder label (the model isn't using the label).
+                this player's own track before snapshotting so the
+                model sees the same per-decision marker it was trained
+                against. Only that player's track is touched.
             max_seq_len: pad/truncate the stream to this many events.
 
         Returns:
@@ -111,9 +118,6 @@ class LiveV4Encoder:
 
         action_mask = _engine_action_mask(self.table, player_id).astype(bool)
         if register_decide:
-            # The action label here is a placeholder (-1 sentinel doesn't
-            # round-trip cleanly through C++; use 0 since the model
-            # ignores it at inference time).
             self._encoder.on_decide(player_id, action_mask, 0)
 
         track = self._encoder.track(player_id)
