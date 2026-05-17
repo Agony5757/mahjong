@@ -51,11 +51,13 @@ class MahjongGame {
         return resp.text();
     }
 
-    async newGame(mode = 'human_ai', aiModel = null, seed = null, maxRound = 1) {
+    async newGame(mode = 'human_ai', aiModel = null, seed = null, maxRound = 1, aiModels = null) {
         this.mode = mode;
+        const body = { mode, ai_model: aiModel, seed, max_round: maxRound };
+        if (aiModels) body.ai_models = aiModels;
         const resp = await this._fetch('/api/game/new', {
             method: 'POST',
-            body: { mode, ai_model: aiModel, seed, max_round: maxRound }
+            body
         });
         this.sessionId = resp.session_id;
         this.state = resp.state;

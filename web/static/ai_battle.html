@@ -66,7 +66,7 @@
 <!-- Landing -->
 <div class="landing" id="landingOverlay">
     <h1>4 AI 对战</h1>
-    <p class="subtitle">观看 4 个随机 AI 自动完成完整半庄（东 1 → 南 4）</p>
+    <p class="subtitle">观看 4 个 AI 自动完成一场对局 — 每席位可独立选择模型</p>
     <div class="mt-16" style="display:flex; gap:20px; align-items:center; flex-wrap:wrap; justify-content:center">
         <label class="text-dim" style="font-size:13px">局数:
             <select id="maxRoundSelect" style="margin-left:8px; padding:4px 8px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px">
@@ -79,11 +79,29 @@
             <input type="number" id="seedInput" placeholder="留空=随机" style="margin-left:8px; padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px; width:120px">
         </label>
     </div>
+    <div class="mt-16" style="display:grid; grid-template-columns:repeat(2,minmax(180px,1fr)); gap:12px; max-width:520px; margin:16px auto 0;">
+        <label class="text-dim" style="font-size:13px; display:flex; flex-direction:column; gap:4px">
+            P0
+            <select id="aiModelP0" class="ai-model-select" style="padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px"></select>
+        </label>
+        <label class="text-dim" style="font-size:13px; display:flex; flex-direction:column; gap:4px">
+            P1
+            <select id="aiModelP1" class="ai-model-select" style="padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px"></select>
+        </label>
+        <label class="text-dim" style="font-size:13px; display:flex; flex-direction:column; gap:4px">
+            P2
+            <select id="aiModelP2" class="ai-model-select" style="padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px"></select>
+        </label>
+        <label class="text-dim" style="font-size:13px; display:flex; flex-direction:column; gap:4px">
+            P3
+            <select id="aiModelP3" class="ai-model-select" style="padding:4px; background:#16213e; color:#eee; border:1px solid #555; border-radius:4px"></select>
+        </label>
+    </div>
     <div class="mode-cards mt-16">
         <div class="mode-card" onclick="startBattle()">
             <div class="icon">🤖</div>
             <h2>开始对战</h2>
-            <p>4 个随机 AI · 自动流转</p>
+            <p>每个席位独立配置 AI</p>
         </div>
     </div>
 </div>
@@ -92,12 +110,45 @@
 <script src="/static/js/ai_client.js"></script>
 <script>
     let client = null;
+    let _availableModels = null;
+
+    async function _populateAiSelects(selects) {
+        if (_availableModels === null) {
+            try {
+                const r = await fetch('/api/models');
+                const j = await r.json();
+                _availableModels = j.models || [];
+            } catch (e) {
+                console.warn('failed to list models:', e);
+                _availableModels = [];
+            }
+        }
+        for (const sel of selects) {
+            sel.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.value = 'random';
+            opt.textContent = '随机 AI';
+            sel.appendChild(opt);
+            for (const m of _availableModels) {
+                const o = document.createElement('option');
+                o.value = m.name;
+                o.textContent = m.name;
+                sel.appendChild(o);
+            }
+        }
+    }
 
     async function startBattle() {
         document.getElementById('landingOverlay').style.display = 'none';
         const seedVal = document.getElementById('seedInput').value;
         const seed = seedVal ? parseInt(seedVal) : null;
         const maxRound = parseInt(document.getElementById('maxRoundSelect').value || '1');
+        const aiModels = [
+            document.getElementById('aiModelP0').value,
+            document.getElementById('aiModelP1').value,
+            document.getElementById('aiModelP2').value,
+            document.getElementById('aiModelP3').value,
+        ];
 
         client = new window.AIBattleClient('mahjongCanvas');
         client.resize();
@@ -107,7 +158,7 @@
         });
 
         try {
-            await client.startGame({ seed, maxRound });
+            await client.startGame({ seed, maxRound, aiModels });
             document.getElementById('statusMsg').textContent = '对局进行中...';
         } catch (err) {
             alert('启动失败: ' + err.message);
@@ -139,6 +190,10 @@
         const ctx = canvas.getContext('2d');
         window.MahjongRenderer.resizeCanvasToContainer(canvas, { maxWidth: 2200, maxHeightRatio: 1.10 });
         window.MahjongRenderer.renderSplash(ctx, canvas.width, canvas.height, '4 AI 对战', '观看 4 个 AI 完成完整半庄，检查牌河、副露和局面流转');
+        const sels = [0, 1, 2, 3]
+            .map(i => document.getElementById(`aiModelP${i}`))
+            .filter(Boolean);
+        _populateAiSelects(sels);
     });
 </script>
 </body>

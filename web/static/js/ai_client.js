@@ -62,11 +62,13 @@
             return resp.json();
         }
 
-        async startGame({ seed = null, maxRound = 1 } = {}) {
+        async startGame({ seed = null, maxRound = 1, aiModels = null } = {}) {
             this.maxRound = maxRound;
+            const body = { mode: '4ai', ai_model: null, seed, max_round: maxRound };
+            if (aiModels) body.ai_models = aiModels;
             const resp = await this._fetch('/api/game/new', {
                 method: 'POST',
-                body: { mode: '4ai', ai_model: null, seed, max_round: maxRound },
+                body,
             });
             this.sessionId = resp.session_id;
             this.state = resp.state;
