@@ -18,8 +18,15 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 import numpy as np
-import torch
-from torch.utils.data import IterableDataset
+
+try:
+    import torch
+    from torch.utils.data import IterableDataset
+    _HAS_TORCH = True
+except Exception:  # torch is optional — only required for dataset/collate helpers
+    torch = None  # type: ignore[assignment]
+    IterableDataset = object  # type: ignore[assignment,misc]
+    _HAS_TORCH = False
 
 try:
     import MahjongPyWrapper as pm
@@ -256,6 +263,10 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
     rivers = {0: [], 1: [], 2: [], 3: []}
     dora_indicators: list = []
     last_discard_who = -1
+    # Tracks the global "last action" similar to ``Table::last_action``.  After
+    # a call (chi/pon/kan/ankan/kakan) the engine does not separate the rinshan
+    # tsumo from hand in state_to_string_v4, so we need to match that.
+    last_action_was_call = False
 
     for i in range(events.shape[0]):
         e = events[i]
@@ -276,6 +287,7 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
             rivers = {0: [], 1: [], 2: [], 3: []}
             dora_indicators = []
             last_discard_who = -1
+            last_action_was_call = False
 
         elif et == _ET.PLAYER_SCORE:
             who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
@@ -289,6 +301,11 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
             aka = bool(e[OFF_AKA])
             if tile >= 0:
                 hand.append((tile, aka))
+                # For the oya track, the 14th INIT_HAND is the dealer's
+                # first draw.  Move it into ``viewer_tsumo`` so subsequent
+                # tsumokiri (DISCARD with fh=False) consumes it correctly.
+                if len(hand) == 14:
+                    viewer_tsumo = hand.pop()
 
         elif et == _ET.DORA_INDICATOR:
             tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
@@ -312,6 +329,7 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
             rf = bool(e[OFF_RIICHI_FLAG])
             fh = bool(e[OFF_FROM_HAND])
             last_discard_who = who
+            last_action_was_call = False
             if who == 0:
                 if fh:
                     if viewer_tsumo is not None:
@@ -321,7 +339,10 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
                 else:
                     viewer_tsumo = None
             if 0 <= who < 4 and tile >= 0:
-                rivers[who].append((tile, aka, rf, fh))
+                # Match engine semantics: River entry's riichi flag is
+                # ``player.riichi || on_riichi`` — once a player has declared
+                # riichi, all subsequent discards are marked riichi=True.
+                rivers[who].append((tile, aka, rf or bool(riichi_status[who]), fh))
 
         elif et == _ET.RIICHI_DECLARE:
             tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
@@ -329,8 +350,9 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
             who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
             fh = bool(e[OFF_FROM_HAND])
             rf = bool(e[OFF_RIICHI_FLAG])
-            riichi_status[who] = 1
+            # Note: player.riichi is set on RIICHI_SUCCESS, not declaration.
             last_discard_who = who
+            last_action_was_call = False
             if who == 0:
                 if fh:
                     if viewer_tsumo is not None:
@@ -343,7 +365,9 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
                 rivers[who].append((tile, aka, rf, fh))
 
         elif et == _ET.RIICHI_SUCCESS:
-            pass
+            who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
+            if 0 <= who < 4:
+                riichi_status[who] = 1
 
         elif et == _ET.CHI:
             lowest = _decode_onehot(e, OFF_TILE, FEAT_TILE)
@@ -354,6 +378,7 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
             if who == 0:
                 _remove_chi_hand_tiles(hand, lowest, chi_type)
             fuuros[who].append({"type": "Chi", "from_r": from_r, "tiles": tiles})
+            last_action_was_call = True
 
         elif et == _ET.PON:
             tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
@@ -362,6 +387,7 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
             if who == 0:
                 _remove_n_from_hand(hand, tile, 2)
             fuuros[who].append({"type": "Pon", "from_r": from_r, "tile": tile})
+            last_action_was_call = True
 
         elif et == _ET.DAIMINKAN:
             tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
@@ -372,23 +398,36 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
             fuuros[who].append(
                 {"type": "DaiMinKan", "from_r": from_r, "tile": tile}
             )
+            last_action_was_call = True
 
         elif et == _ET.ANKAN:
             tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
             who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
             if who == 0:
-                _remove_n_from_hand(hand, tile, 4)
+                # If the kan tile was just drawn (viewer_tsumo holds it), consume
+                # it from viewer_tsumo first; the remaining 3 come from hand.
+                need = 4
+                if viewer_tsumo is not None and viewer_tsumo[0] == tile:
+                    viewer_tsumo = None
+                    need = 3
+                _remove_n_from_hand(hand, tile, need)
             fuuros[who].append({"type": "AnKan", "from_r": -1, "tile": tile})
+            last_action_was_call = True
 
         elif et == _ET.KAKAN:
             tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
             who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
             if who == 0:
-                _remove_n_from_hand(hand, tile, 1)
+                # KaKan uses 1 tile, which may be the just-drawn viewer_tsumo.
+                if viewer_tsumo is not None and viewer_tsumo[0] == tile:
+                    viewer_tsumo = None
+                else:
+                    _remove_n_from_hand(hand, tile, 1)
             for fuuro in reversed(fuuros[who]):
                 if fuuro["type"] == "Pon" and fuuro["tile"] == tile:
                     fuuro["type"] = "KaKan"
                     break
+            last_action_was_call = True
 
         elif et == _ET.DORA_REVEAL:
             tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
@@ -408,21 +447,17 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
     lines.append("RIICHI: " + " ".join(str(v) for v in riichi_status))
 
     # Use viewer_tsumo if available (from DRAW events).
-    # When no DRAW set the tsumo (e.g. after chi/pon), apply the same
-    # basetile-sort detection as state_to_string_v4.
-    # viewer_tsumo tracks the last DRAW tile.  hand[-1] in the engine is the
-    # same tile (push_back after sort_hand).  When viewer_tsumo is set we can
-    # separate it from hand.  When it's None (no DRAW occurred, e.g. after
-    # chi/pon) the engine may still detect hand[-1] as tsumo via pointer
-    # ordering, but we don't have pointer info — so we don't separate.
+    # Match state_to_string_v4: after a call (chi/pon/kan/ankan/kakan), the
+    # engine doesn't separate the rinshan tsumo from hand — merge it back.
     display_hand = list(hand)
-    if viewer_tsumo is not None:
-        display_hand_sorted = sorted(display_hand, key=lambda x: _TILE_STR[x[0]])
-        lines.append("HAND: " + " ".join(_TILE_STR[bt] for bt, _ in display_hand_sorted))
+    show_tsumo = viewer_tsumo is not None and not last_action_was_call
+    if not show_tsumo and viewer_tsumo is not None:
+        display_hand.append(viewer_tsumo)
+    display_hand_sorted = sorted(display_hand, key=lambda x: _TILE_STR[x[0]])
+    lines.append("HAND: " + " ".join(_TILE_STR[bt] for bt, _ in display_hand_sorted))
+    if show_tsumo:
         lines.append("TSUMO: " + tile_str(viewer_tsumo[0], viewer_tsumo[1]))
     else:
-        display_hand_sorted = sorted(display_hand, key=lambda x: _TILE_STR[x[0]])
-        lines.append("HAND: " + " ".join(_TILE_STR[bt] for bt, _ in display_hand_sorted))
         lines.append("TSUMO: -")
 
     di_strs = [_TILE_STR[b] for b in dora_indicators]
@@ -528,6 +563,12 @@ def _route_gamelog_entries(
             from_who = log.player2
             encoder.on_daiminkan(player, basetile, from_who, aka)
         elif action == pm.LogAction.AnKan:
+            # AnKan logs ``tile=nullptr`` and stores the kan tiles in
+            # ``call_tiles`` (see GameLog::log_ankan).  Use the first call
+            # tile to recover the BaseTile.
+            call_tiles = log.call_tiles
+            if call_tiles:
+                basetile = call_tiles[0].tile
             encoder.on_ankan(player, basetile)
         elif action == pm.LogAction.KaKan:
             encoder.on_kakan(player, basetile, aka)
@@ -767,8 +808,12 @@ class StreamingPaipuDatasetV4(IterableDataset):
 # ---------------------------------------------------------------
 
 
-def streaming_collate_v4(batch: List[Dict]) -> Dict[str, torch.Tensor]:
+def streaming_collate_v4(batch: List[Dict]) -> Dict[str, "torch.Tensor"]:
     """Stack a list of V4 sample dicts into a batched tensor dict."""
+    if not _HAS_TORCH:
+        raise ImportError(
+            "streaming_collate_v4 requires PyTorch; install torch to use it"
+        )
     # Pad features to max seq_len in batch
     max_len = max(s["features"].shape[0] for s in batch)
     feat_dim = batch[0]["features"].shape[1]
