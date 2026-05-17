@@ -63,6 +63,45 @@ def unpack_bool(packed: np.ndarray, orig_shape: tuple) -> np.ndarray:
     return flat[..., : orig_shape[1]].reshape(orig_shape).astype(np.bool_)
 
 
+class _LazyUnpackedArray:
+    """Mmap-backed packbits array with on-demand per-row unpacking.
+
+    Behaves like a 2-D bool array of shape ``orig_shape`` but only
+    materializes the bits that are actually indexed. Required because
+    a fully-unpacked shard for a big month would be tens of GiB.
+    """
+
+    __slots__ = ("_packed", "_orig_shape")
+
+    def __init__(self, packed: np.ndarray, orig_shape: tuple):
+        self._packed = packed
+        self._orig_shape = tuple(orig_shape)
+
+    @property
+    def shape(self) -> tuple:
+        return self._orig_shape
+
+    @property
+    def dtype(self):
+        return np.dtype(np.bool_)
+
+    def __len__(self) -> int:
+        return self._orig_shape[0]
+
+    def __getitem__(self, key):
+        # Slice the packed bytes along axis 0, then unpack & truncate.
+        sub = self._packed[key]
+        if sub.ndim == 1:
+            # Single row -> shape (1-D,) after slice. Unpack and trim.
+            bits = np.unpackbits(sub, axis=-1)
+            return bits[: self._orig_shape[1]].astype(np.bool_)
+        n = sub.shape[0]
+        bits = np.unpackbits(sub, axis=-1)
+        return bits[..., : self._orig_shape[1]].reshape(
+            n, self._orig_shape[1]
+        ).astype(np.bool_)
+
+
 def schema_fingerprint() -> Dict:
     return {
         "schema_version": CACHE_SCHEMA_VERSION,
@@ -187,17 +226,22 @@ def rebuild_manifest(cache_dir: str) -> CacheManifest:
 
 
 def open_shard_arrays_v4(cache_dir: str, shard_path: str) -> Dict[str, np.ndarray]:
-    """Load all shard arrays, transparently unpacking any packbits files."""
+    """Load all shard arrays, lazily unpacking packbits files per-row.
+
+    Unpacked features for big shards (e.g. 8.76M rows × 469M events)
+    can exceed 40 GiB, so packed mmaps are wrapped in
+    :class:`_LazyUnpackedArray` and only the slice you index is unpacked.
+    """
     sub = os.path.join(cache_dir, shard_path)
 
     with open(os.path.join(sub, "meta.json")) as f:
         meta = json.load(f)
     packed = meta.get("packed", {})
 
-    def _load_bool(raw_name: str, packed_name: str, orig_key: str) -> np.ndarray:
+    def _load_bool(raw_name: str, packed_name: str, orig_key: str):
         pk_path = os.path.join(sub, packed_name)
         if os.path.exists(pk_path):
-            return unpack_bool(
+            return _LazyUnpackedArray(
                 np.load(pk_path, mmap_mode="r"),
                 tuple(packed[orig_key]),
             )

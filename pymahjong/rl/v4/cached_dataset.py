@@ -56,6 +56,12 @@ class CachedEventDataset(Dataset):
         cached = self._open.get(shard_idx)
         if cached is None:
             cached = open_shard_arrays_v4(self.cache_dir, self._shards[shard_idx])
+            # Pre-compute event-offset table so per-sample indexing is O(1).
+            lengths = np.asarray(cached["lengths"], dtype=np.int64)
+            offsets = np.empty(lengths.shape[0] + 1, dtype=np.int64)
+            offsets[0] = 0
+            np.cumsum(lengths, out=offsets[1:])
+            cached["_event_offsets"] = offsets
             self._open[shard_idx] = cached
         return cached
 
@@ -75,26 +81,22 @@ class CachedEventDataset(Dataset):
         shard_idx, local = self._locate(idx)
         arrays = self._arrays_for(shard_idx)
 
-        lengths = arrays["lengths"]
+        offsets = arrays["_event_offsets"]
+        event_start = int(offsets[local])
+        event_end = int(offsets[local + 1])
 
-        # Cumulative-sum indexing into the flat event array.
-        event_start = int(np.sum(lengths[:local]))
-        event_end = event_start + int(lengths[local])
-
-        features = np.array(
-            arrays["features"][event_start:event_end], dtype=np.bool_, copy=True
+        features = np.asarray(
+            arrays["features"][event_start:event_end], dtype=np.bool_
         )
-        amask = np.array(arrays["action_mask"][local], dtype=np.bool_, copy=True)
+        amask = np.asarray(arrays["action_mask"][local], dtype=np.bool_)
         label = int(arrays["labels"][local])
 
-        # Pad features to max length in this sample (no global max).
         seq_len = features.shape[0]
-        event_dim = features.shape[1]
 
         return {
-            "features": torch.from_numpy(features),
+            "features": torch.from_numpy(np.ascontiguousarray(features)),
             "attention_mask": torch.ones(seq_len, dtype=torch.bool),
-            "action_mask": torch.from_numpy(amask),
+            "action_mask": torch.from_numpy(np.ascontiguousarray(amask)),
             "action": torch.tensor(label, dtype=torch.long),
             "seq_len": torch.tensor(seq_len, dtype=torch.long),
         }
