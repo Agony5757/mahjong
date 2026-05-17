@@ -63,6 +63,11 @@ jobs:
       - name: Run paipu replay validation
         run: python -c "import pymahjong as pm; pm.paipu_replay(mode='debug')"
 
+      - name: Run encoding roundtrip tests (V3 + V4)
+        run: |
+          pip install pytest
+          python -m pytest test/test_encoding_roundtrip.py test/test_v4_encoding.py -v --tb=short -x
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

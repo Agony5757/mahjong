@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import os
 import random
+import threading
 from glob import glob
+from pathlib import Path
 
 import pytest
 
@@ -101,61 +103,124 @@ def test_selfplay_meldheavy_roundtrip(seed):
 
 
 # ---------------------------------------------------------------------------
-# Optional paipu round-trip (skipped if no paipu data found)
+# Paipu round-trip: V3 state_to_string == tokens_to_string via proxy
 # ---------------------------------------------------------------------------
 
-def _find_paipu():
+_proxy_lock = threading.Lock()
+
+
+def _find_paipu(n: int = 5) -> list[str]:
     from pymahjong.config import get_config
     cfg = get_config()
     candidates = []
+    env_dir = os.environ.get("PAIPU_DIR")
+    if env_dir:
+        candidates.insert(0, env_dir)
     roots = ["paipuxmls", "test_paipu", os.path.expanduser("~/paipuxmls")]
     if cfg.paipu_xml_path:
         roots.insert(0, cfg.paipu_xml_path)
     for root in roots:
         if os.path.isdir(root):
-            candidates.extend(glob(os.path.join(root, "**/*.xml"), recursive=True))
-            candidates.extend(glob(os.path.join(root, "**/*.txt"), recursive=True))
-    return candidates
+            candidates.extend(sorted(glob(os.path.join(root, "*.txt"))))
+            candidates.extend(sorted(glob(os.path.join(root, "*.xml"))))
+            if candidates:
+                return candidates[:n]
+    return candidates[:n]
 
 
-@pytest.mark.skipif(
-    not hasattr(pm, "PaipuReplayer"),
-    reason="PaipuReplayer not exposed in this build",
-)
-def test_paipu_roundtrip_sample():
-    paipus = _find_paipu()
-    if not paipus:
-        pytest.skip("no paipu xml files found locally")
+def _verify_paipu_roundtrip_v3(path: str) -> tuple[int, int]:
+    """Replay *path* through V3 encoder and compare canonical strings.
+
+    Returns ``(checks, mismatches)``.
+    """
+    from pymahjong.rl.tokenization import (
+        MahjongTokenizer,
+        state_to_string,
+        tokens_to_string,
+    )
+    from pymahjong import tenhou_paipu_check as tpc
+
     tk = MahjongTokenizer()
-    sampled = paipus[:5]
-    total = 0
-    for path in sampled:
+    checks = 0
+    mismatches = 0
+    first_mismatch: list = []
+
+    class _V3RoundtripProxy:
+        __slots__ = ("_inner",)
+
+        def __init__(self, inner):
+            object.__setattr__(self, "_inner", inner)
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+        def init(self, *args, **kwargs):
+            return self._inner.init(*args, **kwargs)
+
+        def make_selection(self, idx):
+            nonlocal checks, mismatches
+            t = self._inner.table
+            ret = self._inner.make_selection(idx)
+            phase = int(t.get_phase())
+            if phase < 16:
+                actions = (
+                    t.get_self_actions() if phase < 4
+                    else t.get_response_actions()
+                )
+                if len(actions) > 1:
+                    cp = phase % 4
+                    obs = tk.encode(t, cp)
+                    s_state = state_to_string(t, cp)
+                    s_tokens = tokens_to_string(obs)
+                    checks += 1
+                    if s_state != s_tokens:
+                        mismatches += 1
+                        if not first_mismatch:
+                            first_mismatch.append(
+                                (path, phase, cp, s_state, s_tokens)
+                            )
+            return ret
+
+    xml_path = Path(path)
+    with _proxy_lock:
+        orig_ctor = pm.PaipuReplayer
+        pm.PaipuReplayer = lambda *a, **kw: _V3RoundtripProxy(orig_ctor(*a, **kw))
         try:
-            rep = pm.PaipuReplayer()
-            rep.init(path)
-        except Exception:  # noqa: BLE001
-            continue
-        if not (hasattr(rep, "table") and hasattr(rep, "step")
-                and hasattr(rep, "next_action")):
-            pytest.skip("PaipuReplayer next_action/step not exposed")
-        table = rep.table
-        steps = 0
-        while steps < 600:
-            phase = int(table.get_phase())
-            if phase == 16:
-                break
-            cp = phase % 4 if phase < 16 else 0
-            obs = tk.encode(table, cp)
-            s1 = state_to_string(table, cp)
-            s2 = tokens_to_string(obs)
-            assert s1 == s2, (
-                f"mismatch in {path} step={steps} phase={phase}\n"
-                f"-- state --\n{s1}\n-- tokens --\n{s2}"
-            )
-            steps += 1
+            replay = tpc.PaipuReplay()
+            replay.logger = tpc.Logger()
+            replay.write_log = False
             try:
-                rep.step()
-            except Exception:  # noqa: BLE001
-                break
-        total += steps
-    assert total > 0
+                replay._paipu_replay(str(xml_path.parent), xml_path.name)
+            except Exception:
+                pass
+        finally:
+            pm.PaipuReplayer = orig_ctor
+
+    if first_mismatch:
+        path_, phase_, cp_, s1, s2 = first_mismatch[0]
+        raise AssertionError(
+            f"V3 round-trip mismatch in {path_} phase={phase_} cp={cp_}\n"
+            f"-- state --\n{s1}\n-- tokens --\n{s2}"
+        )
+
+    return checks, mismatches
+
+
+class TestV3Roundtrip:
+    """Verify that V3 token encoding round-trips with engine state."""
+
+    @pytest.fixture(scope="class")
+    def paipu_files(self):
+        files = _find_paipu(5)
+        if not files:
+            pytest.skip("no paipu XML files found")
+        return files
+
+    def test_paipu_roundtrip(self, paipu_files):
+        """At every decision point, state_to_string == tokens_to_string."""
+        total_checks = 0
+        for path in paipu_files:
+            checks, mismatches = _verify_paipu_roundtrip_v3(path)
+            total_checks += checks
+            assert mismatches == 0, f"{path}: {mismatches} mismatches"
+        assert total_checks > 0, "no decision points checked"
