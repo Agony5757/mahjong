@@ -170,14 +170,17 @@ class Manifest:
 
     # --- read APIs -------------------------------------------------------
     def get(self, gid: str) -> Optional[dict]:
-        return self._records.get(gid)
+        with self._lock:
+            return self._records.get(gid)
 
     def all_records(self) -> List[dict]:
-        return list(self._records.values())
+        with self._lock:
+            return list(self._records.values())
 
     def status_of(self, gid: str) -> Optional[str]:
-        r = self._records.get(gid)
-        return r.get("status") if r else None
+        with self._lock:
+            r = self._records.get(gid)
+            return r.get("status") if r else None
 
     def is_done(self, gid: str) -> bool:
         return self.status_of(gid) in ("encoded", "failed", "evicted", "duplicate")
@@ -192,7 +195,8 @@ class Manifest:
         return False
 
     def gid_for_sha(self, sha: str) -> Optional[str]:
-        return self._sha_to_gid.get(sha)
+        with self._lock:
+            return self._sha_to_gid.get(sha)
 
     # --- write APIs (always atomic-append + in-memory update) ------------
     def append(self, rec: dict) -> None:

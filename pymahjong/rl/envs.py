@@ -16,7 +16,12 @@ import gymnasium as gym
 import numpy as np
 from gymnasium.spaces import Discrete
 
-from .action_space import ACTION_DIM, ActionEncoder
+from .action_space import (
+    ACTION_DIM,
+    A_PASS_RIICHI,
+    A_RIICHI,
+    ActionEncoder,
+)
 from .encoding import EncodingVersion, get_strategy
 from . import encodings  # noqa: F401 -- ensures all strategies are registered
 
@@ -81,10 +86,20 @@ class EncodingMahjongEnv(gym.Env):
             action = int(np.random.choice(valid))
         else:
             action = int(self.opponent_policy(self._obs()))
+        self._execute_unified_action(action)
+
+    def _execute_unified_action(self, action: int) -> None:
+        """Translate a unified 54-action index and execute it on the engine.
+
+        Bypasses :meth:`MahjongEnv.step`'s encv1-based validation, because
+        the strategy's action_mask may legitimately expose both a regular
+        discard slot and a red5 slot for a red-5 tile while encv1 exposes
+        only the red5 slot.  Riichi-stage2 bookkeeping is handled manually
+        to mirror what ``MahjongEnv.step`` would do.
+        """
         engine_idx = ActionEncoder.unified_to_engine(self._inner.t, action)
         self._inner.t.make_selection(engine_idx)
-        # Riichi stage handling
-        if action in (ActionEncoder.A_RIICHI, ActionEncoder.A_PASS_RIICHI):
+        if action in (A_RIICHI, A_PASS_RIICHI):
             self._inner.riichi_stage2 = False
         else:
             ph = self._inner.t.get_phase()
@@ -94,6 +109,8 @@ class EncodingMahjongEnv(gym.Env):
                     self._inner.riichi_stage2 = True
                 else:
                     self._inner.riichi_stage2 = False
+            else:
+                self._inner.riichi_stage2 = False
 
     def _proceed_to_agent(self):
         while not self._inner.is_over() and self._inner.get_curr_player_id() != self.agent_seat:
@@ -121,7 +138,7 @@ class EncodingMahjongEnv(gym.Env):
     def step(self, action: int):
         if self._inner.get_curr_player_id() != self.agent_seat:
             raise RuntimeError("Step called when it is not the agent's turn.")
-        self._inner.step(self.agent_seat, int(action))
+        self._execute_unified_action(int(action))
         self._proceed_to_agent()
         terminated = self._inner.is_over()
         reward = 0.0
@@ -189,7 +206,23 @@ class EncodingMultiAgentEnv:
 
     def step(self, action: int) -> Tuple[Dict[str, Any], np.ndarray, bool, dict]:
         seat = self.current_player
-        self._inner.step(seat, int(action))
+        # Use unified_to_engine + make_selection rather than _inner.step so
+        # the V3/V4 strategy's action_mask (which may set both regular and
+        # red5 discard slots for a red-5 tile) round-trips into the engine.
+        engine_idx = ActionEncoder.unified_to_engine(self._inner.t, int(action))
+        self._inner.t.make_selection(engine_idx)
+        if int(action) in (A_RIICHI, A_PASS_RIICHI):
+            self._inner.riichi_stage2 = False
+        else:
+            ph = self._inner.t.get_phase()
+            if ph < 4:
+                acts = self._inner.t.get_self_actions()
+                if any(int(a.action) == int(pm.BaseAction.Riichi) for a in acts):
+                    self._inner.riichi_stage2 = True
+                else:
+                    self._inner.riichi_stage2 = False
+            else:
+                self._inner.riichi_stage2 = False
         self._skip_forced()
         done = self._inner.is_over()
         if done:
