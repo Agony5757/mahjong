@@ -1,8 +1,9 @@
 """
 AI player implementations.
-Supports random AI and pretrained VLOGMahjong model.
+Supports random AI, V4 BC transformer, and legacy VLOGMahjong models.
 """
 import numpy as np
+import os
 from typing import Optional
 
 
@@ -11,6 +12,13 @@ class BaseAIPlayer:
 
     def select_action(self, env_wrapper, player_id: int) -> int:
         raise NotImplementedError
+
+    # Hooks called by Game lifecycle. Default implementations do nothing.
+    def on_hand_start(self, env_wrapper) -> None:  # noqa: D401
+        """Notify the AI that a fresh kyoku has begun."""
+
+    def on_action_executed(self, env_wrapper) -> None:  # noqa: D401
+        """Notify the AI that the engine just advanced (post-make_selection)."""
 
 
 class RandomAI(BaseAIPlayer):
@@ -21,11 +29,83 @@ class RandomAI(BaseAIPlayer):
         return int(np.random.choice(valid))
 
 
+class V4ModelAI(BaseAIPlayer):
+    """V4 :class:`EventStreamTransformer` BC/PPO checkpoint.
+
+    Maintains a per-session :class:`LiveV4Encoder` that mirrors the
+    underlying ``pm.Table`` so the model always sees the same event
+    stream it was trained on. ``on_hand_start`` / ``on_action_executed``
+    must be called by the host whenever a kyoku starts or the engine
+    advances; see ``web/game_manager.py`` for the integration.
+    """
+
+    def __init__(self, model_path: str):
+        self.model_path = model_path
+        self._model = None
+        self._device = None
+        self._live = None
+        self._strategy = None
+
+    def _ensure_model(self):
+        if self._model is not None:
+            return
+        import torch
+        from pymahjong.rl.encoding import EncodingVersion, get_strategy
+        from pymahjong.rl.common.config import TransformerConfig
+        from pymahjong.rl.v4.model import EventStreamTransformer
+
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._strategy = get_strategy(EncodingVersion("v4"))
+        self._model = EventStreamTransformer(config=TransformerConfig())
+        ck = torch.load(self.model_path, map_location=self._device, weights_only=False)
+        sd = ck.get("model", ck) if isinstance(ck, dict) else ck
+        self._model.load_state_dict(sd)
+        self._model.to(self._device)
+        self._model.eval()
+
+    def _ensure_live(self, env_wrapper):
+        if self._live is None or self._live.table is not env_wrapper.t:
+            from pymahjong.rl.v4.live import LiveV4Encoder
+            self._live = LiveV4Encoder(env_wrapper.t)
+            self._live.start_hand()
+
+    def on_hand_start(self, env_wrapper) -> None:
+        from pymahjong.rl.v4.live import LiveV4Encoder
+        self._live = LiveV4Encoder(env_wrapper.t)
+        self._live.start_hand()
+
+    def on_action_executed(self, env_wrapper) -> None:
+        if self._live is not None and self._live.table is env_wrapper.t:
+            self._live.sync()
+
+    def select_action(self, env_wrapper, player_id: int) -> int:
+        import torch
+
+        self._ensure_model()
+        self._ensure_live(env_wrapper)
+
+        obs = self._live.observation_for(player_id)
+        feat, attn, mask = self._strategy.obs_to_tensor(obs, self._device)
+
+        with torch.no_grad():
+            logits, _ = self._model(feat, attn, mask)
+        logits = logits.squeeze(0).cpu().numpy()
+        valid_mask = obs["action_mask"]
+        logits[~valid_mask] = -1e9
+        action = int(np.argmax(logits))
+
+        # Safety check: if the chosen action is somehow not valid (e.g. due
+        # to mask differences with engine), fall back to the engine's mask.
+        engine_valid = env_wrapper.get_valid_actions_mask(player_id)
+        if not engine_valid[action]:
+            valid = env_wrapper.get_valid_actions(player_id)
+            action = int(np.random.choice(valid))
+
+        return action
+
+
 class PretrainedModelAI(BaseAIPlayer):
-    """
-    Pretrained VLOGMahjong model as AI opponent.
-    Supports DDQN and BC models from pymahjong/models.py.
-    """
+    """Legacy VLOGMahjong DDQN/BC checkpoints (V1 encoding, 93x34 obs)."""
 
     def __init__(self, model_path: str):
         self.model_path = model_path
@@ -56,7 +136,6 @@ class PretrainedModelAI(BaseAIPlayer):
             self._load_model()
 
         import torch
-        from pymahjong.models import VLOGMahjong
 
         valid_mask = env_wrapper.get_valid_actions_mask(player_id)
         obs = env_wrapper._env.get_obs(player_id)  # 93x34
@@ -77,19 +156,47 @@ class PretrainedModelAI(BaseAIPlayer):
         return action
 
 
+def _detect_model_kind(model_path: str) -> str:
+    """Return ``"v4"`` or ``"legacy"`` for a checkpoint file.
+
+    V4 ``EventStreamTransformer`` checkpoints contain an ``input_proj.weight``
+    in the state dict (the per-event linear projection). Legacy VLOGMahjong
+    checkpoints do not.
+    """
+    try:
+        import torch
+        ck = torch.load(model_path, map_location="cpu", weights_only=False)
+        sd = ck.get("model", ck) if isinstance(ck, dict) else ck
+        if isinstance(sd, dict) and any(
+            k.endswith("input_proj.weight") or k == "input_proj.weight"
+            for k in sd.keys()
+        ):
+            return "v4"
+    except Exception:
+        pass
+    return "legacy"
+
+
 def create_ai_player(ai_type: str, model_path: Optional[str] = None) -> BaseAIPlayer:
     """
     Factory for AI players.
 
     Args:
-        ai_type: "random" or "pretrained"
-        model_path: Path to .pth model file (required for "pretrained")
+        ai_type: ``"random"`` or ``"pretrained"``. When ``"pretrained"``
+            the checkpoint is autodetected as V4 transformer or legacy
+            VLOGMahjong by inspecting the state-dict keys.
+        model_path: Path to .pt/.pth model file (required for ``"pretrained"``).
     """
     if ai_type == "random":
         return RandomAI()
     elif ai_type == "pretrained":
         if not model_path:
             raise ValueError("model_path required for pretrained AI")
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"model file not found: {model_path}")
+        kind = _detect_model_kind(model_path)
+        if kind == "v4":
+            return V4ModelAI(model_path)
         return PretrainedModelAI(model_path)
     else:
         raise ValueError(f"Unknown AI type: {ai_type}")

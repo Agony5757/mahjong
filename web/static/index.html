@@ -29,10 +29,16 @@
                 </select>
             </label>
             <label class="option-row">
-                <span>AI 模型</span>
-                <select id="aiModelSelect">
-                    <option value="random">随机 AI（默认）</option>
-                </select>
+                <span>P1 (下家)</span>
+                <select id="aiModelP1" class="ai-model-select"></select>
+            </label>
+            <label class="option-row">
+                <span>P2 (对家)</span>
+                <select id="aiModelP2" class="ai-model-select"></select>
+            </label>
+            <label class="option-row">
+                <span>P3 (上家)</span>
+                <select id="aiModelP3" class="ai-model-select"></select>
             </label>
             <label class="option-row">
                 <span>随机种子</span>
@@ -84,9 +90,48 @@
 <script src="/static/js/game_core.js"></script>
 <script>
     let game = null;
+    let _availableModels = null;
+
+    async function _populateAiSelects(selects, includeRandom = true) {
+        if (_availableModels === null) {
+            try {
+                const r = await fetch('/api/models');
+                const j = await r.json();
+                _availableModels = j.models || [];
+            } catch (e) {
+                console.warn('failed to list models:', e);
+                _availableModels = [];
+            }
+        }
+        for (const sel of selects) {
+            sel.innerHTML = '';
+            if (includeRandom) {
+                const opt = document.createElement('option');
+                opt.value = 'random';
+                opt.textContent = '随机 AI（默认）';
+                sel.appendChild(opt);
+            }
+            for (const m of _availableModels) {
+                const opt = document.createElement('option');
+                opt.value = m.name;
+                opt.textContent = m.name;
+                sel.appendChild(opt);
+            }
+        }
+    }
+
+    function _buildAiModelsArray() {
+        // human at seat 0; AI at seats 1/2/3.
+        return [
+            null,
+            document.getElementById('aiModelP1').value,
+            document.getElementById('aiModelP2').value,
+            document.getElementById('aiModelP3').value,
+        ];
+    }
 
     function startHumanAI() {
-        const aiModel = document.getElementById('aiModelSelect').value === 'random' ? null : document.getElementById('aiModelSelect').value;
+        const aiModels = _buildAiModelsArray();
         const seedVal = document.getElementById('seedInput').value;
         const seed = seedVal ? parseInt(seedVal) : null;
         const maxRound = parseInt(document.getElementById('maxRoundSelect').value);
@@ -120,7 +165,7 @@
             }
         });
 
-        game.newGame('human_ai', aiModel, seed, maxRound).catch(err => {
+        game.newGame('human_ai', null, seed, maxRound, aiModels).catch(err => {
             alert('启动失败: ' + err.message);
         });
     }
@@ -148,6 +193,15 @@
             panel.appendChild(btn);
         }
     };
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const sels = [
+            document.getElementById('aiModelP1'),
+            document.getElementById('aiModelP2'),
+            document.getElementById('aiModelP3'),
+        ].filter(Boolean);
+        _populateAiSelects(sels);
+    });
 </script>
 </body>
 </html>

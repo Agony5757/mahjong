@@ -43,6 +43,14 @@ wheelhouse/
 # IDE
 .idea/
 
+# Python package manager
+uv.lock
+cache/
+
 # AI assistant config
 .github/copilot-instructions.md
 web/logs
+
+# Trained model checkpoints (only the curated production models are committed)
+*.pt
+!models/bc_v4.best.pt

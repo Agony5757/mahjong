@@ -17,6 +17,8 @@ class MahjongGame {
         this.eventSource = null;
         this.aiSpeed = 1000;  // ms between AI actions
         this._animFrame = null;
+        this._actionInFlight = false;
+        this._autoSubmittedKey = null;
 
         if (window.MahjongRenderer?.setInvalidateHandler) {
             window.MahjongRenderer.setInvalidateHandler(() => this._render());
@@ -49,11 +51,13 @@ class MahjongGame {
         return resp.text();
     }
 
-    async newGame(mode = 'human_ai', aiModel = null, seed = null, maxRound = 1) {
+    async newGame(mode = 'human_ai', aiModel = null, seed = null, maxRound = 1, aiModels = null) {
         this.mode = mode;
+        const body = { mode, ai_model: aiModel, seed, max_round: maxRound };
+        if (aiModels) body.ai_models = aiModels;
         const resp = await this._fetch('/api/game/new', {
             method: 'POST',
-            body: { mode, ai_model: aiModel, seed, max_round: maxRound }
+            body
         });
         this.sessionId = resp.session_id;
         this.state = resp.state;
@@ -100,6 +104,8 @@ class MahjongGame {
 
     async submitAction(actionIdx) {
         if (!this.sessionId) return;
+        if (this._actionInFlight) return;
+        this._actionInFlight = true;
         try {
             const resp = await this._fetch(`/api/game/${this.sessionId}/action`, {
                 method: 'POST',
@@ -113,6 +119,8 @@ class MahjongGame {
             return resp;
         } catch (e) {
             console.error('submitAction failed:', e);
+        } finally {
+            this._actionInFlight = false;
         }
     }
 

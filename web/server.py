@@ -48,6 +48,40 @@ async def log_requests(request: Request, call_next):
 WEB_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
 
+MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
+
+
+def _resolve_model_spec(spec: Optional[str]) -> Optional[str]:
+    """Translate an AI spec from the request into a file path or ``None``.
+
+    Returns ``None`` for the random AI (when ``spec`` is None, empty, or
+    ``"random"``). Otherwise, bare names are resolved to
+    ``<repo>/models/{name}.pt``; anything containing ``/`` or ending in
+    ``.pt`` is used verbatim.
+    """
+    if spec is None:
+        return None
+    s = str(spec).strip()
+    if not s or s.lower() == "random":
+        return None
+    if "/" in s or s.endswith(".pt"):
+        return s
+    return str(MODELS_DIR / f"{s}.pt")
+
+
+def _list_available_models() -> list:
+    """Return ``[{name, path, size}]`` for every ``models/*.pt`` checkpoint."""
+    out: list = []
+    if MODELS_DIR.is_dir():
+        for p in sorted(MODELS_DIR.glob("*.pt")):
+            stem = p.name[: -len(".pt")]
+            out.append({
+                "name": stem,
+                "path": str(p),
+                "size": int(p.stat().st_size),
+            })
+    return out
+
 # ─── Globals ──────────────────────────────────────────────────────────────────
 manager = GameManager()
 
@@ -82,7 +116,12 @@ def _session_state(session: GameSession) -> dict:
 # ─── Models ───────────────────────────────────────────────────────────────────
 class NewGameRequest(BaseModel):
     mode: str = "human_ai"           # "human_ai" | "4ai"
-    ai_model: Optional[str] = None
+    ai_model: Optional[str] = None   # Legacy: single model applied to all AI seats.
+    ai_models: Optional[list] = None  # New: per-seat model names. ``None``/``"random"``
+                                     # entries spawn a RandomAI; bare names resolve to
+                                     # ``models/{name}.pt``; absolute/relative paths
+                                     # containing "/" or ending with ``.pt`` are used as-is.
+                                     # Length 4; for ``human_ai`` mode index 0 (human) is ignored.
     seed: Optional[int] = None
     max_round: int = 1               # 0=tonpuu (East), 1=hansou (East+South), 2=full
 
@@ -318,15 +357,49 @@ async def new_game(req: NewGameRequest, background_tasks: BackgroundTasks):
     session = manager.create_session(mode=mode, seed=req.seed, max_round=req.max_round)
     sid = session.session_id
 
-    # AI per seat
-    ai_type = "random" if not req.ai_model else "pretrained"
-    if mode == GameMode.HUMAN_AI:
-        ais = [None] + [create_ai_player(ai_type, req.ai_model) for _ in range(3)]
+    # AI per seat. Three resolution paths:
+    # 1. Per-seat list ``ai_models`` (preferred); entries are spec strings.
+    # 2. Legacy single ``ai_model``: same model for every AI seat.
+    # 3. Neither: random AI for every seat.
+    def _make_ai(spec: Optional[str]):
+        path = _resolve_model_spec(spec)
+        if path is None:
+            return create_ai_player("random")
+        return create_ai_player("pretrained", path)
+
+    if req.ai_models is not None:
+        if len(req.ai_models) != 4:
+            raise HTTPException(400, "ai_models must have exactly 4 entries")
+        per_seat = list(req.ai_models)
     else:
-        ais = [create_ai_player(ai_type, req.ai_model) for _ in range(4)]
+        per_seat = [req.ai_model] * 4
+
+    if mode == GameMode.HUMAN_AI:
+        ais = [None] + [_make_ai(per_seat[i]) for i in (1, 2, 3)]
+    else:
+        ais = [_make_ai(per_seat[i]) for i in range(4)]
     with _lock:
         _session_ais[sid] = ais
         _session_speed[sid] = 0.2
+
+    # Wire AI lifecycle hooks so stateful AIs (e.g. V4 transformer) stay
+    # in sync with the engine across hand transitions and inter-AI steps.
+    adapter = session.adapter
+    adapter.clear_callbacks()
+
+    def _kyoku_cb():
+        for a in ais:
+            if a is not None:
+                a.on_hand_start(adapter)
+    adapter.add_on_kyoku_start(_kyoku_cb)
+    # The first kyoku was already initialized in session creation, fire now.
+    _kyoku_cb()
+
+    def _step_cb():
+        for a in ais:
+            if a is not None:
+                a.on_action_executed(adapter)
+    adapter.add_on_step(_step_cb)
 
     if mode == GameMode.FOUR_AI:
         background_tasks.add_task(_start_hansou_thread, session)
@@ -452,8 +525,13 @@ async def list_sessions():
 
 # ─── Replay API ──────────────────────────────────────────────────────────────
 def _paipu_dirs() -> list[Path]:
+    from pymahjong.config import get_config
     repo_root = Path(__file__).parent.parent
-    return [repo_root / "paipuxmls", repo_root / "pymahjong" / "paipuxmls"]
+    dirs = [repo_root / "paipuxmls", repo_root / "pymahjong" / "paipuxmls"]
+    cfg_path = get_config().paipu_xml_path
+    if cfg_path:
+        dirs.insert(0, Path(cfg_path))
+    return dirs
 
 
 @app.get("/api/replay/builtin")
@@ -494,6 +572,17 @@ async def get_paipu_steps(req: PaipuStepsRequest):
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/api/models")
+async def list_models():
+    """List available AI model checkpoints under ``<repo>/models/*.pt``.
+
+    Each entry is ``{name, path, size}``; ``name`` is the filename without
+    its ``.pt`` extension. The UI displays ``name`` and submits it as part
+    of ``ai_models`` to ``/api/game/new``.
+    """
+    return {"models": _list_available_models()}
 
 
 if __name__ == "__main__":

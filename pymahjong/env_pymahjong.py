@@ -4,6 +4,29 @@ import warnings
 from gymnasium.spaces import Discrete, Box
 import MahjongPyWrapper as pm
 
+from pymahjong.rl.action_space import (
+    ACTION_DIM as _ACTION_DIM,
+    A_CHILEFT as _CHILEFT,
+    A_CHIMIDDLE as _CHIMIDDLE,
+    A_CHIRIGHT as _CHIRIGHT,
+    A_CHILEFT_USERED as _CHILEFT_USERED,
+    A_CHIMIDDLE_USERED as _CHIMIDDLE_USERED,
+    A_CHIRIGHT_USERED as _CHIRIGHT_USERED,
+    A_PON as _PON,
+    A_PON_USERED as _PON_USERED,
+    A_ANKAN as _ANKAN,
+    A_MINKAN as _MINKAN,
+    A_KAKAN as _KAKAN,
+    A_RIICHI as _RIICHI,
+    A_RON as _RON,
+    A_TSUMO as _TSUMO,
+    A_PUSH as _PUSH,
+    A_PASS_RIICHI as _PASS_RIICHI,
+    A_PASS_RESPONSE as _PASS_RESPONSE,
+    ACTION_TYPES as _ACTION_TYPES,
+    ActionEncoder,
+)
+
 np.set_printoptions(threshold=np.inf)
 
 class MahjongEnv(gym.Env):
@@ -40,28 +63,24 @@ class MahjongEnv(gym.Env):
     INIT_POINTS = 25000
     """int: Initial points for each player."""
 
-    # ACTION INDICES
-    CHILEFT = 37
-    CHIMIDDLE = 38
-    CHIRIGHT = 39
-
-    CHILEFT_USERED = 40
-    CHIMIDDLE_USERED = 41
-    CHIRIGHT_USERED = 42
-
-    PON = 43
-    PON_USERED = 44
-    ANKAN = 45
-    MINKAN = 46
-    KAKAN = 47
-
-    RIICHI = 48
-    RON = 49
-    TSUMO = 50
-    PUSH = 51
-
-    PASS_RIICHI = 52
-    PASS_RESPONSE = 53
+    # ACTION INDICES -- delegate to centralized action_space module
+    CHILEFT = _CHILEFT
+    CHIMIDDLE = _CHIMIDDLE
+    CHIRIGHT = _CHIRIGHT
+    CHILEFT_USERED = _CHILEFT_USERED
+    CHIMIDDLE_USERED = _CHIMIDDLE_USERED
+    CHIRIGHT_USERED = _CHIRIGHT_USERED
+    PON = _PON
+    PON_USERED = _PON_USERED
+    ANKAN = _ANKAN
+    MINKAN = _MINKAN
+    KAKAN = _KAKAN
+    RIICHI = _RIICHI
+    RON = _RON
+    TSUMO = _TSUMO
+    PUSH = _PUSH
+    PASS_RIICHI = _PASS_RIICHI
+    PASS_RESPONSE = _PASS_RESPONSE
 
     # corresponding to self.t.get_phase()
     Phases = ("P1_ACTION", "P2_ACTION", "P3_ACTION", "P4_ACTION", "P1_RESPONSE", "P2_RESPONSE", "P3_RESPONSE",
@@ -69,11 +88,8 @@ class MahjongEnv(gym.Env):
               "P1_抢暗杠RESPONSE", "P2_抢暗杠RESPONSE", " P3_抢暗杠RESPONSE", " P4_抢暗杠RESPONSE", "GAME_OVER",
               "P1_DRAW, P2_DRAW, P3_DRAW, P4_DRAW")
 
-    # pymahjhong.BaseAction
-    ACTION_TYPES = [pm.BaseAction.Discard] * (MAHJONG_TILE_TYPES + 3) + [pm.BaseAction.Chi] * 6 + [pm.BaseAction.Pon] * 2 \
-                   + [pm.BaseAction.AnKan] + [pm.BaseAction.Kan] + [pm.BaseAction.KaKan] \
-                   + [pm.BaseAction.Riichi] + [pm.BaseAction.Ron] + [pm.BaseAction.Tsumo] \
-                   + [pm.BaseAction.Kyushukyuhai] + [pm.BaseAction.Pass] * 2
+    # pymahjhong.BaseAction -- delegate to centralized action_space module
+    ACTION_TYPES = _ACTION_TYPES
 
     def __init__(self):
         self.t = pm.Table()

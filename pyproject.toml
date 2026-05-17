@@ -38,6 +38,7 @@ classifiers = [
 dependencies = [
     "numpy",
     "gymnasium",
+    "pyyaml",
 ]
 
 [project.urls]

@@ -9,6 +9,7 @@
 #include "Player.h"
 #include "fmt/os.h"
 #include <array>
+#include <functional>
 #include <random>
 #include <ctime>
 
@@ -54,8 +55,26 @@ public:
 	bool use_seed = false;
 	int seed = 0;
 
+	// Optional callback fired whenever a tile is drawn (normal or rinshan).
+	// Signature: void(int player, Tile* tile, bool from_rinshan)
+	// Set via set_draw_callback(), cleared via clear_draw_callback().
+	std::function<void(int player, Tile* tile, bool from_rinshan)> draw_callback_;
+
+	// If true, draw_normal() skips adding the tile to the hand.
+	// Used by V4 encoder to control when tiles are added during init.
+	bool skip_draw_to_hand_ = false;
+
 public:
 	Table() = default;
+	void set_draw_callback(
+		std::function<void(int player, Tile* tile, bool from_rinshan)> cb);
+	void clear_draw_callback();
+	void set_skip_draw_to_hand(bool v) { skip_draw_to_hand_ = v; }
+	bool get_skip_draw_to_hand() const { return skip_draw_to_hand_; }
+	// If true, log_game_start() skips the hand-size validation.
+	// Used together with set_skip_draw_to_hand for V4 encoder init.
+	void set_skip_hand_check(bool v) { gamelog.skip_hand_check_ = v; }
+	bool get_skip_hand_check() const { return gamelog.skip_hand_check_; }
 
 	void new_dora();
 	std::vector<BaseTile> get_dora() const;

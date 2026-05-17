@@ -68,9 +68,13 @@ public:
 	Result result;
 	std::vector<BaseGameLog> logs;
 
-	GameLog() 
-	{ 
-		/* avoid reallocation */ 
+	// If true, log_game_start() skips the hand-size validation.
+	// Used by V4 encoder to control when tiles are added during init.
+	bool skip_hand_check_ = false;
+
+	GameLog()
+	{
+		/* avoid reallocation */
 		logs.reserve(128);
 	}
 
@@ -86,6 +90,9 @@ public:
 
 	void _log_draw_normal(int player, Tile* tile);
 	void _log_draw_rinshan(int player, Tile* tile);
+	// Append a draw entry directly (used by Python for synthetic initial draw).
+	// Does NOT modify yama or any player state — caller is responsible for that.
+	void append_draw_normal(int player, Tile* tile);
 	inline void log_draw(int player, Tile* tile, bool from_rinshan)
 	{
 		if (from_rinshan)

@@ -109,10 +109,18 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.value("_7z", BaseTile::_7z)
 		;
 
+	py::enum_<CallGroup::Type>(m, "CallGroupType", "Type of a called meld (chi/pon/kan/ankan/kakan).")
+		.value("Chi", CallGroup::Type::Chi)
+		.value("Pon", CallGroup::Type::Pon)
+		.value("DaiMinKan", CallGroup::Type::DaiMinKan)
+		.value("KaKan", CallGroup::Type::KaKan)
+		.value("AnKan", CallGroup::Type::AnKan)
+		;
+
 	py::class_<CallGroup>(m, "CallGroup", "A called meld (chi/pon/kan) group.")
 		.def_readonly("type", &CallGroup::type, "Action type of this call.")
 		.def_readonly("tiles", &CallGroup::tiles, "Tiles in the called meld.")
-		.def_readonly("take", &CallGroup::take, "Tile taken from another player's discard.")
+		.def_readonly("take", &CallGroup::take, "Position of the taken tile within the meld (0=left, 1=middle, 2=right).")
 		.def("to_string", &CallGroup::to_string, "Return a string representation.")
 		;
 
@@ -169,6 +177,25 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.value("Riichi", BaseAction::Riichi)
 		.value("Tsumo", BaseAction::Tsumo)
 		.value("Kyushukyuhai", BaseAction::Kyushukyuhai)
+		;
+
+	py::enum_<LogAction>(m, "LogAction", "Game log action types.")
+		.value("AnKan", LogAction::AnKan)
+		.value("Pon", LogAction::Pon)
+		.value("Chi", LogAction::Chi)
+		.value("Kan", LogAction::Kan)
+		.value("KaKan", LogAction::KaKan)
+		.value("DiscardFromHand", LogAction::DiscardFromHand)
+		.value("DiscardFromTsumo", LogAction::DiscardFromTsumo)
+		.value("RiichiDiscardFromHand", LogAction::RiichiDiscardFromHand)
+		.value("RiichiDiscardFromTsumo", LogAction::RiichiDiscardFromTsumo)
+		.value("RiichiSuccess", LogAction::RiichiSuccess)
+		.value("DrawNormal", LogAction::DrawNormal)
+		.value("DrawRinshan", LogAction::DrawRinshan)
+		.value("DoraReveal", LogAction::DoraReveal)
+		.value("Kyushukyuhai", LogAction::Kyushukyuhai)
+		.value("Ron", LogAction::Ron)
+		.value("Tsumo", LogAction::Tsumo)
 		;
 
 	py::class_<SelfAction>(m, "SelfAction", "An available self-action (draw phase) for a player.")
@@ -299,6 +326,28 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 
 		.def("set_seed", &Table::set_seed,
 			"Set the random seed for tile shuffling.", py::arg("seed"))
+		.def("set_draw_callback",
+			[](Table& self, std::function<void(int, Tile*, bool)> cb) {
+				self.set_draw_callback(std::move(cb));
+			},
+			"Set a callback fired on every draw (normal or rinshan). "
+			"Callback signature: on_draw(player: int, tile: Tile, from_rinshan: bool). "
+			"Useful for synchronizing event streams with the engine's draw timing.",
+			py::arg("callback"))
+		.def("clear_draw_callback", &Table::clear_draw_callback,
+			"Clear the draw callback.")
+		.def("set_skip_draw_to_hand", &Table::set_skip_draw_to_hand,
+			"If true, draw_normal() skips adding the tile to the hand. "
+			"Used by V4 encoder to control tile addition timing during init.",
+			py::arg("v") = true)
+		.def("get_skip_draw_to_hand", &Table::get_skip_draw_to_hand,
+			"Get the skip_draw_to_hand flag value.")
+		.def("set_skip_hand_check", &Table::set_skip_hand_check,
+			"If true, log_game_start() skips the hand-size validation. "
+			"Use together with set_skip_draw_to_hand for V4 encoder init.",
+			py::arg("v") = true)
+		.def("get_skip_hand_check", &Table::get_skip_hand_check,
+			"Get the skip_hand_check flag value.")
 		.def("set_debug_mode", &Table::set_debug_mode,
 			"Enable debug mode (1 or 2) for replayable logs.", py::arg("debug_mode"))
 		.def("print_debug_replay", &Table::print_debug_replay,
@@ -318,6 +367,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("oya", &Table::oya, "Current dealer (oya) player ID.")
 		.def_readonly("honba", &Table::honba, "Number of repeat counters (honba).")
 		.def_readonly("riichibo", &Table::kyoutaku, "Number of riichi deposit sticks on the table.")
+		.def_readonly("gamelog", &Table::gamelog, py::return_value_policy::reference_internal, "Game event log.")
 
 		// 辅助函数们
 		.def("get_dora", &Table::get_dora, py::return_value_policy::reference_internal, "Get the list of active dora tiles.")
@@ -521,6 +571,8 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("game_wind", &GameLog::game_wind, "Game wind.")
 		.def_readonly("result", &GameLog::result, "Game result.")
 		.def_readonly("logs", &GameLog::logs, "List of action log entries.")
+		.def("append_draw_normal", &GameLog::append_draw_normal,
+		     "Append a synthetic draw entry (used for initial draw).", py::arg("player"), py::arg("tile"))
 		.def("to_string", &GameLog::to_string, "Return a string representation.")
 		;
 
@@ -612,6 +664,90 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("encode_ippatsu_states", &encv2::PassiveTableEncoder::encode_ippatsu_states,
 			"Encode the ippatsu possibility states.", py::arg("ippatsu_states"))
 		;
+
+	// ---- V3 Encoding (snapshot tokenizer) ----
+	namespace encv3 = TrainingDataEncoding::v3;
+
+	py::class_<encv3::TableTokenizer>(m, "encv3_TableTokenizer",
+		"V3 snapshot tokenizer: produces a fixed-length token sequence from a Table state.")
+		.def(py::init<Table*, int, bool>(),
+		     "Create a TableTokenizer.",
+		     py::arg("table"),
+		     py::arg("max_seq_len") = encv3::MAX_SEQ_LEN,
+		     py::arg("include_oracle") = false)
+		.def("encode", &encv3::py_encode,
+		     "Encode the current table state into a dict of numpy arrays.",
+		     py::arg("current_player"),
+		     py::arg("riichi_stage2") = false)
+		;
+
+	m.attr("encv3_MAX_SEQ_LEN") = encv3::MAX_SEQ_LEN;
+	m.attr("encv3_TOKEN_FEATURES") = encv3::TOKEN_FEATURES;
+	m.attr("encv3_SCALAR_DIM") = encv3::SCALAR_DIM;
+	m.attr("encv3_ACTION_DIM") = encv3::ACTION_DIM;
+	m.attr("encv3_NUM_SEGMENTS") = encv3::NUM_SEGMENTS;
+
+	// ---- V4 Encoding ----
+	namespace encv4 = TrainingDataEncoding::v4;
+
+	py::class_<encv4::HandTrackEncoder>(m, "encv4_TrackEncoder")
+		.def("events", &encv4::py_events, "Get events as (N, EVENT_DIM) bool array.")
+		.def("decide_points", &encv4::py_decide_points,
+		     "Get decide points as list of dicts.")
+		.def("viewer", &encv4::HandTrackEncoder::viewer)
+		.def("clear", &encv4::HandTrackEncoder::clear)
+		;
+
+	py::class_<encv4::HandEncoder>(m, "encv4_HandEncoder")
+		.def(py::init<Table*>(), py::arg("table"))
+		.def("encode_context_and_score", &encv4::HandEncoder::encode_context_and_score,
+		     "Encode GAME_CONTEXT + PLAYER_SCORE (no INIT_HAND, no DoraIndicator).")
+		.def("encode_dora_indicator", &encv4::HandEncoder::encode_dora_indicator,
+		     "Encode DORA_INDICATOR from current table state.")
+		.def("fire_init_hand", &encv4::HandEncoder::fire_init_hand,
+		     py::arg("n") = 13,
+		     "Fire INIT_HAND events directly from hand tiles (up to n, default 13).")
+		.def("encode_init", &encv4::HandEncoder::encode_init)
+		.def("on_draw", &encv4::HandEncoder::on_draw,
+		     py::arg("player"), py::arg("tile"), py::arg("aka"))
+		.def("on_discard", &encv4::HandEncoder::on_discard,
+		     py::arg("player"), py::arg("tile"), py::arg("aka"), py::arg("flags"))
+		.def("on_chi", &encv4::HandEncoder::on_chi,
+		     py::arg("player"), py::arg("lowest"), py::arg("chi_type"),
+		     py::arg("from_who"), py::arg("aka_bits"))
+		.def("on_pon", &encv4::HandEncoder::on_pon,
+		     py::arg("player"), py::arg("tile"), py::arg("from_who"), py::arg("aka"))
+		.def("on_daiminkan", &encv4::HandEncoder::on_daiminkan,
+		     py::arg("player"), py::arg("tile"), py::arg("from_who"), py::arg("aka"))
+		.def("on_ankan", &encv4::HandEncoder::on_ankan,
+		     py::arg("player"), py::arg("tile"))
+		.def("on_kakan", &encv4::HandEncoder::on_kakan,
+		     py::arg("player"), py::arg("tile"), py::arg("aka"))
+		.def("on_riichi", &encv4::HandEncoder::on_riichi,
+		     py::arg("player"), py::arg("tile"), py::arg("aka"), py::arg("from_hand"))
+		.def("on_riichi_success", &encv4::HandEncoder::on_riichi_success,
+		     py::arg("player"))
+		.def("on_dora_reveal", &encv4::HandEncoder::on_dora_reveal,
+		     py::arg("tile"), py::arg("aka"))
+		.def("on_ron", &encv4::HandEncoder::on_ron,
+		     py::arg("winner"), py::arg("from_who"))
+		.def("on_tsumo", &encv4::HandEncoder::on_tsumo,
+		     py::arg("winner"))
+		.def("on_ryuukyoku", &encv4::HandEncoder::on_ryuukyoku)
+		.def("on_decide", &encv4::HandEncoder::on_decide,
+		     py::arg("player"), py::arg("action_mask"), py::arg("action_label"))
+		.def("track", &encv4::HandEncoder::track,
+		     py::return_value_policy::reference, py::arg("player"))
+		.def("clear", &encv4::HandEncoder::clear)
+		.def("set_init_phase", &encv4::HandEncoder::set_init_phase,
+		     py::arg("v") = true,
+		     "Set init phase flag. While true, on_draw encodes INIT_HAND. "
+		     "Call set_init_phase(false) to switch to DRAW encoding.")
+		;
+
+	m.attr("encv4_EVENT_DIM") = encv4::EVENT_DIM;
+	m.attr("encv4_N_ACTION_DIM") = encv4::N_ACTION_DIM;
+	m.attr("encv4_MAX_SEQ_LEN") = encv4::MAX_SEQ_LEN;
 }
 
 #ifdef __GNUC__
