@@ -326,6 +326,28 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 
 		.def("set_seed", &Table::set_seed,
 			"Set the random seed for tile shuffling.", py::arg("seed"))
+		.def("set_draw_callback",
+			[](Table& self, std::function<void(int, Tile*, bool)> cb) {
+				self.set_draw_callback(std::move(cb));
+			},
+			"Set a callback fired on every draw (normal or rinshan). "
+			"Callback signature: on_draw(player: int, tile: Tile, from_rinshan: bool). "
+			"Useful for synchronizing event streams with the engine's draw timing.",
+			py::arg("callback"))
+		.def("clear_draw_callback", &Table::clear_draw_callback,
+			"Clear the draw callback.")
+		.def("set_skip_draw_to_hand", &Table::set_skip_draw_to_hand,
+			"If true, draw_normal() skips adding the tile to the hand. "
+			"Used by V4 encoder to control tile addition timing during init.",
+			py::arg("v") = true)
+		.def("get_skip_draw_to_hand", &Table::get_skip_draw_to_hand,
+			"Get the skip_draw_to_hand flag value.")
+		.def("set_skip_hand_check", &Table::set_skip_hand_check,
+			"If true, log_game_start() skips the hand-size validation. "
+			"Use together with set_skip_draw_to_hand for V4 encoder init.",
+			py::arg("v") = true)
+		.def("get_skip_hand_check", &Table::get_skip_hand_check,
+			"Get the skip_hand_check flag value.")
 		.def("set_debug_mode", &Table::set_debug_mode,
 			"Enable debug mode (1 or 2) for replayable logs.", py::arg("debug_mode"))
 		.def("print_debug_replay", &Table::print_debug_replay,
@@ -549,6 +571,8 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def_readonly("game_wind", &GameLog::game_wind, "Game wind.")
 		.def_readonly("result", &GameLog::result, "Game result.")
 		.def_readonly("logs", &GameLog::logs, "List of action log entries.")
+		.def("append_draw_normal", &GameLog::append_draw_normal,
+		     "Append a synthetic draw entry (used for initial draw).", py::arg("player"), py::arg("tile"))
 		.def("to_string", &GameLog::to_string, "Return a string representation.")
 		;
 
@@ -676,6 +700,13 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 
 	py::class_<encv4::HandEncoder>(m, "encv4_HandEncoder")
 		.def(py::init<Table*>(), py::arg("table"))
+		.def("encode_context_and_score", &encv4::HandEncoder::encode_context_and_score,
+		     "Encode GAME_CONTEXT + PLAYER_SCORE (no INIT_HAND, no DoraIndicator).")
+		.def("encode_dora_indicator", &encv4::HandEncoder::encode_dora_indicator,
+		     "Encode DORA_INDICATOR from current table state.")
+		.def("fire_init_hand", &encv4::HandEncoder::fire_init_hand,
+		     py::arg("n") = 13,
+		     "Fire INIT_HAND events directly from hand tiles (up to n, default 13).")
 		.def("encode_init", &encv4::HandEncoder::encode_init)
 		.def("on_draw", &encv4::HandEncoder::on_draw,
 		     py::arg("player"), py::arg("tile"), py::arg("aka"))
@@ -693,7 +724,7 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("on_kakan", &encv4::HandEncoder::on_kakan,
 		     py::arg("player"), py::arg("tile"), py::arg("aka"))
 		.def("on_riichi", &encv4::HandEncoder::on_riichi,
-		     py::arg("player"), py::arg("tile"), py::arg("flags"))
+		     py::arg("player"), py::arg("tile"), py::arg("aka"), py::arg("from_hand"))
 		.def("on_riichi_success", &encv4::HandEncoder::on_riichi_success,
 		     py::arg("player"))
 		.def("on_dora_reveal", &encv4::HandEncoder::on_dora_reveal,
@@ -708,6 +739,10 @@ PYBIND11_MODULE(MahjongPyWrapper, m)
 		.def("track", &encv4::HandEncoder::track,
 		     py::return_value_policy::reference, py::arg("player"))
 		.def("clear", &encv4::HandEncoder::clear)
+		.def("set_init_phase", &encv4::HandEncoder::set_init_phase,
+		     py::arg("v") = true,
+		     "Set init phase flag. While true, on_draw encodes INIT_HAND. "
+		     "Call set_init_phase(false) to switch to DRAW encoding.")
 		;
 
 	m.attr("encv4_EVENT_DIM") = encv4::EVENT_DIM;

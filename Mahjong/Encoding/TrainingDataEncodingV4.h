@@ -152,10 +152,25 @@ namespace TrainingDataEncoding {
 		public:
 			explicit HandTrackEncoder(Table* t, int viewer);
 
+			// Encode GAME_CONTEXT + PLAYER_SCORE (no INIT_HAND, no DORA_INDICATOR).
+			// Does NOT modify init_phase_ or n_init_hand_.
+			void encode_context_and_score();
+			// Encode DORA_INDICATOR from current table state.
+			void encode_dora_indicator();
+			// Fire INIT_HAND events directly from hand tiles (up to n, default 13).
+			// Does NOT modify init_phase_ or n_init_hand_.
+			void fire_init_hand(int n = 13);
+			// Convenience: GAME_CONTEXT + PLAYER_SCORE + INIT_HAND (up to n) + DORA_INDICATOR.
+			// Also sets init_phase_ = true.
+			void encode_game_context_and_dora();
 			void encode_init();
 
-			// Private event — only added to the drawing player's track
+			// Called by draw callback during Table::game_init / game_init_for_replay.
+			// While init_phase_ is true, encodes INIT_HAND (one per draw).
+			// After set_init_phase(false), encodes DRAW.
 			void on_draw(BaseTile tile, bool aka);
+			void set_init_phase(bool v) { init_phase_ = v; }
+			void set_n_init_hand(int n) { n_init_hand_ = n; }
 
 			// Public events — added to ALL tracks by HandEncoder
 			void on_discard(int absolute_player, BaseTile tile, bool aka, int flags);
@@ -165,7 +180,7 @@ namespace TrainingDataEncoding {
 			void on_daiminkan(int absolute_player, BaseTile tile, int absolute_from_who, bool aka);
 			void on_ankan(int absolute_player, BaseTile tile);
 			void on_kakan(int absolute_player, BaseTile tile, bool aka);
-			void on_riichi(int absolute_player, BaseTile tile, int flags);
+			void on_riichi(int absolute_player, BaseTile tile, bool aka, bool from_hand);
 			void on_riichi_success(int absolute_player);
 			void on_dora_reveal(BaseTile tile, bool aka);
 			void on_ron(int absolute_winner, int absolute_from_who);
@@ -190,6 +205,8 @@ namespace TrainingDataEncoding {
 			int viewer_;
 			std::vector<EventFeatures> events_;
 			std::vector<DecidePoint> decide_points_;
+			bool init_phase_ = false;  // true until encode_init() / set_init_phase(false)
+			int n_init_hand_ = -1;  // -1 = auto (hand.size(), capped at 13)
 		};
 
 		// ---------------------------------------------------------------
@@ -209,7 +226,7 @@ namespace TrainingDataEncoding {
 			void on_daiminkan(int player, BaseTile tile, int from_who, bool aka);
 			void on_ankan(int player, BaseTile tile);
 			void on_kakan(int player, BaseTile tile, bool aka);
-			void on_riichi(int player, BaseTile tile, int flags);
+			void on_riichi(int player, BaseTile tile, bool aka, bool from_hand);
 			void on_riichi_success(int player);
 			void on_dora_reveal(BaseTile tile, bool aka);
 			void on_ron(int winner, int from_who);
@@ -221,6 +238,32 @@ namespace TrainingDataEncoding {
 			               int label);
 
 			const HandTrackEncoder& track(int player) const { return tracks_[player]; }
+			void set_init_phase(bool v) {
+			    for (auto& tr : tracks_) tr.set_init_phase(v);
+			}
+			// Set the number of INIT_HAND events to fire in encode_game_context_and_dora / fire_init_hand.
+			// -1 (default) = auto (use hand.size(), capped at 13).
+			// Set to 13 to fire exactly 13 INIT_HAND events regardless of hand size.
+			void set_n_init_hand(int n) {
+			    for (auto& tr : tracks_) tr.set_n_init_hand(n);
+			}
+			// Encode GAME_CONTEXT + PLAYER_SCORE (no INIT_HAND, no DORA_INDICATOR).
+			void encode_context_and_score() {
+			    for (auto& tr : tracks_) tr.encode_context_and_score();
+			}
+			// Encode DORA_INDICATOR from current table state.
+			void encode_dora_indicator() {
+			    for (auto& tr : tracks_) tr.encode_dora_indicator();
+			}
+			// Fire INIT_HAND events directly from hand tiles (up to n, default 13).
+			void fire_init_hand(int n = 13) {
+			    for (auto& tr : tracks_) tr.fire_init_hand(n);
+			}
+			// Fire GAME_CONTEXT + PLAYER_SCORE + INIT_HAND (up to n) + DORA_INDICATOR.
+			// Also sets init_phase_ = true (subsequent draws encode INIT_HAND).
+			void encode_game_context_and_dora() {
+			    for (auto& tr : tracks_) tr.encode_game_context_and_dora();
+			}
 			void clear();
 
 		private:

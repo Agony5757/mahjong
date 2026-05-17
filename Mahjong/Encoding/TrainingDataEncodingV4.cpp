@@ -25,7 +25,7 @@ int HandTrackEncoder::to_relative(int absolute_player) const {
     return rel;
 }
 
-void HandTrackEncoder::encode_init() {
+void HandTrackEncoder::encode_context_and_score() {
     // GAME_CONTEXT: game_wind, self_wind, oya_relative
     {
         EventFeatures f;
@@ -46,17 +46,9 @@ void HandTrackEncoder::encode_init() {
         f.set_honba(table_->honba);
         events_.push_back(f);
     }
+}
 
-    // INIT_HAND × 13 (sorted)
-    auto& hand = table_->players[viewer_].hand;
-    for (auto* tile : hand) {
-        EventFeatures f;
-        f.set_event_type(EventType::INIT_HAND);
-        f.set_tile(static_cast<int>(tile->tile));
-        if (tile->red_dora) f.set_aka();
-        events_.push_back(f);
-    }
-
+void HandTrackEncoder::encode_dora_indicator() {
     // DORA_INDICATOR — only currently revealed dora
     for (int i = 0; i < table_->n_active_dora && i < (int)table_->dora_indicator.size(); ++i) {
         auto* dora = table_->dora_indicator[i];
@@ -68,12 +60,61 @@ void HandTrackEncoder::encode_init() {
     }
 }
 
+void HandTrackEncoder::fire_init_hand(int n) {
+    // Fire INIT_HAND events directly from the hand tiles.
+    // n = number of tiles to fire (default 13, capped at hand.size())
+    // Does NOT modify init_phase_ or n_init_hand_.
+    auto& hand = table_->players[viewer_].hand;
+    int n_fire = n;
+    if (n_fire < 0 || n_fire > static_cast<int>(hand.size()))
+        n_fire = static_cast<int>(hand.size());
+    if (n_fire > 13) n_fire = 13;
+    for (int i = 0; i < n_fire; ++i) {
+        auto* tile = hand[i];
+        EventFeatures f;
+        f.set_event_type(EventType::INIT_HAND);
+        f.set_tile(static_cast<int>(tile->tile));
+        if (tile->red_dora) f.set_aka();
+        events_.push_back(f);
+    }
+}
+
+void HandTrackEncoder::encode_game_context_and_dora() {
+    // Convenience: GAME_CONTEXT + PLAYER_SCORE + INIT_HAND (up to 13 from hand)
+    // + DORA_INDICATOR.  Marks init_phase_ = true so subsequent draw callbacks
+    // encode INIT_HAND instead of DRAW.
+    encode_context_and_score();
+    fire_init_hand(n_init_hand_ >= 0 ? n_init_hand_ : 13);
+    encode_dora_indicator();
+    init_phase_ = true;
+    n_init_hand_ = -1;
+}
+
+void HandTrackEncoder::encode_init() {
+    // Full init: game context + dora + INIT_HAND.  Also marks init phase.
+    encode_game_context_and_dora();
+    // encode_game_context_and_dora() already sets init_phase_ = true.
+}
+
 void HandTrackEncoder::on_draw(BaseTile tile, bool aka) {
-    EventFeatures f;
-    f.set_event_type(EventType::DRAW);
-    f.set_tile(static_cast<int>(tile));
-    if (aka) f.set_aka();
-    events_.push_back(f);
+    if (init_phase_) {
+        // During Table::game_init / game_init_for_replay: encode INIT_HAND.
+        // Each draw from draw_normal() adds one tile to the hand.
+        // After this fires, init_phase_ stays true until set_init_phase(false)
+        // is called by encode_init() below.
+        EventFeatures f;
+        f.set_event_type(EventType::INIT_HAND);
+        f.set_tile(static_cast<int>(tile));
+        if (aka) f.set_aka();
+        events_.push_back(f);
+    } else {
+        // Normal game-loop draw: encode DRAW.
+        EventFeatures f;
+        f.set_event_type(EventType::DRAW);
+        f.set_tile(static_cast<int>(tile));
+        if (aka) f.set_aka();
+        events_.push_back(f);
+    }
 }
 
 void HandTrackEncoder::on_discard(int absolute_player, BaseTile tile, bool aka, int flags) {
@@ -135,13 +176,14 @@ void HandTrackEncoder::on_kakan(int absolute_player, BaseTile tile, bool aka) {
     events_.push_back(f);
 }
 
-void HandTrackEncoder::on_riichi(int absolute_player, BaseTile tile, int flags) {
+void HandTrackEncoder::on_riichi(int absolute_player, BaseTile tile, bool aka, bool from_hand) {
     EventFeatures f;
     f.set_event_type(EventType::RIICHI_DECLARE);
     f.set_tile(static_cast<int>(tile));
-    if (flags & 0x01) f.set_aka();
+    if (aka) f.set_aka();
     f.set_who(to_relative(absolute_player));
-    if (flags & 0x02) f.set_from_hand();
+    f.set_riichi_flag();  // Always a riichi discard
+    if (from_hand) f.set_from_hand();
     events_.push_back(f);
 }
 
@@ -246,8 +288,8 @@ void HandEncoder::on_kakan(int player, BaseTile tile, bool aka) {
     for (auto& tr : tracks_) tr.on_kakan(player, tile, aka);
 }
 
-void HandEncoder::on_riichi(int player, BaseTile tile, int flags) {
-    for (auto& tr : tracks_) tr.on_riichi(player, tile, flags);
+void HandEncoder::on_riichi(int player, BaseTile tile, bool aka, bool from_hand) {
+    for (auto& tr : tracks_) tr.on_riichi(player, tile, aka, from_hand);
 }
 
 void HandEncoder::on_riichi_success(int player) {

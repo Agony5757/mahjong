@@ -26,10 +26,432 @@ try:
 except Exception:
     pm = None
 
-from ..v3.tokenization import ACTION_DIM, MAX_SEQ_LEN
+from ..v3.tokenization import (
+    ACTION_DIM,
+    MAX_SEQ_LEN,
+    _MELD_ANKAN,
+    _MELD_CHI,
+    _MELD_DAIMINKAN,
+    _MELD_KAKAN,
+    _MELD_PON,
+    _TILE_STR,
+    _WIND_STR,
+    _fuuro_from_r,
+    _safe,
+    _tile_id_and_aka,
+    tile_str,
+)
 
 # Re-export C++ constants
 EVENT_DIM: int = getattr(pm, "encv4_EVENT_DIM", 100) if pm else 100
+
+# ---------------------------------------------------------------------------
+# V4 feature layout constants (matching TrainingDataEncodingV4.h)
+# ---------------------------------------------------------------------------
+
+OFF_EVENT_TYPE = 0;    FEAT_EVENT_TYPE = 19
+OFF_TILE = 19;         FEAT_TILE = 34
+OFF_AKA = 53;          FEAT_AKA = 1
+OFF_WHO = 54;          FEAT_WHO = 4
+OFF_SCORE = 58;        FEAT_SCORE = 16
+OFF_GAME_WIND = 74;    FEAT_GAME_WIND = 4
+OFF_SELF_WIND = 78;    FEAT_SELF_WIND = 4
+OFF_OYA_REL = 82;      FEAT_OYA_REL = 4
+OFF_RIICHI_ST = 86;    FEAT_RIICHI_ST = 4
+OFF_CHI_TYPE = 90;     FEAT_CHI_TYPE = 3
+OFF_RIICHI_FLAG = 93;  FEAT_RIICHI_FLAG = 1
+OFF_FROM_HAND = 94;    FEAT_FROM_HAND = 1
+OFF_HONBA = 95;        FEAT_HONBA = 4
+OFF_SIGN = 99;         FEAT_SIGN = 1
+
+
+class _ET:
+    """Event types matching C++ EventType enum."""
+    PAD = 0
+    GAME_CONTEXT = 1
+    PLAYER_SCORE = 2
+    INIT_HAND = 3
+    DORA_INDICATOR = 4
+    DRAW = 5
+    DISCARD = 6
+    CHI = 7
+    PON = 8
+    DAIMINKAN = 9
+    ANKAN = 10
+    KAKAN = 11
+    RIICHI_DECLARE = 12
+    RIICHI_SUCCESS = 13
+    RON = 14
+    TSUMO = 15
+    RYUUKYOKU = 16
+    SCORE_CHANGE = 17
+    DORA_REVEAL = 18
+
+
+def _decode_onehot(bits, offset, length):
+    for i in range(length):
+        if bits[offset + i]:
+            return i
+    return -1
+
+
+def _decode_binary(bits, offset, length):
+    val = 0
+    for i in range(length):
+        if bits[offset + i]:
+            val |= (1 << i)
+    return val
+
+
+def _decode_signed_binary(bits, offset, length):
+    val = _decode_binary(bits, offset, length)
+    if val >= (1 << (length - 1)):
+        val -= (1 << length)
+    return val
+
+
+def _remove_from_hand(hand: list, basetile: int, aka: bool) -> None:
+    for i, (bt, a) in enumerate(hand):
+        if bt == basetile and a == aka:
+            hand.pop(i)
+            return
+    for i, (bt, _) in enumerate(hand):
+        if bt == basetile:
+            hand.pop(i)
+            return
+
+
+def _remove_n_from_hand(hand: list, basetile: int, n: int) -> None:
+    removed = 0
+    for i in range(len(hand) - 1, -1, -1):
+        if hand[i][0] == basetile:
+            hand.pop(i)
+            removed += 1
+            if removed >= n:
+                return
+
+
+def _remove_chi_hand_tiles(hand: list, lowest: int, chi_type: int) -> None:
+    chi_tiles = [lowest, lowest + 1, lowest + 2]
+    for pos in range(3):
+        if pos != chi_type:
+            _remove_from_hand(hand, chi_tiles[pos], False)
+
+
+# ---------------------------------------------------------------------------
+# Round-trip canonical string functions
+# ---------------------------------------------------------------------------
+
+
+def state_to_string_v4(table, viewer: int) -> str:
+    """Pretty-print engine state in V4 canonical format (viewer-relative)."""
+    if pm is None:
+        raise RuntimeError("MahjongPyWrapper not importable")
+
+    players = table.players
+    me = players[viewer]
+    phase = int(table.get_phase())
+
+    lines = []
+    lines.append("== V4 STATE ==")
+    lines.append(f"VIEWER: {viewer}")
+
+    game_wind = int(table.game_wind)
+    self_wind = int(me.wind)
+    oya_rel = (int(table.oya) - viewer) % 4
+    lines.append(
+        f"GAME: wind={_WIND_STR[game_wind]} "
+        f"self_wind={_WIND_STR[self_wind]} oya_rel={oya_rel}"
+    )
+
+    honba = int(getattr(table, "honba", 0))
+    lines.append(f"HONBA: {honba}")
+
+    scores = [int(players[(viewer + r) % 4].score) for r in range(4)]
+    lines.append("SCORES: " + " ".join(str(s) for s in scores))
+
+    riichi = [1 if players[(viewer + r) % 4].riichi else 0 for r in range(4)]
+    lines.append("RIICHI: " + " ".join(str(v) for v in riichi))
+
+    hand_tiles = list(me.hand)
+    tsumo_tile = None
+    if len(hand_tiles) > 0 and len(hand_tiles) % 3 == 2:
+        # Only separate tsumo when the viewer is in a self-action phase
+        # AND just drew a tile (last_action is Discard, not Chi/Pon/Kan).
+        acting = phase % 4
+        is_self_action = phase < 4
+        no_call = table.last_action not in (
+            pm.BaseAction.Chi, pm.BaseAction.Pon,
+            pm.BaseAction.Kan, pm.BaseAction.AnKan, pm.BaseAction.KaKan,
+        )
+        if viewer == acting and is_self_action and no_call:
+            tsumo_tile = hand_tiles[-1]
+            hand_tiles = hand_tiles[:-1]
+    hand_strs = sorted(_TILE_STR[int(t.tile)] for t in hand_tiles)
+    lines.append("HAND: " + " ".join(hand_strs))
+    if tsumo_tile is not None:
+        b, a = _tile_id_and_aka(tsumo_tile)
+        lines.append("TSUMO: " + tile_str(b, a))
+    else:
+        lines.append("TSUMO: -")
+
+    n_active = int(getattr(table, "n_active_dora", 1))
+    di_strs = [_TILE_STR[int(d.tile)] for d in list(table.dora_indicator)[:n_active]]
+    lines.append("DORA_IND: " + (" ".join(di_strs) if di_strs else "-"))
+
+    _MELD_NAMES = {
+        _MELD_CHI: "Chi",
+        _MELD_PON: "Pon",
+        _MELD_DAIMINKAN: "DaiMinKan",
+        _MELD_KAKAN: "KaKan",
+        _MELD_ANKAN: "AnKan",
+    }
+
+    for r in range(4):
+        seat = (viewer + r) % 4
+        cgs = _safe(lambda s=seat: players[s].get_fuuros(), []) or []
+        parts = []
+        for cg in cgs:
+            mt = int(cg.type)
+            owner_from_r = _fuuro_from_r(mt, getattr(cg, "take", 0))
+            viewer_from_r = -1 if mt == _MELD_ANKAN else (r + owner_from_r) % 4
+            name = _MELD_NAMES.get(mt, f"?{mt}")
+
+            if mt == _MELD_CHI:
+                tile_strs = " ".join(_TILE_STR[int(t.tile)] for t in cg.tiles)
+                parts.append(f"[{name} from_r={viewer_from_r} tiles={tile_strs}]")
+            elif mt == _MELD_ANKAN:
+                tile_bt = int(cg.tiles[0].tile)
+                parts.append(f"[{name} tile={_TILE_STR[tile_bt]}]")
+            else:
+                tile_bt = int(cg.tiles[0].tile)
+                parts.append(f"[{name} from_r={viewer_from_r} tile={_TILE_STR[tile_bt]}]")
+        lines.append(f"FUURO[r={r}]: " + (" ".join(parts) if parts else "-"))
+
+    for r in range(4):
+        seat = (viewer + r) % 4
+        river = _safe(lambda s=seat: players[s].get_river().river, []) or []
+        parts = []
+        for idx, rt in enumerate(river):
+            base = int(rt.tile.tile)
+            ri = "R" if rt.riichi else "."
+            fh = "H" if rt.fromhand else "h"
+            parts.append(f"{_TILE_STR[base]}#{idx}{ri}{fh}")
+        lines.append(f"RIVER[r={r}]: " + (" ".join(parts) if parts else "-"))
+
+    return "\n".join(lines)
+
+
+def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
+    """Reconstruct canonical state string from V4 event sequence."""
+    game_wind = -1
+    self_wind = -1
+    oya_rel = -1
+    honba = 0
+    scores = [0, 0, 0, 0]
+    riichi_status = [0, 0, 0, 0]
+    hand: list = []
+    viewer_tsumo: Optional[tuple] = None
+    fuuros = {0: [], 1: [], 2: [], 3: []}
+    rivers = {0: [], 1: [], 2: [], 3: []}
+    dora_indicators: list = []
+    last_discard_who = -1
+
+    for i in range(events.shape[0]):
+        e = events[i]
+        et = _decode_onehot(e, OFF_EVENT_TYPE, FEAT_EVENT_TYPE)
+        if et <= _ET.PAD:
+            continue
+
+        if et == _ET.GAME_CONTEXT:
+            game_wind = _decode_onehot(e, OFF_GAME_WIND, FEAT_GAME_WIND)
+            self_wind = _decode_onehot(e, OFF_SELF_WIND, FEAT_SELF_WIND)
+            oya_rel = _decode_onehot(e, OFF_OYA_REL, FEAT_OYA_REL)
+            honba = 0
+            scores = [0, 0, 0, 0]
+            riichi_status = [0, 0, 0, 0]
+            hand = []
+            viewer_tsumo = None
+            fuuros = {0: [], 1: [], 2: [], 3: []}
+            rivers = {0: [], 1: [], 2: [], 3: []}
+            dora_indicators = []
+            last_discard_who = -1
+
+        elif et == _ET.PLAYER_SCORE:
+            who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
+            score_units = _decode_signed_binary(e, OFF_SCORE, FEAT_SCORE)
+            honba = _decode_binary(e, OFF_HONBA, FEAT_HONBA)
+            if 0 <= who < 4:
+                scores[who] = score_units * 100 + 25000
+
+        elif et == _ET.INIT_HAND:
+            tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            aka = bool(e[OFF_AKA])
+            if tile >= 0:
+                hand.append((tile, aka))
+
+        elif et == _ET.DORA_INDICATOR:
+            tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            if tile >= 0:
+                dora_indicators.append(tile)
+
+        elif et == _ET.DRAW:
+            tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            aka = bool(e[OFF_AKA])
+            # DRAW events only appear on the viewer's own track,
+            # so every DRAW here belongs to the viewer.
+            if tile >= 0:
+                if viewer_tsumo is not None:
+                    hand.append(viewer_tsumo)
+                viewer_tsumo = (tile, aka)
+
+        elif et == _ET.DISCARD:
+            tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            aka = bool(e[OFF_AKA])
+            who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
+            rf = bool(e[OFF_RIICHI_FLAG])
+            fh = bool(e[OFF_FROM_HAND])
+            last_discard_who = who
+            if who == 0:
+                if fh:
+                    if viewer_tsumo is not None:
+                        hand.append(viewer_tsumo)
+                        viewer_tsumo = None
+                    _remove_from_hand(hand, tile, aka)
+                else:
+                    viewer_tsumo = None
+            if 0 <= who < 4 and tile >= 0:
+                rivers[who].append((tile, aka, rf, fh))
+
+        elif et == _ET.RIICHI_DECLARE:
+            tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            aka = bool(e[OFF_AKA])
+            who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
+            fh = bool(e[OFF_FROM_HAND])
+            rf = bool(e[OFF_RIICHI_FLAG])
+            riichi_status[who] = 1
+            last_discard_who = who
+            if who == 0:
+                if fh:
+                    if viewer_tsumo is not None:
+                        hand.append(viewer_tsumo)
+                        viewer_tsumo = None
+                    _remove_from_hand(hand, tile, aka)
+                else:
+                    viewer_tsumo = None
+            if 0 <= who < 4 and tile >= 0:
+                rivers[who].append((tile, aka, rf, fh))
+
+        elif et == _ET.RIICHI_SUCCESS:
+            pass
+
+        elif et == _ET.CHI:
+            lowest = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
+            chi_type = _decode_onehot(e, OFF_CHI_TYPE, FEAT_CHI_TYPE)
+            from_r = (who + 3) % 4
+            tiles = [lowest, lowest + 1, lowest + 2]
+            if who == 0:
+                _remove_chi_hand_tiles(hand, lowest, chi_type)
+            fuuros[who].append({"type": "Chi", "from_r": from_r, "tiles": tiles})
+
+        elif et == _ET.PON:
+            tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
+            from_r = last_discard_who if last_discard_who >= 0 else -1
+            if who == 0:
+                _remove_n_from_hand(hand, tile, 2)
+            fuuros[who].append({"type": "Pon", "from_r": from_r, "tile": tile})
+
+        elif et == _ET.DAIMINKAN:
+            tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
+            from_r = last_discard_who if last_discard_who >= 0 else -1
+            if who == 0:
+                _remove_n_from_hand(hand, tile, 3)
+            fuuros[who].append(
+                {"type": "DaiMinKan", "from_r": from_r, "tile": tile}
+            )
+
+        elif et == _ET.ANKAN:
+            tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
+            if who == 0:
+                _remove_n_from_hand(hand, tile, 4)
+            fuuros[who].append({"type": "AnKan", "from_r": -1, "tile": tile})
+
+        elif et == _ET.KAKAN:
+            tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            who = _decode_onehot(e, OFF_WHO, FEAT_WHO)
+            if who == 0:
+                _remove_n_from_hand(hand, tile, 1)
+            for fuuro in reversed(fuuros[who]):
+                if fuuro["type"] == "Pon" and fuuro["tile"] == tile:
+                    fuuro["type"] = "KaKan"
+                    break
+
+        elif et == _ET.DORA_REVEAL:
+            tile = _decode_onehot(e, OFF_TILE, FEAT_TILE)
+            if tile >= 0:
+                dora_indicators.append(tile)
+
+    # Build output
+    lines = []
+    lines.append("== V4 STATE ==")
+    lines.append(f"VIEWER: {viewer}")
+    lines.append(
+        f"GAME: wind={_WIND_STR[game_wind]} "
+        f"self_wind={_WIND_STR[self_wind]} oya_rel={oya_rel}"
+    )
+    lines.append(f"HONBA: {honba}")
+    lines.append("SCORES: " + " ".join(str(s) for s in scores))
+    lines.append("RIICHI: " + " ".join(str(v) for v in riichi_status))
+
+    # Use viewer_tsumo if available (from DRAW events).
+    # When no DRAW set the tsumo (e.g. after chi/pon), apply the same
+    # basetile-sort detection as state_to_string_v4.
+    # viewer_tsumo tracks the last DRAW tile.  hand[-1] in the engine is the
+    # same tile (push_back after sort_hand).  When viewer_tsumo is set we can
+    # separate it from hand.  When it's None (no DRAW occurred, e.g. after
+    # chi/pon) the engine may still detect hand[-1] as tsumo via pointer
+    # ordering, but we don't have pointer info — so we don't separate.
+    display_hand = list(hand)
+    if viewer_tsumo is not None:
+        display_hand_sorted = sorted(display_hand, key=lambda x: _TILE_STR[x[0]])
+        lines.append("HAND: " + " ".join(_TILE_STR[bt] for bt, _ in display_hand_sorted))
+        lines.append("TSUMO: " + tile_str(viewer_tsumo[0], viewer_tsumo[1]))
+    else:
+        display_hand_sorted = sorted(display_hand, key=lambda x: _TILE_STR[x[0]])
+        lines.append("HAND: " + " ".join(_TILE_STR[bt] for bt, _ in display_hand_sorted))
+        lines.append("TSUMO: -")
+
+    di_strs = [_TILE_STR[b] for b in dora_indicators]
+    lines.append("DORA_IND: " + (" ".join(di_strs) if di_strs else "-"))
+
+    for r in range(4):
+        parts = []
+        for f in fuuros[r]:
+            if f["type"] == "Chi":
+                ts = " ".join(_TILE_STR[t] for t in f["tiles"])
+                parts.append(f"[Chi from_r={f['from_r']} tiles={ts}]")
+            elif f["type"] == "AnKan":
+                parts.append(f"[AnKan tile={_TILE_STR[f['tile']]}]")
+            else:
+                parts.append(
+                    f"[{f['type']} from_r={f['from_r']} "
+                    f"tile={_TILE_STR[f['tile']]}]"
+                )
+        lines.append(f"FUURO[r={r}]: " + (" ".join(parts) if parts else "-"))
+
+    for r in range(4):
+        parts = []
+        for idx, (tile, _aka, rf, fh) in enumerate(rivers[r]):
+            ri = "R" if rf else "."
+            h = "H" if fh else "h"
+            parts.append(f"{_TILE_STR[tile]}#{idx}{ri}{h}")
+        lines.append(f"RIVER[r={r}]: " + (" ".join(parts) if parts else "-"))
+
+    return "\n".join(lines)
 
 _proxy_lock = threading.Lock()
 
@@ -62,6 +484,7 @@ _LA = {
 def _route_gamelog_entries(
     encoder,  # pm.encv4_HandEncoder
     entries,  # list of BaseGameLog
+    skip_draw: bool = False,
 ) -> None:
     """Route new GameLog entries to the HandEncoder."""
     for log in entries:
@@ -71,6 +494,9 @@ def _route_gamelog_entries(
         aka = tile.red_dora if tile else False
         basetile = tile.tile if tile else pm.BaseTile._1m  # pass BaseTile enum, not int
 
+        if skip_draw and action in (pm.LogAction.DrawNormal, pm.LogAction.DrawRinshan):
+            continue
+
         if action == pm.LogAction.DrawNormal:
             encoder.on_draw(player, basetile, aka)
         elif action == pm.LogAction.DrawRinshan:
@@ -79,9 +505,9 @@ def _route_gamelog_entries(
             flags = 0x02 if action == pm.LogAction.DiscardFromHand else 0
             encoder.on_discard(player, basetile, aka, flags)
         elif action == pm.LogAction.RiichiDiscardFromHand:
-            encoder.on_riichi(player, basetile, 0x02)
+            encoder.on_riichi(player, basetile, aka, True)
         elif action == pm.LogAction.RiichiDiscardFromTsumo:
-            encoder.on_riichi(player, basetile, 0)
+            encoder.on_riichi(player, basetile, aka, False)
         elif action == pm.LogAction.RiichiSuccess:
             encoder.on_riichi_success(player)
         elif action == pm.LogAction.Chi:
@@ -374,4 +800,6 @@ __all__ = [
     "encode_paipu_file_v4",
     "StreamingPaipuDatasetV4",
     "streaming_collate_v4",
+    "state_to_string_v4",
+    "events_to_string_v4",
 ]

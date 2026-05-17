@@ -119,7 +119,7 @@ void GameLog::log_game_start(
 	};
 	for (const auto& hand : init_hands)
 	{
-		if (hand.size() != 13)
+		if (!skip_hand_check_ && hand.size() != 13)
 			throw std::runtime_error("Game init log failed. Hand size is not 13 at the beginning.");
 	}
 }
@@ -132,6 +132,10 @@ void GameLog::_log_draw_normal(int player, Tile* tile)
 void GameLog::_log_draw_rinshan(int player, Tile* tile)
 {
 	_log({ player, -1, LogAction::DrawRinshan, tile, {} });
+}
+
+void GameLog::append_draw_normal(int player, Tile* tile) {
+	_log({ player, -1, LogAction::DrawNormal, tile, {} });
 }
 
 void GameLog::_log_discard_from_tsumo(int player, Tile* tile)

@@ -45,6 +45,15 @@ vector<BaseTile> Table::get_ura_dora() const
 	return doratiles;
 }
 
+void Table::set_draw_callback(
+	std::function<void(int player, Tile* tile, bool from_rinshan)> cb) {
+	draw_callback_ = std::move(cb);
+}
+
+void Table::clear_draw_callback() {
+	draw_callback_ = nullptr;
+}
+
 void Table::init_tiles()
 {
 	for (int i = 0; i < N_TILES; ++i) {
@@ -486,18 +495,19 @@ void Table::draw_tenhou_style()
 			draw_n_normal((oya + i) % 4, 4);
 		}
 	}
-	// 跳章
-	// 每次摸1个
+	// 跳章 — 每次摸1个
 	for (int i = 0; i < 4; ++i) {
-		draw_normal_no_record((oya + i) % 4);
+		draw_normal((oya + i) % 4);
 	}
 }
 
 void Table::draw_normal(int i_player)
 {
-	players[i_player].hand.push_back(yama.back());
-	gamelog.log_draw(i_player, yama.back(), false);
+	Tile* drawn = yama.back();
+	if (!skip_draw_to_hand_) players[i_player].hand.push_back(drawn);
+	gamelog.log_draw(i_player, drawn, false);
 	yama.pop_back();
+	if (draw_callback_) draw_callback_(i_player, drawn, false);
 }
 
 void Table::draw_normal_no_record(int i_player)
@@ -519,9 +529,11 @@ void Table::draw_rinshan(int i_player)
 	int n_kan = get_remain_kan_tile();
 	auto iter = yama.begin();
 	if (n_kan % 2 == 0) ++iter;
-	players[i_player].hand.push_back(*iter);
-	gamelog.log_draw(i_player, *iter, true);
+	Tile* drawn = *iter;
+	players[i_player].hand.push_back(drawn);
+	gamelog.log_draw(i_player, drawn, true);
 	yama.erase(iter);
+	if (draw_callback_) draw_callback_(i_player, drawn, true);
 }
 
 void Table::reshuffle_yama(unsigned int seed)
