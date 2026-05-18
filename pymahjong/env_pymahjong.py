@@ -482,6 +482,37 @@ class MahjongEnv(gym.Env):
             payoffs[i] = self.t.get_result().score[i] - self.INIT_POINTS
         return payoffs
 
+    def get_result_info(self):
+        """Return basic info about the terminal hand result.
+
+        Only meaningful after :meth:`is_over` returns True.
+
+        Returns:
+            dict with keys:
+                * ``result_type`` (str): one of ``"RonAgari"``, ``"TsumoAgari"``,
+                  ``"NoTileRyuuKyoku"``, ``"NagashiMangan"``,
+                  ``"Ryukyouku_Interval_9Hai"``, ``"Ryukyouku_Interval_4Wind"``,
+                  ``"Ryukyouku_Interval_4Riichi"``, ``"Ryukyouku_Interval_4Kan"``,
+                  ``"Ryukyouku_Interval_3Ron"``.
+                * ``winners`` (list[int]): seat indices that won this hand
+                  (empty for ryuukyoku; multi-entry for double/triple ron).
+                * ``is_agari`` (bool): True iff at least one player won
+                  (``RonAgari``/``TsumoAgari``/``NagashiMangan``).
+        """
+        result = self.t.get_result()
+        rtype = result.result_type
+        try:
+            rtype_str = rtype.name  # pybind11 enum
+        except AttributeError:
+            rtype_str = str(rtype).split(".")[-1]
+        winners = list(result.winner)
+        is_agari = rtype_str in ("RonAgari", "TsumoAgari", "NagashiMangan")
+        return {
+            "result_type": rtype_str,
+            "winners": winners,
+            "is_agari": is_agari,
+        }
+
     def is_over(self):
         """Check whether the current game has ended.
 

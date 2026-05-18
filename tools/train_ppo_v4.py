@@ -70,6 +70,16 @@ def main() -> int:
     ap.add_argument("--no-reward-norm", action="store_true")
     ap.add_argument("--no-advantage-norm", action="store_true")
 
+    # Reward shaping (bootstrap)
+    ap.add_argument("--win-bonus-coef", type=float, default=0.5,
+                    help="Linear coefficient applied to each winner's payoff and "
+                         "added as an extra terminal reward on every agari "
+                         "(Ron/Tsumo/NagashiMangan). Bonus = coef * payoff[winner], "
+                         "so larger wins (yakuman, haneman, ...) yield proportionally "
+                         "larger bonuses; ryuukyoku yields none. The winner's "
+                         "effective reward becomes payoff * (1 + coef). "
+                         "Set to 0 to disable. Default: 0.5.")
+
     # Model
     ap.add_argument("--d-model", type=int, default=256)
     ap.add_argument("--n-layers", type=int, default=6)
@@ -120,6 +130,7 @@ def main() -> int:
         pfsp_p=args.pfsp_p,
         reward_norm=not args.no_reward_norm,
         advantage_norm=not args.no_advantage_norm,
+        win_bonus_coef=args.win_bonus_coef,
         save_path=args.save_path,
         snapshot_dir=args.snapshot_dir,
         save_interval=args.save_interval,

@@ -20,6 +20,10 @@ Reward convention:
 * Intermediate steps yield ``reward = 0`` and ``done = False``.
 * On terminal step, ``payoffs`` (length-4, dtype float32) is the per-seat
   reward in *units of 25 000 points* (matches the existing PPO loop).
+* The terminal ``info`` dict additionally exposes ``result_type``
+  (e.g. ``"RonAgari"``, ``"TsumoAgari"``, ``"NoTileRyuuKyoku"``, ...)
+  and ``winners`` (list of seat indices), so the training loop can
+  apply optional reward shaping (e.g. a per-winner bootstrap bonus).
 """
 
 from __future__ import annotations
@@ -86,6 +90,10 @@ class V4MultiAgentEnv:
 
     def is_over(self) -> bool:
         return self._inner.is_over()
+
+    def get_result_info(self) -> dict:
+        """Return terminal-hand result info.  Valid only after :meth:`is_over`."""
+        return self._inner.get_result_info()
 
     def is_learner_seat(self, seat: int) -> bool:
         """Return True if *seat* is controlled by the learner (no fixed policy)."""
@@ -173,7 +181,10 @@ class V4MultiAgentEnv:
 
         Returns:
             ``(next_obs_or_None, payoffs (4,), done, info)``.  ``info``
-            includes the seat that just acted.
+            always includes ``"acting_seat"``; on terminal step it also
+            includes ``"result_type"`` (str), ``"winners"`` (list[int]),
+            and ``"is_agari"`` (bool) — see
+            :meth:`pymahjong.env_pymahjong.MahjongEnv.get_result_info`.
         """
         if self._enc is None:
             raise RuntimeError("Call reset() before step().")
@@ -188,10 +199,13 @@ class V4MultiAgentEnv:
         if done:
             payoffs = self._inner.get_payoffs().astype(np.float32) / 25000.0
             next_obs = None
+            info: dict = {"acting_seat": acting_seat}
+            info.update(self._inner.get_result_info())
         else:
             payoffs = np.zeros(4, dtype=np.float32)
             next_obs = self.observe()
-        return next_obs, payoffs, done, {"acting_seat": acting_seat}
+            info = {"acting_seat": acting_seat}
+        return next_obs, payoffs, done, info
 
     # ------------------------------------------------------------------ internals
 

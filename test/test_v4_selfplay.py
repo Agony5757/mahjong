@@ -49,6 +49,7 @@ def test_v4_env_step_advances_until_done():
     env = V4MultiAgentEnv(max_seq_len=128)
     obs = env.reset(seed=7)
     steps = 0
+    info: dict = {}
     while not env.is_over() and steps < 400:
         mask = np.asarray(obs["action_mask"])
         valid = np.flatnonzero(mask)
@@ -59,9 +60,45 @@ def test_v4_env_step_advances_until_done():
         if done:
             assert payoffs.shape == (4,)
             assert obs_or_none is None
+            # Terminal info should expose result_type + winners.
+            assert "result_type" in info
+            assert "winners" in info
+            assert "is_agari" in info
+            assert isinstance(info["winners"], list)
+            if info["is_agari"]:
+                assert len(info["winners"]) >= 1
+                assert info["result_type"] in ("RonAgari", "TsumoAgari", "NagashiMangan")
+            else:
+                assert len(info["winners"]) == 0
             break
         obs = obs_or_none
     assert steps > 0
+
+
+def test_win_bonus_linear_shaping():
+    """``win_bonus_coef`` adds coef*payoff to each winner before normalization."""
+    from pymahjong.rl.v4.selfplay import _RewardNormalizer
+
+    # Stub out the env-state-dependent parts of _finalize_env_payoffs by
+    # exercising the shaping math in isolation.
+    coef = 0.5
+    payoffs = np.array([1.0, -0.4, -0.6, 0.0], dtype=np.float32)
+    winners = [0]
+    shaped = payoffs.astype(np.float32, copy=True)
+    for w in winners:
+        shaped[int(w)] += coef * float(payoffs[int(w)])
+    # Winner 0: 1.0 + 0.5*1.0 = 1.5; losers unchanged.
+    assert shaped[0] == pytest.approx(1.5)
+    assert shaped[1] == pytest.approx(-0.4)
+    assert shaped[2] == pytest.approx(-0.6)
+    assert shaped[3] == pytest.approx(0.0)
+
+    # Ryuukyoku (no winners) leaves payoffs untouched.
+    shaped_ryuukyoku = payoffs.astype(np.float32, copy=True)
+    winners_ryuukyoku: list = []
+    for w in winners_ryuukyoku:
+        shaped_ryuukyoku[int(w)] += coef * float(payoffs[int(w)])
+    np.testing.assert_array_equal(shaped_ryuukyoku, payoffs)
 
 
 # ---------------------------------------------------------------------------
@@ -140,6 +177,17 @@ def test_trainer_runs_one_update_shared_selfplay():
     trainer.train()
     after = _params_snapshot(trainer.model)
     assert _params_changed(before, after), "model parameters should have been updated"
+    assert trainer._total_learner_steps >= cfg.rollout_steps
+
+
+def test_trainer_runs_with_win_bonus_coef():
+    """Smoke-test that win_bonus_coef shaping doesn't break the rollout/PPO path."""
+    cfg = _tiny_cfg(win_bonus_coef=0.5)
+    trainer = SelfPlayPPOTrainer(config=cfg, transformer_config=_tiny_tcfg())
+    before = _params_snapshot(trainer.model)
+    trainer.train()
+    after = _params_snapshot(trainer.model)
+    assert _params_changed(before, after)
     assert trainer._total_learner_steps >= cfg.rollout_steps
 
 

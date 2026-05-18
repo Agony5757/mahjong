@@ -17,7 +17,9 @@ Design (see ``docs/plan.md`` / README for the full rationale):
 3. **Per-seat trajectories** — Mahjong turn order is irregular, so we
    keep a buffer per (env, seat) pair and compute GAE per seat at
    episode end.  Terminal reward = ``payoff / 25000`` (matches existing
-   PPO).
+   PPO), optionally augmented by a per-winner bonus linear in the
+   winning payoff (``win_bonus_coef * payoff[winner]``) to bootstrap
+   learning toward agari.
 
 4. **PPO update** uses only *learner* seats' transitions.  Snapshot
    seats just produce environment transitions for the learners; their
@@ -105,6 +107,20 @@ class SelfPlayConfig:
     reward_norm: bool = True
     """If True, divide rewards by an EMA of |reward| to stabilize."""
     advantage_norm: bool = True
+
+    # -- reward shaping (bootstrap) --
+    win_bonus_coef: float = 0.0
+    """Linear coefficient applied to each *winner*'s payoff and added as
+    an extra terminal reward on agari (RonAgari / TsumoAgari /
+    NagashiMangan).  Concretely, for each ``w`` in ``winners`` we add
+    ``win_bonus_coef * payoff[w]`` (in units of 25 000 points, same
+    scale as the base reward).  This makes the bootstrap signal
+    *linear in the winning score*: a yakuman win gives ~4× the bonus
+    of a mangan win, while ryuukyoku gives no bonus at all.
+    Effectively the winner's terminal reward becomes
+    ``payoff[w] * (1 + win_bonus_coef)``.  The shaped reward is fed to
+    :class:`_RewardNormalizer` so the EMA tracks the augmented scale.
+    Set to ``0.0`` to disable (default)."""
 
     # -- I/O --
     save_path: str = "checkpoints/ppo_v4.pt"
@@ -403,8 +419,14 @@ class SelfPlayPPOTrainer:
                     env._auto_step_opponents()
                     if env.is_over():
                         obs_per_env[i] = None
-                        finalized.append(self._finalize_env(i))
-                        episode_returns.append(finalized[-1][4].sum().item())  # type: ignore[arg-type]
+                        # Hand may have ended while opponents were acting; fetch
+                        # payoffs + winners directly from the inner env.
+                        payoffs_done = env._inner.get_payoffs().astype(np.float32) / 25000.0
+                        winners_done = env.get_result_info().get("winners", [])
+                        finalized.append(
+                            self._finalize_env_payoffs(i, payoffs_done, winners_done)
+                        )
+                        episode_returns.append(float(np.mean(payoffs_done)))
                         episode_lengths.append(sum(len(t.actions) for t in state["trajs"].values()))
                         obs_per_env[i] = self._reset_env(i, env)
                     else:
@@ -420,10 +442,11 @@ class SelfPlayPPOTrainer:
                 state["trajs"][seat].rewards.append(0.0)
                 learner_step_count += 1
 
-                next_obs, payoffs, done, _ = env.step(action)
+                next_obs, payoffs, done, info = env.step(action)
                 if done:
                     # Episode over: finalize all learner-seat trajectories.
-                    advantages_acc, returns_acc, obs_acc, act_acc, lp_acc, v_acc = self._finalize_env_payoffs(i, payoffs)
+                    winners = info.get("winners", []) if isinstance(info, dict) else []
+                    advantages_acc, returns_acc, obs_acc, act_acc, lp_acc, v_acc = self._finalize_env_payoffs(i, payoffs, winners)
                     finalized.append((obs_acc, act_acc, lp_acc, v_acc, advantages_acc, returns_acc))
                     episode_returns.append(float(np.mean(payoffs)))
                     episode_lengths.append(sum(len(t.actions) for t in state["trajs"].values()))
@@ -484,14 +507,21 @@ class SelfPlayPPOTrainer:
         self,
         env_idx: int,
         payoffs: np.ndarray,
+        winners: Optional[List[int]] = None,
     ) -> Tuple[np.ndarray, np.ndarray, List[Dict[str, Any]], List[int], List[float], List[float]]:
         """Finalize an env that just terminated: produce GAE per learner seat."""
         state = self._env_state[env_idx]
+        shaped = payoffs.astype(np.float32, copy=True)
+        if winners and self.cfg.win_bonus_coef != 0.0:
+            for w in winners:
+                wi = int(w)
+                if 0 <= wi < 4:
+                    shaped[wi] += float(self.cfg.win_bonus_coef) * float(payoffs[wi])
         norm_payoffs = (
-            self.reward_norm.normalize(payoffs) if self.reward_norm else payoffs
+            self.reward_norm.normalize(shaped) if self.reward_norm else shaped
         )
         if self.reward_norm:
-            self.reward_norm.update(payoffs)
+            self.reward_norm.update(shaped)
         # Update opponent winrate (learner = top non-opponent seat finish).
         snap: Optional[Snapshot] = state["opponent_snapshot"]
         if snap is not None and state["opponent_seats"]:
