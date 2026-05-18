@@ -306,6 +306,11 @@ class SelfPlayPPOTrainer:
         )
         self.reward_norm = _RewardNormalizer() if self.cfg.reward_norm else None
 
+        # Cache of {id(Snapshot) -> PolicyFn} so each opponent snapshot
+        # allocates exactly one transformer on GPU, reused across every
+        # episode it's sampled for.  Bounded LRU via insertion order.
+        self._snapshot_policy_cache: "Dict[int, PolicyFn]" = {}
+
         # Per-env state (assigned on reset).
         self._env_state: List[Dict[str, Any]] = [
             self._fresh_env_state() for _ in range(self.cfg.n_envs)
@@ -338,6 +343,34 @@ class SelfPlayPPOTrainer:
 
     # ------------------------------------------------------------------ opp assignment
 
+    def _get_snapshot_policy(self, snap: Snapshot) -> PolicyFn:
+        """Return a cached PolicyFn for *snap*, instantiating once.
+
+        Earlier versions created a fresh :class:`EventStreamTransformer`
+        for every episode that mixed in an opponent, which dominated
+        wall-clock for long runs (sps went 700→140 in 20 minutes).  We
+        now cache per-snapshot-id so each snapshot allocates exactly
+        once and is reused for every episode that samples it.  When
+        the pool evicts a snapshot the cache entry is dropped via the
+        bounded LRU below.
+        """
+        sid = id(snap)
+        cached = self._snapshot_policy_cache.get(sid)
+        if cached is not None:
+            return cached
+        opp_model = EventStreamTransformer(config=self.model.cfg).to(self._device)
+        opp_model.load_state_dict(snap.state_dict)
+        opp_model.eval()
+        policy = _make_snapshot_policy(opp_model, self._device)
+        # Bounded LRU: keep at most ``pool_capacity`` snapshot policies
+        # alive at once (matches the upper bound on the opponent pool).
+        if len(self._snapshot_policy_cache) >= max(self.cfg.pool_capacity, 4):
+            # Drop the oldest cached entry; insertion order preserved in dict.
+            oldest = next(iter(self._snapshot_policy_cache))
+            self._snapshot_policy_cache.pop(oldest, None)
+        self._snapshot_policy_cache[sid] = policy
+        return policy
+
     def _assign_opponents(self) -> Tuple[Dict[int, PolicyFn], set, Optional[Snapshot]]:
         """Decide which seats are learner-controlled vs snapshot-controlled.
 
@@ -354,11 +387,7 @@ class SelfPlayPPOTrainer:
         snap = self.pool.sample()
         if snap is None:
             return {}, set(), None
-        # Load snapshot into a transient model (kept on CPU/GPU per device).
-        opp_model = EventStreamTransformer(config=self.model.cfg).to(self._device)
-        opp_model.load_state_dict(snap.state_dict)
-        opp_model.eval()
-        policy = _make_snapshot_policy(opp_model, self._device)
+        policy = self._get_snapshot_policy(snap)
         k = int(min(self.cfg.n_frozen_seats, 3))
         opp_seats = set(np.random.choice(4, size=k, replace=False).tolist())
         policy_map = {seat: policy for seat in opp_seats}
