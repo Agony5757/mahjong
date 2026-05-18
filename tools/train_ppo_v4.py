@@ -39,7 +39,11 @@ def main() -> int:
 
     # Training schedule
     ap.add_argument("--total-steps", type=int, default=1_000_000)
-    ap.add_argument("--rollout-steps", type=int, default=4096)
+    ap.add_argument("--rollout-steps", type=int, default=16384,
+                    help="Learner transitions per PPO update. Mahjong is "
+                         "high-variance: 16384 ≈ 200-300 hands/rollout, which "
+                         "gives meaningful per-update win-rate/payoff stats. "
+                         "Lower (e.g. 4096) for faster updates on small models.")
     ap.add_argument("--n-envs", type=int, default=8)
     ap.add_argument("--n-epochs", type=int, default=4)
     ap.add_argument("--batch-size", type=int, default=256)

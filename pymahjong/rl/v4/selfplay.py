@@ -73,8 +73,12 @@ class SelfPlayConfig:
     # -- training schedule --
     total_steps: int = 1_000_000
     """Total *learner transitions* to collect across the entire run."""
-    rollout_steps: int = 4096
-    """Learner transitions per PPO update."""
+    rollout_steps: int = 16384
+    """Learner transitions per PPO update.  Mahjong is high-variance:
+    a single hand averages ~50 actions and only ~25 hands fit in 2048
+    transitions, which makes per-rollout win-rate / payoff metrics
+    very noisy.  16384 transitions ≈ 200-300 hands per rollout, giving
+    statistically meaningful per-update stats."""
     n_envs: int = 8
     """Parallel env instances (sampled round-robin)."""
     n_epochs: int = 4
@@ -390,6 +394,32 @@ class SelfPlayPPOTrainer:
             action, log_prob, value = self.model.act(feat, attn, mask, deterministic=False)
         return int(action.item()), float(log_prob.item()), float(value.item())
 
+    def _act_learner_batch(
+        self,
+        obs_list: List[Dict[str, Any]],
+    ) -> Tuple[List[int], List[float], List[float]]:
+        """Batched version of :meth:`_act_learner`.
+
+        Stacks ``obs_list`` into a single padded batch and runs *one* forward
+        through the policy.  With ``n_envs`` parallel envs this is up to
+        ``n_envs``× cheaper than per-env forward calls (most of the cost of
+        a tiny transformer on GPU is launch overhead, not arithmetic).
+        """
+        if not obs_list:
+            return [], [], []
+        self.model.eval()
+        b = self._collate_obs(obs_list)
+        feat = b["features"].to(self._device, non_blocking=True)
+        attn = b["attention_mask"].to(self._device, non_blocking=True)
+        mask = b["action_mask"].to(self._device, non_blocking=True)
+        with torch.no_grad():
+            actions, log_probs, values = self.model.act(feat, attn, mask, deterministic=False)
+        return (
+            actions.cpu().tolist(),
+            log_probs.cpu().tolist(),
+            values.cpu().tolist(),
+        )
+
     def _collect_rollout(self, n_steps: int) -> Tuple[_SeatBatch, Dict[str, float]]:
         """Collect ``n_steps`` learner transitions across all envs."""
         batch = _SeatBatch()
@@ -423,50 +453,92 @@ class SelfPlayPPOTrainer:
             else:
                 ryuukyoku_count += 1
 
-        while learner_step_count < n_steps:
-            for i, env in enumerate(self.envs):
-                if learner_step_count >= n_steps:
-                    break
-                if env.is_over():
-                    # Should not happen here — handled after step — but guard.
-                    obs_per_env[i] = self._reset_env(i, env)
-                    continue
+        def _finalize_terminated_env(i: int, env: V4MultiAgentEnv) -> None:
+            """Pull payoffs+winners from a just-terminated env, finalize the
+            learner trajectories, record metrics, and reset for a new episode."""
+            state = self._env_state[i]
+            payoffs_done = env._inner.get_payoffs().astype(np.float32) / 25000.0
+            winners_done = env.get_result_info().get("winners", [])
+            adv_acc, ret_acc, obs_acc, act_acc, lp_acc, v_acc = (
+                self._finalize_env_payoffs(i, payoffs_done, winners_done)
+            )
+            finalized.append((obs_acc, act_acc, lp_acc, v_acc, adv_acc, ret_acc))
+            _record_episode(
+                payoffs_done,
+                winners_done,
+                sum(len(t.actions) for t in state["trajs"].values()),
+            )
+            obs_per_env[i] = self._reset_env(i, env)
 
-                obs = obs_per_env[i]
+        while learner_step_count < n_steps:
+            # ---- 1. Pre-process every env: ensure it's either terminated
+            #         or its current player is a learner (auto-step opponents
+            #         and finalize+reset terminations along the way).
+            ready_env_idx: List[int] = []
+            ready_obs: List[Dict[str, Any]] = []
+            for i, env in enumerate(self.envs):
+                if env.is_over():
+                    obs_per_env[i] = self._reset_env(i, env)
+                    # After reset the active seat may have changed (e.g. an
+                    # opponent took the opening turn inside _reset_env's
+                    # _auto_step_opponents); invalidate stale obs.
+                    obs_per_env[i] = None
+
+                # Skip opponent moves; if the episode ends inside opponent
+                # play, finalize + reset and re-skip on the fresh episode.
+                changed = False
+                guard = 0
+                while True:
+                    if env.is_over():
+                        _finalize_terminated_env(i, env)
+                        obs_per_env[i] = None
+                        changed = True
+                        guard += 1
+                        if guard > 8:
+                            # Degenerate; bail to avoid an infinite loop.
+                            break
+                        continue
+                    state = self._env_state[i]
+                    if env.current_player in state["opponent_seats"]:
+                        env._auto_step_opponents()
+                        obs_per_env[i] = None
+                        changed = True
+                        continue
+                    break
+
+                if env.is_over():
+                    continue  # too many consecutive degenerate resets
+
+                # Re-observe whenever the current acting seat may have
+                # changed; otherwise the cached obs in obs_per_env still
+                # matches the current learner's perspective.
+                obs = obs_per_env[i] if not changed else None
                 if obs is None:
                     obs = env.observe()
-                seat = env.current_player
+                    obs_per_env[i] = obs
+                ready_env_idx.append(i)
+                ready_obs.append(obs)
+
+            if not ready_env_idx:
+                # Pathological: all envs degenerate.  Loop to retry on next
+                # iteration (resets happen at top of next iter).
+                continue
+
+            # ---- 2. Batched forward over all ready envs.
+            actions_b, log_probs_b, values_b = self._act_learner_batch(ready_obs)
+
+            # ---- 3. Apply each action to its env, append to traj, handle term.
+            for k, i in enumerate(ready_env_idx):
+                if learner_step_count >= n_steps:
+                    break
+                env = self.envs[i]
+                seat = env.current_player  # still the learner seat
                 state = self._env_state[i]
+                action = int(actions_b[k])
+                log_prob = float(log_probs_b[k])
+                value = float(values_b[k])
 
-                if seat in state["opponent_seats"]:
-                    # Snapshot seat acts inline via the env's opponent map.
-                    # In practice _auto_step_opponents already advances past
-                    # them after each learner step, so this branch only fires
-                    # on the very first observe of an episode where the
-                    # opening seat is an opponent.
-                    env._auto_step_opponents()
-                    if env.is_over():
-                        obs_per_env[i] = None
-                        # Hand may have ended while opponents were acting; fetch
-                        # payoffs + winners directly from the inner env.
-                        payoffs_done = env._inner.get_payoffs().astype(np.float32) / 25000.0
-                        winners_done = env.get_result_info().get("winners", [])
-                        finalized.append(
-                            self._finalize_env_payoffs(i, payoffs_done, winners_done)
-                        )
-                        _record_episode(
-                            payoffs_done,
-                            winners_done,
-                            sum(len(t.actions) for t in state["trajs"].values()),
-                        )
-                        obs_per_env[i] = self._reset_env(i, env)
-                    else:
-                        obs_per_env[i] = env.observe()
-                    continue
-
-                # Learner seat — sample an action.
-                action, log_prob, value = self._act_learner(obs)
-                state["trajs"][seat].obs.append(obs)
+                state["trajs"][seat].obs.append(ready_obs[k])
                 state["trajs"][seat].actions.append(action)
                 state["trajs"][seat].log_probs.append(log_prob)
                 state["trajs"][seat].values.append(value)
@@ -475,10 +547,11 @@ class SelfPlayPPOTrainer:
 
                 next_obs, payoffs, done, info = env.step(action)
                 if done:
-                    # Episode over: finalize all learner-seat trajectories.
                     winners = info.get("winners", []) if isinstance(info, dict) else []
-                    advantages_acc, returns_acc, obs_acc, act_acc, lp_acc, v_acc = self._finalize_env_payoffs(i, payoffs, winners)
-                    finalized.append((obs_acc, act_acc, lp_acc, v_acc, advantages_acc, returns_acc))
+                    adv_acc, ret_acc, obs_acc, act_acc, lp_acc, v_acc = (
+                        self._finalize_env_payoffs(i, payoffs, winners)
+                    )
+                    finalized.append((obs_acc, act_acc, lp_acc, v_acc, adv_acc, ret_acc))
                     _record_episode(
                         payoffs,
                         winners,
