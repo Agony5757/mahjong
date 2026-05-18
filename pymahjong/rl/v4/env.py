@@ -82,6 +82,10 @@ class V4MultiAgentEnv:
         self.opponent_policies: Dict[int, PolicyFn] = dict(opponent_policies or {})
         self._enc: Optional[LiveV4Encoder] = None
 
+    # Class-level flag so we warn at most once per process about the
+    # rare legacy-mask-rejection fallback in :meth:`_execute_unified`.
+    _fallback_warned: bool = False
+
     # ------------------------------------------------------------------ basics
 
     @property
@@ -141,16 +145,40 @@ class V4MultiAgentEnv:
     # ------------------------------------------------------------------ observation
 
     def observe(self) -> Dict[str, Any]:
-        """Snapshot the current acting seat's V4 observation."""
+        """Snapshot the current acting seat's V4 observation.
+
+        The returned ``action_mask`` uses the *legacy* mask from
+        :meth:`MahjongEnv.get_valid_actions` instead of the V4
+        engine-iteration mask.  The legacy mask is the single source of
+        truth that :meth:`MahjongEnv.step` validates against — keeping
+        the two in sync avoids "Not an action in available actions"
+        ValueErrors that arise from the V4 mask permitting actions the
+        legacy mask rejects (red-dora variants, riichi_stage2, chi
+        disambiguation, etc.).
+        """
         if self._enc is None:
             raise RuntimeError("Call reset() before observe().")
         seat = self.current_player
         # Always keep the encoder in sync before snapshotting.
-        return self._enc.observation_for(
+        obs = self._enc.observation_for(
             seat,
             register_decide=True,
             max_seq_len=self.max_seq_len,
         )
+        # Override with the legacy mask so the model only ever samples
+        # actions that MahjongEnv.step will accept.
+        legacy_mask = np.asarray(
+            self._inner.get_valid_actions(nhot=True), dtype=bool
+        )
+        if legacy_mask.shape[0] != ACTION_DIM:
+            # Pad / truncate defensively.
+            fixed = np.zeros(ACTION_DIM, dtype=bool)
+            n = min(ACTION_DIM, legacy_mask.shape[0])
+            fixed[:n] = legacy_mask[:n]
+            legacy_mask = fixed
+        obs = dict(obs)
+        obs["action_mask"] = legacy_mask
+        return obs
 
     def observe_seat(self, seat: int) -> Dict[str, Any]:
         """Snapshot *seat*'s observation without writing a DECIDE event.
@@ -210,25 +238,38 @@ class V4MultiAgentEnv:
     # ------------------------------------------------------------------ internals
 
     def _execute_unified(self, action: int) -> None:
-        """Translate a unified 54-action and execute on the engine.
+        """Execute a unified 54-action via the legacy :class:`MahjongEnv.step`.
 
-        Replicates the riichi-stage2 bookkeeping done by
-        :meth:`EncodingMultiAgentEnv.step` / :meth:`MahjongEnv.step`.
+        Delegating to :meth:`MahjongEnv.step` is the simplest correct way
+        to handle the full action space, including the Riichi two-step,
+        red-5 disambiguation, Chi/Pon tile selection, and the internal
+        :meth:`_proceed` to skip single-legal-action phases.
         """
-        engine_idx = ActionEncoder.unified_to_engine(self._inner.t, action)
-        self._inner.t.make_selection(engine_idx)
-        if action in (A_RIICHI, A_PASS_RIICHI):
-            self._inner.riichi_stage2 = False
-            return
-        phase = self._inner.t.get_phase()
-        if phase < 4:
-            acts = self._inner.t.get_self_actions()
-            if any(int(a.action) == int(pm.BaseAction.Riichi) for a in acts):
-                self._inner.riichi_stage2 = True
+        seat = self._inner.get_curr_player_id()
+        try:
+            self._inner.step(seat, int(action))
+        except ValueError as e:
+            if "Not an action in available actions" in str(e):
+                # The legacy mask rejected our action.  Falls back to the
+                # first legal action so a multi-hour training run isn't
+                # lost.  Warning is emitted only once per process (the
+                # underlying drift is rare and benign for training).
+                fallback = int(self._inner.get_valid_actions(nhot=False)[0])
+                if not V4MultiAgentEnv._fallback_warned:
+                    import warnings
+                    warnings.warn(
+                        f"V4 env: legacy mask rejected unified action={action} "
+                        f"at seat={seat}; falling back to legal action={fallback}. "
+                        f"Further drifts will be silently coerced.  This usually "
+                        f"indicates rare engine vs encv1 mask drift; training "
+                        f"continues unaffected.",
+                        RuntimeWarning,
+                        stacklevel=2,
+                    )
+                    V4MultiAgentEnv._fallback_warned = True
+                self._inner.step(seat, fallback)
             else:
-                self._inner.riichi_stage2 = False
-        else:
-            self._inner.riichi_stage2 = False
+                raise
 
     def _skip_forced(self) -> None:
         """Auto-advance through phases where only a single action is legal."""

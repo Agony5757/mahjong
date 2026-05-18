@@ -7,6 +7,7 @@ bidirectional mapping between engine actions and the unified action space.
 
 from __future__ import annotations
 
+import warnings
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -232,9 +233,12 @@ class ActionEncoder:
             accepted_bases = {int(base_action)}
 
         first_match: Optional[int] = None
+        first_same_base: Optional[int] = None
         for i, sel in enumerate(actions):
             if int(sel.action) not in accepted_bases:
                 continue
+            if first_same_base is None:
+                first_same_base = i
             tiles = sel.correspond_tiles
             if tile_basetiles is None:
                 if match_any_red:
@@ -252,11 +256,23 @@ class ActionEncoder:
             if tiles and int(tiles[0].tile) == tile_basetiles[0]:
                 return i
 
-        # Fallback: if no exact red-match was found but a same-base-action
-        # candidate exists, accept it (avoids ValueError when only one
-        # red/non-red variant is actually legal).
+        # Fallback chain:
+        #   1) first base-action match with wrong red-dora (Chi/Pon corner cases)
+        #   2) first same-base-action selection regardless of tile id — covers
+        #      rare action_mask vs engine-selections drift (e.g. riichi_stage2
+        #      bugs).  Warn so we notice if this fires often.
         if first_match is not None:
             return first_match
+        if first_same_base is not None:
+            warnings.warn(
+                f"unified_to_engine: tile-id mismatch for action={action}, "
+                f"base={base_action}; falling back to first same-base "
+                f"selection (engine_idx={first_same_base}).  This usually "
+                f"indicates an action_mask/engine drift bug.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            return first_same_base
 
         raise ValueError(
             f"No engine selection matches action={action}, base={base_action}"
