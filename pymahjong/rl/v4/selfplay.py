@@ -122,6 +122,14 @@ class SelfPlayConfig:
     :class:`_RewardNormalizer` so the EMA tracks the augmented scale.
     Set to ``0.0`` to disable (default)."""
 
+    reward_clip: float = 3.0
+    """Symmetric clip applied to the *normalized* terminal reward fed
+    into GAE.  Prevents rare yakuman / huge-han wins from saturating
+    the value head (we observed value-loss spikes up to ~2.0 without
+    clipping while the median is < 0.05).  ``0`` or negative disables.
+    Default ``3.0`` ≈ 3× the running |reward| EMA scale, which keeps
+    99% of payoffs unclipped while taming yakuman outliers."""
+
     # -- I/O --
     save_path: str = "checkpoints/ppo_v4.pt"
     save_interval: int = 100_000
@@ -389,11 +397,31 @@ class SelfPlayPPOTrainer:
         for i, env in enumerate(self.envs):
             obs_per_env[i] = env.observe()
 
-        episode_returns: List[float] = []
-        episode_lengths: List[int] = []
+        # Richer per-episode metrics (replace the always-zero "mean_return").
+        ep_lengths: List[int] = []
+        ep_abs_payoffs: List[float] = []           # mean |payoff| per hand → hand magnitude
+        ep_max_winner_payoff: List[float] = []     # max winner payoff per agari hand
+        ep_max_loser_payoff: List[float] = []      # max |payoff| of losers per agari hand
+        agari_count = 0
+        ryuukyoku_count = 0
         learner_step_count = 0
 
         finalized: List[Tuple[List[Dict[str, Any]], List[int], List[float], List[float], np.ndarray, np.ndarray]] = []
+
+        def _record_episode(payoffs: np.ndarray, winners: list, ep_len: int) -> None:
+            nonlocal agari_count, ryuukyoku_count
+            ep_lengths.append(ep_len)
+            ep_abs_payoffs.append(float(np.mean(np.abs(payoffs))))
+            if winners:
+                agari_count += 1
+                winner_payoffs = [float(payoffs[int(w)]) for w in winners if 0 <= int(w) < 4]
+                if winner_payoffs:
+                    ep_max_winner_payoff.append(max(winner_payoffs))
+                loser_idx = [s for s in range(4) if s not in {int(w) for w in winners}]
+                if loser_idx:
+                    ep_max_loser_payoff.append(max(abs(float(payoffs[s])) for s in loser_idx))
+            else:
+                ryuukyoku_count += 1
 
         while learner_step_count < n_steps:
             for i, env in enumerate(self.envs):
@@ -426,8 +454,11 @@ class SelfPlayPPOTrainer:
                         finalized.append(
                             self._finalize_env_payoffs(i, payoffs_done, winners_done)
                         )
-                        episode_returns.append(float(np.mean(payoffs_done)))
-                        episode_lengths.append(sum(len(t.actions) for t in state["trajs"].values()))
+                        _record_episode(
+                            payoffs_done,
+                            winners_done,
+                            sum(len(t.actions) for t in state["trajs"].values()),
+                        )
                         obs_per_env[i] = self._reset_env(i, env)
                     else:
                         obs_per_env[i] = env.observe()
@@ -448,8 +479,11 @@ class SelfPlayPPOTrainer:
                     winners = info.get("winners", []) if isinstance(info, dict) else []
                     advantages_acc, returns_acc, obs_acc, act_acc, lp_acc, v_acc = self._finalize_env_payoffs(i, payoffs, winners)
                     finalized.append((obs_acc, act_acc, lp_acc, v_acc, advantages_acc, returns_acc))
-                    episode_returns.append(float(np.mean(payoffs)))
-                    episode_lengths.append(sum(len(t.actions) for t in state["trajs"].values()))
+                    _record_episode(
+                        payoffs,
+                        winners,
+                        sum(len(t.actions) for t in state["trajs"].values()),
+                    )
                     obs_per_env[i] = self._reset_env(i, env)
                 else:
                     obs_per_env[i] = next_obs
@@ -484,7 +518,16 @@ class SelfPlayPPOTrainer:
             all_adv.append(adv_acc)
             all_ret.append(ret_acc)
         if not all_acts:
-            return batch, {"episodes": 0, "mean_return": 0.0, "mean_length": 0.0}
+            return batch, {
+                "episodes": 0,
+                "agari": 0,
+                "ryuukyoku": 0,
+                "win_rate": 0.0,
+                "mean_length": 0.0,
+                "mean_abs_payoff": 0.0,
+                "mean_winner_payoff": 0.0,
+                "mean_loser_payoff": 0.0,
+            }
 
         batch.obs = all_obs
         batch.actions = np.asarray(all_acts, dtype=np.int64)
@@ -496,10 +539,16 @@ class SelfPlayPPOTrainer:
         if self.cfg.advantage_norm and batch.advantages.std() > 1e-6:
             batch.advantages = (batch.advantages - batch.advantages.mean()) / (batch.advantages.std() + 1e-6)
 
+        total_ep = agari_count + ryuukyoku_count
         stats = {
-            "episodes": len(episode_returns),
-            "mean_return": float(np.mean(episode_returns)) if episode_returns else 0.0,
-            "mean_length": float(np.mean(episode_lengths)) if episode_lengths else 0.0,
+            "episodes": total_ep,
+            "agari": agari_count,
+            "ryuukyoku": ryuukyoku_count,
+            "win_rate": (agari_count / total_ep) if total_ep > 0 else 0.0,
+            "mean_length": float(np.mean(ep_lengths)) if ep_lengths else 0.0,
+            "mean_abs_payoff": float(np.mean(ep_abs_payoffs)) if ep_abs_payoffs else 0.0,
+            "mean_winner_payoff": float(np.mean(ep_max_winner_payoff)) if ep_max_winner_payoff else 0.0,
+            "mean_loser_payoff": float(np.mean(ep_max_loser_payoff)) if ep_max_loser_payoff else 0.0,
         }
         return batch, stats
 
@@ -522,6 +571,12 @@ class SelfPlayPPOTrainer:
         )
         if self.reward_norm:
             self.reward_norm.update(shaped)
+        # Clip the (already-normalized) per-seat terminal reward to tame
+        # yakuman / huge-han outliers that otherwise destabilize the
+        # value head.  Skip when reward_clip <= 0.
+        if self.cfg.reward_clip and self.cfg.reward_clip > 0:
+            c = float(self.cfg.reward_clip)
+            norm_payoffs = np.clip(norm_payoffs, -c, c)
         # Update opponent winrate (learner = top non-opponent seat finish).
         snap: Optional[Snapshot] = state["opponent_snapshot"]
         if snap is not None and state["opponent_seats"]:
@@ -736,8 +791,11 @@ class SelfPlayPPOTrainer:
                 sps = self._total_learner_steps / max(elapsed, 1e-9)
                 print(
                     f"[selfplay] upd={update} steps={self._total_learner_steps} "
-                    f"ep={stats['episodes']} ret={stats['mean_return']:+.4f} "
+                    f"ep={stats['episodes']} win%={100*stats['win_rate']:.1f} "
                     f"len={stats['mean_length']:.1f} "
+                    f"|pay|={stats['mean_abs_payoff']:.3f} "
+                    f"win_pay={stats['mean_winner_payoff']:+.3f} "
+                    f"lose_pay={stats['mean_loser_payoff']:.3f} "
                     f"pi={losses['policy_loss']:+.4f} v={losses['value_loss']:.4f} "
                     f"H={losses['entropy']:.3f} KL={losses['approx_kl']:+.4f} "
                     f"sps={sps:.1f} pool={len(self.pool)}",

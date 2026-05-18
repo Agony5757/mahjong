@@ -7,13 +7,10 @@ bidirectional mapping between engine actions and the unified action space.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import List, Optional, Tuple
 
 import numpy as np
 import MahjongPyWrapper as pm
-
-if TYPE_CHECKING:
-    from typing import List, Optional, Tuple
 
 # ---------------------------------------------------------------------------
 # Action dimension
@@ -153,7 +150,7 @@ class ActionEncoder:
             return A_KAKAN
         if ba == int(BA.Riichi):
             return A_RIICHI
-        if ba == int(BA.Ron):
+        if ba == int(BA.Ron) or ba == int(BA.ChanKan) or ba == int(BA.ChanAnKan):
             return A_RON
         if ba == int(BA.Tsumo):
             return A_TSUMO
@@ -216,20 +213,50 @@ class ActionEncoder:
             raise ValueError(f"action {action} out of range")
 
         base_action, tile_basetiles, use_red = target
+        # Base actions whose unified-space slot does NOT distinguish
+        # red-dora variants (AnKan/MinKan/KaKan/Riichi/Ron/Tsumo/
+        # Kyushukyuhai/Pass): match the first engine candidate of the
+        # right base action regardless of red-dora membership.  Chi/Pon
+        # *do* have separate _USERED slots and must red-match strictly.
+        red_distinct_base = {
+            int(BA.Chi),
+            int(BA.Pon),
+        }
+        match_any_red = int(base_action) not in red_distinct_base
 
+        # A_RON also covers ChanKan / ChanAnKan engine responses (ron-on-
+        # a-kan), which the mask treats as A_RON.  Accept any of these.
+        if int(base_action) == int(BA.Ron):
+            accepted_bases = {int(BA.Ron), int(BA.ChanKan), int(BA.ChanAnKan)}
+        else:
+            accepted_bases = {int(base_action)}
+
+        first_match: Optional[int] = None
         for i, sel in enumerate(actions):
-            if int(sel.action) != int(base_action):
+            if int(sel.action) not in accepted_bases:
                 continue
             tiles = sel.correspond_tiles
             if tile_basetiles is None:
-                # Chi/Pon: match by red-dora flag
+                if match_any_red:
+                    # AnKan/MinKan/KaKan/Riichi/Ron/Tsumo/Pass/Kyushuku:
+                    # red-dora is irrelevant in the unified space.
+                    return i
+                # Chi/Pon: match by red-dora flag.
                 has_red = any(getattr(t, "red_dora", False) for t in tiles) if tiles else False
                 if has_red == use_red:
                     return i
-                # Fallback: if only one candidate of this base action, accept it
+                # Remember first base-action match as a fallback.
+                if first_match is None:
+                    first_match = i
                 continue
             if tiles and int(tiles[0].tile) == tile_basetiles[0]:
                 return i
+
+        # Fallback: if no exact red-match was found but a same-base-action
+        # candidate exists, accept it (avoids ValueError when only one
+        # red/non-red variant is actually legal).
+        if first_match is not None:
+            return first_match
 
         raise ValueError(
             f"No engine selection matches action={action}, base={base_action}"

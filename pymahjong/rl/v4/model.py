@@ -141,12 +141,36 @@ class EventStreamTransformer(nn.Module):
         deterministic: bool = False,
     ):
         logits, value = self.forward(features, attention_mask, action_mask)
+        # Numerical safety: clamp to a finite range and verify the mask
+        # has at least one valid action per row to avoid `Categorical`
+        # asserting on all-NEG_INF logits → NaN softmax → CUDA crash.
+        if action_mask is not None:
+            valid = action_mask.any(dim=-1, keepdim=True)
+            if not bool(valid.all()):
+                # Defensive fallback: if any row has no valid action, mark
+                # action 0 as valid for that row.  Should never happen in
+                # practice, but prevents a hard CUDA failure.
+                fallback = torch.zeros_like(action_mask)
+                fallback[..., 0] = True
+                action_mask = torch.where(valid, action_mask, fallback)
+                logits = logits.masked_fill(~action_mask, NEG_INF)
+        # Replace any non-finite logits (NaN/Inf besides masked NEG_INF)
+        # to keep the categorical distribution well-defined.
+        finite = torch.isfinite(logits)
+        # NEG_INF entries are isfinite=False but intentional; only sanitize
+        # actual NaN/+Inf by checking the mask first.
+        if action_mask is not None:
+            need_fix = (~finite) & action_mask
+            if bool(need_fix.any()):
+                logits = torch.where(need_fix, torch.zeros_like(logits), logits)
+
         if deterministic:
             action = logits.argmax(dim=-1)
             log_prob = F.log_softmax(logits, dim=-1).gather(-1, action.unsqueeze(-1)).squeeze(-1)
         else:
-            probs = F.softmax(logits, dim=-1)
-            dist = torch.distributions.Categorical(probs=probs)
+            # Pass logits (not probs) for numerical stability; Categorical
+            # applies a stable log-softmax internally.
+            dist = torch.distributions.Categorical(logits=logits)
             action = dist.sample()
             log_prob = dist.log_prob(action)
         return action, log_prob, value

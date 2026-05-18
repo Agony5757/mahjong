@@ -79,6 +79,10 @@ def main() -> int:
                          "larger bonuses; ryuukyoku yields none. The winner's "
                          "effective reward becomes payoff * (1 + coef). "
                          "Set to 0 to disable. Default: 0.5.")
+    ap.add_argument("--reward-clip", type=float, default=3.0,
+                    help="Symmetric clip applied to normalized terminal reward "
+                         "to tame yakuman / haneman outliers (after _RewardNormalizer). "
+                         "Set <=0 to disable. Default: 3.0.")
 
     # Model
     ap.add_argument("--d-model", type=int, default=256)
@@ -131,6 +135,7 @@ def main() -> int:
         reward_norm=not args.no_reward_norm,
         advantage_norm=not args.no_advantage_norm,
         win_bonus_coef=args.win_bonus_coef,
+        reward_clip=args.reward_clip,
         save_path=args.save_path,
         snapshot_dir=args.snapshot_dir,
         save_interval=args.save_interval,
