@@ -18,6 +18,7 @@ class EncodingVersion(Enum):
     V2 = "v2"
     V3 = "v3"
     V4 = "v4"
+    V5 = "v5"
 
 
 @runtime_checkable
@@ -98,6 +99,23 @@ class EncodingStrategy(Protocol):
     def forward_from_batch(self, model, batch: Dict[str, Any]) -> tuple:
         """Dispatch *batch* through *model* → ``(logits, value)``."""
         ...
+
+    def forward_from_batch_raw(
+        self, model, batch: Dict[str, Any]
+    ) -> tuple:
+        """Like :meth:`forward_from_batch` but returns *RAW* logits + the
+        original action mask, so the caller can apply the mask itself
+        (e.g. to compute an illegal-logit penalty alongside the
+        cross-entropy loss).
+
+        Returns:
+            ``(raw_logits, value, action_mask)`` — ``raw_logits`` has
+            **no** ``-inf`` filling applied; ``action_mask`` is the bool
+            mask of legal actions from the batch.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement forward_from_batch_raw"
+        )
 
     def evaluate_actions_from_batch(
         self, model, batch: Dict[str, Any], actions

@@ -15,10 +15,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..action_space import ACTION_DIM
+from ..action_space import (
+    ACTION_DIM,
+    ACTION_HEAD_DIM,
+    ACTION_HEAD_SLOTS,
+    RESPONSE_HEAD_DIM,
+    RESPONSE_HEAD_SLOTS,
+)
 from ..common.config import TransformerConfig
 
 NEG_INF = -1e9
+
+# V4 event-stream pads to MAX_SEQ_LEN=512 (see TrainingDataEncodingV4.h).
+# pos_emb gets ``+1`` to leave a slot for the prepended CLS token when
+# ``cfg.use_cls`` is enabled.
+V4_MAX_SEQ_LEN = 512
 
 
 class EventStreamTransformer(nn.Module):
@@ -34,17 +45,27 @@ class EventStreamTransformer(nn.Module):
         config: TransformerConfig | None = None,
         event_dim: int = 100,
         action_dim: int = ACTION_DIM,
+        pos_max_len: int = V4_MAX_SEQ_LEN,
+        split_heads: bool = False,
     ):
         super().__init__()
         cfg = config or TransformerConfig()
         self.cfg = cfg
         self.event_dim = event_dim
         self.action_dim = action_dim
+        self.pos_max_len = pos_max_len
+        self.split_heads = split_heads
 
         self.input_proj = nn.Linear(event_dim, cfg.d_model)
         if cfg.use_cls:
             self.cls = nn.Parameter(torch.zeros(1, 1, cfg.d_model))
             nn.init.trunc_normal_(self.cls, std=0.02)
+
+        if getattr(cfg, "use_pos_emb", False):
+            self.pos_emb = nn.Embedding(pos_max_len + 1, cfg.d_model)
+            nn.init.zeros_(self.pos_emb.weight)
+        else:
+            self.pos_emb = None
 
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=cfg.d_model,
@@ -58,7 +79,29 @@ class EventStreamTransformer(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=cfg.n_layers)
         self.norm = nn.LayerNorm(cfg.d_model)
 
-        self.policy_head = nn.Linear(cfg.d_model, action_dim)
+        if split_heads:
+            # Phase-routed split heads: each head has exclusive jurisdiction
+            # over its slots → response-phase logits can't leak into
+            # action-phase decisions (and vice versa) because the two
+            # output projections are entirely independent.
+            self.policy_head_action = nn.Linear(cfg.d_model, ACTION_HEAD_DIM)
+            self.policy_head_response = nn.Linear(cfg.d_model, RESPONSE_HEAD_DIM)
+            # Pre-build int64 index tensors for fast scatter into 54-dim layout.
+            self.register_buffer(
+                "_action_slot_idx",
+                torch.tensor(ACTION_HEAD_SLOTS, dtype=torch.long),
+                persistent=False,
+            )
+            self.register_buffer(
+                "_response_slot_idx",
+                torch.tensor(RESPONSE_HEAD_SLOTS, dtype=torch.long),
+                persistent=False,
+            )
+            # The legacy ``policy_head`` attribute is left absent so that
+            # state-dict load mismatches surface loudly when accidentally
+            # mixing single-head and split-head checkpoints.
+        else:
+            self.policy_head = nn.Linear(cfg.d_model, action_dim)
         self.value_head = nn.Sequential(
             nn.Linear(cfg.d_model, cfg.d_model),
             nn.GELU(),
@@ -91,6 +134,16 @@ class EventStreamTransformer(nn.Module):
             )
         else:
             mask_extended = attention_mask
+        if self.pos_emb is not None:
+            L = x.size(1)
+            if L > self.pos_emb.num_embeddings:
+                raise ValueError(
+                    f"EventStreamTransformer: sequence length {L} exceeds "
+                    f"pos_emb capacity {self.pos_emb.num_embeddings}. "
+                    f"Increase pos_max_len when constructing the model."
+                )
+            pos = torch.arange(L, device=x.device)
+            x = x + self.pos_emb(pos).unsqueeze(0)
         key_padding_mask = ~mask_extended
         x = self.encoder(x, src_key_padding_mask=key_padding_mask)
         x = self.norm(x)
@@ -104,6 +157,29 @@ class EventStreamTransformer(nn.Module):
         denom = m.sum(dim=1).clamp(min=1.0)
         mean_pool = (body * m).sum(dim=1) / denom
         return cls_out + mean_pool
+
+    def _policy_logits(self, h: torch.Tensor) -> torch.Tensor:
+        """Return ``(B, 54)`` raw policy logits.
+
+        In ``split_heads`` mode the two head projections write into
+        their disjoint slot positions and *all other slots stay at
+        -inf* (so they can never be picked by an inference argmax,
+        even if the engine's action_mask incorrectly marked them
+        legal — defence in depth).
+        """
+        if not self.split_heads:
+            return self.policy_head(h)
+
+        B = h.size(0)
+        action_logits = self.policy_head_action(h)       # (B, 43)
+        response_logits = self.policy_head_response(h)   # (B, 11)
+        # Initialise the scatter target with NEG_INF so unwritten slots
+        # are inert.  Using NEG_INF instead of 0 makes the cross-head
+        # separation airtight: even after softmax these slots are 0.
+        out = h.new_full((B, ACTION_DIM), NEG_INF)
+        out.index_copy_(1, self._action_slot_idx, action_logits)
+        out.index_copy_(1, self._response_slot_idx, response_logits)
+        return out
 
     def forward(
         self,
@@ -122,7 +198,7 @@ class EventStreamTransformer(nn.Module):
             ``(logits, value)`` tuple.
         """
         h = self.encode(features, attention_mask)
-        logits = self.policy_head(h)
+        logits = self._policy_logits(h)
         value = self.value_head(h).squeeze(-1)
         if action_mask is not None:
             logits = logits.masked_fill(~action_mask, NEG_INF)

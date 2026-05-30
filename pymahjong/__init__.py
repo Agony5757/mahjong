@@ -6,6 +6,7 @@ Submodules:
 - ``models``: Pretrained VLOG-Mahjong RL model architecture.
 - ``base_modules``: Neural network module definitions.
 - ``tenhou_paipu_check``: Tenhou XML paipu validation and replay utilities.
+- ``paipu_recorder``: Generate Tenhou-style XML paipu from running games.
 """
 
 from __future__ import annotations
@@ -58,6 +59,17 @@ def __getattr__(name):
 
 # Utilities
 from pymahjong.tenhou_paipu_check import paipu_replay, paipu_replay_summary
+from pymahjong.paipu_recorder import (
+    TenhouPaipuRecorder,
+    replay_recorded_paipu,
+)
+from pymahjong.paipu_tenhou_json import (
+    xml_to_tenhou_json,
+    xml_string_to_tenhou_json,
+    make_editor_url,
+    make_per_hand_urls,
+    save_tenhou_json,
+)
 
 __all__ = [
     # Environments
@@ -104,6 +116,13 @@ __all__ = [
     # Utilities
     "paipu_replay",
     "paipu_replay_summary",
+    "TenhouPaipuRecorder",
+    "replay_recorded_paipu",
+    "xml_to_tenhou_json",
+    "xml_string_to_tenhou_json",
+    "make_editor_url",
+    "make_per_hand_urls",
+    "save_tenhou_json",
 ]
 
 # Version from build-time (set by setuptools-scm)

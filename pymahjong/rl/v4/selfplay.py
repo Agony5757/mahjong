@@ -55,6 +55,7 @@ except Exception as e:  # noqa: BLE001
     raise RuntimeError("torch is required for V4 self-play training") from e
 
 from ..common.config import TransformerConfig
+from ..encoding import EncodingVersion, get_strategy
 from ..v4.cached_dataset import cached_event_collate
 from ..v4.env import PolicyFn, V4MultiAgentEnv
 from ..v4.model import EventStreamTransformer
@@ -145,6 +146,46 @@ class SelfPlayConfig:
     seed: Optional[int] = None
     log_interval: int = 1
     """Print a log line every N PPO updates."""
+
+    # -- architecture --
+    encoding: str = "v4"
+    """Which encoding strategy to use for model construction.  Either
+    ``"v4"`` (linear policy head :class:`EventStreamTransformer`) or
+    ``"v5"`` (Douzero-style :class:`DouzeroV5Transformer` -- shared
+    scorer over per-legal-action embeddings).  Selected via the
+    :mod:`~pymahjong.rl.encoding` strategy registry."""
+
+    split_heads: bool = False
+    """If True, build the EventStreamTransformer with split policy heads
+    (action-phase + response-phase sub-heads).  MUST match the BC
+    checkpoint architecture, or warm-start will silently fall back to a
+    randomly-initialized policy head.  V5 ignores this flag (its shared
+    scorer subsumes phase routing via the descriptor's phase bit)."""
+
+    # -- periodic self-play evaluation --
+    # Unlike the rollout stats (which mix in the opponent pool),
+    # ``selfplay_eval`` runs the *current learner* in all 4 seats on a
+    # fixed seed set and reports clean tsumo/ron/houjuu/ryuukyoku rates.
+    # This is the metric to track for "is the policy actually getting
+    # better at Mahjong" rather than "is it beating older snapshots".
+    selfplay_eval_interval: int = 0
+    """Run a clean shared-policy self-play eval every N PPO updates.
+    ``0`` disables (default).  Typical: 5 updates ≈ 80K learner steps."""
+    selfplay_eval_hands: int = 64
+    """Hands per self-play eval call.  Larger = lower variance but more
+    wall-clock; 64 hands ≈ 15-25 s on RTX 5080."""
+    selfplay_eval_deterministic: bool = True
+    """``True`` = argmax actions during eval (matches inference).
+    ``False`` = sample (better mode-collapse detection)."""
+    selfplay_eval_seed: int = 12345
+    """Base seed for self-play eval; each eval uses
+    ``seed + eval_count * 1009`` so reseeded hands don't overlap."""
+
+    # -- V5-only model knobs (ignored for encoding="v4") --
+    scorer_hidden: int = 256
+    """Hidden width of the V5 shared ``(state, action)`` scorer MLP."""
+    action_proj_dim: Optional[int] = None
+    """V5 per-action embedding width.  ``None`` = match ``d_model``."""
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +328,9 @@ class SelfPlayPPOTrainer:
             np.random.seed(self.cfg.seed)
 
         tcfg = transformer_config or TransformerConfig()
-        self.model = EventStreamTransformer(config=tcfg).to(self._device)
+        self._tcfg = tcfg
+        self._strategy = get_strategy(EncodingVersion(self.cfg.encoding))
+        self.model = self._build_model().to(self._device)
 
         if bc_checkpoint and os.path.exists(bc_checkpoint):
             self._load_bc(bc_checkpoint)
@@ -323,16 +366,62 @@ class SelfPlayPPOTrainer:
 
     # ------------------------------------------------------------------ utils
 
+    def _build_model(self):
+        """Construct a fresh model using the encoding strategy registry.
+
+        For ``encoding="v4"`` returns an :class:`EventStreamTransformer`
+        with optional ``split_heads``; for ``encoding="v5"`` returns a
+        :class:`DouzeroV5Transformer` (V5 ignores ``split_heads``).
+        Used for both the learner model and frozen-snapshot policies.
+        """
+        kwargs = dict(transformer_config=self._tcfg)
+        if self.cfg.encoding == "v4":
+            kwargs["split_heads"] = self.cfg.split_heads
+        elif self.cfg.encoding == "v5":
+            kwargs["scorer_hidden"] = self.cfg.scorer_hidden
+            kwargs["action_proj_dim"] = self.cfg.action_proj_dim
+        return self._strategy.create_model(**kwargs)
+
     def _load_bc(self, path: str) -> None:
         ckpt = torch.load(path, map_location=self._device)
         state = ckpt.get("model", ckpt)
-        # ``strict=False`` so the BC checkpoint can have minor key drift.
+        # Auto-detect checkpoint architecture from key names; refuse silent
+        # mismatch with the trainer's encoding/split-heads config.
+        ckpt_is_v5 = any(k.startswith("scorer.") or k.startswith("action_proj")
+                         for k in state)
+        ckpt_is_v4_split = any(k.startswith("policy_head_action") for k in state)
+        ckpt_is_v4_single = any(k == "policy_head.weight" for k in state)
+        if ckpt_is_v5 and self.cfg.encoding != "v5":
+            raise RuntimeError(
+                f"BC checkpoint at {path} looks like a V5 (Douzero) ckpt "
+                f"(has scorer.*/action_proj keys) but trainer encoding "
+                f"is {self.cfg.encoding!r}.  Re-launch with encoding='v5'."
+            )
+        if (ckpt_is_v4_split or ckpt_is_v4_single) and self.cfg.encoding != "v4":
+            raise RuntimeError(
+                f"BC checkpoint at {path} looks like a V4 ckpt but trainer "
+                f"encoding is {self.cfg.encoding!r}.  Re-launch with "
+                f"encoding='v4' (and matching --split-heads)."
+            )
+        if self.cfg.encoding == "v4":
+            if ckpt_is_v4_split != self.cfg.split_heads:
+                raise RuntimeError(
+                    f"V4 BC checkpoint head architecture mismatches model:\n"
+                    f"  ckpt at {path} has split_heads={ckpt_is_v4_split}\n"
+                    f"  trainer was built with split_heads={self.cfg.split_heads}\n"
+                    f"Fix by passing/removing --split-heads to match the ckpt."
+                )
+        # ``strict=False`` so the BC checkpoint can have minor key drift
+        # (e.g. running buffers / value head shape unaffected).
         missing, unexpected = self.model.load_state_dict(state, strict=False)
         if missing:
             print(f"[selfplay] BC ckpt missing keys: {missing[:5]}{'...' if len(missing) > 5 else ''}")
         if unexpected:
             print(f"[selfplay] BC ckpt unexpected keys: {unexpected[:5]}{'...' if len(unexpected) > 5 else ''}")
-        print(f"[selfplay] Loaded BC checkpoint from {path}")
+        kind = "v5" if ckpt_is_v5 else (
+            "v4-split" if ckpt_is_v4_split else "v4-single"
+        )
+        print(f"[selfplay] Loaded BC checkpoint from {path} (kind={kind})")
 
     def _fresh_env_state(self) -> Dict[str, Any]:
         return {
@@ -358,7 +447,7 @@ class SelfPlayPPOTrainer:
         cached = self._snapshot_policy_cache.get(sid)
         if cached is not None:
             return cached
-        opp_model = EventStreamTransformer(config=self.model.cfg).to(self._device)
+        opp_model = self._build_model().to(self._device)
         opp_model.load_state_dict(snap.state_dict)
         opp_model.eval()
         policy = _make_snapshot_policy(opp_model, self._device)
@@ -864,10 +953,51 @@ class SelfPlayPPOTrainer:
 
     # ------------------------------------------------------------------ public loop
 
+    def _run_selfplay_eval(self, eval_count: int) -> None:
+        """Clean shared-policy self-play eval reporting tsumo/ron/houjuu/ryuu.
+
+        Runs the current learner in all 4 seats (no opponent pool mixing)
+        on a fixed seed batch so successive eval calls are comparable.
+        Logged as ``[PPO-SP]`` lines so they're greppable separately from
+        ``[selfplay]`` per-update stats.
+        """
+        try:
+            from .selfplay_eval import selfplay_eval_v4, format_selfplay_metrics
+        except Exception as e:  # noqa: BLE001
+            print(f"[PPO-SP] selfplay_eval import failed: {e!r}", flush=True)
+            return
+        seed = int(self.cfg.selfplay_eval_seed) + eval_count * 1009
+        was_training = self.model.training
+        try:
+            metrics = selfplay_eval_v4(
+                self.model,
+                n_hands=self.cfg.selfplay_eval_hands,
+                deterministic=self.cfg.selfplay_eval_deterministic,
+                max_seq_len=self.cfg.max_seq_len,
+                seed=seed,
+                device=self._device,
+            )
+            print(
+                f"[PPO-SP] step={self._total_learner_steps:>7d}  "
+                f"{format_selfplay_metrics(metrics)}",
+                flush=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            print(f"[PPO-SP] eval failed: {e!r}", flush=True)
+        finally:
+            if was_training:
+                self.model.train()
+
     def train(self) -> EventStreamTransformer:
         cfg = self.cfg
         update = 0
+        eval_count = 0
         start_time = time.time()
+        # Optional: run a baseline eval at step 0 so the next eval has
+        # something to compare against.
+        if cfg.selfplay_eval_interval > 0 and cfg.selfplay_eval_hands > 0:
+            self._run_selfplay_eval(eval_count)
+            eval_count += 1
         while self._total_learner_steps < cfg.total_steps:
             update += 1
             batch, stats = self._collect_rollout(cfg.rollout_steps)
@@ -903,8 +1033,19 @@ class SelfPlayPPOTrainer:
                     f"sps={sps:.1f} pool={len(self.pool)}",
                     flush=True,
                 )
+
+            # Clean self-play eval (tsumo / ron / houjuu / ryuukyoku
+            # rates against own current weights, no opponent pool).
+            if (cfg.selfplay_eval_interval > 0
+                    and cfg.selfplay_eval_hands > 0
+                    and update % cfg.selfplay_eval_interval == 0):
+                self._run_selfplay_eval(eval_count)
+                eval_count += 1
         if cfg.save_path:
             self._save_checkpoint()
+        # Final eval after training so the last log line is the clean number.
+        if cfg.selfplay_eval_interval > 0 and cfg.selfplay_eval_hands > 0:
+            self._run_selfplay_eval(eval_count)
         return self.model
 
     def _save_checkpoint(self) -> None:

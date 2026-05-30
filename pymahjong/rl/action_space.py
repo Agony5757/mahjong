@@ -73,6 +73,49 @@ ACTION_TYPES = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Phase-routed head split  (architectural fix for mask-leak — candidate C)
+# ---------------------------------------------------------------------------
+#
+# Splitting the 54-dim policy head into two phase-disjoint heads gives each
+# head exclusive jurisdiction over its slots, so a "Pass-Response" logit
+# from response-phase training can never leak into an action-phase decision
+# (and vice versa).
+#
+# * ACTION_HEAD_SLOTS — legal during P{i}_ACTION (and its sub-states like
+#   riichi-step-2): discards + self-actions (AnKan, KaKan, Riichi, Tsumo,
+#   Push, Pass-Riichi).
+# * RESPONSE_HEAD_SLOTS — legal during P{i}_RESPONSE / CHANKAN response:
+#   Chi (6 variants), Pon (2 variants), MinKan, Ron, Pass-Response.
+#
+# At inference, the V4 ``action_mask`` (which is already phase-aware) picks
+# out the slots that come from the active head; the other head's outputs
+# are scattered into the disjoint slot positions with no overlap.
+ACTION_HEAD_SLOTS = (
+    list(range(37))              # discard 0..36
+    + [45, 47, 48, 50, 51, 52]   # AnKan, KaKan, Riichi, Tsumo, Push, Pass-Riichi
+)
+RESPONSE_HEAD_SLOTS = [
+    37, 38, 39, 40, 41, 42,      # chi
+    43, 44,                      # pon
+    46,                          # MinKan
+    49,                          # Ron
+    53,                          # Pass-Response
+]
+assert (
+    set(ACTION_HEAD_SLOTS).isdisjoint(RESPONSE_HEAD_SLOTS)
+    and set(ACTION_HEAD_SLOTS) | set(RESPONSE_HEAD_SLOTS) == set(range(54))
+), "action/response head slots must partition 0..53"
+ACTION_HEAD_DIM = len(ACTION_HEAD_SLOTS)      # 43
+RESPONSE_HEAD_DIM = len(RESPONSE_HEAD_SLOTS)  # 11
+
+# HEAD_OF[i] = 0 if slot i is in the action head, else 1.
+import numpy as _np  # noqa: E402
+HEAD_OF = _np.zeros(ACTION_DIM, dtype=_np.int64)
+for s in RESPONSE_HEAD_SLOTS:
+    HEAD_OF[s] = 1
+
+
 class ActionEncoder:
     """Centralized bidirectional mapping between engine actions and the
     54-action unified space."""

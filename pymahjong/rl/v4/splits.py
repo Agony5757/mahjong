@@ -134,6 +134,31 @@ def _all_track_ids(base: CachedEventDataset) -> np.ndarray:
     return np.concatenate(parts, axis=0) if parts else np.empty(0, dtype=np.int64)
 
 
+def _all_game_ids(base: CachedEventDataset) -> np.ndarray:
+    """Concatenate per-shard game_ids into one ``int64`` array of length len(base).
+
+    Older shards (pre-May-2026) that lack ``game_ids.npy`` are silently
+    backfilled with ``track_ids`` by :func:`open_shard_arrays_v4`, in which
+    case :func:`split_by_game_id` degrades to :func:`split_by_track_id`.
+    """
+    parts = []
+    for shard in base._shards:
+        arr = open_shard_arrays_v4(base.cache_dir, shard)
+        parts.append(np.asarray(arr["game_ids"], dtype=np.int64))
+    return np.concatenate(parts, axis=0) if parts else np.empty(0, dtype=np.int64)
+
+
+def _splitmix_to_unit(values: np.ndarray, seed: int) -> np.ndarray:
+    """Map int64 ids to deterministic uniform [0, 1) floats via splitmix64."""
+    mixed = (values ^ np.int64(seed)).astype(np.uint64)
+    h = mixed ^ (mixed >> np.uint64(30))
+    h = (h * np.uint64(0xBF58476D1CE4E5B9)) & np.uint64((1 << 64) - 1)
+    h ^= h >> np.uint64(27)
+    h = (h * np.uint64(0x94D049BB133111EB)) & np.uint64((1 << 64) - 1)
+    h ^= h >> np.uint64(31)
+    return (h / np.float64(1 << 64)).astype(np.float64)
+
+
 def split_by_track_id(
     base: CachedEventDataset,
     ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),
@@ -146,8 +171,9 @@ def split_by_track_id(
 
     Warning: samples encoded from the same (game, hand) but different
     player seats have *different* ``track_id``s, so this split allows
-    a small amount of cross-seat leakage. Prefer :func:`split_by_shard`
-    if you need a strict no-leak guarantee.
+    a small amount of cross-seat leakage. Prefer
+    :func:`split_by_game_id` (no cross-seat leak) or
+    :func:`split_by_shard` (no leak at all) when possible.
     """
     if abs(sum(ratios) - 1.0) > 1e-6:
         raise ValueError(f"ratios must sum to 1.0, got {ratios}")
@@ -158,15 +184,48 @@ def split_by_track_id(
     boundary_val = r_train + r_val
 
     track_ids = _all_track_ids(base)
-    # Deterministic bucket in [0, 1).
-    mixed = (track_ids ^ np.int64(seed)).astype(np.uint64)
-    # Splitmix-style hash for better dispersion than `% N`.
-    h = mixed ^ (mixed >> np.uint64(30))
-    h = (h * np.uint64(0xBF58476D1CE4E5B9)) & np.uint64((1 << 64) - 1)
-    h ^= h >> np.uint64(27)
-    h = (h * np.uint64(0x94D049BB133111EB)) & np.uint64((1 << 64) - 1)
-    h ^= h >> np.uint64(31)
-    frac = (h / np.float64(1 << 64)).astype(np.float64)  # [0, 1)
+    frac = _splitmix_to_unit(track_ids, seed)
+
+    train_mask = frac < boundary_train
+    val_mask = (frac >= boundary_train) & (frac < boundary_val)
+    test_mask = frac >= boundary_val
+
+    all_idx = np.arange(len(base), dtype=np.int64)
+    return SplitResult(
+        train=_SubsetDataset(base, all_idx[train_mask], name="train"),
+        val=_SubsetDataset(base, all_idx[val_mask], name="val"),
+        test=_SubsetDataset(base, all_idx[test_mask], name="test"),
+    )
+
+
+def split_by_game_id(
+    base: CachedEventDataset,
+    ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),
+    seed: int = 42,
+) -> SplitResult:
+    """Split samples by hashing ``game_id`` (paipu file stem).
+
+    All four seats × all hands × all decision points belonging to the
+    same hanchan land in the **same** split. This eliminates the
+    cross-seat leakage that :func:`split_by_track_id` allows, where
+    four players in one game share wall tiles / dora indicators / dice /
+    hand context but get distinct ``track_id`` s.
+
+    Requires shards written by post-May-2026 :class:`V4ShardWriter`
+    which persist ``game_ids.npy``.  Older shards transparently fall
+    back to ``track_ids`` (see :func:`_all_game_ids`), so on legacy
+    caches this function silently behaves like :func:`split_by_track_id`.
+    """
+    if abs(sum(ratios) - 1.0) > 1e-6:
+        raise ValueError(f"ratios must sum to 1.0, got {ratios}")
+    if any(r < 0 for r in ratios):
+        raise ValueError(f"ratios must be non-negative, got {ratios}")
+    r_train, r_val, _r_test = ratios
+    boundary_train = r_train
+    boundary_val = r_train + r_val
+
+    game_ids = _all_game_ids(base)
+    frac = _splitmix_to_unit(game_ids, seed)
 
     train_mask = frac < boundary_train
     val_mask = (frac >= boundary_train) & (frac < boundary_val)
@@ -184,4 +243,5 @@ __all__ = [
     "SplitResult",
     "split_by_shard",
     "split_by_track_id",
+    "split_by_game_id",
 ]

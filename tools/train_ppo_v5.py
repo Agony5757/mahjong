@@ -1,23 +1,33 @@
 #!/usr/bin/env python3
-"""V4 self-play PPO training launcher.
+"""V5 (Douzero-style) self-play PPO training launcher.
+
+V5 reuses the V4 self-play infrastructure (env, opponent pool, GAE,
+PPO loss) and swaps the policy model for the Douzero-style
+:class:`DouzeroV5Transformer` (per-legal-action shared MLP scorer).
+See :mod:`pymahjong.rl.v5` for the architecture rationale.
 
 Standard recipe::
 
-    # Stage 1: BC warm-start (see tools/train_bc_v4.py)
-    python tools/train_bc_v4.py --cache-dir cache/houou --split-by shard \\
-        --train-shards shard_2024 --val-shards shard_2025 \\
-        --save-path checkpoints/bc_v4.pt --n-steps 100000
+    # Stage 1: V5 BC warm-start on the leak-free cache
+    python tools/train_bc_v5.py --split-by shard \\
+        --train-shards 'c2501_*,c2502_*,c2503_*,c2504_*,c2505_*,c2506_*' \\
+        --val-shards 'c2507_*' --test-shards 'c2508_*,c0001_*' \\
+        --n-steps 40000 --save-path checkpoints/bc_v5_clean.pt
 
-    # Stage 2: PPO self-play
-    python tools/train_ppo_v4.py \\
-        --bc-checkpoint checkpoints/bc_v4.pt \\
-        --save-path checkpoints/ppo_v4.pt \\
-        --total-steps 5000000 --n-envs 16
+    # Stage 2: V5 PPO self-play (fine-tune)
+    python tools/train_ppo_v5.py \\
+        --bc-checkpoint checkpoints/bc_v5_clean.best.pt \\
+        --save-path checkpoints/ppo_v5_clean.pt \\
+        --snapshot-dir checkpoints/ppo_v5_snapshots \\
+        --total-steps 500000 --rollout-steps 16384 \\
+        --lr 1e-4 --win-bonus-coef 0.5
 
-Ablation: classical "lock 3, train 1" mode::
+V5 differs from V4 in two ways that matter at launch time:
 
-    python tools/train_ppo_v4.py --bc-checkpoint ... \\
-        --opponent-mix-ratio 1.0 --n-frozen-seats 3
+* Model defaults are pinned to the BC ckpt shape (192 / 4 / 6 / 4) so
+  warm-start ``load_state_dict`` succeeds without manual overrides.
+* ``--split-heads`` is gone — V5's shared scorer subsumes phase routing
+  via the descriptor's phase bit.
 """
 from __future__ import annotations
 
@@ -29,33 +39,38 @@ from pymahjong.rl.v4.selfplay import SelfPlayConfig, train_selfplay_v4
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     # I/O
     ap.add_argument("--bc-checkpoint", type=str, default=None,
-                    help="Path to a BC checkpoint to warm-start from (strongly recommended).")
-    ap.add_argument("--save-path", type=str, default="checkpoints/ppo_v4.pt")
+                    help="Path to a V5 BC checkpoint to warm-start from "
+                         "(strongly recommended).")
+    ap.add_argument("--save-path", type=str, default="checkpoints/ppo_v5.pt")
     ap.add_argument("--snapshot-dir", type=str, default=None,
                     help="If set, persist opponent-pool snapshots under this dir.")
 
     # Training schedule
-    ap.add_argument("--total-steps", type=int, default=1_000_000)
+    ap.add_argument("--total-steps", type=int, default=500_000,
+                    help="Total learner transitions across the entire run.  "
+                         "500K is enough for a first PPO fine-tune pass on top "
+                         "of a strong BC init (~5-10 hours on RTX 5080).  "
+                         "Scale up once you've validated the loop converges.")
     ap.add_argument("--rollout-steps", type=int, default=16384,
-                    help="Learner transitions per PPO update. Mahjong is "
-                         "high-variance: 16384 ≈ 200-300 hands/rollout, which "
-                         "gives meaningful per-update win-rate/payoff stats. "
-                         "Lower (e.g. 4096) for faster updates on small models.")
+                    help="Learner transitions per PPO update.")
     ap.add_argument("--n-envs", type=int, default=8)
     ap.add_argument("--n-epochs", type=int, default=4)
     ap.add_argument("--batch-size", type=int, default=256)
     ap.add_argument("--max-seq-len", type=int, default=512)
 
-    # PPO hyper-parameters
+    # PPO hyper-parameters -- conservative defaults for fine-tuning.
     ap.add_argument("--gamma", type=float, default=0.99)
     ap.add_argument("--lam", type=float, default=0.95)
     ap.add_argument("--clip-range", type=float, default=0.2)
     ap.add_argument("--value-coef", type=float, default=0.5)
     ap.add_argument("--entropy-coef", type=float, default=0.01)
-    ap.add_argument("--lr", type=float, default=3e-4)
+    ap.add_argument("--lr", type=float, default=1e-4,
+                    help="Fine-tuning learning rate.  Lower than BC's 3e-4 to "
+                         "avoid destabilising the warm-start policy.")
     ap.add_argument("--grad-clip", type=float, default=0.5)
 
     # Self-play / opponent pool
@@ -67,60 +82,54 @@ def main() -> int:
     ap.add_argument("--snapshot-interval", type=int, default=50_000,
                     help="Take a snapshot every N learner transitions.")
     ap.add_argument("--pool-capacity", type=int, default=20)
-    ap.add_argument("--pool-sampling", choices=["uniform", "latest", "pfsp"], default="pfsp")
+    ap.add_argument("--pool-sampling", choices=["uniform", "latest", "pfsp"],
+                    default="pfsp")
     ap.add_argument("--pfsp-p", type=float, default=2.0)
 
     # Normalization
     ap.add_argument("--no-reward-norm", action="store_true")
     ap.add_argument("--no-advantage-norm", action="store_true")
 
-    # Reward shaping (bootstrap)
+    # Reward shaping
     ap.add_argument("--win-bonus-coef", type=float, default=0.5,
-                    help="Linear coefficient applied to each winner's payoff and "
-                         "added as an extra terminal reward on every agari "
-                         "(Ron/Tsumo/NagashiMangan). Bonus = coef * payoff[winner], "
-                         "so larger wins (yakuman, haneman, ...) yield proportionally "
-                         "larger bonuses; ryuukyoku yields none. The winner's "
-                         "effective reward becomes payoff * (1 + coef). "
-                         "Set to 0 to disable. Default: 0.5.")
+                    help="Linear coefficient on each winner's payoff added as "
+                         "an extra terminal reward (Bonus = coef * payoff[winner]). "
+                         "Default 0.5 encourages high-score wins.  Clean BC "
+                         "already has ~20-35%% agari rate, so we keep some "
+                         "shaping to bias towards bigger wins (yakuman/haneman).")
     ap.add_argument("--reward-clip", type=float, default=3.0,
-                    help="Symmetric clip applied to normalized terminal reward "
-                         "to tame yakuman / haneman outliers (after _RewardNormalizer). "
-                         "Set <=0 to disable. Default: 3.0.")
+                    help="Symmetric clip on normalized terminal reward.")
 
-    # Model (defaults match the standard BC checkpoint shape 192/4/6/4 --
-    # see checkpoints/bc_v4*.metrics.json.  Override if your BC ckpt is
-    # different; mismatched shapes will fail load_state_dict loudly.)
+    # Model (defaults pinned to the standard V5 BC ckpt shape 192/4/6/4).
     ap.add_argument("--d-model", type=int, default=192)
     ap.add_argument("--n-layers", type=int, default=4)
     ap.add_argument("--n-heads", type=int, default=6)
     ap.add_argument("--ff-mult", type=int, default=4)
     ap.add_argument("--dropout", type=float, default=0.1)
     ap.add_argument("--use-pos-emb", action="store_true",
-                    help="Add a learned positional embedding to V4 events. "
-                         "Required to break the encoder's permutation "
-                         "invariance over the event stream (e.g. so the model "
-                         "can read river order / 巡目). The pos_emb table is "
-                         "zero-initialised so warm-starting from a BC "
-                         "checkpoint trained without it is exact on step 0.")
-    ap.add_argument("--split-heads", action="store_true",
-                    help="Build the model with split policy heads (action "
-                         "head 43d + response head 11d).  MUST match the "
-                         "BC checkpoint's architecture — _load_bc() raises "
-                         "loudly on mismatch.")
+                    help="Add a learned positional embedding to V5 events.")
+    # V5-specific Douzero head shape (must match BC ckpt's scorer width).
+    ap.add_argument("--scorer-hidden", type=int, default=256,
+                    help="Hidden width of the shared (state, action) MLP.")
+    ap.add_argument("--action-proj-dim", type=int, default=0,
+                    help="V5 action-embedding width.  0 = match d_model.")
 
     # Periodic self-play evaluation (clean tsumo/ron/houjuu/ryuu rates).
-    ap.add_argument("--selfplay-eval-interval", type=int, default=0,
+    ap.add_argument("--selfplay-eval-interval", type=int, default=5,
                     help="Run a clean self-play eval every N PPO updates "
                          "and log tsumo/ron/houjuu/ryuukyoku rates as "
-                         "[PPO-SP] lines.  0 disables.")
-    ap.add_argument("--selfplay-eval-hands", type=int, default=64)
-    ap.add_argument("--selfplay-eval-stochastic", action="store_true")
+                         "[PPO-SP] lines.  0 disables.  Default 5 ~ once "
+                         "per ~80K learner steps (with rollout_steps=16384).")
+    ap.add_argument("--selfplay-eval-hands", type=int, default=64,
+                    help="Hands per eval call.  Larger = lower variance, "
+                         "but ~0.3 s/hand on RTX 5080.")
+    ap.add_argument("--selfplay-eval-stochastic", action="store_true",
+                    help="Sample (vs argmax) during eval -- catches mode "
+                         "collapse but adds variance.")
     ap.add_argument("--selfplay-eval-seed", type=int, default=12345)
 
     # Misc
-    ap.add_argument("--device", type=str, default=None,
-                    help="cpu / cuda / cuda:0 / ...  Default: auto-detect.")
+    ap.add_argument("--device", type=str, default=None)
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--save-interval", type=int, default=100_000)
     ap.add_argument("--log-interval", type=int, default=1)
@@ -141,6 +150,7 @@ def main() -> int:
     )
 
     cfg = SelfPlayConfig(
+        encoding="v5",
         total_steps=args.total_steps,
         rollout_steps=args.rollout_steps,
         n_envs=args.n_envs,
@@ -170,14 +180,17 @@ def main() -> int:
         log_interval=args.log_interval,
         device=args.device,
         seed=args.seed,
-        split_heads=args.split_heads,
+        # V5 ignores split_heads -- shared scorer handles phase routing.
+        split_heads=False,
+        scorer_hidden=args.scorer_hidden,
+        action_proj_dim=args.action_proj_dim or None,
         selfplay_eval_interval=args.selfplay_eval_interval,
         selfplay_eval_hands=args.selfplay_eval_hands,
         selfplay_eval_deterministic=not args.selfplay_eval_stochastic,
         selfplay_eval_seed=args.selfplay_eval_seed,
     )
 
-    print(f"[train_ppo_v4] config: {cfg}")
+    print(f"[train_ppo_v5] config: {cfg}")
     train_selfplay_v4(
         bc_checkpoint=args.bc_checkpoint,
         config=cfg,

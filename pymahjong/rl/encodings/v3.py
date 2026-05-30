@@ -136,6 +136,16 @@ class V3Strategy:
             scalars=batch.get("scalars"),
         )
 
+    def forward_from_batch_raw(self, model, batch: dict):
+        """Return *un-masked* logits + value + the action mask."""
+        raw_logits, value = model(
+            batch["tokens"],
+            batch["attention_mask"],
+            None,
+            scalars=batch.get("scalars"),
+        )
+        return raw_logits, value, batch["action_mask"]
+
     def evaluate_actions_from_batch(self, model, batch: dict, actions):
         """Dispatch a V3 batch through model.evaluate_actions."""
         return model.evaluate_actions(

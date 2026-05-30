@@ -18,3 +18,10 @@ class TransformerConfig:
     dropout: float = 0.1
     use_cls: bool = True
     max_seq_len: int = DEFAULT_MAX_SEQ_LEN
+    # V4-only: add a learned positional embedding before the transformer
+    # encoder so the model is no longer permutation-invariant over events.
+    # Defaults to ``False`` for backward compatibility with existing V4
+    # checkpoints (e.g. ``bc_v4.best.pt``).  When enabled, the table is
+    # zero-initialised so a warm-start from a no-pos-emb checkpoint
+    # initially reproduces the old forward exactly.
+    use_pos_emb: bool = False

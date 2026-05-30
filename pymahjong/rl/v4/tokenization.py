@@ -654,6 +654,13 @@ def encode_paipu_file_v4(
         enc = enc_holder[0]
         if enc is None:
             return
+        # Hash the game_id (paipu filename stem) once per hand: same paipu →
+        # same game_hash for all four seats, so :func:`split_by_game_id` can
+        # keep an entire hanchan in a single split (no cross-seat leakage of
+        # game-shared context like wall, dora indicators, dice, hand_idx).
+        game_hash = int(
+            hashlib.md5(f"{game_id}".encode()).hexdigest()[:15], 16
+        )
         for p in range(4):
             track = enc.track(p)
             events = track.events()
@@ -663,8 +670,19 @@ def encode_paipu_file_v4(
             )
             for dp in dpoints:
                 pos = dp["track_pos"]
-                seq_len = pos + 1
-                if seq_len > 512:
+                # BUG FIX: ``track_pos`` is set in C++ as ``events_.size()``
+                # at the moment of on_decide(), i.e. the index where the
+                # *next* event will be written.  ``events[:pos + 1]`` would
+                # then include the *first* event appended after on_decide —
+                # which for a self-action decision is the player's own
+                # discard/call event.  That leaks the expert label directly
+                # into the input features (verified: removing the last
+                # event drops V5 BC test acc from 96.7% to 42.1%).
+                # The correct snapshot is ``events[:pos]`` — all events
+                # that existed *before* on_decide was called, matching
+                # what live.py / V4MultiAgentEnv expose at inference time.
+                seq_len = pos
+                if seq_len <= 0 or seq_len > 512:
                     continue
                 features = events[:seq_len].astype(np.float32)
                 attention_mask = np.ones(seq_len, dtype=np.bool_)
@@ -672,6 +690,7 @@ def encode_paipu_file_v4(
                 action_label = dp["action_label"]
                 samples.append({
                     "track_id": track_id,
+                    "game_id": game_hash,
                     "features": features,
                     "attention_mask": attention_mask,
                     "action_mask": action_mask,

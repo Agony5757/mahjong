@@ -142,6 +142,7 @@ class V4ShardWriter:
         self._action_masks: List[np.ndarray] = []
         self._labels: List[int] = []
         self._track_ids: List[int] = []
+        self._game_ids: List[int] = []
 
     def __enter__(self) -> "V4ShardWriter":
         return self
@@ -164,6 +165,9 @@ class V4ShardWriter:
         self._action_masks.append(amask.astype(np.bool_, copy=True))
         self._labels.append(int(sample["action"]))
         self._track_ids.append(int(sample["track_id"]))
+        # Backward-compat: fall back to track_id when game_id isn't supplied
+        # so older sample producers still work (game_id will then mix games).
+        self._game_ids.append(int(sample.get("game_id", sample["track_id"])))
 
     def close(self) -> ShardEntry:
         if self.n_rows == 0:
@@ -172,11 +176,16 @@ class V4ShardWriter:
             )
         os.makedirs(self.shard_dir, exist_ok=True)
 
+        # Snapshot the count before we clear the buffers — the returned
+        # ShardEntry must reflect what was actually written.
+        n_rows_written = self.n_rows
+
         features = np.concatenate(self._features, axis=0)
         lengths = np.array([f.shape[0] for f in self._features], dtype=np.int32)
         action_masks = np.stack(self._action_masks, axis=0)
         labels = np.asarray(self._labels, dtype=np.int16)
         track_ids = np.asarray(self._track_ids, dtype=np.int64)
+        game_ids = np.asarray(self._game_ids, dtype=np.int64)
 
         np.save(os.path.join(self.shard_dir, "features.packbits.npy"),
                 pack_bool(features))
@@ -185,9 +194,10 @@ class V4ShardWriter:
                 pack_bool(action_masks))
         np.save(os.path.join(self.shard_dir, "labels.npy"), labels)
         np.save(os.path.join(self.shard_dir, "track_ids.npy"), track_ids)
+        np.save(os.path.join(self.shard_dir, "game_ids.npy"), game_ids)
 
         meta = {
-            "n_rows": int(self.n_rows),
+            "n_rows": int(n_rows_written),
             "schema_version": CACHE_SCHEMA_VERSION,
             "total_events": int(features.shape[0]),
             "packed": {
@@ -202,10 +212,11 @@ class V4ShardWriter:
         self._action_masks.clear()
         self._labels.clear()
         self._track_ids.clear()
+        self._game_ids.clear()
 
         return ShardEntry(
             path=os.path.basename(self.shard_dir),
-            n_rows=int(self.n_rows),
+            n_rows=int(n_rows_written),
             cumulative=0,
         )
 
@@ -255,6 +266,12 @@ def open_shard_arrays_v4(cache_dir: str, shard_path: str) -> Dict[str, np.ndarra
         "lengths":     np.load(os.path.join(sub, "lengths.npy"),     mmap_mode="r"),
         "labels":      np.load(os.path.join(sub, "labels.npy"),      mmap_mode="r"),
         "track_ids":   np.load(os.path.join(sub, "track_ids.npy"),   mmap_mode="r"),
+        # ``game_ids.npy`` was added later (May 2026) to support
+        # game-level splits without cross-seat leakage. Old shards lack
+        # this file → fall back to track_ids so callers can still load.
+        "game_ids":    (np.load(os.path.join(sub, "game_ids.npy"), mmap_mode="r")
+                        if os.path.exists(os.path.join(sub, "game_ids.npy"))
+                        else np.load(os.path.join(sub, "track_ids.npy"), mmap_mode="r")),
     }
 
 

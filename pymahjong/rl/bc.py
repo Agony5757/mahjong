@@ -53,6 +53,63 @@ class BCConfig:
     eval_max_batches: int = 0   # 0 = evaluate whole val set; >0 caps wall time
     early_stop_patience: int = 0  # 0 disables early stopping
     best_save_path: Optional[str] = None  # defaults to save_path + '.best'
+    # Self-play sanity evaluation (V4 only).  Plays ``selfplay_eval_hands``
+    # hands with the current model occupying all four seats and reports
+    # agari rate / episode length / etc.  Useful to verify the BC model
+    # has learned to actually finish hands -- not just match action
+    # distributions in cross-entropy.
+    selfplay_eval_interval: int = 0     # 0 disables
+    selfplay_eval_hands: int = 16
+    selfplay_eval_deterministic: bool = True
+    selfplay_eval_max_seq_len: int = 512
+    selfplay_eval_seed: int = 12345
+    # If set, every BC-SP eval also saves one paipu (.xml + .url.txt)
+    # to this directory, named ``step_{step:06d}.xml``.  Lets you watch
+    # the model's play evolve as training progresses.
+    selfplay_paipu_dir: Optional[str] = None
+
+    # Architectural: split policy head into action-phase + response-phase
+    # subheads.  See action_space.{ACTION,RESPONSE}_HEAD_SLOTS.
+    split_heads: bool = False
+
+    # Auxiliary loss: penalise raw logits of *illegal* actions.  Mitigates
+    # the standard masked-CE pathology where rare-but-when-legal-popular
+    # actions (Tsumo / Ron / KaKan / Push / Pass-Response) get unbounded
+    # logits in unrelated states (because the mask zeros their gradient
+    # whenever they're illegal — so nothing pushes them down).
+    #
+    # Four penalty shapes are supported, controlled by ``illegal_logit_kind``:
+    #
+    #   * ``"unmasked_ce"`` (default & strongest of the CE family): mix
+    #     standard unmasked cross-entropy into the loss::
+    #
+    #         loss = (1 - coef) * masked_ce + coef * unmasked_ce
+    #
+    #     ``coef=0`` reduces to pure masked CE (backwards compatible).
+    #     ``coef=1`` is pure unmasked CE.  Typical 0.3..1.0.
+    #
+    #   * ``"unmasked_ce_smooth"``: as ``unmasked_ce`` but with
+    #     label-smoothing ``label_smoothing_eps`` (default 0.1) applied
+    #     to the unmasked CE, so every non-target slot (incl. illegal)
+    #     has a tiny soft target = eps/(N-1).  Often a stronger
+    #     regulariser than plain unmasked CE.
+    #
+    #   * ``"bce_multilabel"``: drop softmax entirely; treat each of the
+    #     54 slots as an independent sigmoid with target = 1 for the
+    #     expert action and 0 for everything else (including illegal and
+    #     legal-but-not-taken).  No shared partition function → no leak
+    #     mechanism.  ``coef`` controls mixing with masked_ce.  Try 0.5.
+    #
+    #   * ``"softplus"``: ``coef * mean( softplus(logit) * ~mask )``.
+    #     Weaker — pushes positive illegal logits to ~0 but 30 zero-logit
+    #     illegal slots still dominate softmax mass.  Try 1e-2..1e-1.
+    #
+    #   * ``"l2"``: ``coef * mean( logit**2 * ~mask )``.  Weakest.
+    #
+    # Set ``illegal_logit_coef`` to 0 to disable (backwards-compatible).
+    illegal_logit_coef: float = 0.0
+    illegal_logit_kind: str = "unmasked_ce"
+    label_smoothing_eps: float = 0.1  # used by 'unmasked_ce_smooth'
 
 
 def _device(cfg: BCConfig) -> torch.device:
@@ -103,10 +160,17 @@ def evaluate(
     device: torch.device,
     max_batches: int = 0,
 ):
-    """Compute cross-entropy loss and top-1 accuracy on a dataset.
+    """Compute cross-entropy loss + top-1 accuracy on a dataset.
 
-    Returns ``(mean_loss, mean_acc, n_samples)``. The model is left in
-    its previous training mode regardless of input state.
+    Reports both the supervised CE loss (on masked logits) **and** the
+    mean illegal-action softmax mass on the *raw* (un-masked) logits.
+    The latter is a diagnostic for the standard masked-CE pathology and
+    is reported regardless of whether ``illegal_logit_coef`` is enabled.
+
+    Returns:
+        ``(mean_ce_loss, mean_acc, n_samples, raw_illegal_mass)``.
+        The model is left in its previous training mode regardless of
+        input state.
     """
     was_training = model.training
     model.eval()
@@ -114,22 +178,34 @@ def evaluate(
     total_loss = 0.0
     total_correct = 0
     total_n = 0
+    total_illegal_mass = 0.0
     for i, batch in enumerate(loader):
         if max_batches and i >= max_batches:
             break
         batch = {k: v.to(device, non_blocking=True) for k, v in batch.items()}
-        logits, _ = strategy.forward_from_batch(model, batch)
-        loss = F.cross_entropy(logits, batch["action"], reduction="sum")
-        pred = logits.argmax(dim=-1)
+        raw_logits, _, action_mask = strategy.forward_from_batch_raw(model, batch)
+        action_mask = action_mask.bool()
+        masked_logits = raw_logits.masked_fill(~action_mask, -1e9)
+        loss = F.cross_entropy(masked_logits, batch["action"], reduction="sum")
+        pred = masked_logits.argmax(dim=-1)
         n = batch["action"].numel()
         total_loss += float(loss.item())
         total_correct += int((pred == batch["action"]).sum().item())
         total_n += n
+        with torch.no_grad():
+            raw_probs = torch.softmax(raw_logits, dim=-1)
+            illegal_mass = (raw_probs * (~action_mask).float()).sum(dim=-1)
+            total_illegal_mass += float(illegal_mass.sum().item())
     if was_training:
         model.train()
     if total_n == 0:
-        return float("nan"), float("nan"), 0
-    return total_loss / total_n, total_correct / total_n, total_n
+        return float("nan"), float("nan"), 0, float("nan")
+    return (
+        total_loss / total_n,
+        total_correct / total_n,
+        total_n,
+        total_illegal_mass / total_n,
+    )
 
 
 def train_bc(
@@ -164,7 +240,10 @@ def train_bc(
     strategy = get_strategy(EncodingVersion(encoding))
 
     if model is None:
-        model = strategy.create_model(transformer_config=transformer_config)
+        model = strategy.create_model(
+            transformer_config=transformer_config,
+            split_heads=getattr(cfg, "split_heads", False),
+        )
     model = model.to(device)
     model.train()
 
@@ -182,9 +261,38 @@ def train_bc(
     best_save_path = cfg.best_save_path or (cfg.save_path + ".best"
                                             if cfg.save_path else None)
 
+    # V4 / V5 self-play eval is optional and gated on encoding.  V5
+    # reuses V4's environment and live encoder (only the model head
+    # differs), so the same selfplay_eval_v4 helper works for both.
+    do_sp_eval = (
+        encoding in ("v4", "v5")
+        and cfg.selfplay_eval_interval > 0
+        and cfg.selfplay_eval_hands > 0
+    )
+    sp_eval_fn = None
+    sp_format_fn = None
+    sp_record_fn = None
+    if do_sp_eval:
+        try:
+            from pymahjong.rl.v4.selfplay_eval import (
+                selfplay_eval_v4 as sp_eval_fn,  # noqa: F811
+                format_selfplay_metrics as sp_format_fn,  # noqa: F811
+                record_one_selfplay_hand as sp_record_fn,  # noqa: F811
+            )
+        except Exception as _e:  # noqa: BLE001
+            print(
+                f"[BC-SP] failed to import selfplay_eval_v4 ({_e!r}); "
+                "self-play evaluation disabled",
+                flush=True,
+            )
+            do_sp_eval = False
+    sp_run_count = 0
+
     step = 0
     running_loss = 0.0
     running_acc = 0.0
+    running_illegal_pen = 0.0
+    running_illegal_mass = 0.0
     iterator = iter(loader)
     while step < cfg.n_steps:
         try:
@@ -194,8 +302,59 @@ def train_bc(
             batch = next(iterator)
         batch = {k: v.to(device, non_blocking=True) for k, v in batch.items()}
 
-        logits, _ = strategy.forward_from_batch(model, batch)
-        loss = F.cross_entropy(logits, batch["action"])
+        raw_logits, _, action_mask = strategy.forward_from_batch_raw(model, batch)
+        action_mask = action_mask.bool()
+        masked_logits = raw_logits.masked_fill(~action_mask, -1e9)
+        masked_ce = F.cross_entropy(masked_logits, batch["action"])
+
+        # Illegal-logit penalty (Stage-0 mitigation for masked-CE leak).
+        illegal_pen = raw_logits.new_zeros(())
+        if cfg.illegal_logit_coef > 0 and cfg.illegal_logit_kind == "unmasked_ce":
+            unmasked_ce = F.cross_entropy(raw_logits, batch["action"])
+            ce_loss = (1.0 - cfg.illegal_logit_coef) * masked_ce + \
+                      cfg.illegal_logit_coef * unmasked_ce
+            illegal_pen = unmasked_ce - masked_ce
+            loss = ce_loss
+        elif cfg.illegal_logit_coef > 0 and cfg.illegal_logit_kind == "unmasked_ce_smooth":
+            # Like unmasked_ce but with label smoothing → illegal slots
+            # have a tiny positive target = eps/(54-1), so they're more
+            # actively pushed toward a specific low value.
+            unmasked_ce = F.cross_entropy(
+                raw_logits, batch["action"],
+                label_smoothing=cfg.label_smoothing_eps,
+            )
+            ce_loss = (1.0 - cfg.illegal_logit_coef) * masked_ce + \
+                      cfg.illegal_logit_coef * unmasked_ce
+            illegal_pen = unmasked_ce - masked_ce
+            loss = ce_loss
+        elif cfg.illegal_logit_coef > 0 and cfg.illegal_logit_kind == "bce_multilabel":
+            # Independent per-slot BCE: expert action = positive,
+            # everything else (legal-but-not-taken AND illegal) = negative.
+            # No softmax denominator → no shared-mass leak mechanism.
+            target = F.one_hot(batch["action"], num_classes=raw_logits.shape[-1]).float()
+            bce_loss = F.binary_cross_entropy_with_logits(
+                raw_logits, target, reduction="mean",
+            )
+            ce_loss = (1.0 - cfg.illegal_logit_coef) * masked_ce + \
+                      cfg.illegal_logit_coef * bce_loss
+            illegal_pen = bce_loss  # diagnostic: keep separate
+            loss = ce_loss
+        elif cfg.illegal_logit_coef > 0:
+            illegal_mask_f = (~action_mask).float()
+            if cfg.illegal_logit_kind == "softplus":
+                pen_per_slot = F.softplus(raw_logits) * illegal_mask_f
+            elif cfg.illegal_logit_kind == "l2":
+                pen_per_slot = (raw_logits ** 2) * illegal_mask_f
+            else:
+                raise ValueError(
+                    f"Unknown illegal_logit_kind: {cfg.illegal_logit_kind!r}"
+                )
+            illegal_pen = pen_per_slot.mean()
+            ce_loss = masked_ce
+            loss = ce_loss + cfg.illegal_logit_coef * illegal_pen
+        else:
+            ce_loss = masked_ce
+            loss = ce_loss
 
         optim.zero_grad(set_to_none=True)
         loss.backward()
@@ -203,14 +362,20 @@ def train_bc(
         optim.step()
 
         with torch.no_grad():
-            pred = logits.argmax(dim=-1)
+            pred = masked_logits.argmax(dim=-1)
             running_acc = 0.95 * running_acc + 0.05 * (pred == batch["action"]).float().mean().item()
-        running_loss = 0.95 * running_loss + 0.05 * loss.item()
+            raw_probs = torch.softmax(raw_logits, dim=-1)
+            illegal_mass = (raw_probs * (~action_mask).float()).sum(dim=-1).mean()
+            running_illegal_mass = 0.95 * running_illegal_mass + 0.05 * float(illegal_mass.item())
+            running_illegal_pen = 0.95 * running_illegal_pen + 0.05 * float(illegal_pen.item())
+        running_loss = 0.95 * running_loss + 0.05 * float(ce_loss.item())
 
         step += 1
         if step % cfg.log_interval == 0:
             print(
-                f"[BC] step={step:>7d}  loss={running_loss:.4f}  acc={running_acc:.3f}",
+                f"[BC] step={step:>7d}  ce={running_loss:.4f}  acc={running_acc:.3f}  "
+                f"raw_illegal_mass={running_illegal_mass:.3f}  "
+                f"illegal_pen={running_illegal_pen:.3f}",
                 flush=True,
             )
         if step % cfg.save_interval == 0 and cfg.save_path:
@@ -218,14 +383,15 @@ def train_bc(
             torch.save({"model": model.state_dict(), "step": step}, cfg.save_path)
 
         if do_eval and step % cfg.eval_interval == 0:
-            val_loss, val_acc, n = evaluate(
+            val_loss, val_acc, n, val_illegal_mass = evaluate(
                 model, val_dataset,
                 strategy=strategy, cfg=cfg, device=device,
                 max_batches=cfg.eval_max_batches,
             )
             print(
-                f"[BC] step={step:>7d}  val_loss={val_loss:.4f}  "
-                f"val_acc={val_acc:.3f}  val_n={n}",
+                f"[BC] step={step:>7d}  val_ce={val_loss:.4f}  "
+                f"val_acc={val_acc:.3f}  val_n={n}  "
+                f"val_raw_illegal_mass={val_illegal_mass:.3f}",
                 flush=True,
             )
             improved = val_loss < best_val_loss - 1e-6
@@ -252,6 +418,49 @@ def train_bc(
                         flush=True,
                     )
                     break
+
+        if do_sp_eval and step % cfg.selfplay_eval_interval == 0:
+            try:
+                sp_run_count += 1
+                sp_metrics = sp_eval_fn(
+                    model,
+                    n_hands=cfg.selfplay_eval_hands,
+                    deterministic=cfg.selfplay_eval_deterministic,
+                    max_seq_len=cfg.selfplay_eval_max_seq_len,
+                    seed=cfg.selfplay_eval_seed + sp_run_count,
+                    device=device,
+                )
+                print(
+                    f"[BC-SP] step={step:>7d}  {sp_format_fn(sp_metrics)}",
+                    flush=True,
+                )
+                # Optional: also save one paipu for in-training viewing.
+                if cfg.selfplay_paipu_dir and sp_record_fn is not None:
+                    try:
+                        out_xml = os.path.join(
+                            cfg.selfplay_paipu_dir,
+                            f"step_{step:06d}.xml",
+                        )
+                        ok = sp_record_fn(
+                            model, out_xml,
+                            seed=cfg.selfplay_eval_seed + sp_run_count,
+                            max_seq_len=cfg.selfplay_eval_max_seq_len,
+                            deterministic=cfg.selfplay_eval_deterministic,
+                            device=device,
+                            title="BC training-progress",
+                            subtitle=f"step={step}",
+                        )
+                        if ok:
+                            print(
+                                f"[BC-SP] step={step:>7d}  saved paipu → {out_xml}",
+                                flush=True,
+                            )
+                    except Exception as _e:  # noqa: BLE001
+                        print(f"[BC-SP] step={step}: paipu save failed: {_e!r}",
+                              flush=True)
+            except Exception as _e:  # noqa: BLE001
+                # Don't let an eval crash kill the whole training run.
+                print(f"[BC-SP] step={step}: eval failed: {_e!r}", flush=True)
 
     if cfg.save_path:
         os.makedirs(os.path.dirname(os.path.abspath(cfg.save_path)) or ".", exist_ok=True)

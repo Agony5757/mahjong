@@ -56,9 +56,15 @@ class V4ModelAI(BaseAIPlayer):
 
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._strategy = get_strategy(EncodingVersion("v4"))
-        self._model = EventStreamTransformer(config=TransformerConfig())
         ck = torch.load(self.model_path, map_location=self._device, weights_only=False)
         sd = ck.get("model", ck) if isinstance(ck, dict) else ck
+        # Auto-detect optional architectural toggles from the checkpoint's
+        # state dict so this loader works for both old (no pos_emb) and new
+        # (with pos_emb) BC/PPO checkpoints without manual configuration.
+        use_pos_emb = "pos_emb.weight" in sd
+        self._model = EventStreamTransformer(
+            config=TransformerConfig(use_pos_emb=use_pos_emb)
+        )
         self._model.load_state_dict(sd)
         self._model.to(self._device)
         self._model.eval()

@@ -1,0 +1,17 @@
+{
+  "train_size": 2960233,
+  "val_size": 152036,
+  "test_size": 172392,
+  "test_loss": 0.007258137693853666,
+  "test_acc": 0.9979233375098613,
+  "test_n": 172392,
+  "n_steps": 15000,
+  "batch_size": 128,
+  "lr": 0.0003,
+  "weight_decay": 0.0001,
+  "split_by": "game-id",
+  "train_shards": [],
+  "val_shards": [],
+  "test_shards": [],
+  "wall_time_s": 372.41377452298184
+}

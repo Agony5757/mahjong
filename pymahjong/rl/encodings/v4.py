@@ -51,7 +51,10 @@ class V4Strategy:
         from ..v4.model import EventStreamTransformer
 
         cfg = kwargs.get("transformer_config") or TransformerConfig()
-        return EventStreamTransformer(config=cfg, event_dim=self.EVENT_DIM)
+        split_heads = bool(kwargs.get("split_heads", False))
+        return EventStreamTransformer(
+            config=cfg, event_dim=self.EVENT_DIM, split_heads=split_heads,
+        )
 
     # -- Collation -------------------------------------------------------------
 
@@ -126,6 +129,15 @@ class V4Strategy:
             batch["attention_mask"],
             batch["action_mask"],
         )
+
+    def forward_from_batch_raw(self, model, batch: dict):
+        """Return *un-masked* logits + value + the action mask."""
+        raw_logits, value = model(
+            batch["features"],
+            batch["attention_mask"],
+            None,
+        )
+        return raw_logits, value, batch["action_mask"]
 
     def evaluate_actions_from_batch(self, model, batch: dict, actions):
         """Dispatch a V4 batch through model.evaluate_actions."""
