@@ -29,8 +29,6 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-import torch
-
 from ..encoding import EncodingVersion, register
 from .v4 import V4Strategy
 
