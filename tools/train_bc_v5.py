@@ -77,16 +77,69 @@ def main() -> int:
     ap.add_argument("--ratios", type=_parse_ratios, default=(0.8, 0.1, 0.1),
                     help="train,val,test ratios (for --split-by track-id)")
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--n-steps", type=int, default=20000)
+    ap.add_argument("--n-steps", type=int, default=0,
+                    help="Total optimizer steps.  If 0 (default), computed "
+                         "from --n-epochs × train_size / batch_size.  When "
+                         "both are given, --n-steps wins.")
+    ap.add_argument("--n-epochs", type=float, default=3.0,
+                    help="Train for this many epochs over the train split "
+                         "(default 3.0).  Ignored when --n-steps > 0.")
     ap.add_argument("--batch-size", type=int, default=128)
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--weight-decay", type=float, default=1e-4)
+    # ---- Optimizer / LR schedule --------------------------------------
+    ap.add_argument("--optimizer", choices=["adamw", "muon"], default="adamw",
+                    help="Optimizer kind.  'adamw' (default) is the legacy "
+                         "trainer; 'muon' uses Muon for 2-D hidden weights + "
+                         "AdamW for embeddings/heads/biases/norms.  Muon "
+                         "typically converges in ~0.6-0.75x the steps on "
+                         "transformer policies.")
+    ap.add_argument("--muon-lr", type=float, default=None,
+                    help="LR for the Muon param group.  Default None => "
+                         "67 * --lr per Keller Jordan's recipe (so the "
+                         "default for --lr 3e-4 is muon_lr=0.02).")
+    ap.add_argument("--betas", type=lambda s: tuple(float(x) for x in s.split(",")),
+                    default=(0.9, 0.999),
+                    help="AdamW (beta1, beta2).  '0.9,0.95' is the "
+                         "transformer-recommended setting for late-stage "
+                         "stability when training past 1 epoch.")
+    ap.add_argument("--lr-schedule", choices=["constant", "cosine", "linear"],
+                    default="constant",
+                    help="LR schedule shape.  'cosine' is recommended once "
+                         "val loss starts plateauing.")
+    ap.add_argument("--warmup-steps", type=int, default=0,
+                    help="Linear warmup over the first N steps (default 0).")
+    ap.add_argument("--min-lr-ratio", type=float, default=0.1,
+                    help="Cosine / linear decay's end LR as a fraction of "
+                         "peak LR (default 0.1, i.e. decay to 10%%).")
+    # ---- Weights & Biases (optional) ----------------------------------
+    ap.add_argument("--wandb-project", default=None,
+                    help="If set, log metrics to this wandb project.  "
+                         "Requires `pip install wandb` and (for online "
+                         "mode) `wandb login` or WANDB_API_KEY env var.")
+    ap.add_argument("--wandb-entity", default=None,
+                    help="wandb entity / team name (default = your default).")
+    ap.add_argument("--wandb-name", default=None,
+                    help="Run name in wandb (default = auto-generated).")
+    ap.add_argument("--wandb-tags", default=None,
+                    type=lambda s: tuple(t for t in s.split(",") if t),
+                    help="Comma-separated tags (e.g. 'v5,muon,big11M').")
+    ap.add_argument("--wandb-mode", default="online",
+                    choices=["online", "offline", "disabled"],
+                    help="online: live web dashboard (needs login). "
+                         "offline: log to disk, sync later with `wandb sync`. "
+                         "disabled: don't log to wandb at all.")
     ap.add_argument("--num-workers", type=int, default=2)
     ap.add_argument("--log-interval", type=int, default=200)
     ap.add_argument("--eval-interval", type=int, default=1000)
     ap.add_argument("--eval-max-batches", type=int, default=0,
                     help="cap val batches per evaluation (0 = full val set)")
     ap.add_argument("--early-stop-patience", type=int, default=0)
+    ap.add_argument("--early-stop-min-epoch", type=float, default=1.0,
+                    help="Don't trigger early stopping until at least this "
+                         "many epochs have been trained.  Default 1.0 — "
+                         "patience counter resets every eval until one full "
+                         "epoch has been seen.  Mirrors train_bc_v4.py.")
     ap.add_argument("--save-path", type=Path, default=Path("bc_v5.pt"))
     ap.add_argument("--best-save-path", type=Path, default=None)
     ap.add_argument("--metrics-out", type=Path, default=None,
@@ -138,6 +191,13 @@ def main() -> int:
                     help="Shape of the illegal-logit penalty (see V4 docs).")
     ap.add_argument("--label-smoothing-eps", type=float, default=0.1,
                     help="eps for 'unmasked_ce_smooth' (default 0.1).")
+    ap.add_argument("--resume", type=Path, default=None,
+                    help="Resume training from a checkpoint saved by a "
+                         "previous run.  Restores model weights and, "
+                         "if present in the ckpt, optimizer state, "
+                         "training step counter, best-val tracking and "
+                         "self-play eval counter.  Architecture flags "
+                         "must match the checkpoint.")
     args = ap.parse_args()
 
     print(f"cache_dir   = {args.cache_dir}")
@@ -205,8 +265,28 @@ def main() -> int:
         print("ERROR: val split is empty", file=sys.stderr)
         return 2
 
+    # Compute n_steps and early_stop_min_step from epoch counts
+    # (same convention as tools/train_bc_v4.py).
+    train_size = len(split.train)
+    steps_per_epoch = max(1, train_size // args.batch_size)
+    if args.n_steps > 0:
+        n_steps = args.n_steps
+        effective_epochs = n_steps / steps_per_epoch
+        print(f"n_steps={n_steps}  (= {effective_epochs:.2f} epochs over "
+              f"{train_size:,} samples / bs {args.batch_size})")
+    else:
+        n_steps = int(args.n_epochs * steps_per_epoch)
+        print(f"n_steps={n_steps}  (= {args.n_epochs} epochs × "
+              f"{steps_per_epoch:,} steps/epoch; train_size={train_size:,}, "
+              f"bs={args.batch_size})")
+    early_stop_min_step = int(max(0.0, args.early_stop_min_epoch) * steps_per_epoch)
+    if args.early_stop_patience > 0:
+        print(f"early-stop: patience={args.early_stop_patience} evals, "
+              f"min_step={early_stop_min_step} "
+              f"(= {args.early_stop_min_epoch} epochs)")
+
     cfg = BCConfig(
-        n_steps=args.n_steps,
+        n_steps=n_steps,
         batch_size=args.batch_size,
         lr=args.lr,
         weight_decay=args.weight_decay,
@@ -218,6 +298,7 @@ def main() -> int:
         eval_interval=args.eval_interval,
         eval_max_batches=args.eval_max_batches,
         early_stop_patience=args.early_stop_patience,
+        early_stop_min_step=early_stop_min_step,
         selfplay_eval_interval=args.selfplay_eval_interval,
         selfplay_eval_hands=args.selfplay_eval_hands,
         selfplay_eval_deterministic=not args.selfplay_eval_stochastic,
@@ -227,6 +308,18 @@ def main() -> int:
         illegal_logit_kind=args.illegal_logit_kind,
         label_smoothing_eps=args.label_smoothing_eps,
         split_heads=False,    # V5 has no phase-split head -- shared scorer subsumes it.
+        optimizer=args.optimizer,
+        betas=args.betas,
+        muon_lr=args.muon_lr,
+        lr_schedule=args.lr_schedule,
+        warmup_steps=args.warmup_steps,
+        min_lr_ratio=args.min_lr_ratio,
+        wandb_project=args.wandb_project,
+        wandb_entity=args.wandb_entity,
+        wandb_name=args.wandb_name,
+        wandb_tags=args.wandb_tags,
+        wandb_mode=args.wandb_mode,
+        wandb_extra_config={"argv": " ".join(sys.argv)},
     )
 
     # Build the V5 model up-front so we can pass V5-specific knobs that
@@ -257,6 +350,7 @@ def main() -> int:
         config=cfg,
         transformer_config=tcfg,
         encoding="v5",
+        resume_from=str(args.resume) if args.resume else None,
     )
     dt = time.monotonic() - t0
     print(f"\ntraining wall time: {dt:.1f}s")
