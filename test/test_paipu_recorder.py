@@ -77,3 +77,164 @@ def test_record_minimum_metadata(tmp_path):
 def test_n_hands_count(tmp_path):
     recorder, n = _random_selfplay_record(3, base_seed=3000)
     assert recorder.n_hands == n
+
+
+def test_agari_score_changes_match_engine(tmp_path):
+    """Recorded ``<AGARI sc=...>`` deltas must reflect the engine's
+    post-payout per-hand scores (``result.score``), not the pre-payout
+    snapshot from ``table.get_scores()`` which only tracks
+    ``players[i].score`` (= initial − riichi stick).
+
+    Regression for the bug that produced empty / wrong score deltas
+    (e.g. ``sc="...,0,...,0,...,0,...,0"`` for a 7700-point ron) and
+    made the resulting Tenhou-editor URLs unrenderable.
+    """
+    import xml.etree.ElementTree as ET
+
+    # Synthesize an agari by replaying a deterministic seed that lands
+    # in an AGARI under the engine's default dealing.  We probe a small
+    # range of seeds and take the first that wins; random uniform play
+    # alone almost never produces agari (≈3% per hand) so we use a
+    # greedy heuristic: never call chi/pon/kan/riichi, always tsumo / ron
+    # / discard the rightmost tile.  This still relies on the dealt
+    # tiles but converges to AGARI much faster than uniform random.
+    def _greedy_to_agari(env, base_seed: int, *, n_tries: int = 200) -> int:
+        for off in range(n_tries):
+            seed = base_seed + off
+            env.reset(seed=seed)
+            steps = 0
+            while not env.is_over() and steps < 500:
+                pid = env.get_curr_player_id()
+                valid = np.flatnonzero(env.get_valid_actions(nhot=True))
+                if len(valid) == 0:
+                    break
+                # Action layout (see env_pymahjong.py): 0-33 discard,
+                # 34 riichi, 35 chi(L)..37 chi(R), 38 pon, 39 ankan,
+                # 40 minkan, 41 kakan, 42 tsumo, 43 ron, 44 push, 45 pass.
+                # Prefer tsumo > ron > pass > smallest discard > anything.
+                pref = []
+                if 42 in valid:
+                    pref.append(42)
+                elif 43 in valid:
+                    pref.append(43)
+                else:
+                    discards = [a for a in valid.tolist() if a < 34]
+                    if discards:
+                        pref.append(min(discards))
+                    elif 45 in valid:
+                        pref.append(45)
+                    else:
+                        pref.append(int(valid[0]))
+                env.step(pid, pref[0])
+                steps += 1
+            if int(env.t.get_phase()) == int(pm.PhaseEnum.GAME_OVER):
+                res = env.t.gamelog.result
+                if int(res.result_type) in (
+                    int(pm.ResultType.RonAgari),
+                    int(pm.ResultType.TsumoAgari),
+                ):
+                    return seed
+        return -1
+
+    env = MahjongEnv()
+    seed = _greedy_to_agari(env, 4200)
+    assert seed >= 0, "could not synthesize an AGARI hand in 200 tries"
+
+    rec = TenhouPaipuRecorder()
+    rec.record_hand(env.t, seed=seed)
+    root = ET.fromstring(rec.to_string())
+    agari = root.find("AGARI")
+    assert agari is not None, "expected an AGARI element"
+
+    sc = [int(x) for x in agari.get("sc").split(",")]
+    deltas = sc[1::2]
+    # Chip conservation: deltas must sum to zero.
+    assert sum(deltas) == 0, f"AGARI sc deltas don't sum to zero: {deltas}"
+
+    # The winner's recorded delta must be > 0 for any non-zero-point
+    # agari (no triple-overlap edge case here since we only kept one).
+    ten = agari.get("ten")
+    pts = int(ten.split(",")[1])
+    who = int(agari.get("who"))
+    assert pts > 0, f"unexpected zero-point agari (ten={ten})"
+    assert deltas[who] > 0, (
+        f"winner {who} has non-positive delta {deltas[who]} for "
+        f"an agari worth {pts} points (sc={sc})"
+    )
+
+    # Replay must validate against the recorded paipu now that both
+    # recorder and validator agree on ``result.score`` as ground truth.
+    out = tmp_path / "agari_one.xml"
+    rec.save(str(out))
+    n_ok, n_fail = replay_recorded_paipu(str(out), verbose=False)
+    assert (n_ok, n_fail) == (1, 0)
+
+
+def test_agari_from_who_matches_ron_tsumo_semantics(tmp_path):
+    """``<AGARI fromWho=...>`` must equal ``who`` for tsumo and a real
+    discarder for ron.
+
+    Regression for the bug where the recorder used the heuristic
+    ``from_who = result.loser[0] if loser else winner`` — but
+    ``GameResult.cpp`` populates ``result.loser`` with *all three*
+    non-winners on tsumo, so the heuristic wrote a meaningless
+    ``fromWho`` (an arbitrary non-winner) for tsumo wins.
+    """
+    import xml.etree.ElementTree as ET
+    import random
+
+    env = MahjongEnv()
+    rng = random.Random(0)
+    n_ron_checked = 0
+    n_tsumo_checked = 0
+    # Tsumo wins are rare under random / greedy play; scan a wide seed
+    # range and check every agari hand we encounter.
+    for seed in range(7000, 7500):
+        env.reset(seed=seed)
+        steps = 0
+        while not env.is_over() and steps < 500:
+            pid = env.get_curr_player_id()
+            valid = np.flatnonzero(env.get_valid_actions(nhot=True))
+            if len(valid) == 0:
+                break
+            v = valid.tolist()
+            if 42 in v:
+                a = 42
+            elif 43 in v:
+                a = 43
+            else:
+                d = [x for x in v if x < 34]
+                a = min(d) if d else (45 if 45 in v else int(rng.choice(v)))
+            env.step(pid, a)
+            steps += 1
+        if int(env.t.get_phase()) != int(pm.PhaseEnum.GAME_OVER):
+            continue
+        res = env.t.gamelog.result
+        rt = int(res.result_type)
+        if rt not in (int(pm.ResultType.RonAgari), int(pm.ResultType.TsumoAgari)):
+            continue
+        rec = TenhouPaipuRecorder()
+        rec.record_hand(env.t, seed=seed)
+        root = ET.fromstring(rec.to_string())
+        ag = root.find("AGARI")
+        who = int(ag.get("who"))
+        from_who = int(ag.get("fromWho"))
+        if rt == int(pm.ResultType.TsumoAgari):
+            n_tsumo_checked += 1
+            assert from_who == who, (
+                f"tsumo AGARI must have fromWho == who; "
+                f"got who={who} fromWho={from_who} (seed={seed})"
+            )
+        else:
+            n_ron_checked += 1
+            assert from_who != who, (
+                f"ron AGARI must have fromWho != who; "
+                f"got who={who} fromWho={from_who} (seed={seed})"
+            )
+        if n_ron_checked >= 5 and n_tsumo_checked >= 0:
+            break
+    # We expect to see at least one ron in 500 seeds; tsumo coverage
+    # is best-effort (statistically uncommon for random play).
+    assert n_ron_checked >= 1, (
+        f"didn't observe any ron in 500 seeds — test ineffective"
+    )

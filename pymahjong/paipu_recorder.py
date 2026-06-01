@@ -508,11 +508,18 @@ class TenhouPaipuRecorder:
     def _result_element(self, table, gl) -> ET.Element:
         result = gl.result
         rt = result.result_type
-        # ``gl.result`` is sometimes left uninitialized (rt = Error / -1)
-        # when the game ends via an unusual terminal path under random
-        # play.  Fall back to ``t.get_scores()`` for finals so the
-        # recorded paipu always reflects what the engine actually decided.
-        final_scores = list(table.get_scores())
+        # Prefer ``result.score`` (engine-computed per-hand final scores,
+        # populated by GameResult.cpp for every ron / tsumo / ryuukyoku /
+        # nagashi-mangan path).  ``table.get_scores()`` reflects the
+        # player counters which, in single-hand V4MultiAgentEnv use, may
+        # still be at the pre-agari snapshot (with only the riichi-stick
+        # deduction applied), so deltas computed from it are wrong for
+        # agari hands.  Fall back to ``t.get_scores()`` only when the
+        # result struct is uninitialized (rt = Error / -1).
+        if int(rt) >= 0:
+            final_scores = [int(s) for s in result.score]
+        else:
+            final_scores = list(table.get_scores())
         score_changes = [
             (final_scores[i] - gl.start_scores[i]) // 100 for i in range(4)
         ]
@@ -528,7 +535,17 @@ class TenhouPaipuRecorder:
         # ----- Agari -----
         if rt in (pm.ResultType.RonAgari, pm.ResultType.TsumoAgari):
             winner = result.winner[0]
-            from_who = result.loser[0] if list(result.loser) else winner
+            # Distinguish ron vs tsumo via ``result_type`` rather than via
+            # ``result.loser``: the engine populates ``result.loser`` with
+            # *all three* non-winners on tsumo (see
+            # Mahjong/GameResult.cpp:233), so the previous heuristic
+            # ``loser[0] if loser else winner`` picked an arbitrary
+            # non-winner and wrote a misleading ``fromWho``.
+            is_tsumo = (rt == pm.ResultType.TsumoAgari)
+            if is_tsumo:
+                from_who = winner
+            else:
+                from_who = result.loser[0] if list(result.loser) else winner
             counter = result.results[winner]
             attrs = {
                 "who": str(winner),
@@ -548,6 +565,14 @@ class TenhouPaipuRecorder:
                     str(t.id) for t in table.dora_indicator
                 ),
             }
+            # For non-dealer tsumo, ``score1`` is what the dealer pays
+            # and ``score2`` is what each non-dealer pays.  The Tenhou
+            # display format needs both (``X-Y点`` = kodomo-pay /
+            # oya-pay), so expose ``score2`` as a side attribute.
+            # Dealer tsumo has ``score2 == 0`` (everyone pays
+            # ``score1``).  For ron, ``score2`` is meaningless.
+            if is_tsumo and int(counter.score2) > 0:
+                attrs["score2"] = str(int(counter.score2))
             return ET.Element("AGARI", attrs)
 
         # ----- Ryuukyoku (or any other terminal we treat as draw) -----
@@ -749,11 +774,38 @@ def _replay_one_hand_from_xml(
             break
 
         if tag in ("AGARI", "RYUUKYOKU"):
-            # Drain any final response-phase passes and any forced ryuukyoku.
-            for _ in range(8):
+            # Drain pending response phases and trigger the recorded
+            # terminal action (ron / tsumo / forced ryuukyoku) so the
+            # engine actually computes ``result.score``.
+            target_winner = -1
+            target_fromwho = -1
+            is_tsumo = False
+            if tag == "AGARI":
+                target_winner = int(sib.get("who"))
+                target_fromwho = int(sib.get("fromWho"))
+                is_tsumo = (target_winner == target_fromwho)
+            for _ in range(12):
                 if int(t.get_phase()) == GAME_OVER:
                     break
                 phase = int(t.get_phase())
+                if tag == "AGARI" and is_tsumo and phase < 4 \
+                        and phase == target_winner:
+                    # Self-draw win: select Tsumo from the action phase.
+                    idx = t.get_selection_from_action_basetile(
+                        pm.BaseAction.Tsumo, [], False,
+                    )
+                    if idx >= 0:
+                        t.make_selection(idx)
+                        continue
+                if tag == "AGARI" and not is_tsumo and phase >= 4 \
+                        and t.who_make_selection() == target_winner:
+                    # Ron: winner's response phase — pick Ron.
+                    idx = t.get_selection_from_action_basetile(
+                        pm.BaseAction.Ron, [], False,
+                    )
+                    if idx >= 0:
+                        t.make_selection(idx)
+                        continue
                 actions = (t.get_self_actions() if phase < 4
                            else t.get_response_actions())
                 if len(actions) <= 1:
@@ -764,6 +816,8 @@ def _replay_one_hand_from_xml(
                     )
                     if idx >= 0:
                         t.make_selection(idx)
+                    else:
+                        t.make_selection(0)
                 else:
                     # Response phase with options but no XML naru — pass.
                     t.make_selection(0)
@@ -773,7 +827,17 @@ def _replay_one_hand_from_xml(
             recorded_finals = [
                 sc_parts[2 * i] * 100 + recorded_changes[i] for i in range(4)
             ]
-            actual_finals = list(t.get_scores())
+            # Use the engine's per-hand ``result.score`` (post-payout)
+            # as ground truth.  ``t.get_scores()`` reflects only the
+            # ``players[i].score`` field, which is updated for riichi
+            # stick deductions but NOT for AGARI payouts (see
+            # ``Mahjong/Table.cpp``), so it would falsely fail this
+            # comparison for any winning hand.
+            res = t.gamelog.result
+            if int(res.result_type) >= 0:
+                actual_finals = [int(s) for s in res.score]
+            else:
+                actual_finals = list(t.get_scores())
             if recorded_finals != actual_finals:
                 if verbose:
                     print(f"[replay] score mismatch: rec={recorded_finals} "
