@@ -168,3 +168,73 @@ def test_agari_score_changes_match_engine(tmp_path):
     rec.save(str(out))
     n_ok, n_fail = replay_recorded_paipu(str(out), verbose=False)
     assert (n_ok, n_fail) == (1, 0)
+
+
+def test_agari_from_who_matches_ron_tsumo_semantics(tmp_path):
+    """``<AGARI fromWho=...>`` must equal ``who`` for tsumo and a real
+    discarder for ron.
+
+    Regression for the bug where the recorder used the heuristic
+    ``from_who = result.loser[0] if loser else winner`` — but
+    ``GameResult.cpp`` populates ``result.loser`` with *all three*
+    non-winners on tsumo, so the heuristic wrote a meaningless
+    ``fromWho`` (an arbitrary non-winner) for tsumo wins.
+    """
+    import xml.etree.ElementTree as ET
+    import random
+
+    env = MahjongEnv()
+    rng = random.Random(0)
+    n_ron_checked = 0
+    n_tsumo_checked = 0
+    # Tsumo wins are rare under random / greedy play; scan a wide seed
+    # range and check every agari hand we encounter.
+    for seed in range(7000, 7500):
+        env.reset(seed=seed)
+        steps = 0
+        while not env.is_over() and steps < 500:
+            pid = env.get_curr_player_id()
+            valid = np.flatnonzero(env.get_valid_actions(nhot=True))
+            if len(valid) == 0:
+                break
+            v = valid.tolist()
+            if 42 in v:
+                a = 42
+            elif 43 in v:
+                a = 43
+            else:
+                d = [x for x in v if x < 34]
+                a = min(d) if d else (45 if 45 in v else int(rng.choice(v)))
+            env.step(pid, a)
+            steps += 1
+        if int(env.t.get_phase()) != int(pm.PhaseEnum.GAME_OVER):
+            continue
+        res = env.t.gamelog.result
+        rt = int(res.result_type)
+        if rt not in (int(pm.ResultType.RonAgari), int(pm.ResultType.TsumoAgari)):
+            continue
+        rec = TenhouPaipuRecorder()
+        rec.record_hand(env.t, seed=seed)
+        root = ET.fromstring(rec.to_string())
+        ag = root.find("AGARI")
+        who = int(ag.get("who"))
+        from_who = int(ag.get("fromWho"))
+        if rt == int(pm.ResultType.TsumoAgari):
+            n_tsumo_checked += 1
+            assert from_who == who, (
+                f"tsumo AGARI must have fromWho == who; "
+                f"got who={who} fromWho={from_who} (seed={seed})"
+            )
+        else:
+            n_ron_checked += 1
+            assert from_who != who, (
+                f"ron AGARI must have fromWho != who; "
+                f"got who={who} fromWho={from_who} (seed={seed})"
+            )
+        if n_ron_checked >= 5 and n_tsumo_checked >= 0:
+            break
+    # We expect to see at least one ron in 500 seeds; tsumo coverage
+    # is best-effort (statistically uncommon for random play).
+    assert n_ron_checked >= 1, (
+        f"didn't observe any ron in 500 seeds — test ineffective"
+    )

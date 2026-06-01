@@ -535,7 +535,17 @@ class TenhouPaipuRecorder:
         # ----- Agari -----
         if rt in (pm.ResultType.RonAgari, pm.ResultType.TsumoAgari):
             winner = result.winner[0]
-            from_who = result.loser[0] if list(result.loser) else winner
+            # Distinguish ron vs tsumo via ``result_type`` rather than via
+            # ``result.loser``: the engine populates ``result.loser`` with
+            # *all three* non-winners on tsumo (see
+            # Mahjong/GameResult.cpp:233), so the previous heuristic
+            # ``loser[0] if loser else winner`` picked an arbitrary
+            # non-winner and wrote a misleading ``fromWho``.
+            is_tsumo = (rt == pm.ResultType.TsumoAgari)
+            if is_tsumo:
+                from_who = winner
+            else:
+                from_who = result.loser[0] if list(result.loser) else winner
             counter = result.results[winner]
             attrs = {
                 "who": str(winner),
@@ -555,6 +565,14 @@ class TenhouPaipuRecorder:
                     str(t.id) for t in table.dora_indicator
                 ),
             }
+            # For non-dealer tsumo, ``score1`` is what the dealer pays
+            # and ``score2`` is what each non-dealer pays.  The Tenhou
+            # display format needs both (``X-Y点`` = kodomo-pay /
+            # oya-pay), so expose ``score2`` as a side attribute.
+            # Dealer tsumo has ``score2 == 0`` (everyone pays
+            # ``score1``).  For ron, ``score2`` is meaningless.
+            if is_tsumo and int(counter.score2) > 0:
+                attrs["score2"] = str(int(counter.score2))
             return ET.Element("AGARI", attrs)
 
         # ----- Ryuukyoku (or any other terminal we treat as draw) -----

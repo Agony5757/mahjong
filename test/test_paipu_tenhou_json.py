@@ -196,3 +196,107 @@ def test_agari_subarray_uses_tenhou_string_format(tmp_path):
         assert yaku_re.match(yaku), (
             f"yaku string doesn't match Tenhou regex: {yaku!r}"
         )
+
+
+# --- Ron / Tsumo classification ---
+# These tests bypass the engine and feed synthetic <AGARI> XML directly
+# to the converter so we can exercise tsumo-oya, tsumo-kodomo, and ron
+# code paths without having to coax the engine into producing each
+# variant under random self-play (tsumo wins are extremely rare).
+
+import xml.etree.ElementTree as ET  # noqa: E402
+
+from pymahjong.paipu_tenhou_json import xml_string_to_tenhou_json  # noqa: E402
+
+_BASE_INIT = (
+    '<mjloggm ver="2.3">'
+    '<GO type="33" lobby="0"/>'
+    '<UN n0="A" n1="B" n2="C" n3="D" dan="0,0,0,0" '
+    'rate="1500,1500,1500,1500" sx="C,C,C,C"/>'
+    '<TAIKYOKU oya="{oya}"/>'
+    '<INIT seed="0,0,0,0,0,0" ten="250,250,250,250" oya="{oya}" '
+    'hai0="0,1,2,3,4,5,6,7,8,9,10,11,12" '
+    'hai1="16,17,18,19,20,21,22,23,24,25,26,27,28" '
+    'hai2="32,33,34,35,36,37,38,39,40,41,42,43,44" '
+    'hai3="48,49,50,51,52,53,54,55,56,57,58,59,60" '
+    'seed_int="0"/>'
+)
+
+
+def _agari_xml(*, who, fromWho, oya, sc, ten, yaku="", score2=None):
+    score2_attr = f' score2="{score2}"' if score2 is not None else ""
+    return (
+        _BASE_INIT.format(oya=oya)
+        + f'<AGARI who="{who}" fromWho="{fromWho}" ba="0,0" sc="{sc}" '
+        f'hai="0,1,2,3,4,5,6,7,8,9,10,11,12,13" machi="13" '
+        f'ten="{ten}" yaku="{yaku}" doraHai="0"{score2_attr}/>'
+        + "</mjloggm>"
+    )
+
+
+def test_ron_ten_string_format():
+    """Ron: ten string is '<fu>符<han>飜<total>点' (no ∀, no X-Y)."""
+    # P2 (kodomo) ron P0 (oya), 40fu 3han = 5200pts total.
+    xml = _agari_xml(
+        who=2, fromWho=0, oya=0,
+        sc="250,-52,250,0,250,52,250,0",
+        ten="40,5200,0",
+        yaku="1,1,2,1,3,1",  # riichi(1) + tanyao(1) + tsumo(1) → 3 han total
+    )
+    data = xml_string_to_tenhou_json(xml)
+    ten_str = data["log"][0][16][2][3]
+    assert ten_str == "40符3飜5200点", f"got {ten_str!r}"
+    assert "∀" not in ten_str
+    assert "-" not in ten_str.replace("点", "")  # no X-Y form
+
+
+def test_dealer_tsumo_ten_string_format():
+    """Dealer tsumo: ten string ends with '点∀' (everyone pays score1)."""
+    # P0 (oya) tsumo, 30fu 2han, score1=1000 (each non-dealer pays 1000).
+    # fromWho == who is the tsumo marker.
+    xml = _agari_xml(
+        who=0, fromWho=0, oya=0,
+        sc="250,30,250,-10,250,-10,250,-10",
+        ten="30,1000,0",
+        yaku="1,1,3,1",
+    )
+    data = xml_string_to_tenhou_json(xml)
+    ten_str = data["log"][0][16][2][3]
+    assert ten_str == "30符2飜1000点∀", f"got {ten_str!r}"
+
+
+def test_nondealer_tsumo_ten_string_format():
+    """Non-dealer tsumo: ten string is '<fu>符<han>飜<X>-<Y>点'
+    (X = each kodomo pay = score2, Y = oya pay = score1)."""
+    # P1 (kodomo) tsumo with oya=P0, 30fu 2han.  score1=1000 (P0 pays),
+    # score2=500 (P2/P3 each pay).
+    xml = _agari_xml(
+        who=1, fromWho=1, oya=0,
+        sc="250,-10,250,20,250,-5,250,-5",
+        ten="30,1000,0",
+        yaku="1,1,3,1",
+        score2=500,
+    )
+    data = xml_string_to_tenhou_json(xml)
+    ten_str = data["log"][0][16][2][3]
+    assert ten_str == "30符2飜500-1000点", f"got {ten_str!r}"
+
+
+def test_tsumo_winner_tuple_from_equals_who():
+    """Tsumo: winner_tuple[1] (fromWho) must equal winner_tuple[0] (who).
+
+    This is the canonical Tenhou convention for tsumo (the editor's
+    quick-summary logic at offset 23546 uses ``b[2][0]==b[2][1]`` to
+    detect tsumo vs ron)."""
+    xml = _agari_xml(
+        who=2, fromWho=2, oya=0,
+        sc="250,-10,250,-10,250,30,250,-10",
+        ten="30,1000,0",
+        yaku="3,1",
+        score2=0,  # dealer-tsumo style: omit or 0 means everyone pays score1
+    )
+    data = xml_string_to_tenhou_json(xml)
+    winner_tuple = data["log"][0][16][2]
+    assert winner_tuple[0] == winner_tuple[1] == 2, (
+        f"tsumo winner_tuple must have who==fromWho, got {winner_tuple}"
+    )

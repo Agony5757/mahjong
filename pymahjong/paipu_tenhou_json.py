@@ -350,7 +350,7 @@ def _translate_hand(init: ET.Element, events: Sequence[ET.Element]) -> List[Any]
             continue
 
         if tag == "AGARI":
-            _emit_agari_json(hand_json, ev, events)
+            _emit_agari_json(hand_json, ev, events, oya=int(init.get("oya", "0")))
             continue
 
         if tag == "RYUUKYOKU":
@@ -470,6 +470,8 @@ def _emit_agari_json(
     hand_json: List[Any],
     el: ET.Element,
     events: Sequence[ET.Element],
+    *,
+    oya: int = 0,
 ) -> None:
     """Translate an <AGARI> element into the result slot (index 16).
 
@@ -488,6 +490,11 @@ def _emit_agari_json(
     ten_str_raw = el.get("ten", "0,0,0")
     yaku_str_raw = el.get("yaku", "")
     fu, base_points, mangan_level = [int(x) for x in ten_str_raw.split(",")]
+    # Side attribute populated by the recorder for non-dealer tsumo:
+    # ``score2`` = per-non-dealer pay (Tenhou displays "X-Y点" =
+    # kodomo-pay/oya-pay).  Missing / 0 = not applicable (ron, or
+    # dealer tsumo where everyone pays ``score1``).
+    score2 = int(el.get("score2", "0"))
 
     # Parse yaku list (XML emits ``id,han,id,han,...``); aggregate dora
     # variants by count since each dora hit is reported as a separate
@@ -501,13 +508,16 @@ def _emit_agari_json(
     # ten_str: position 3 of the winner sub-array — a string the editor
     # displays verbatim (and uses to detect tsumo via "∀" suffix).
     is_tsumo = (who == from_who)
+    is_oya = (who == oya)
     total_han = _yaku_total_han(yaku_ids)
     ten_str = _format_ten_string(
         fu=fu,
         han=total_han,
-        base_points=base_points,
+        score1=base_points,
+        score2=score2,
         mangan_level=mangan_level,
         is_tsumo=is_tsumo,
+        is_oya=is_oya,
     )
     yaku_strings = _format_yaku_strings(yaku_ids)
 
@@ -647,33 +657,57 @@ def _format_ten_string(
     *,
     fu: int,
     han: int,
-    base_points: int,
+    score1: int,
+    score2: int,
     mangan_level: int,
     is_tsumo: bool,
+    is_oya: bool,
 ) -> str:
     """Build the ``n[3]`` ten-display string for the agari sub-array.
 
     Tenhou's regex requires the string to contain ``<digits>点`` (with
-    optional ``∀`` for tsumo).  Format depends on mangan tier:
+    optional ``∀`` for dealer tsumo or ``X-Y点`` for non-dealer tsumo).
 
-    * 0 — non-mangan: ``"<fu>符<han>飜<points>点"``
-    * 1 — mangan: ``"満貫<points>点"``
-    * 2 — haneman: ``"跳満<points>点"``
-    * 3 — baiman: ``"倍満<points>点"``
-    * 4 — sanbaiman: ``"三倍満<points>点"``
-    * 5+ — yakuman: ``"役満<points>点"``
+    Point-encoding cases:
+
+    * **Ron** (``not is_tsumo``): ``score1`` is the *total* point
+      transfer from the loser → ``"...{score1}点"``.
+    * **Dealer tsumo** (``is_oya and is_tsumo``): ``score1`` is what
+      each non-dealer pays → ``"...{score1}点∀"`` (``∀`` = "from all").
+    * **Non-dealer tsumo** (``not is_oya and is_tsumo``): ``score1`` is
+      what the dealer pays, ``score2`` is what each other non-dealer
+      pays → ``"...{score2}-{score1}点"`` (kodomo-pay/oya-pay).
+
+    Mangan-tier names (満貫/跳満/倍満/三倍満/役満) replace the
+    ``<fu>符<han>飜`` prefix when ``mangan_level > 0``.
     """
-    suffix = "∀" if is_tsumo else ""
-    if mangan_level <= 0:
+    # Build the prefix (fu/han block or mangan-tier name).
+    if mangan_level > 0:
+        prefix = {
+            1: "満貫",
+            2: "跳満",
+            3: "倍満",
+            4: "三倍満",
+        }.get(mangan_level, "役満")
+    else:
         han_disp = max(han, 1)
-        return f"{fu}符{han_disp}飜{base_points}点{suffix}"
-    name = {
-        1: "満貫",
-        2: "跳満",
-        3: "倍満",
-        4: "三倍満",
-    }.get(mangan_level, "役満")
-    return f"{name}{base_points}点{suffix}"
+        prefix = f"{fu}符{han_disp}飜"
+
+    # Build the points body and tsumo marker.
+    if not is_tsumo:
+        body = f"{score1}点"
+    elif is_oya:
+        body = f"{score1}点∀"
+    else:
+        # Non-dealer tsumo: ``X-Y点`` where X = each kodomo pay
+        # (``score2``), Y = oya pay (``score1``).  If the recorder
+        # didn't expose ``score2`` (legacy XMLs), fall back to a
+        # single-value display so the Tenhou regex still matches.
+        if score2 > 0:
+            body = f"{score2}-{score1}点"
+        else:
+            body = f"{score1}点∀"
+    return prefix + body
 
 
 def _emit_ryuukyoku_json(hand_json: List[Any], el: ET.Element) -> None:
