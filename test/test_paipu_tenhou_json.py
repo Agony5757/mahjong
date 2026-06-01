@@ -116,3 +116,83 @@ def test_xml_string_variant_matches_path(tmp_path):
     a = xml_to_tenhou_json(str(xml_path))
     b = xml_string_to_tenhou_json(text)
     assert a == b
+
+
+def test_agari_subarray_uses_tenhou_string_format(tmp_path):
+    """Regression: AGARI winner sub-array must follow Tenhou's expected
+    schema ``[who, from, pao, "<点>点 string", "<yaku>(<N>飜)", ...]``.
+
+    The Tenhou paipu editor (``/5/1129.js``) calls ``h[3].match(...)``
+    on the winner sub-array's position-3 entry — if it's a raw int
+    (the previous bug) JS throws ``h[3].match is not a function`` and
+    the page hangs on "L O A D I N G ...".  This test directly checks
+    the schema so any future regression is caught at unit-test time.
+    """
+    # Synthesize one agari hand deterministically using a greedy
+    # heuristic (random play almost never wins).
+    env = MahjongEnv()
+    seed = -1
+    for off in range(200):
+        s = 6500 + off
+        env.reset(seed=s)
+        steps = 0
+        while not env.is_over() and steps < 500:
+            pid = env.get_curr_player_id()
+            valid = np.flatnonzero(env.get_valid_actions(nhot=True))
+            if len(valid) == 0:
+                break
+            v = valid.tolist()
+            if 42 in v:
+                a = 42  # tsumo
+            elif 43 in v:
+                a = 43  # ron
+            else:
+                d = [x for x in v if x < 34]
+                a = min(d) if d else (45 if 45 in v else int(v[0]))
+            env.step(pid, a)
+            steps += 1
+        if int(env.t.get_phase()) == int(pm.PhaseEnum.GAME_OVER):
+            res = env.t.gamelog.result
+            if int(res.result_type) in (
+                int(pm.ResultType.RonAgari),
+                int(pm.ResultType.TsumoAgari),
+            ):
+                seed = s
+                break
+    assert seed >= 0, "could not synthesize an AGARI hand in 200 tries"
+
+    rec = TenhouPaipuRecorder()
+    rec.record_hand(env.t, seed=seed)
+    out = tmp_path / "agari.xml"
+    rec.save(str(out))
+
+    data = xml_to_tenhou_json(str(out))
+    hand = data["log"][0]
+    result = hand[16]
+    assert result[0] == "和了", f"expected agari result, got {result[0]!r}"
+    winner_tuple = result[2]
+    # Schema: [who:int, from:int, pao:int, ten_str:str, *yaku_str:str]
+    assert len(winner_tuple) >= 5, (
+        f"winner_tuple too short: {winner_tuple}"
+    )
+    assert isinstance(winner_tuple[0], int)
+    assert isinstance(winner_tuple[1], int)
+    assert isinstance(winner_tuple[2], int)
+    assert isinstance(winner_tuple[3], str), (
+        f"ten_str at position 3 must be str (was {type(winner_tuple[3]).__name__}); "
+        f"Tenhou JS calls .match() on it"
+    )
+    # Tenhou regex: /[\d\-]+点∀?(\d枚∀?)?/
+    import re
+    assert re.search(r"[\d\-]+点", winner_tuple[3]), (
+        f"ten_str doesn't match Tenhou regex: {winner_tuple[3]!r}"
+    )
+    # Yaku entries: strings matching /^([^\(]*)\((\d+飜|)(?:役満)?(\d+枚|)\)/
+    yaku_re = re.compile(r"^([^\(]*)\((\d+飜|)(?:役満)?(\d+枚|)\)")
+    for i, yaku in enumerate(winner_tuple[4:], start=4):
+        assert isinstance(yaku, str), (
+            f"yaku at position {i} must be str (was {type(yaku).__name__})"
+        )
+        assert yaku_re.match(yaku), (
+            f"yaku string doesn't match Tenhou regex: {yaku!r}"
+        )

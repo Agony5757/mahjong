@@ -471,35 +471,209 @@ def _emit_agari_json(
     el: ET.Element,
     events: Sequence[ET.Element],
 ) -> None:
-    """Translate an <AGARI> element into the result slot (index 16)."""
+    """Translate an <AGARI> element into the result slot (index 16).
+
+    Tenhou's paipu editor (``/5/1129.js``) parses the agari sub-array as
+    ``[who, from_who, pao_who, "<点>点 description string",
+      "<yaku>(<N>飜)", ...]`` — i.e. position [3] onwards must be
+    *strings*, not raw integers (the regex at offset 23546 of the
+    editor JS matches ``/[\\d\\-]+点∀?(\\d枚∀?)?/`` against position 3).
+    Emitting raw ints makes the editor's per-hand renderer throw and
+    leaves the paipu unrenderable.
+    """
     who = int(el.get("who"))
     from_who = int(el.get("fromWho"))
     sc_parts = [int(x) for x in el.get("sc", "0,0,0,0,0,0,0,0").split(",")]
     score_changes = [sc_parts[2 * i + 1] for i in range(4)]
-    ten_str = el.get("ten", "0,0,0")
-    yaku_str = el.get("yaku", "")
-    # ten_info: [fu, base_score, mangan_level]
-    ten_info = [int(x) for x in ten_str.split(",")]
-    yaku_pairs: List[int] = []
-    if yaku_str:
-        for tok in yaku_str.split(","):
-            try:
-                yaku_pairs.append(int(tok))
-            except ValueError:
-                pass
-    # Tenhou format: ["和了", [score_changes], [who, from, pao, fu, points, yaku_strings...]]
-    # The exact length of the agari sub-array varies by viewer; the
-    # minimal form ["和了", deltas, [who, from, who]] is widely accepted.
+    ten_str_raw = el.get("ten", "0,0,0")
+    yaku_str_raw = el.get("yaku", "")
+    fu, base_points, mangan_level = [int(x) for x in ten_str_raw.split(",")]
+
+    # Parse yaku list (XML emits ``id,han,id,han,...``); aggregate dora
+    # variants by count since each dora hit is reported as a separate
+    # ``Dora,1`` / ``Akadora,1`` / ``Uradora,1`` entry.
+    yaku_ids: List[int] = []
+    if yaku_str_raw:
+        tokens = [int(t) for t in yaku_str_raw.split(",") if t]
+        for i in range(0, len(tokens), 2):
+            yaku_ids.append(tokens[i])
+
+    # ten_str: position 3 of the winner sub-array — a string the editor
+    # displays verbatim (and uses to detect tsumo via "∀" suffix).
+    is_tsumo = (who == from_who)
+    total_han = _yaku_total_han(yaku_ids)
+    ten_str = _format_ten_string(
+        fu=fu,
+        han=total_han,
+        base_points=base_points,
+        mangan_level=mangan_level,
+        is_tsumo=is_tsumo,
+    )
+    yaku_strings = _format_yaku_strings(yaku_ids)
+
+    # Pao (sekinin-barai): not currently exposed via the AGARI element,
+    # so default to ``who`` (no separate liability) — Tenhou treats
+    # ``pao == who`` as "no pao".
+    winner_tuple: List[Any] = [who, from_who, who, ten_str] + yaku_strings
+
     if hand_json[16] and hand_json[16][0] == "和了":
         # Double ron — append a second [who, from, who, ten, yaku] tuple.
         hand_json[16][1] = [hand_json[16][1][i] + score_changes[i] for i in range(4)]
-        hand_json[16].append([who, from_who, who] + list(ten_info) + yaku_pairs)
+        hand_json[16].append(winner_tuple)
     else:
         hand_json[16] = [
             "和了",
             score_changes,
-            [who, from_who, who] + list(ten_info) + yaku_pairs,
+            winner_tuple,
         ]
+
+
+# Yaku id → (japanese display name, default han value).  Indexed against
+# the ``Yaku`` enum order in ``Mahjong/Yaku.h`` (None=0).  Sentinel
+# entries (Yaku_1_han, Yaku_2_han, ...) are kept so int(Yaku::X) lines up.
+_YAKU_TABLE: List[Optional["tuple[str, int]"]] = [
+    None,                       # 0: None
+    ("立直", 1),                # 1: Riichi
+    ("断幺九", 1),              # 2: Tanyao
+    ("門前清自摸和", 1),        # 3: Menzentsumo
+    ("自風 東", 1),             # 4: Jikaze_Ton
+    ("自風 南", 1),             # 5: Jikaze_Nan
+    ("自風 西", 1),             # 6: Jikaze_Sha
+    ("自風 北", 1),             # 7: Jikaze_Pei
+    ("場風 東", 1),             # 8: Bakaze_Ton
+    ("場風 南", 1),             # 9: Bakaze_Nan
+    ("場風 西", 1),             # 10: Bakaze_Sha
+    ("場風 北", 1),             # 11: Bakaze_Pei
+    ("役牌 白", 1),             # 12: Yakuhai_Haku
+    ("役牌 發", 1),             # 13: Yakuhai_Hatsu
+    ("役牌 中", 1),             # 14: Yakuhai_Chu
+    ("平和", 1),                # 15: Pinfu
+    ("一盃口", 1),              # 16: Ippeikou
+    ("槍槓", 1),                # 17: Chankan
+    ("嶺上開花", 1),            # 18: Rinshankaihou
+    ("海底摸月", 1),            # 19: Haiteiraoyue
+    ("河底撈魚", 1),            # 20: Houteiraoyu
+    ("一発", 1),                # 21: Ippatsu
+    ("ドラ", 1),                # 22: Dora (per-tile; aggregated by count)
+    ("裏ドラ", 1),              # 23: Uradora (per-tile; aggregated)
+    ("赤ドラ", 1),              # 24: Akadora (per-tile; aggregated)
+    ("北ドラ", 1),              # 25: Peidora (3-player only)
+    ("混全帯幺九", 1),          # 26: Honchantaiyaochu_Naki
+    ("一気通貫", 1),            # 27: Ikkitsuukan_Naki
+    ("三色同順", 1),            # 28: Sanshokudoujun_Naki
+    None,                       # 29: Yaku_1_han (sentinel)
+    ("両立直", 2),              # 30: Dabururiichi
+    ("三色同刻", 2),            # 31: Sanshokudoukou
+    ("三槓子", 2),              # 32: Sankantsu
+    ("対々和", 2),              # 33: Toitoiho
+    ("三暗刻", 2),              # 34: Sanankou
+    ("小三元", 2),              # 35: Shousangen
+    ("混老頭", 2),              # 36: Honroutou
+    ("七対子", 2),              # 37: Chiitoitsu
+    ("混全帯幺九", 2),          # 38: Honchantaiyaochu
+    ("一気通貫", 2),            # 39: Ikkitsuukan
+    ("三色同順", 2),            # 40: Sanshokudoujun
+    ("純全帯幺九", 2),          # 41: Junchantaiyaochu_Naki
+    ("混一色", 2),              # 42: Honitsu_Naki
+    None,                       # 43: Yaku_2_han (sentinel)
+    ("二盃口", 3),              # 44: Rianpeikou
+    ("純全帯幺九", 3),          # 45: Junchantaiyaochu
+    ("混一色", 3),              # 46: Honitsu
+    None,                       # 47: Yaku_3_han
+    ("清一色", 5),              # 48: Chinitsu_Naki
+    None,                       # 49: Yaku_5_han
+    ("清一色", 6),              # 50: Chinitsu
+    None,                       # 51: Yaku_6_han
+    ("流し満貫", 5),            # 52: Nagashimangan
+    None,                       # 53: Yaku_mangan (sentinel)
+    ("天和", 13),               # 54: Tenhou
+    ("地和", 13),               # 55: Chihou
+    ("大三元", 13),             # 56: Daisangen
+    ("四暗刻", 13),             # 57: Siiankou
+    ("字一色", 13),             # 58: Tsuiisou
+    ("緑一色", 13),             # 59: Ryuiisou
+    ("清老頭", 13),             # 60: Chinroutou
+    ("国士無双", 13),           # 61: Kokushimusou
+    ("小四喜", 13),             # 62: Shousuushi
+    ("四槓子", 13),             # 63: Siikantsu
+    ("九蓮宝燈", 13),           # 64: Chuurenpoutou
+    None,                       # 65: Yakuman (sentinel)
+    ("四暗刻単騎", 26),         # 66: Siiankou_1 (double yakuman)
+    ("国士無双十三面", 26),     # 67: Koukushimusou_13
+    ("純正九蓮宝燈", 26),       # 68: Chuurenpoutou_9
+    ("大四喜", 26),             # 69: Daisuushi
+]
+_DORA_IDS = {22, 23, 24, 25}  # Dora / Uradora / Akadora / Peidora
+
+
+def _yaku_total_han(yaku_ids: Sequence[int]) -> int:
+    """Sum the default-han values for the given yaku id sequence."""
+    total = 0
+    for yid in yaku_ids:
+        if 0 <= yid < len(_YAKU_TABLE) and _YAKU_TABLE[yid] is not None:
+            total += _YAKU_TABLE[yid][1]
+    return total
+
+
+def _format_yaku_strings(yaku_ids: Sequence[int]) -> List[str]:
+    """Format yaku list as Tenhou-editor display strings.
+
+    Each entry is ``"<name>(<N>飜)"`` for normal yaku, ``"<name>(役満)"``
+    for yakuman, or ``"<name>(W役満)"`` for double-yakuman.  Dora-class
+    yaku (Dora/Uradora/Akadora/Peidora) are aggregated by count.
+    """
+    out: List[str] = []
+    seen_dora: Dict[int, int] = {}  # yaku_id -> count
+    for yid in yaku_ids:
+        if yid in _DORA_IDS:
+            seen_dora[yid] = seen_dora.get(yid, 0) + 1
+            continue
+        if not (0 <= yid < len(_YAKU_TABLE)) or _YAKU_TABLE[yid] is None:
+            continue
+        name, han = _YAKU_TABLE[yid]
+        if han >= 26:
+            out.append(f"{name}(W役満)")
+        elif han >= 13:
+            out.append(f"{name}(役満)")
+        else:
+            out.append(f"{name}({han}飜)")
+    for yid, count in seen_dora.items():
+        name = _YAKU_TABLE[yid][0]
+        out.append(f"{name}({count}飜)")
+    return out
+
+
+def _format_ten_string(
+    *,
+    fu: int,
+    han: int,
+    base_points: int,
+    mangan_level: int,
+    is_tsumo: bool,
+) -> str:
+    """Build the ``n[3]`` ten-display string for the agari sub-array.
+
+    Tenhou's regex requires the string to contain ``<digits>点`` (with
+    optional ``∀`` for tsumo).  Format depends on mangan tier:
+
+    * 0 — non-mangan: ``"<fu>符<han>飜<points>点"``
+    * 1 — mangan: ``"満貫<points>点"``
+    * 2 — haneman: ``"跳満<points>点"``
+    * 3 — baiman: ``"倍満<points>点"``
+    * 4 — sanbaiman: ``"三倍満<points>点"``
+    * 5+ — yakuman: ``"役満<points>点"``
+    """
+    suffix = "∀" if is_tsumo else ""
+    if mangan_level <= 0:
+        han_disp = max(han, 1)
+        return f"{fu}符{han_disp}飜{base_points}点{suffix}"
+    name = {
+        1: "満貫",
+        2: "跳満",
+        3: "倍満",
+        4: "三倍満",
+    }.get(mangan_level, "役満")
+    return f"{name}{base_points}点{suffix}"
 
 
 def _emit_ryuukyoku_json(hand_json: List[Any], el: ET.Element) -> None:
