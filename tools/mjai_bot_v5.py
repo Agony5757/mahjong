@@ -681,19 +681,28 @@ class V5MjaiBot:
                 else:
                     mask[A_DISCARD_BASE + bt] = True
         else:
-            for tile in set(self.my_tehai):
+            # Count normal vs aka separately for 5m/5p/5s
+            has_normal: Dict[int, bool] = {}    # bt -> True if normal version in hand
+            has_aka: Dict[int, bool] = {}       # bt in (4, 13, 22) -> True if aka 5 in hand
+            for tile in self.my_tehai:
                 bt, aka = MJAI_TILE_INFO[tile]
                 if aka:
-                    if bt == 4:
-                        mask[A_DISCARD_RED5M] = True
-                    elif bt == 13:
-                        mask[A_DISCARD_RED5P] = True
-                    elif bt == 22:
-                        mask[A_DISCARD_RED5S] = True
-                # Even if we have an aka, the normal-5 discard is also legal
-                # if we have ≥1 of the normal-5 in addition. Simplify: always
-                # offer base-tile discard since aka collapses to bt anyway.
+                    has_aka[bt] = True
+                else:
+                    has_normal[bt] = True
+            # Enable base-tile discard only if normal version in hand
+            for bt, _ in has_normal.items():
                 mask[A_DISCARD_BASE + bt] = True
+            # Enable aka discard only if aka version in hand
+            if has_aka.get(4):
+                mask[A_DISCARD_RED5M] = True
+            if has_aka.get(13):
+                mask[A_DISCARD_RED5P] = True
+            if has_aka.get(22):
+                mask[A_DISCARD_RED5S] = True
+            # For tiles that are 5m/5p/5s and we have ONLY aka (no normal),
+            # we must NOT enable A_DISCARD_BASE+bt — which is what the above
+            # achieves naturally since has_normal[bt] would be False.
 
         # === Tsumo
         if self._can_tsumo():
@@ -970,6 +979,24 @@ class V5MjaiBot:
         return '{"type":"none"}'
 
     def _make_dahai_msg(self, tile: str, tsumogiri: Optional[bool] = None) -> str:
+        # Safety: if the requested tile is not actually in our hand, fall back
+        # to a tile that is (prefer the just-drawn tile = tsumogiri, else any
+        # tile in tehai). This guards against action-mask bugs causing chombo.
+        if tile not in self.my_tehai:
+            sys.stderr.write(
+                f"V5 dahai sanity: requested {tile} not in tehai {sorted(self.my_tehai)}; "
+                f"falling back\n"
+            )
+            # Prefer tsumogiri (always safe — we just drew this tile)
+            if self.last_self_tsumo is not None and self.last_self_tsumo in self.my_tehai:
+                tile = self.last_self_tsumo
+                tsumogiri = True
+            elif self.my_tehai:
+                tile = self.my_tehai[-1]
+                tsumogiri = None  # recompute below
+            else:
+                # Should not happen
+                return '{"type":"none"}'
         if tsumogiri is None:
             tsumogiri = (tile == self.last_self_tsumo)
         return json.dumps({
