@@ -58,7 +58,10 @@ MJAI_TILE_INFO: Dict[str, Tuple[int, bool]] = {
     **{f"{n}s": (n - 1 + 18, False) for n in range(1, 10)},
     "E": (27, False), "S": (28, False), "W": (29, False), "N": (30, False),
     "P": (31, False), "F": (32, False), "C": (33, False),
-    # aka 5s
+    # red 5s — libriichi uses "5mr"/"5pr"/"5sr"; mjai.app docs use "0m"/"0p"/"0s"
+    "5mr": (4, True),
+    "5pr": (13, True),
+    "5sr": (22, True),
     "0m": (4, True),
     "0p": (13, True),
     "0s": (22, True),
@@ -68,11 +71,11 @@ MJAI_TILE_INFO: Dict[str, Tuple[int, bool]] = {
 def basetile_to_mjai(basetile_idx: int, aka: bool = False) -> str:
     if aka:
         if basetile_idx == 4:
-            return "0m"
+            return "5mr"
         if basetile_idx == 13:
-            return "0p"
+            return "5pr"
         if basetile_idx == 22:
-            return "0s"
+            return "5sr"
     if basetile_idx < 9:
         return f"{basetile_idx + 1}m"
     if basetile_idx < 18:
@@ -166,7 +169,7 @@ class V5MjaiBot:
         self.oya: int = 0
         self.scores: List[int] = [25000] * 4
         self.dora_indicators: List[str] = []
-        # my hand (mjai strings, e.g. "1m", "0p")
+        # my hand (mjai strings, e.g. "1m", "5pr")
         self.my_tehai: List[str] = []
         # tiles I've discarded (for furiten)
         self.my_river: List[str] = []
@@ -466,11 +469,11 @@ class V5MjaiBot:
             for bt in candidates:
                 mask[A_DISCARD_BASE + bt] = True
                 # Also offer aka variants if we have them
-                if bt == 4 and "0m" in self.my_tehai:
+                if bt == 4 and "5mr" in self.my_tehai:
                     mask[A_DISCARD_RED5M] = True
-                elif bt == 13 and "0p" in self.my_tehai:
+                elif bt == 13 and "5pr" in self.my_tehai:
                     mask[A_DISCARD_RED5P] = True
-                elif bt == 22 and "0s" in self.my_tehai:
+                elif bt == 22 and "5sr" in self.my_tehai:
                     mask[A_DISCARD_RED5S] = True
             action = self._run_model(mask)
             return self._action_to_mjai_self(action)
@@ -735,7 +738,7 @@ class V5MjaiBot:
             # red 5 variant: if we have an aka of this tile
             bt, _ = MJAI_TILE_INFO[opp_tile]
             if bt in (4, 13, 22):
-                aka_str = {4: "0m", 13: "0p", 22: "0s"}[bt]
+                aka_str = {4: "5mr", 13: "5pr", 22: "5sr"}[bt]
                 if aka_str in self.my_tehai:
                     mask[A_PON_USERED] = True
 
@@ -785,11 +788,11 @@ class V5MjaiBot:
             tile = basetile_to_mjai(action)
             return self._make_dahai_msg(tile)
         if action == A_DISCARD_RED5M:
-            return self._make_dahai_msg("0m")
+            return self._make_dahai_msg("5mr")
         if action == A_DISCARD_RED5P:
-            return self._make_dahai_msg("0p")
+            return self._make_dahai_msg("5pr")
         if action == A_DISCARD_RED5S:
-            return self._make_dahai_msg("0s")
+            return self._make_dahai_msg("5sr")
         if action == A_RIICHI:
             # Riichi is a two-event protocol in mjai: emit `reach`, then on the
             # next prompt emit `dahai` (with the discard tile that keeps tenpai).
@@ -816,9 +819,9 @@ class V5MjaiBot:
             consumed = [normal_str] * 4
             # If aka exists, replace one with aka
             aka_str = None
-            if bt == 4: aka_str = "0m"
-            elif bt == 13: aka_str = "0p"
-            elif bt == 22: aka_str = "0s"
+            if bt == 4: aka_str = "5mr"
+            elif bt == 13: aka_str = "5pr"
+            elif bt == 22: aka_str = "5sr"
             if aka_str and aka_str in self.my_tehai:
                 consumed[0] = aka_str
             return json.dumps({
@@ -839,9 +842,9 @@ class V5MjaiBot:
                         # which tile in hand we use for kakan (prefer aka if exists)
                         normal_str = basetile_to_mjai(bt)
                         aka_str = None
-                        if bt == 4: aka_str = "0m"
-                        elif bt == 13: aka_str = "0p"
-                        elif bt == 22: aka_str = "0s"
+                        if bt == 4: aka_str = "5mr"
+                        elif bt == 13: aka_str = "5pr"
+                        elif bt == 22: aka_str = "5sr"
                         kakan_tile = aka_str if (aka_str and aka_str in self.my_tehai) else normal_str
                         return json.dumps({
                             "type": "kakan",
@@ -873,9 +876,9 @@ class V5MjaiBot:
             consumed: List[str] = []
             normal_str = basetile_to_mjai(bt, aka=False)
             aka_str = None
-            if bt == 4: aka_str = "0m"
-            elif bt == 13: aka_str = "0p"
-            elif bt == 22: aka_str = "0s"
+            if bt == 4: aka_str = "5mr"
+            elif bt == 13: aka_str = "5pr"
+            elif bt == 22: aka_str = "5sr"
             tehai_copy = list(self.my_tehai)
             if action == A_PON_USERED and aka_str and aka_str in tehai_copy:
                 consumed.append(aka_str)
@@ -906,9 +909,9 @@ class V5MjaiBot:
             bt, _ = MJAI_TILE_INFO[opp_tile]
             normal_str = basetile_to_mjai(bt, aka=False)
             aka_str = None
-            if bt == 4: aka_str = "0m"
-            elif bt == 13: aka_str = "0p"
-            elif bt == 22: aka_str = "0s"
+            if bt == 4: aka_str = "5mr"
+            elif bt == 13: aka_str = "5pr"
+            elif bt == 22: aka_str = "5sr"
             tehai_copy = list(self.my_tehai)
             consumed = []
             # Take all 3 matching tiles from hand (incl aka if present)
@@ -943,9 +946,9 @@ class V5MjaiBot:
             for w in want:
                 normal_str = basetile_to_mjai(w, aka=False)
                 aka_str = None
-                if w == 4: aka_str = "0m"
-                elif w == 13: aka_str = "0p"
-                elif w == 22: aka_str = "0s"
+                if w == 4: aka_str = "5mr"
+                elif w == 13: aka_str = "5pr"
+                elif w == 22: aka_str = "5sr"
                 if use_red and aka_str and aka_str in tehai_copy:
                     consumed.append(aka_str)
                     tehai_copy.remove(aka_str)
