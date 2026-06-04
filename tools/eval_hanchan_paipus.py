@@ -38,7 +38,19 @@ from pymahjong.rl.v4.hanchan_env import HanchanEnv
 from pymahjong.rl.v4.model import EventStreamTransformer
 
 
-def _load_model(path, *, device, split_heads, encoding="v4"):
+def _load_model(
+    path,
+    *,
+    device,
+    split_heads,
+    encoding="v4",
+    d_model=192,
+    n_heads=6,
+    n_layers=4,
+    ff_mult=4,
+    scorer_hidden=256,
+    action_proj_dim=None,
+):
     """Load a V4 or V5 BC/PPO checkpoint.
 
     Args:
@@ -47,12 +59,23 @@ def _load_model(path, *, device, split_heads, encoding="v4"):
             :class:`DouzeroV5Transformer` via the V5 strategy registry.
         split_heads: only meaningful for V4 linear-head checkpoints;
             ignored for V5 (its shared scorer subsumes phase routing).
+        d_model/n_heads/n_layers/ff_mult: transformer arch overrides — must
+            match the checkpoint's shapes.  Defaults reproduce the legacy
+            192/6/4/4 BC v4 baseline; larger DDP V5 runs (e.g. ddp8_3ep)
+            need 384/8/6/4.
+        scorer_hidden/action_proj_dim: V5-only Douzero head sizing.
     """
-    cfg = TransformerConfig()  # 192/4/6/4 defaults — match BC/PPO ckpts
+    cfg = TransformerConfig(
+        d_model=d_model, n_heads=n_heads, n_layers=n_layers, ff_mult=ff_mult,
+    )
     if encoding == "v5":
         from pymahjong.rl.encoding import EncodingVersion, get_strategy
         strat = get_strategy(EncodingVersion.V5)
-        m = strat.create_model(transformer_config=cfg).to(device)
+        m = strat.create_model(
+            transformer_config=cfg,
+            scorer_hidden=scorer_hidden,
+            action_proj_dim=action_proj_dim,
+        ).to(device)
     else:
         m = EventStreamTransformer(config=cfg, split_heads=split_heads).to(device)
     ck = torch.load(str(path), map_location=device, weights_only=False)
@@ -90,14 +113,29 @@ def main() -> int:
     ap.add_argument("--device", default=None)
     ap.add_argument("--max-steps-per-kyoku", type=int, default=2000,
                     help="Safety cap on decisions per kyoku.")
+    ap.add_argument("--d-model", type=int, default=192,
+                    help="Transformer d_model (default 192 matches BC v4 baseline; "
+                         "V5 DDP big11M uses 384).")
+    ap.add_argument("--n-heads", type=int, default=6)
+    ap.add_argument("--n-layers", type=int, default=4)
+    ap.add_argument("--ff-mult", type=int, default=4)
+    ap.add_argument("--scorer-hidden", type=int, default=256,
+                    help="V5 Douzero head MLP hidden width.")
+    ap.add_argument("--action-proj-dim", type=int, default=None,
+                    help="V5 action feature projection dim (default = d_model).")
     args = ap.parse_args()
 
     device = torch.device(
         args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     )
     print(f"loading {args.model} on {device}  encoding={args.encoding}  split_heads={args.split_heads}")
-    model = _load_model(args.model, device=device, split_heads=args.split_heads,
-                        encoding=args.encoding)
+    model = _load_model(
+        args.model, device=device, split_heads=args.split_heads,
+        encoding=args.encoding,
+        d_model=args.d_model, n_heads=args.n_heads, n_layers=args.n_layers,
+        ff_mult=args.ff_mult, scorer_hidden=args.scorer_hidden,
+        action_proj_dim=args.action_proj_dim,
+    )
     names = [n.strip() for n in args.player_names.split(",")]
     assert len(names) == 4
     args.out_dir.mkdir(parents=True, exist_ok=True)
