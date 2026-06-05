@@ -500,7 +500,17 @@ class V5MjaiBot:
         return self._action_to_mjai_self(action)
 
     def _response_to_dahai(self, last_ev: Dict[str, Any]) -> str:
-        """Pick response to opponent's dahai (pass / pon / chi / kan / ron)."""
+        """Pick response to opponent's dahai (pass / pon / chi / kan / ron).
+
+        By default response calls are disabled because the hand-coded
+        :meth:`_compute_response_mask` diverges from the libriichi engine
+        in several edge cases (no-yaku ron, post-call chi/pon timing,
+        etc.) and causes ryukyoku-error chombo (-8000pt). Set
+        ``V5_ENABLE_CALLS=1`` to opt back in for debugging.
+        """
+        import os
+        if not os.environ.get("V5_ENABLE_CALLS"):
+            return '{"type":"none"}'
         mask = self._compute_response_mask(last_ev)
         if not mask.any() or (mask.sum() == 1 and mask[A_PASS_RESPONSE]):
             return '{"type":"none"}'
@@ -715,10 +725,17 @@ class V5MjaiBot:
                 mask[A_RIICHI] = True
 
         # === Ankan / Kakan
-        if self._can_ankan():
-            mask[A_ANKAN] = True
-        if self._can_kakan():
-            mask[A_KAKAN] = True
+        # Both require strict engine-side validation we don't replicate
+        # (riichi-wait preservation, kan-dora limit, 4-kan abortive
+        # checks, last-wall-tile constraints, etc.). Default-disable to
+        # avoid chombo; opt back in with V5_ENABLE_CALLS=1 once a proper
+        # validator is added.
+        import os
+        if os.environ.get("V5_ENABLE_CALLS") and not riichi_locked:
+            if self._can_ankan():
+                mask[A_ANKAN] = True
+            if self._can_kakan():
+                mask[A_KAKAN] = True
 
         # === Kyushukyuhai (skip — rare, may add later)
         # TODO(mjai-bot): kyushukyuhai check
