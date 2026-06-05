@@ -297,17 +297,16 @@ class V5MjaiBot:
         my_tehai = ev["tehais"][self.player_id]
         assert "?" not in my_tehai, "my own tehai should be revealed"
         self.my_tehai = list(my_tehai)
-        # Dealer gets 14 tiles (last one is initial tsumo); convert
+        # Dealer gets 14 tiles (last one is initial tsumo)
         if len(my_tehai) == 14:
             self.last_self_tsumo = my_tehai[-1]
 
-        # Build a stub yama: 13 tiles per player slots; opponents get
-        # placeholder tiles. Wall structure for game_init_with_config is
-        # internal — we just need a 136-tile vector. Use our real tiles
-        # for our slots + any tiles for others.
-        # TODO(mjai-bot): verify yama layout matches what pm.Table expects.
-        # Below uses a naive layout; may need tweak.
-        yama = self._build_initial_yama(my_tehai)
+        # Build a yama where our seat's deal positions get the REAL tiles
+        # from mjai (and the dora indicator position gets the real dora
+        # marker). Without this fix, the encoder's INIT_HAND events would
+        # reflect the naive yama (1m-1m-1m-1m-...) and the model would
+        # receive garbage initial hands — see commit history for details.
+        yama = self._build_initial_yama(my_tehai, ev["dora_marker"])
 
         self.table = pm.Table()
         self.table.game_init_with_config(
@@ -320,31 +319,97 @@ class V5MjaiBot:
         )
         self.encoder = pm.encv4_HandEncoder(self.table)
         self.encoder.encode_init()
-        # Now register dora
-        dora_idx, dora_aka = MJAI_TILE_INFO[ev["dora_marker"]]
-        # encode_init already snapshotted dora from table state; if mjai dora
-        # differs (it shouldn't, since we copied into yama), we'd call:
-        # self.encoder.on_dora_reveal(basetile_enum(dora_idx), dora_aka)
 
-    def _build_initial_yama(self, my_tehai: List[str]) -> List[int]:
-        """Construct a 136-int yama where our seat's draws come from our tehai.
+    def _build_initial_yama(self, my_tehai: List[str], dora_marker: str) -> List[int]:
+        """Construct a 136-int yama so that ``pm.Table.game_init_with_config``
+        deals ``my_tehai`` to our seat AND places ``dora_marker`` at the
+        dora-indicator position.
 
-        Tenhou-style wall layout per ``game_init_with_config`` source: the
-        wall is dealt 4-4-4-1 in rounds to each seat starting from oya. To
-        guarantee our tiles end up in our hand, we need to compute the
-        right positions for our seat — see :func:`Mahjong/Table.cpp:185`.
+        Tenhou-style wall layout per :func:`Mahjong/Table.cpp:Table::draw_tenhou_style`:
+        the wall is popped from the back (yama.back()) and dealt 4-4-4-1 in
+        rounds starting from oya. Concretely with ``yama = list(range(136))``
+        and ``oya=0``, ``players[0]`` gets yama positions ``{135..132,
+        119..116, 103..100, 87}`` for its 13 init tiles, then ``yama[83]``
+        as its first tsumo (if oya). The dora indicator is read from
+        ``yama[5]`` (the dead wall is at the front of the yama).
 
-        TODO(mjai-bot): implement the exact yama layout. As a STUB we use
-        ``pm.generate_test_yama()`` style random — this means our table's
-        initial hand will NOT match ``my_tehai``. The C++ encoder reads
-        the hand from table on encode_init(), so this matters.
+        Tile id ↔ basetile mapping (4 ids per basetile, contiguous):
+        bt=0  → ids 0..3 (1m), bt=4 → ids 16..19 (5m incl aka at id 16),
+        bt=13 → ids 52..55 (5p, aka=52), bt=22 → ids 88..91 (5s, aka=88),
+        bt=33 → ids 132..135 (中).
 
-        WORKAROUND: after game_init_with_config we can call
-        ``encoder.fire_init_hand`` with our real tehai bypassing the
-        table's hand. Let's go with that path.
+        We pick a UNIQUE tile id for every requested mjai tile string, then
+        atomically place all (position, tile_id) constraints into the yama,
+        filling the remaining slots with the leftover ids in ascending
+        order.
         """
-        # Fallback: deterministic ordering. NB: opponents' tiles don't matter.
-        yama = list(range(136))
+        AKA_ID = {4: 16, 13: 52, 22: 88}
+
+        def mjai_to_id_picker():
+            used: set = set()
+            def pick(mjai_tile: str) -> int:
+                bt, aka = MJAI_TILE_INFO[mjai_tile]
+                if aka:
+                    tid = AKA_ID[bt]
+                    if tid in used:
+                        raise ValueError(f"duplicate aka tile id for {mjai_tile}")
+                    used.add(tid)
+                    return tid
+                cands = [i for i in range(bt * 4, bt * 4 + 4)]
+                if bt in AKA_ID:
+                    cands = [c for c in cands if c != AKA_ID[bt]]
+                for c in cands:
+                    if c not in used:
+                        used.add(c)
+                        return c
+                raise ValueError(f"no tile id available for {mjai_tile}")
+            return pick
+
+        pick_id = mjai_to_id_picker()
+
+        # Compute our seat's deal positions (popping from back of yama).
+        positions: List[int] = []
+        cursor = 135
+        for _round in range(3):
+            for i in range(4):
+                player = (self.oya + i) % 4
+                for _ in range(4):
+                    if player == self.player_id:
+                        positions.append(cursor)
+                    cursor -= 1
+        # 'tiao zhang' final 1-tile per player
+        for i in range(4):
+            player = (self.oya + i) % 4
+            if player == self.player_id:
+                positions.append(cursor)
+            cursor -= 1
+        # If we're oya and mjai gave us 14 tiles, the 14th is the first tsumo
+        # which pm.Table will deal from yama[cursor] (next pop).
+        n_init = 13
+        if len(my_tehai) == 14:
+            positions.append(cursor)
+            n_init = 14
+        assert len(positions) == n_init, (
+            f"yama-position calc mismatch: got {len(positions)} expected {n_init}"
+        )
+
+        # Build the placement constraints.
+        placements: Dict[int, int] = {}
+        for pos, mjai_tile in zip(positions, my_tehai[:n_init]):
+            placements[pos] = pick_id(mjai_tile)
+        # Dora indicator: pm.Table reads it from yama[5] (after dealing).
+        placements[5] = pick_id(dora_marker)
+
+        # Compose yama: place desired ids, fill remaining slots with leftover
+        # ids in ascending order.
+        used_ids = set(placements.values())
+        leftover = (tid for tid in range(136) if tid not in used_ids)
+        yama: List[int] = [0] * 136
+        for pos in range(136):
+            if pos in placements:
+                yama[pos] = placements[pos]
+            else:
+                yama[pos] = next(leftover)
         return yama
 
     # --------------------------------------------------------- visible events
