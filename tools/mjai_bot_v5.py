@@ -10,22 +10,27 @@ Architecture
 mjai is event-stream JSON over stdin/stdout. The bot:
 
 1. Parses each incoming event batch.
-2. Maintains its own minimal game state in pure Python (so we don't need
-   to keep a parallel ``pm.Table`` perfectly in sync with the mjai server,
-   which is hard because opponent draws are masked as ``"pai": "?"``).
+2. Maintains its own minimal game state in pure Python plus a libriichi
+   ``mjai.mlibriichi.state.PlayerState`` shadow — the latter is the
+   engine-authoritative source of legal actions and is fed every event
+   verbatim via ``ps.update(event_json)``. The action mask is built from
+   ``ps.last_cans`` (``ActionCandidate``), which matches exactly what
+   the mjai simulator will accept.
 3. Drives a ``pm.encv4_HandEncoder`` directly via its ``on_*`` hooks so
-   the per-player V4 token stream matches what the model was trained on.
-4. On a decision event, computes the 54-dim action mask from the mjai
-   state, runs the V5 model, picks the best legal action, and emits the
-   corresponding mjai action message.
+   the per-player V4 token stream matches what the model was trained on
+   (model input is encv4; legality is libriichi).
+4. On a decision event, computes the 54-dim action mask from libriichi
+   ``last_cans``, runs the V5 model, picks the best legal action, and
+   emits the corresponding mjai action message. Every non-trivial
+   emitted JSON is run through ``ps.validate_reaction`` as a final
+   safety net; if it raises, the bot falls back to ``{"type":"none"}``
+   or tsumogiri instead of chombo'ing.
 
-This keeps the encoder logic identical to training (C++ ``encv4``) while
-sidestepping the parallel ``pm.Table`` sync problem.
-
-Status: SKELETON — see ``# TODO(mjai-bot)`` markers. The framework is in
-place; the remaining work is filling out the action-mask logic for
-response phases (pon/chi/kan/ron) and finishing the chi tile-id selection
-when emitting chi messages.
+Earlier versions of this bot hand-coded the legal-action mask which
+diverged from libriichi in several edge cases (no-yaku ron, riichi +
+ankan wait-preservation, kan-dora limit, chi/pon timing after another
+call). Those bug classes are now closed because the mask comes from the
+same engine the mjai simulator uses.
 
 Usage (inside docker container):
     python bot.py <player_id>
@@ -45,6 +50,15 @@ import torch
 import MahjongPyWrapper as pm  # type: ignore
 from pymahjong.rl.common.config import TransformerConfig
 from pymahjong.rl.encoding import EncodingVersion, get_strategy
+
+try:
+    import mjai.mlibriichi as _mlr  # type: ignore
+    _PLAYER_STATE_CLS = _mlr.state.PlayerState
+except Exception as _e:  # noqa: BLE001
+    _PLAYER_STATE_CLS = None
+    _MLR_IMPORT_ERR = _e
+else:
+    _MLR_IMPORT_ERR = None
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +170,15 @@ class V5MjaiBot:
         state = ck["model"] if isinstance(ck, dict) and "model" in ck else ck
         self.model.load_state_dict(state)
 
+        # Shadow PlayerState from libriichi — engine-authoritative legality.
+        if _PLAYER_STATE_CLS is None:
+            raise RuntimeError(
+                f"mjai.mlibriichi not available; cannot run V5MjaiBot: {_MLR_IMPORT_ERR}"
+            )
+        self.ps = _PLAYER_STATE_CLS(player_id)
+        # Latest ActionCandidate from ps.update; refreshed every event.
+        self._last_cans: Optional[Any] = None
+
         # Per-kyoku state (reset on start_kyoku)
         self._reset_kyoku_state()
 
@@ -209,6 +232,17 @@ class V5MjaiBot:
     # ----------------------------------------------------------- event handler
 
     def _process_event(self, ev: Dict[str, Any]) -> None:
+        # Feed every event to the libriichi PlayerState shadow — this is
+        # what powers the engine-authoritative action mask in
+        # _compute_*_mask. Schema violations are logged and skipped (we
+        # keep whatever last_cans we had before).
+        try:
+            self._last_cans = self.ps.update(json.dumps(ev))
+        except Exception as e:  # noqa: BLE001
+            sys.stderr.write(
+                f"V5 ps.update failed on {ev.get('type')!r}: {e}\n"
+            )
+
         t = ev.get("type")
         if t == "start_game":
             # No per-game state needed; per-kyoku state is reset in start_kyoku
@@ -451,24 +485,46 @@ class V5MjaiBot:
     # ---------------------------------------------------------- decision logic
 
     def _maybe_act(self, last_ev: Dict[str, Any]) -> Optional[str]:
-        """Decide if we should react to last_ev, and emit mjai action."""
+        """Decide if we should react to last_ev, and emit mjai action.
+
+        Dispatch is driven by libriichi's ``ActionCandidate`` (``self._last_cans``)
+        which is the engine-authoritative signal: if ``can_act`` is False,
+        we don't act this turn. Otherwise we either:
+
+        * pick a self-action (discard / riichi / tsumo / ankan / kakan / push)
+          when ``can_discard`` (and friends) is set; OR
+        * pick a response (pass / pon / chi / kan / ron) when
+          ``can_chi/can_pon/can_daiminkan/can_ron_agari/can_pass`` is set.
+
+        We also handle the riichi 2-step protocol (reach echo → dahai).
+        """
         t = last_ev.get("type")
+        ac = self._last_cans
 
         # === Reach 2-step: server echoed our own reach, now emit dahai
         if t == "reach" and last_ev.get("actor") == self.player_id and getattr(self, "_pending_riichi", False):
             self._pending_riichi = False
-            # Pick a discard tile that keeps tenpai
-            ok, candidates = self._can_riichi()
-            if not ok or not candidates:
-                # Fallback: tsumogiri
+            candidates = getattr(self, "_pending_riichi_candidates", None) or []
+            if not candidates:
+                ok, candidates = self._can_riichi()
+                if not ok:
+                    candidates = []
+            if not candidates:
+                # Last-ditch: try every tile in hand and let validate_reaction
+                # pick the first one libriichi accepts. Beats chombo.
+                for tile in list(set(self.my_tehai)):
+                    candidate_msg = self._make_dahai_msg(tile)
+                    try:
+                        self.ps.validate_reaction(candidate_msg)
+                        return candidate_msg
+                    except Exception:
+                        continue
                 if self.last_self_tsumo is not None:
                     return self._make_dahai_msg(self.last_self_tsumo, tsumogiri=True)
                 return None
-            # Use model to pick among legal tenpai-preserving discards
             mask = np.zeros(ACTION_DIM, dtype=bool)
             for bt in candidates:
                 mask[A_DISCARD_BASE + bt] = True
-                # Also offer aka variants if we have them
                 if bt == 4 and "5mr" in self.my_tehai:
                     mask[A_DISCARD_RED5M] = True
                 elif bt == 13 and "5pr" in self.my_tehai:
@@ -476,50 +532,68 @@ class V5MjaiBot:
                 elif bt == 22 and "5sr" in self.my_tehai:
                     mask[A_DISCARD_RED5S] = True
             action = self._run_model(mask)
-            return self._action_to_mjai_self(action)
+            return self._guarded_emit(self._action_to_mjai_self(action))
 
-        # === Self-action phase: after our own tsumo
-        if t == "tsumo" and last_ev.get("actor") == self.player_id:
+        # === Below this point, libriichi's ActionCandidate drives dispatch.
+        if ac is None or not getattr(ac, "can_act", False):
+            return None
+
+        # Self-action phase: ours to draw/discard/riichi/tsumo/(an)kan/push.
+        # This covers: after our own tsumo, after our own chi/pon (forced
+        # discard), after our own ankan/daiminkan/kakan rinshan tsumo.
+        if (ac.can_discard or ac.can_tsumo_agari or ac.can_riichi
+                or ac.can_ankan or ac.can_kakan or ac.can_ryukyoku):
             return self._self_action()
 
-        # === Response phase: after another player's dahai
-        if t == "dahai" and last_ev.get("actor") != self.player_id:
+        # Response phase: another player's dahai / kakan (chankan).
+        if (ac.can_chi or ac.can_pon or ac.can_daiminkan or ac.can_ron_agari):
+            if t == "kakan":
+                return self._response_to_kakan(last_ev)
             return self._response_to_dahai(last_ev)
 
-        # === Chankan response to opponent kakan
-        if t == "kakan" and last_ev.get("actor") != self.player_id:
-            return self._response_to_kakan(last_ev)
+        # can_pass without any call → just pass
+        if ac.can_pass:
+            return '{"type":"none"}'
 
-        # === No decision needed
         return None
 
     def _self_action(self) -> str:
         """Pick action after our own tsumo (discard / riichi / tsumo / ankan / kakan / push)."""
         mask = self._compute_self_action_mask()
         action = self._run_model(mask)
-        return self._action_to_mjai_self(action)
+        msg = self._action_to_mjai_self(action)
+        return self._guarded_emit(msg)
 
     def _response_to_dahai(self, last_ev: Dict[str, Any]) -> str:
         """Pick response to opponent's dahai (pass / pon / chi / kan / ron).
 
-        By default response calls are disabled because the hand-coded
-        :meth:`_compute_response_mask` diverges from the libriichi engine
-        in several edge cases (no-yaku ron, post-call chi/pon timing,
-        etc.) and causes ryukyoku-error chombo (-8000pt). Set
-        ``V5_ENABLE_CALLS=1`` to opt back in for debugging.
+        Mask comes from libriichi ``ActionCandidate`` (see
+        :meth:`_compute_response_mask`); every emitted action JSON is
+        validated through ``ps.validate_reaction`` before sending.
         """
-        import os
-        if not os.environ.get("V5_ENABLE_CALLS"):
-            return '{"type":"none"}'
         mask = self._compute_response_mask(last_ev)
         if not mask.any() or (mask.sum() == 1 and mask[A_PASS_RESPONSE]):
             return '{"type":"none"}'
         action = self._run_model(mask)
-        return self._action_to_mjai_response(action, last_ev)
+        msg = self._action_to_mjai_response(action, last_ev)
+        return self._guarded_emit(msg)
 
     def _response_to_kakan(self, last_ev: Dict[str, Any]) -> str:
-        """Chankan check."""
-        # TODO(mjai-bot): check if we can ron on the kakan tile
+        """Chankan check — libriichi sets ``can_ron_agari`` on its
+        ``last_cans`` if a chankan ron is legal (yakus included)."""
+        ac = self._last_cans
+        if ac is not None and ac.can_ron_agari:
+            actor = last_ev["actor"]
+            tile = last_ev.get("pai") or (last_ev.get("consumed", [None])[0])
+            if tile is None:
+                return '{"type":"none"}'
+            msg = json.dumps({
+                "type": "hora",
+                "actor": self.player_id,
+                "target": actor,
+                "pai": tile,
+            })
+            return self._guarded_emit(msg)
         return '{"type":"none"}'
 
     # ---------------------------------------------------- action-mask building
@@ -645,9 +719,15 @@ class V5MjaiBot:
     def _can_chi_patterns(self, opp_tile: str, from_actor: int) -> List[Tuple[int, int]]:
         """Return list of (chi_type, lowest_basetile) we can chi on opp_tile.
 
-        chi_type: 0=chi-left (opp tile is highest), 1=chi-middle (opp tile is
-        middle), 2=chi-right (opp tile is lowest). Only legal from kamicha
-        (upstream player). Honor/terminal restrictions apply.
+        Convention (matches ``pymahjong.rl.action_space.classify_chi``):
+
+        * ``chi_type=0`` (A_CHILEFT)  = called tile is the LOWEST  in the run
+        * ``chi_type=1`` (A_CHIMIDDLE) = called tile is the MIDDLE in the run
+        * ``chi_type=2`` (A_CHIRIGHT) = called tile is the HIGHEST in the run
+
+        Only legal from kamicha. Note: superseded by libriichi
+        ``ActionCandidate.can_chi_low/mid/high`` for the actual mask;
+        kept here for callers that need a hand-only check.
         """
         # Only kamicha → us (i.e., from_actor + 1 mod 4 == player_id)
         if (from_actor + 1) % 4 != self.player_id:
@@ -659,125 +739,173 @@ class V5MjaiBot:
         idx_in_suit = bt - suit_off
         counts = self._tehai_counts()
         out: List[Tuple[int, int]] = []
-        # chi-left: opp tile is highest in run (tiles -2, -1 in suit)
-        if idx_in_suit >= 2 and counts[bt - 2] > 0 and counts[bt - 1] > 0:
-            out.append((0, bt - 2))
-        # chi-middle: opp tile is middle (tiles -1, +1)
+        # chi_type=0 (called LOW): hand has +1, +2 -> run lowest = called bt
+        if idx_in_suit <= 6 and counts[bt + 1] > 0 and counts[bt + 2] > 0:
+            out.append((0, bt))
+        # chi_type=1 (called MID): hand has -1, +1 -> run lowest = bt-1
         if 1 <= idx_in_suit <= 7 and counts[bt - 1] > 0 and counts[bt + 1] > 0:
             out.append((1, bt - 1))
-        # chi-right: opp tile is lowest (tiles +1, +2)
-        if idx_in_suit <= 6 and counts[bt + 1] > 0 and counts[bt + 2] > 0:
-            out.append((2, bt))
+        # chi_type=2 (called HIGH): hand has -2, -1 -> run lowest = bt-2
+        if idx_in_suit >= 2 and counts[bt - 2] > 0 and counts[bt - 1] > 0:
+            out.append((2, bt - 2))
         return out
 
     def _compute_self_action_mask(self) -> np.ndarray:
-        """Return 54-dim bool mask of legal actions in our self-action phase."""
-        mask = np.zeros(ACTION_DIM, dtype=bool)
-        counts = self._tehai_counts()
+        """Return 54-dim bool mask of legal actions in our self-action phase.
 
-        # === Discard legality
-        riichi_locked = self.riichi[self.player_id]
-        if riichi_locked:
-            # Only tsumogiri the just-drawn tile
-            tsumo = self.last_self_tsumo
-            if tsumo is not None:
-                bt, aka = MJAI_TILE_INFO[tsumo]
-                if aka and bt == 4:
-                    mask[A_DISCARD_RED5M] = True
-                elif aka and bt == 13:
-                    mask[A_DISCARD_RED5P] = True
-                elif aka and bt == 22:
-                    mask[A_DISCARD_RED5S] = True
-                else:
-                    mask[A_DISCARD_BASE + bt] = True
-        else:
-            # Count normal vs aka separately for 5m/5p/5s
-            has_normal: Dict[int, bool] = {}    # bt -> True if normal version in hand
-            has_aka: Dict[int, bool] = {}       # bt in (4, 13, 22) -> True if aka 5 in hand
-            for tile in self.my_tehai:
-                bt, aka = MJAI_TILE_INFO[tile]
+        Uses libriichi's ``ActionCandidate`` (``self._last_cans``) as the
+        authoritative source. Falls back to a tsumogiri-only mask if the
+        shadow state has no candidates (defensive — should not happen
+        once start_kyoku has fired).
+        """
+        mask = np.zeros(ACTION_DIM, dtype=bool)
+        ac = self._last_cans
+        if ac is None or not getattr(ac, "can_act", False):
+            # Defensive fallback: emit a tsumogiri-safe mask
+            if self.last_self_tsumo is not None:
+                bt, aka = MJAI_TILE_INFO[self.last_self_tsumo]
                 if aka:
-                    has_aka[bt] = True
-                else:
-                    has_normal[bt] = True
-            # Enable base-tile discard only if normal version in hand
-            for bt, _ in has_normal.items():
+                    {4: A_DISCARD_RED5M, 13: A_DISCARD_RED5P, 22: A_DISCARD_RED5S}.get(bt)
+                    aka_action = {4: A_DISCARD_RED5M, 13: A_DISCARD_RED5P, 22: A_DISCARD_RED5S}.get(bt)
+                    if aka_action is not None:
+                        mask[aka_action] = True
+                        return mask
                 mask[A_DISCARD_BASE + bt] = True
-            # Enable aka discard only if aka version in hand
-            if has_aka.get(4):
+            return mask
+
+        # === Discard
+        if ac.can_discard:
+            tehai = self.ps.tehai            # 34-len count vector
+            akas = self.ps.akas_in_hand      # [bool, bool, bool] for 5m/5p/5s
+            forbidden = self.ps.forbidden_tiles  # kuikae / post-call constraints
+            # Number of non-aka 5s per suit:
+            #   tehai[4]  = total 5m count (including aka), so non-aka = total - akas[0]
+            for bt in range(34):
+                if tehai[bt] <= 0:
+                    continue
+                if forbidden[bt]:
+                    continue
+                # If bt is a 5-tile and the only copy in hand is the aka,
+                # don't enable the NORMAL discard.
+                if bt == 4 and akas[0] and tehai[bt] == 1:
+                    continue
+                if bt == 13 and akas[1] and tehai[bt] == 1:
+                    continue
+                if bt == 22 and akas[2] and tehai[bt] == 1:
+                    continue
+                mask[A_DISCARD_BASE + bt] = True
+            # Aka discards: enabled iff aka present AND that tile is not forbidden
+            if akas[0] and not forbidden[4]:
                 mask[A_DISCARD_RED5M] = True
-            if has_aka.get(13):
+            if akas[1] and not forbidden[13]:
                 mask[A_DISCARD_RED5P] = True
-            if has_aka.get(22):
+            if akas[2] and not forbidden[22]:
                 mask[A_DISCARD_RED5S] = True
-            # For tiles that are 5m/5p/5s and we have ONLY aka (no normal),
-            # we must NOT enable A_DISCARD_BASE+bt — which is what the above
-            # achieves naturally since has_normal[bt] would be False.
 
         # === Tsumo
-        if self._can_tsumo():
+        if ac.can_tsumo_agari:
             mask[A_TSUMO] = True
 
-        # === Riichi
-        if not riichi_locked:
+        # === Riichi (also requires tenpai-preserving discard — checked at
+        # the dahai step). We additionally guard: must have at least one
+        # candidate discard, otherwise the bot would emit reach then be
+        # forced into a chombo dahai. _can_riichi computes candidates.
+        if ac.can_riichi:
             ok, _ = self._can_riichi()
             if ok:
                 mask[A_RIICHI] = True
 
-        # === Ankan / Kakan
-        # Both require strict engine-side validation we don't replicate
-        # (riichi-wait preservation, kan-dora limit, 4-kan abortive
-        # checks, last-wall-tile constraints, etc.). Default-disable to
-        # avoid chombo; opt back in with V5_ENABLE_CALLS=1 once a proper
-        # validator is added.
-        import os
-        if os.environ.get("V5_ENABLE_CALLS") and not riichi_locked:
-            if self._can_ankan():
-                mask[A_ANKAN] = True
-            if self._can_kakan():
-                mask[A_KAKAN] = True
+        # === Ankan (libriichi guards riichi+ankan wait-preservation,
+        # kan-dora limit, 4-kan abortive, last-wall-tile, etc.)
+        if ac.can_ankan:
+            mask[A_ANKAN] = True
 
-        # === Kyushukyuhai (skip — rare, may add later)
-        # TODO(mjai-bot): kyushukyuhai check
+        # === Kakan
+        if ac.can_kakan:
+            mask[A_KAKAN] = True
+
+        # === Kyushukyuhai
+        if ac.can_ryukyoku:
+            mask[A_PUSH] = True
 
         return mask
 
     def _compute_response_mask(self, last_dahai: Dict[str, Any]) -> np.ndarray:
-        """Return 54-dim mask for responses to opponent's dahai."""
+        """Return 54-dim mask for responses to opponent's dahai.
+
+        Uses libriichi's ``ActionCandidate`` (``self._last_cans``).
+
+        Chi convention (matches ``pymahjong.rl.action_space.classify_chi``):
+
+        * ``A_CHILEFT``  = called tile is the LOWEST  in the run (libriichi ``can_chi_low``)
+        * ``A_CHIMIDDLE`` = called tile is the MIDDLE in the run (libriichi ``can_chi_mid``)
+        * ``A_CHIRIGHT`` = called tile is the HIGHEST in the run (libriichi ``can_chi_high``)
+        """
         mask = np.zeros(ACTION_DIM, dtype=bool)
+        ac = self._last_cans
+        # Pass is always present as a baseline; libriichi may also set can_pass
         mask[A_PASS_RESPONSE] = True
-
-        opp_tile = last_dahai["pai"]
-        from_actor = last_dahai["actor"]
-
-        # === Ron
-        if self._can_ron(opp_tile):
-            mask[A_RON] = True
-
-        # If we're in riichi we can't call (only ron/pass)
-        if self.riichi[self.player_id]:
+        if ac is None:
             return mask
 
-        # === Pon
-        if self._can_pon(opp_tile):
+        # === Ron
+        if ac.can_ron_agari:
+            mask[A_RON] = True
+
+        # === Pon (+ aka variant if we have an aka 5 in hand for 5m/5p/5s)
+        if ac.can_pon:
             mask[A_PON] = True
-            # red 5 variant: if we have an aka of this tile
+            opp_tile = last_dahai["pai"]
             bt, _ = MJAI_TILE_INFO[opp_tile]
             if bt in (4, 13, 22):
-                aka_str = {4: "5mr", 13: "5pr", 22: "5sr"}[bt]
-                if aka_str in self.my_tehai:
+                aka_idx = {4: 0, 13: 1, 22: 2}[bt]
+                if self.ps.akas_in_hand[aka_idx]:
+                    # Sanity: we need 2 tiles of bt; if we only have 1 normal + 1 aka,
+                    # then the only viable pon uses the aka, so A_PON_USERED is the
+                    # only legal pon. If we have >=2 normals, both A_PON and
+                    # A_PON_USERED are legal.
                     mask[A_PON_USERED] = True
 
-        # === Minkan
-        if self._can_minkan(opp_tile):
+        # === Minkan (daiminkan)
+        if ac.can_daiminkan:
             mask[A_MINKAN] = True
 
-        # === Chi (only from kamicha)
-        chi_options = self._can_chi_patterns(opp_tile, from_actor)
-        for chi_type, _lowest in chi_options:
-            mask[A_CHILEFT + chi_type] = True
-            # red-variant flag if either consumed tile is aka 5
-            # (will be picked up in action emission)
+        # === Chi (only legal from kamicha; libriichi enforces this)
+        if ac.can_chi_low:
+            mask[A_CHILEFT] = True
+        if ac.can_chi_mid:
+            mask[A_CHIMIDDLE] = True
+        if ac.can_chi_high:
+            mask[A_CHIRIGHT] = True
+        # Chi-with-red variants: if the chi run includes a 5-tile that we
+        # have as aka, enable the *USERED variant. classify_chi maps:
+        #   CHILEFT  (called low)  -> consumed = [bt+1, bt+2]
+        #   CHIMIDDLE              -> consumed = [bt-1, bt+1]
+        #   CHIRIGHT (called high) -> consumed = [bt-2, bt-1]
+        if any([ac.can_chi_low, ac.can_chi_mid, ac.can_chi_high]):
+            opp_tile = last_dahai["pai"]
+            bt, _ = MJAI_TILE_INFO[opp_tile]
+            tehai_counts = self.ps.tehai
+            akas = self.ps.akas_in_hand
+            for is_legal, chi_variant, consumed_offsets in (
+                (ac.can_chi_low,  A_CHILEFT_USERED,   (bt + 1, bt + 2)),
+                (ac.can_chi_mid,  A_CHIMIDDLE_USERED, (bt - 1, bt + 1)),
+                (ac.can_chi_high, A_CHIRIGHT_USERED,  (bt - 2, bt - 1)),
+            ):
+                if not is_legal:
+                    continue
+                # Check if either consumed slot is a 5 we have aka of, AND
+                # actually have a second tile of that 5-type to consume.
+                aka_in_run = False
+                for off in consumed_offsets:
+                    if off == 4 and akas[0]:
+                        aka_in_run = True
+                    elif off == 13 and akas[1]:
+                        aka_in_run = True
+                    elif off == 22 and akas[2]:
+                        aka_in_run = True
+                if aka_in_run:
+                    mask[chi_variant] = True
 
         return mask
 
@@ -823,9 +951,12 @@ class V5MjaiBot:
             # Riichi is a two-event protocol in mjai: emit `reach`, then on the
             # next prompt emit `dahai` (with the discard tile that keeps tenpai).
             # The simulator sends back the reach event for us to confirm, then
-            # asks for the dahai. We emit reach here and remember to pick the
-            # best legal riichi discard next time.
+            # asks for the dahai. We emit reach here and remember the
+            # tenpai-preserving discard candidates so the next prompt can pick
+            # from them with the model.
             self._pending_riichi = True
+            ok, candidates = self._can_riichi()
+            self._pending_riichi_candidates = candidates if ok else []
             return json.dumps({"type": "reach", "actor": self.player_id})
         if action == A_TSUMO:
             tile = self.last_self_tsumo or self.my_tehai[-1]
@@ -836,14 +967,15 @@ class V5MjaiBot:
                 "pai": tile,
             })
         if action == A_ANKAN:
-            # Find first quad in tehai; if multiple, ask model on next pass
-            tiles_4 = [bt for bt in range(34) if self._tehai_counts()[bt] >= 4]
-            if not tiles_4:
+            # Use libriichi's engine-validated candidate list (handles riichi
+            # wait-preservation, kan-dora limit, 4-kan abortive, last-wall-tile).
+            cands = list(self.ps.ankan_candidates() or [])
+            if not cands:
                 return '{"type":"none"}'
-            bt = tiles_4[0]
-            normal_str = basetile_to_mjai(bt)
+            normal_str = cands[0]  # mjai tile string, e.g. "5m"
+            bt, _ = MJAI_TILE_INFO[normal_str]
             consumed = [normal_str] * 4
-            # If aka exists, replace one with aka
+            # If aka exists in our hand for this tile, swap one in
             aka_str = None
             if bt == 4: aka_str = "5mr"
             elif bt == 13: aka_str = "5pr"
@@ -856,17 +988,16 @@ class V5MjaiBot:
                 "consumed": consumed,
             })
         if action == A_KAKAN:
-            ka_bts = self._can_kakan()
-            if not ka_bts:
+            cands = list(self.ps.kakan_candidates() or [])
+            if not cands:
                 return '{"type":"none"}'
-            bt = ka_bts[0]
+            normal_str = cands[0]
+            bt, _ = MJAI_TILE_INFO[normal_str]
             # find the matching pon meld
             for meld in self.my_melds:
                 if meld["type"] == "pon":
                     mbt, _ = MJAI_TILE_INFO[meld["called"]]
                     if mbt == bt:
-                        # which tile in hand we use for kakan (prefer aka if exists)
-                        normal_str = basetile_to_mjai(bt)
                         aka_str = None
                         if bt == 4: aka_str = "5mr"
                         elif bt == 13: aka_str = "5pr"
@@ -960,13 +1091,17 @@ class V5MjaiBot:
             chi_type = (action - A_CHILEFT) % 3   # 0/1/2
             use_red = action >= A_CHILEFT_USERED
             bt, _ = MJAI_TILE_INFO[opp_tile]
-            # Determine the 2 tiles we consume from hand
+            # Determine the 2 tiles we consume from hand.
+            # Convention (matches pymahjong.rl.action_space.classify_chi):
+            #   chi_type=0 (A_CHILEFT)   = called is LOWEST  -> consumed = [bt+1, bt+2]
+            #   chi_type=1 (A_CHIMIDDLE) = called is MIDDLE  -> consumed = [bt-1, bt+1]
+            #   chi_type=2 (A_CHIRIGHT)  = called is HIGHEST -> consumed = [bt-2, bt-1]
             if chi_type == 0:
-                want = [bt - 2, bt - 1]
+                want = [bt + 1, bt + 2]
             elif chi_type == 1:
                 want = [bt - 1, bt + 1]
             else:
-                want = [bt + 1, bt + 2]
+                want = [bt - 2, bt - 1]
             consumed = []
             tehai_copy = list(self.my_tehai)
             for w in want:
@@ -994,6 +1129,41 @@ class V5MjaiBot:
                 "consumed": consumed,
             })
         return '{"type":"none"}'
+
+    def _guarded_emit(self, msg: str) -> str:
+        """Validate ``msg`` through libriichi ``ps.validate_reaction``;
+        on failure, fall back to a safe action and warn on stderr.
+
+        ``{"type":"none"}`` and reach announcements (``{"type":"reach"}``)
+        are passed through without validation — reach pairs with a
+        follow-up dahai that gets its own validation.
+        """
+        try:
+            parsed = json.loads(msg)
+        except Exception:
+            return msg
+        t = parsed.get("type")
+        if t in ("none", "reach"):
+            return msg
+        try:
+            self.ps.validate_reaction(msg)
+            return msg
+        except Exception as e:  # noqa: BLE001
+            sys.stderr.write(
+                f"V5 validate_reaction rejected {parsed!r}: {e}\n"
+            )
+            # Fallback strategy:
+            # - For self-action discards/agari/kans → tsumogiri if possible, else "none"
+            # - For response-phase → "none" (pass)
+            if t in ("dahai", "hora", "ankan", "kakan", "reach"):
+                if self.last_self_tsumo is not None and self.last_self_tsumo in self.my_tehai:
+                    fb = self._make_dahai_msg(self.last_self_tsumo, tsumogiri=True)
+                    try:
+                        self.ps.validate_reaction(fb)
+                        return fb
+                    except Exception:
+                        pass
+            return '{"type":"none"}'
 
     def _make_dahai_msg(self, tile: str, tsumogiri: Optional[bool] = None) -> str:
         # Safety: if the requested tile is not actually in our hand, fall back
