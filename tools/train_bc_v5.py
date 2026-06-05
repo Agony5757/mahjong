@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -200,12 +201,24 @@ def main() -> int:
                          "must match the checkpoint.")
     args = ap.parse_args()
 
-    print(f"cache_dir   = {args.cache_dir}")
-    print(f"split_by    = {args.split_by}")
-    print(f"device      = {'cuda' if torch.cuda.is_available() else 'cpu'}")
+    # DDP: torchrun sets LOCAL_RANK; each rank must claim its GPU *before*
+    # any CUDA context is created (e.g. by torch.cuda.is_available() below),
+    # otherwise all ranks land on cuda:0 → OOM.
+    _local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+    _world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    _is_main = int(os.environ.get("RANK", "0")) == 0
+    if _world_size > 1 and torch.cuda.is_available():
+        torch.cuda.set_device(_local_rank)
+
+    if _is_main:
+        print(f"cache_dir   = {args.cache_dir}")
+        print(f"split_by    = {args.split_by}")
+        print(f"device      = {'cuda' if torch.cuda.is_available() else 'cpu'}  "
+              f"world_size={_world_size}")
 
     base = CachedEventDataset(str(args.cache_dir))
-    print(f"base dataset: {len(base):,} samples")
+    if _is_main:
+        print(f"base dataset: {len(base):,} samples")
 
     if args.split_by == "shard":
         if not (args.train_shards and args.val_shards and args.test_shards):
@@ -353,22 +366,31 @@ def main() -> int:
         resume_from=str(args.resume) if args.resume else None,
     )
     dt = time.monotonic() - t0
-    print(f"\ntraining wall time: {dt:.1f}s")
+    # Under DDP, only rank 0 should print / write outputs.
+    is_main = int(os.environ.get("RANK", "0")) == 0
+    if is_main:
+        print(f"\ntraining wall time: {dt:.1f}s")
 
     # Final test eval on the (best-by-val) restored model.
     if len(split.test) == 0:
-        print("WARNING: test split is empty; skipping test eval")
+        if is_main:
+            print("WARNING: test split is empty; skipping test eval")
         test_loss, test_acc, test_n, test_illegal_mass = float("nan"), float("nan"), 0, float("nan")
     else:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device(f"cuda:{int(os.environ.get('LOCAL_RANK', '0'))}"
+                              if torch.cuda.is_available() else "cpu")
+        # evaluate() is DDP-aware (uses DistributedSampler + allreduces sums)
+        # so calling it from all ranks gives every rank the correct global
+        # mean, after which only rank 0 prints / writes.
         test_loss, test_acc, test_n, test_illegal_mass = evaluate(
             model, split.test, strategy=strategy, cfg=cfg, device=device,
             max_batches=0,
         )
-        print(f"\n[TEST] loss={test_loss:.4f}  acc={test_acc:.3f}  n={test_n}  "
-              f"raw_illegal_mass={test_illegal_mass:.3f}")
+        if is_main:
+            print(f"\n[TEST] loss={test_loss:.4f}  acc={test_acc:.3f}  n={test_n}  "
+                  f"raw_illegal_mass={test_illegal_mass:.3f}")
 
-    if args.metrics_out:
+    if args.metrics_out and is_main:
         args.metrics_out.parent.mkdir(parents=True, exist_ok=True)
         args.metrics_out.write_text(json.dumps({
             "encoding": "v5",

@@ -18,16 +18,89 @@ Runs entirely on a single GPU; falls back to CPU automatically.
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, DistributedSampler
 
 from .common.optim import CombinedOptimizer, build_optimizer, build_scheduler
 from .encoding import EncodingVersion, get_strategy
 from . import encodings  # noqa: F401 -- trigger strategy registration
+
+
+# ----------------------------------------------------------------------
+# DDP helpers
+# ----------------------------------------------------------------------
+def _ddp_env() -> Tuple[int, int, int]:
+    """Read RANK/LOCAL_RANK/WORLD_SIZE from torchrun env.  Returns (0,0,1) if absent."""
+    rank = int(os.environ.get("RANK", "0"))
+    local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+    world = int(os.environ.get("WORLD_SIZE", "1"))
+    return rank, local_rank, world
+
+
+def _is_ddp() -> bool:
+    return int(os.environ.get("WORLD_SIZE", "1")) > 1
+
+
+def _is_main() -> bool:
+    return int(os.environ.get("RANK", "0")) == 0
+
+
+def _maybe_init_ddp() -> Tuple[int, int, int]:
+    """Initialise nccl process group when launched via torchrun.
+
+    Idempotent: safe to call multiple times; safe when env vars are unset
+    (returns (0, 0, 1) and does nothing).
+    """
+    rank, local_rank, world = _ddp_env()
+    if world <= 1:
+        return rank, local_rank, world
+    import torch.distributed as dist  # noqa: PLC0415
+    if not dist.is_initialized():
+        dist.init_process_group(backend="nccl")
+    torch.cuda.set_device(local_rank)
+    return rank, local_rank, world
+
+
+def _maybe_destroy_ddp() -> None:
+    if not _is_ddp():
+        return
+    try:
+        import torch.distributed as dist  # noqa: PLC0415
+        if dist.is_initialized():
+            dist.destroy_process_group()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _ddp_allreduce_mean(value: float, world: int) -> float:
+    """Average ``value`` across all DDP ranks (mean reduction).  No-op for
+    world==1 or when the process group has been destroyed."""
+    if world <= 1:
+        return value
+    import torch.distributed as dist  # noqa: PLC0415
+    if not dist.is_initialized():
+        return value
+    t = torch.tensor([value], dtype=torch.float64, device="cuda")
+    dist.all_reduce(t, op=dist.ReduceOp.SUM)
+    return float(t.item() / world)
+
+
+def _ddp_allreduce_sum(values: Tuple[float, ...]) -> Tuple[float, ...]:
+    """Sum ``values`` element-wise across all DDP ranks.  No-op for world==1
+    or when the process group has been destroyed (e.g. after train_bc returns)."""
+    if not _is_ddp():
+        return values
+    import torch.distributed as dist  # noqa: PLC0415
+    if not dist.is_initialized():
+        return values
+    t = torch.tensor(list(values), dtype=torch.float64, device="cuda")
+    dist.all_reduce(t, op=dist.ReduceOp.SUM)
+    return tuple(t.cpu().tolist())
 
 
 @dataclass
@@ -189,6 +262,9 @@ class BCConfig:
 
 
 def _device(cfg: BCConfig) -> torch.device:
+    if _is_ddp():
+        # torchrun sets LOCAL_RANK; one GPU per rank.
+        return torch.device(f"cuda:{int(os.environ['LOCAL_RANK'])}")
     if cfg.device:
         return torch.device(cfg.device)
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -214,12 +290,27 @@ def _resolve_dataset_mode(cfg: BCConfig) -> str:
 def _build_loader(dataset, cfg: BCConfig, strategy, shuffle: bool, drop_last: bool):
     is_map_style = hasattr(dataset, "__len__")
     _collate = getattr(dataset, "collate_fn", None) or strategy.collate_fn
+    # DDP: per-GPU batch = global batch / world_size; use DistributedSampler.
+    sampler = None
+    effective_batch = cfg.batch_size
+    if _is_ddp() and is_map_style:
+        rank, _, world = _ddp_env()
+        sampler = DistributedSampler(
+            dataset, num_replicas=world, rank=rank,
+            shuffle=shuffle, drop_last=drop_last, seed=0,
+        )
+        assert cfg.batch_size % world == 0, (
+            f"DDP requires batch_size ({cfg.batch_size}) divisible by world_size ({world})"
+        )
+        effective_batch = cfg.batch_size // world
     return DataLoader(
         dataset,
-        batch_size=cfg.batch_size,
+        batch_size=effective_batch,
         collate_fn=_collate,
         num_workers=cfg.num_workers if is_map_style else 0,
-        shuffle=is_map_style and shuffle,
+        # When using DistributedSampler, the DataLoader's `shuffle` must be False.
+        shuffle=(sampler is None) and is_map_style and shuffle,
+        sampler=sampler,
         pin_memory=cfg.pin_memory and torch.cuda.is_available(),
         drop_last=is_map_style and drop_last,
         persistent_workers=is_map_style and cfg.num_workers > 0,
@@ -274,6 +365,12 @@ def evaluate(
             total_illegal_mass += float(illegal_mass.sum().item())
     if was_training:
         model.train()
+    # DDP: allreduce the per-rank sums so every rank sees the same global mean.
+    total_loss, total_correct_f, total_n_f, total_illegal_mass = _ddp_allreduce_sum(
+        (total_loss, float(total_correct), float(total_n), total_illegal_mass)
+    )
+    total_n = int(total_n_f)
+    total_correct = int(total_correct_f)
     if total_n == 0:
         return float("nan"), float("nan"), 0, float("nan")
     return (
@@ -287,11 +384,15 @@ def evaluate(
 def _maybe_init_wandb(cfg: BCConfig, encoding: str, transformer_config):
     """Try to initialise wandb if ``cfg.wandb_project`` is set.
 
+    DDP-safe: only rank 0 talks to wandb; other ranks return None.
+
     Returns the wandb run object on success, ``None`` on opt-out, or
     ``None`` with a printed warning on import / init failure (training
     continues either way).  ``None`` callers should fall back to a no-op
     via :func:`_wandb_log`.
     """
+    if not _is_main():
+        return None
     if not cfg.wandb_project:
         return None
     try:
@@ -327,6 +428,10 @@ def _maybe_init_wandb(cfg: BCConfig, encoding: str, transformer_config):
                     run_config[k] = getattr(transformer_config, k)
         if cfg.wandb_extra_config:
             run_config.update(cfg.wandb_extra_config)
+        # Record DDP info so wandb UI shows whether this was a multi-GPU run.
+        _, _, world = _ddp_env()
+        run_config["world_size"] = world
+        run_config["effective_batch_size"] = cfg.batch_size  # global batch
         run = wandb.init(
             project=cfg.wandb_project,
             entity=cfg.wandb_entity,
@@ -343,6 +448,10 @@ def _maybe_init_wandb(cfg: BCConfig, encoding: str, transformer_config):
         wandb.define_metric("val/*", step_metric="step")
         wandb.define_metric("selfplay/*", step_metric="step")
         wandb.define_metric("lr/*", step_metric="step")
+        # NEW: wall-clock time metrics (elapsed seconds, rolling step/s
+        # and samples/s).  Also indexed by ``step`` so they line up with
+        # everything else in the run.
+        wandb.define_metric("time/*", step_metric="step")
         print(
             f"[BC] wandb initialised: project={cfg.wandb_project} "
             f"name={run.name} mode={cfg.wandb_mode}",
@@ -413,6 +522,8 @@ def train_bc(
         otherwise the model at the final step).
     """
     cfg = config or BCConfig()
+    # Initialise DDP early so device routing below uses the right GPU.
+    rank, local_rank, world = _maybe_init_ddp()
     device = _device(cfg)
 
     strategy = get_strategy(EncodingVersion(encoding))
@@ -514,7 +625,22 @@ def train_bc(
                 flush=True,
             )
 
-    # Initialise wandb if requested.  No-op when cfg.wandb_project is
+    # Wrap with DDP after model state restored and optimizer built (the
+    # raw param tensors are shared between optim and DDP — wrapping is
+    # transparent to the optimizer).  Done before training loop only.
+    # ``find_unused_parameters=True`` is required for V5 (value head is
+    # not used in BC; DDP would otherwise error on the unused gradients).
+    raw_model = model  # for state_dict save/load
+    if _is_ddp():
+        from torch.nn.parallel import DistributedDataParallel as DDP  # noqa: PLC0415
+        model = DDP(
+            model,
+            device_ids=[local_rank],
+            output_device=local_rank,
+            find_unused_parameters=True,
+        )
+
+    # Initialise wandb if requested (rank 0 only).  No-op when cfg.wandb_project is
     # unset; safe to call even if `wandb` isn't installed.
     wandb_run = _maybe_init_wandb(cfg, encoding, transformer_config)
 
@@ -550,6 +676,10 @@ def train_bc(
     running_acc = 0.0
     running_illegal_pen = 0.0
     running_illegal_mass = 0.0
+    # Wall-time tracking for throughput / ETA wandb metrics.
+    train_t0 = time.time()           # absolute start of this run's loop
+    last_log_t = train_t0            # timestamp of last log line
+    last_log_step = step             # step at last log line
     iterator = iter(loader)
     while step < cfg.n_steps:
         try:
@@ -632,26 +762,49 @@ def train_bc(
         if step % cfg.log_interval == 0:
             lrs = scheduler.get_last_lr()
             lr_str = "/".join(f"{lr:.2e}" for lr in lrs)
-            print(
-                f"[BC] step={step:>7d}  ce={running_loss:.4f}  acc={running_acc:.3f}  "
-                f"raw_illegal_mass={running_illegal_mass:.3f}  "
-                f"illegal_pen={running_illegal_pen:.3f}  lr={lr_str}",
-                flush=True,
-            )
-            _wandb_log(wandb_run, {
-                "train/ce": running_loss,
-                "train/acc": running_acc,
-                "train/raw_illegal_mass": running_illegal_mass,
-                "train/illegal_pen": running_illegal_pen,
-                # Index 0 is the *first* underlying optimizer; for the
-                # combined Muon+AdamW case that's the Muon group.
-                # Logging both lets you see the schedule on each side.
-                **{f"lr/group_{i}": lr for i, lr in enumerate(lrs)},
-            }, step=step)
-        if step % cfg.save_interval == 0 and cfg.save_path:
+            # Allreduce training metrics across DDP ranks so the value
+            # we print/log is the *mean over GPUs* (not just rank 0).
+            agg_loss = _ddp_allreduce_mean(running_loss, world)
+            agg_acc = _ddp_allreduce_mean(running_acc, world)
+            agg_imass = _ddp_allreduce_mean(running_illegal_mass, world)
+            agg_ipen = _ddp_allreduce_mean(running_illegal_pen, world)
+            # Wall-time / throughput.
+            now = time.time()
+            elapsed_s = now - train_t0
+            interval_s = now - last_log_t
+            interval_steps = step - last_log_step
+            steps_per_sec = interval_steps / max(interval_s, 1e-6)
+            # cfg.batch_size is the GLOBAL batch under DDP (we divide
+            # internally in _build_loader), so samples/s is correct.
+            samples_per_sec = steps_per_sec * cfg.batch_size
+            last_log_t = now
+            last_log_step = step
+            if _is_main():
+                print(
+                    f"[BC] step={step:>7d}  ce={agg_loss:.4f}  acc={agg_acc:.3f}  "
+                    f"raw_illegal_mass={agg_imass:.3f}  "
+                    f"illegal_pen={agg_ipen:.3f}  lr={lr_str}  "
+                    f"elapsed={elapsed_s:.0f}s  rate={steps_per_sec:.2f}st/s  "
+                    f"({samples_per_sec:.0f}sa/s)",
+                    flush=True,
+                )
+                _wandb_log(wandb_run, {
+                    "train/ce": agg_loss,
+                    "train/acc": agg_acc,
+                    "train/raw_illegal_mass": agg_imass,
+                    "train/illegal_pen": agg_ipen,
+                    # Index 0 is the *first* underlying optimizer; for the
+                    # combined Muon+AdamW case that's the Muon group.
+                    # Logging both lets you see the schedule on each side.
+                    **{f"lr/group_{i}": lr for i, lr in enumerate(lrs)},
+                    "time/elapsed_s": elapsed_s,
+                    "time/steps_per_sec": steps_per_sec,
+                    "time/samples_per_sec": samples_per_sec,
+                }, step=step)
+        if step % cfg.save_interval == 0 and cfg.save_path and _is_main():
             os.makedirs(os.path.dirname(os.path.abspath(cfg.save_path)) or ".", exist_ok=True)
             torch.save({
-                "model": model.state_dict(),
+                "model": raw_model.state_dict(),
                 "optim": optim.state_dict(),
                 "scheduler": scheduler.state_dict(),
                 "step": step,
@@ -667,29 +820,30 @@ def train_bc(
                 strategy=strategy, cfg=cfg, device=device,
                 max_batches=cfg.eval_max_batches,
             )
-            print(
-                f"[BC] step={step:>7d}  val_ce={val_loss:.4f}  "
-                f"val_acc={val_acc:.3f}  val_n={n}  "
-                f"val_raw_illegal_mass={val_illegal_mass:.3f}",
-                flush=True,
-            )
-            _wandb_log(wandb_run, {
-                "val/ce": val_loss,
-                "val/acc": val_acc,
-                "val/n": n,
-                "val/raw_illegal_mass": val_illegal_mass,
-                "val/best_ce_so_far": min(best_val_loss, val_loss),
-            }, step=step)
+            if _is_main():
+                print(
+                    f"[BC] step={step:>7d}  val_ce={val_loss:.4f}  "
+                    f"val_acc={val_acc:.3f}  val_n={n}  "
+                    f"val_raw_illegal_mass={val_illegal_mass:.3f}",
+                    flush=True,
+                )
+                _wandb_log(wandb_run, {
+                    "val/ce": val_loss,
+                    "val/acc": val_acc,
+                    "val/n": n,
+                    "val/raw_illegal_mass": val_illegal_mass,
+                    "val/best_ce_so_far": min(best_val_loss, val_loss),
+                }, step=step)
             improved = val_loss < best_val_loss - 1e-6
             if improved:
                 best_val_loss = val_loss
                 best_step = step
                 bad_evals = 0
-                if best_save_path:
+                if best_save_path and _is_main():
                     os.makedirs(os.path.dirname(os.path.abspath(best_save_path)) or ".",
                                 exist_ok=True)
                     torch.save({
-                        "model": model.state_dict(),
+                        "model": raw_model.state_dict(),
                         "optim": optim.state_dict(),
                         "scheduler": scheduler.state_dict(),
                         "step": step,
@@ -709,19 +863,24 @@ def train_bc(
                 else:
                     bad_evals += 1
                     if cfg.early_stop_patience > 0 and bad_evals >= cfg.early_stop_patience:
-                        print(
-                            f"[BC] early stopping at step {step}: "
-                            f"no val_loss improvement for {bad_evals} evaluations "
-                            f"(best={best_val_loss:.4f} at step {best_step})",
-                            flush=True,
-                        )
+                        if _is_main():
+                            print(
+                                f"[BC] early stopping at step {step}: "
+                                f"no val_loss improvement for {bad_evals} evaluations "
+                                f"(best={best_val_loss:.4f} at step {best_step})",
+                                flush=True,
+                            )
                         break
 
-        if do_sp_eval and step % cfg.selfplay_eval_interval == 0:
+        # Self-play eval is intrinsically single-process (model plays
+        # all 4 seats in a single env loop), so only rank 0 runs it and
+        # logs.  Other ranks skip ahead.
+        if do_sp_eval and step % cfg.selfplay_eval_interval == 0 and _is_main():
             try:
                 sp_run_count += 1
+                # Use raw_model so the SP loop sees the unwrapped policy.
                 sp_metrics = sp_eval_fn(
-                    model,
+                    raw_model,
                     n_hands=cfg.selfplay_eval_hands,
                     deterministic=cfg.selfplay_eval_deterministic,
                     max_seq_len=cfg.selfplay_eval_max_seq_len,
@@ -747,7 +906,7 @@ def train_bc(
                             f"step_{step:06d}.xml",
                         )
                         ok = sp_record_fn(
-                            model, out_xml,
+                            raw_model, out_xml,
                             seed=cfg.selfplay_eval_seed + sp_run_count,
                             max_seq_len=cfg.selfplay_eval_max_seq_len,
                             deterministic=cfg.selfplay_eval_deterministic,
@@ -767,10 +926,11 @@ def train_bc(
                 # Don't let an eval crash kill the whole training run.
                 print(f"[BC-SP] step={step}: eval failed: {_e!r}", flush=True)
 
-    if cfg.save_path:
+    # Final checkpoint (rank 0 only).
+    if cfg.save_path and _is_main():
         os.makedirs(os.path.dirname(os.path.abspath(cfg.save_path)) or ".", exist_ok=True)
         torch.save({
-            "model": model.state_dict(),
+            "model": raw_model.state_dict(),
             "optim": optim.state_dict(),
             "scheduler": scheduler.state_dict(),
             "step": step,
@@ -780,14 +940,21 @@ def train_bc(
             "sp_run_count": sp_run_count,
         }, cfg.save_path)
 
-    # Restore best-by-val weights if we were tracking them.
-    if do_eval and best_save_path and os.path.exists(best_save_path):
+    # Restore best-by-val weights if we were tracking them (rank 0 only;
+    # other ranks will exit without reloading — the final returned model
+    # on non-zero ranks is the in-training one which is fine because
+    # only rank 0 ever uses it after train_bc returns).
+    if do_eval and best_save_path and _is_main() and os.path.exists(best_save_path):
         ck = torch.load(best_save_path, map_location=device, weights_only=False)
-        model.load_state_dict(ck["model"])
+        raw_model.load_state_dict(ck["model"])
         print(
             f"[BC] restored best checkpoint (step={ck['step']}, "
             f"val_loss={ck['val_loss']:.4f}, val_acc={ck['val_acc']:.3f})",
             flush=True,
         )
     _wandb_finish(wandb_run)
-    return model
+    # NOTE: do *not* destroy DDP here -- caller (train_bc_v5.py) may
+    # still need the process group for the final test eval allreduce.
+    # The orchestrator should call dist.destroy_process_group() itself
+    # at exit time (or just let process termination handle it).
+    return raw_model
