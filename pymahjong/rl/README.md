@@ -65,6 +65,29 @@ train_ppo(
 )
 ```
 
+### 第二阶段（替代方案）：Mortal 算法（价值型自博弈）
+
+除 PPO 外，还提供 **Mortal 风格的价值学习**（`pymahjong/rl/v5/mortal.py`）。Q 网络 = **原版 `EventStreamTransformer` 编码器 + 独立 Douzero Q-head**（`mortal_qnet.py`）：状态用 V5 事件流编码，动作用 V5 Douzero 描述符，共享 scorer **直接输出每个合法动作的 Q(s,a)**。与 PPO 的区别：
+
+- **蒙特卡洛 Q 目标**：`q_target = gamma^steps_to_done * kyoku_reward`（无 bootstrap）。
+- **DQN 损失** `0.5*MSE(Q[a], q_target)` + 可选 **CQL** 保守正则 + **辅助 next-rank 头**。
+- **GRP 顺位奖励**（`pymahjong/rl/v5/grp.py`）：用整局得分序列换算每局「最终顺位期望点数」的增量。三种奖励：`placement`（默认，无需预训练，顺位感知）、`grp`（需训练 GRP）、`points`（原始得分差）。
+- 数据来自 `HanchanEnv` 的**完整半庄**自对弈（提供顺位与逐局得分）。
+- 更新在 `train()` 模式（MC 回归无重要性比率，dropout 安全；与 PPO 必须 `eval()` 不同）。
+
+```bash
+# 从 V5 BC 权重热启动（仅辅助 rank 头是新初始化的）
+python tools/train_mortal_v5.py \
+    --bc-checkpoint checkpoints/bc_v5.best.pt \
+    --save-path checkpoints/mortal_v5.pt \
+    --reward-kind placement --total-steps 1000000 --rollout-steps 8192 --lr 1e-4
+
+# 最忠实 Mortal：训练好的 GRP 网络 + CQL
+python tools/train_mortal_v5.py --bc-checkpoint checkpoints/bc_v5.best.pt \
+    --reward-kind grp --grp-ckpt checkpoints/grp.pt --cql
+```
+
+
 ## 关键设计决策
 
 **为什么不用旧的 93×34 矩阵？** 旧编码是给 CNN 设计的，大量位置是零。新编码用变长 token，平均只需 30-80 个 token，信息密度更高。

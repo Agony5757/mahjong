@@ -187,6 +187,44 @@ class SelfPlayConfig:
     action_proj_dim: Optional[int] = None
     """V5 per-action embedding width.  ``None`` = match ``d_model``."""
 
+    # -- wandb logging (optional) --
+    # If ``wandb_project`` is set, per-update training stats, self-play eval
+    # metrics, and Mortal-eval results are logged to a single wandb run.
+    # wandb is a *soft dependency*: if it isn't installed the trainer prints
+    # one warning and continues.  ``wandb_mode`` is online | offline | disabled.
+    wandb_project: Optional[str] = None
+    wandb_entity: Optional[str] = None
+    wandb_name: Optional[str] = None
+    wandb_tags: Optional[Tuple[str, ...]] = None
+    wandb_mode: str = "online"
+    wandb_extra_config: Optional[dict] = None
+
+    # -- Mortal head-to-head eval on every checkpoint save --
+    # Disabled by default.  When enabled, after each checkpoint is written the
+    # trainer runs ``mjai_bench_v2`` as a subprocess for two matchups (1v3 and
+    # 3v1) vs the Mortal AI and logs the results to wandb under ``mortal/*``.
+    # All paths are server-specific and must be supplied explicitly.
+    mortal_eval: bool = False
+    """Enable Mortal head-to-head eval after each checkpoint save."""
+    mortal_eval_hanchan: int = 16
+    """Hanchan per matchup.  More = lower variance but longer pause."""
+    mortal_bench_script: Optional[str] = None
+    """Absolute path to the ``mjai_bench_v2.py`` benchmark CLI."""
+    mortal_bench_cwd: Optional[str] = None
+    """Working directory for the bench subprocess (its src/ dir)."""
+    mortal_ckpt: Optional[str] = None
+    """Absolute path to the Mortal ``.pth`` weights."""
+    mortal_eval_python: Optional[str] = None
+    """Interpreter for the eval subprocess.  ``None`` = ``sys.executable``."""
+    mortal_eval_out_dir: Optional[str] = None
+    """Root dir for per-step eval logs/summaries.  ``None`` = next to save_path."""
+    mortal_eval_seed_start: int = 10000
+    mortal_eval_seed_key: int = 4242
+    mortal_eval_timeout_sec: float = 1800.0
+    """Per-matchup subprocess timeout (seconds)."""
+    mortal_eval_amp: bool = False
+    """Pass ``--amp`` to the Mortal agent in the bench subprocess."""
+
 
 # ---------------------------------------------------------------------------
 # Per-seat trajectory buffer
@@ -363,6 +401,96 @@ class SelfPlayPPOTrainer:
 
         self._total_learner_steps = 0
         self._next_snapshot_at = self.cfg.snapshot_interval
+
+        # Optional wandb run (single writer for train + eval metrics).
+        self._wandb_run = self._maybe_init_wandb()
+        # Step of the last Mortal eval, to skip a duplicate final eval.
+        self._last_mortal_eval_step = -1
+
+    # ------------------------------------------------------------------ wandb
+
+    def _maybe_init_wandb(self):
+        cfg = self.cfg
+        if not cfg.wandb_project:
+            return None
+        try:
+            import wandb  # noqa: PLC0415 -- optional dep
+        except ImportError:
+            print(
+                "[selfplay] wandb_project is set but the `wandb` package "
+                "isn't installed.  Training continues without wandb.",
+                flush=True,
+            )
+            return None
+        try:
+            run_config = {
+                "encoding": cfg.encoding,
+                "total_steps": cfg.total_steps,
+                "rollout_steps": cfg.rollout_steps,
+                "n_envs": cfg.n_envs,
+                "n_epochs": cfg.n_epochs,
+                "batch_size": cfg.batch_size,
+                "lr": cfg.lr,
+                "gamma": cfg.gamma,
+                "lam": cfg.lam,
+                "clip_range": cfg.clip_range,
+                "entropy_coef": cfg.entropy_coef,
+                "value_coef": cfg.value_coef,
+                "win_bonus_coef": cfg.win_bonus_coef,
+                "opponent_mix_ratio": cfg.opponent_mix_ratio,
+                "n_frozen_seats": cfg.n_frozen_seats,
+                "scorer_hidden": cfg.scorer_hidden,
+                "mortal_eval": cfg.mortal_eval,
+                "mortal_eval_hanchan": cfg.mortal_eval_hanchan,
+            }
+            for k in ("d_model", "n_layers", "n_heads", "ff_mult", "dropout", "use_pos_emb"):
+                if hasattr(self._tcfg, k):
+                    run_config[k] = getattr(self._tcfg, k)
+            if cfg.wandb_extra_config:
+                run_config.update(cfg.wandb_extra_config)
+            run = wandb.init(
+                project=cfg.wandb_project,
+                entity=cfg.wandb_entity,
+                name=cfg.wandb_name,
+                tags=list(cfg.wandb_tags) if cfg.wandb_tags else None,
+                mode=cfg.wandb_mode,
+                config=run_config,
+                resume="allow",
+            )
+            wandb.define_metric("step")
+            for prefix in ("train/*", "selfplay/*", "mortal/*", "time/*"):
+                wandb.define_metric(prefix, step_metric="step")
+            print(
+                f"[selfplay] wandb initialised: project={cfg.wandb_project} "
+                f"name={run.name} mode={cfg.wandb_mode}",
+                flush=True,
+            )
+            return run
+        except Exception as _e:  # noqa: BLE001
+            print(f"[selfplay] wandb init failed: {_e!r}; continuing without wandb",
+                  flush=True)
+            return None
+
+    def _wandb_log(self, data: dict) -> None:
+        if self._wandb_run is None:
+            return
+        try:
+            import wandb  # noqa: PLC0415
+            payload = dict(data)
+            step = int(self._total_learner_steps)
+            payload["step"] = step
+            wandb.log(payload, step=step)
+        except Exception:  # noqa: BLE001
+            pass  # never break training over a logging error
+
+    def _wandb_finish(self) -> None:
+        if self._wandb_run is None:
+            return
+        try:
+            import wandb  # noqa: PLC0415
+            wandb.finish()
+        except Exception:  # noqa: BLE001
+            pass
 
     # ------------------------------------------------------------------ utils
 
@@ -863,7 +991,21 @@ class SelfPlayPPOTrainer:
     def _ppo_update(self, batch: _SeatBatch) -> Dict[str, float]:
         if len(batch) == 0:
             return {"policy_loss": 0.0, "value_loss": 0.0, "entropy": 0.0, "approx_kl": 0.0}
-        self.model.train()
+        # IMPORTANT: evaluate the policy in eval() mode (dropout OFF) during
+        # the PPO update.  The behaviour log-probs (``old_log_probs``) were
+        # collected in eval() mode during rollout, so computing the new
+        # log-probs in train() mode (dropout ON, p=0.1 across 6 layers) makes
+        # the importance ratio compare two *different* stochastic policies:
+        # empirically the same sample's log-prob varies ~0.12 nats between two
+        # train-mode passes (exp(0.12)≈±12%), which swamps the 0.2 PPO clip
+        # range and the real signal, producing a persistently biased KL and
+        # collapsing the policy toward uniform.  Eval mode makes the target
+        # policy consistent with the behaviour policy (ratio==1 at the first
+        # minibatch) and restores a valid trust region.  Gradients still flow
+        # (we do NOT use torch.no_grad here), and the model has only
+        # dropout/LayerNorm — no BatchNorm — so eval() is correct for the
+        # backward pass.
+        self.model.eval()
         n = len(batch)
         device = self._device
 
@@ -982,11 +1124,108 @@ class SelfPlayPPOTrainer:
                 f"{format_selfplay_metrics(metrics)}",
                 flush=True,
             )
+            self._wandb_log({
+                f"selfplay/{k}": float(v)
+                for k, v in metrics.items()
+                if isinstance(v, (int, float))
+            })
         except Exception as e:  # noqa: BLE001
             print(f"[PPO-SP] eval failed: {e!r}", flush=True)
         finally:
             if was_training:
                 self.model.train()
+
+    def _run_mortal_eval(self) -> None:
+        """Run 1v3 / 3v1 head-to-head vs Mortal on the just-saved checkpoint
+        and log the results to wandb.  Never raises — a failed eval logs
+        ``mortal/<matchup>/failed=1`` and training continues unharmed."""
+        cfg = self.cfg
+        if not cfg.mortal_eval or not cfg.save_path:
+            return
+        step = int(self._total_learner_steps)
+        if step == self._last_mortal_eval_step:
+            return  # don't re-eval the same checkpoint (e.g. final save)
+        missing = [n for n, v in (("mortal_bench_script", cfg.mortal_bench_script),
+                                  ("mortal_bench_cwd", cfg.mortal_bench_cwd),
+                                  ("mortal_ckpt", cfg.mortal_ckpt)) if not v]
+        if missing:
+            print(f"[mortal-eval] disabled: missing config {missing}", flush=True)
+            return
+        try:
+            from .mortal_eval import run_mortal_matchups
+        except Exception as e:  # noqa: BLE001
+            print(f"[mortal-eval] import failed: {e!r}", flush=True)
+            return
+
+        # Freeze the just-saved checkpoint under a per-step name so the eval
+        # has stable provenance and is immune to the next overwrite.
+        save_path = cfg.save_path
+        frozen = os.path.join(
+            os.path.dirname(os.path.abspath(save_path)) or ".",
+            f"_mortal_eval_step_{step}.pt",
+        )
+        try:
+            if os.path.exists(frozen):
+                os.remove(frozen)
+            os.link(save_path, frozen)  # hardlink: instant, no extra disk
+        except Exception:  # noqa: BLE001
+            frozen = save_path  # hardlink failed (e.g. cross-fs); use live path
+
+        out_root = cfg.mortal_eval_out_dir or os.path.join(
+            os.path.dirname(os.path.abspath(save_path)) or ".", "mortal_eval")
+        out_dir = os.path.join(out_root, f"step_{step}")
+
+        # Free cached GPU memory so the eval child has headroom.
+        try:
+            if self._device.type == "cuda":
+                torch.cuda.empty_cache()
+        except Exception:  # noqa: BLE001
+            pass
+
+        print(f"[mortal-eval] step={step} running 1v3/3v1 "
+              f"({cfg.mortal_eval_hanchan} hanchan each)...", flush=True)
+        was_training = self.model.training
+        t0 = time.time()
+        try:
+            metrics = run_mortal_matchups(
+                frozen,
+                bench_script=cfg.mortal_bench_script,
+                bench_cwd=cfg.mortal_bench_cwd,
+                mortal_ckpt=cfg.mortal_ckpt,
+                out_dir=out_dir,
+                n_hanchan=cfg.mortal_eval_hanchan,
+                d_model=self._tcfg.d_model,
+                n_heads=self._tcfg.n_heads,
+                n_layers=self._tcfg.n_layers,
+                ff_mult=self._tcfg.ff_mult,
+                scorer_hidden=cfg.scorer_hidden,
+                eval_python=cfg.mortal_eval_python,
+                seed_start=cfg.mortal_eval_seed_start,
+                seed_key=cfg.mortal_eval_seed_key,
+                device="cuda" if self._device.type == "cuda" else "cpu",
+                amp=cfg.mortal_eval_amp,
+                timeout_sec=cfg.mortal_eval_timeout_sec,
+            )
+            self._last_mortal_eval_step = step
+            r13 = metrics.get("mortal/1v3/v5_avg_rank")
+            r31 = metrics.get("mortal/3v1/v5_avg_rank")
+            print(
+                f"[mortal-eval] step={step} done in {time.time()-t0:.0f}s  "
+                f"1v3 v5_avg_rank={r13 if r13 is None else round(r13,3)}  "
+                f"3v1 v5_avg_rank={r31 if r31 is None else round(r31,3)}",
+                flush=True,
+            )
+            self._wandb_log(metrics)
+        except Exception as e:  # noqa: BLE001
+            print(f"[mortal-eval] step={step} failed: {e!r}", flush=True)
+        finally:
+            if was_training:
+                self.model.train()
+            try:
+                if frozen != save_path and os.path.exists(frozen):
+                    os.remove(frozen)
+            except Exception:  # noqa: BLE001
+                pass
 
     def train(self) -> EventStreamTransformer:
         cfg = self.cfg
@@ -1017,6 +1256,7 @@ class SelfPlayPPOTrainer:
             # Save.
             if cfg.save_path and (update % max(1, cfg.save_interval // cfg.rollout_steps) == 0):
                 self._save_checkpoint()
+                self._run_mortal_eval()
 
             if update % max(1, cfg.log_interval) == 0:
                 elapsed = time.time() - start_time
@@ -1033,6 +1273,22 @@ class SelfPlayPPOTrainer:
                     f"sps={sps:.1f} pool={len(self.pool)}",
                     flush=True,
                 )
+                self._wandb_log({
+                    "train/win_rate": stats["win_rate"],
+                    "train/episodes": stats["episodes"],
+                    "train/mean_length": stats["mean_length"],
+                    "train/mean_abs_payoff": stats["mean_abs_payoff"],
+                    "train/mean_winner_payoff": stats["mean_winner_payoff"],
+                    "train/mean_loser_payoff": stats["mean_loser_payoff"],
+                    "train/policy_loss": losses["policy_loss"],
+                    "train/value_loss": losses["value_loss"],
+                    "train/entropy": losses["entropy"],
+                    "train/approx_kl": losses["approx_kl"],
+                    "train/update": update,
+                    "train/pool_size": len(self.pool),
+                    "time/elapsed_sec": elapsed,
+                    "time/steps_per_sec": sps,
+                })
 
             # Clean self-play eval (tsumo / ron / houjuu / ryuukyoku
             # rates against own current weights, no opponent pool).
@@ -1043,9 +1299,11 @@ class SelfPlayPPOTrainer:
                 eval_count += 1
         if cfg.save_path:
             self._save_checkpoint()
+            self._run_mortal_eval()
         # Final eval after training so the last log line is the clean number.
         if cfg.selfplay_eval_interval > 0 and cfg.selfplay_eval_hands > 0:
             self._run_selfplay_eval(eval_count)
+        self._wandb_finish()
         return self.model
 
     def _save_checkpoint(self) -> None:
@@ -1053,14 +1311,19 @@ class SelfPlayPPOTrainer:
         if not path:
             return
         os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
+        # Atomic write: save to a temp file then os.replace so a crash mid-save
+        # can never leave a corrupt checkpoint at ``path``.
+        tmp = f"{path}.tmp"
         torch.save(
             {
                 "model": self.model.state_dict(),
                 "step": self._total_learner_steps,
                 "config": self.cfg.__dict__,
+                "transformer_config": self._tcfg.__dict__,
             },
-            path,
+            tmp,
         )
+        os.replace(tmp, path)
 
 
 # ---------------------------------------------------------------------------

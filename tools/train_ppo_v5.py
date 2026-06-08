@@ -133,6 +133,39 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--save-interval", type=int, default=100_000)
     ap.add_argument("--log-interval", type=int, default=1)
+
+    # wandb logging (optional; single run for train + eval metrics)
+    ap.add_argument("--wandb-project", type=str, default=None,
+                    help="Enable wandb logging to this project.")
+    ap.add_argument("--wandb-entity", type=str, default=None)
+    ap.add_argument("--wandb-name", type=str, default=None)
+    ap.add_argument("--wandb-tags", type=str, default=None,
+                    help="Comma-separated tags.")
+    ap.add_argument("--wandb-mode", type=str, default="online",
+                    choices=["online", "offline", "disabled"])
+
+    # Mortal head-to-head eval on every checkpoint save (1v3 + 3v1)
+    ap.add_argument("--mortal-eval", action="store_true",
+                    help="After each checkpoint save, benchmark vs Mortal "
+                         "(1v3 and 3v1) and log to wandb.")
+    ap.add_argument("--mortal-eval-hanchan", type=int, default=16,
+                    help="Hanchan per matchup.")
+    ap.add_argument("--mortal-bench-script", type=str, default=None,
+                    help="Absolute path to mjai_bench_v2.py.")
+    ap.add_argument("--mortal-bench-cwd", type=str, default=None,
+                    help="Working dir for the bench subprocess (its src/).")
+    ap.add_argument("--mortal-ckpt", type=str, default=None,
+                    help="Absolute path to Mortal .pth weights.")
+    ap.add_argument("--mortal-eval-python", type=str, default=None,
+                    help="Interpreter for the eval subprocess "
+                         "(default: this Python).")
+    ap.add_argument("--mortal-eval-out-dir", type=str, default=None,
+                    help="Root dir for per-step eval logs "
+                         "(default: <save_path dir>/mortal_eval).")
+    ap.add_argument("--mortal-eval-timeout", type=float, default=1800.0,
+                    help="Per-matchup subprocess timeout (seconds).")
+    ap.add_argument("--mortal-eval-amp", action="store_true",
+                    help="Pass --amp to the Mortal agent.")
     args = ap.parse_args()
 
     if args.save_path:
@@ -188,6 +221,23 @@ def main() -> int:
         selfplay_eval_hands=args.selfplay_eval_hands,
         selfplay_eval_deterministic=not args.selfplay_eval_stochastic,
         selfplay_eval_seed=args.selfplay_eval_seed,
+        # wandb
+        wandb_project=args.wandb_project,
+        wandb_entity=args.wandb_entity,
+        wandb_name=args.wandb_name,
+        wandb_tags=(tuple(t.strip() for t in args.wandb_tags.split(","))
+                    if args.wandb_tags else None),
+        wandb_mode=args.wandb_mode,
+        # Mortal head-to-head eval on each checkpoint
+        mortal_eval=args.mortal_eval,
+        mortal_eval_hanchan=args.mortal_eval_hanchan,
+        mortal_bench_script=args.mortal_bench_script,
+        mortal_bench_cwd=args.mortal_bench_cwd,
+        mortal_ckpt=args.mortal_ckpt,
+        mortal_eval_python=args.mortal_eval_python,
+        mortal_eval_out_dir=args.mortal_eval_out_dir,
+        mortal_eval_timeout_sec=args.mortal_eval_timeout,
+        mortal_eval_amp=args.mortal_eval_amp,
     )
 
     print(f"[train_ppo_v5] config: {cfg}")
