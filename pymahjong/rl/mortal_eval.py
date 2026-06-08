@@ -1,4 +1,4 @@
-"""Head-to-head evaluation of a V5 checkpoint against the Mortal AI.
+"""Head-to-head evaluation of a checkpoint against the Mortal AI.
 
 This is a thin orchestration layer around the standalone ``mjai_bench_v2``
 CLI (the mjai-protocol benchmark harness that pits agents against each
@@ -35,7 +35,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-# Seat layouts for the two matchups and which seat indices hold our V5 bot.
+# Seat layouts for the two matchups and which seat indices hold our bot.
 _MATCHUPS: Dict[str, Tuple[List[str], List[int]]] = {
     "1v3": (["v5", "mortal", "mortal", "mortal"], [0]),
     "3v1": (["mortal", "v5", "v5", "v5"], [1, 2, 3]),

@@ -1,4 +1,4 @@
-"""Opponent snapshot pool for V4 self-play training.
+"""Opponent snapshot pool for self-play training.
 
 Maintains a bounded ring buffer of historical policy snapshots so the
 learner can play against past versions of itself in addition to the

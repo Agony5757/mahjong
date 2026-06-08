@@ -1,4 +1,4 @@
-"""Train/val/test splits for V4 cached datasets.
+"""Train/val/test splits for cached datasets.
 
 Two strategies are provided:
 
@@ -22,7 +22,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from .cache import CacheManifest, load_manifest, open_shard_arrays_v4
+from .cache import CacheManifest, load_manifest, open_shard_arrays
 from .cached_dataset import CachedEventDataset
 
 
@@ -129,7 +129,7 @@ def _all_track_ids(base: CachedEventDataset) -> np.ndarray:
     """Concatenate per-shard track_ids into one ``int64`` array of length len(base)."""
     parts = []
     for shard in base._shards:
-        arr = open_shard_arrays_v4(base.cache_dir, shard)
+        arr = open_shard_arrays(base.cache_dir, shard)
         parts.append(np.asarray(arr["track_ids"], dtype=np.int64))
     return np.concatenate(parts, axis=0) if parts else np.empty(0, dtype=np.int64)
 
@@ -138,12 +138,12 @@ def _all_game_ids(base: CachedEventDataset) -> np.ndarray:
     """Concatenate per-shard game_ids into one ``int64`` array of length len(base).
 
     Older shards (pre-May-2026) that lack ``game_ids.npy`` are silently
-    backfilled with ``track_ids`` by :func:`open_shard_arrays_v4`, in which
+    backfilled with ``track_ids`` by :func:`open_shard_arrays`, in which
     case :func:`split_by_game_id` degrades to :func:`split_by_track_id`.
     """
     parts = []
     for shard in base._shards:
-        arr = open_shard_arrays_v4(base.cache_dir, shard)
+        arr = open_shard_arrays(base.cache_dir, shard)
         parts.append(np.asarray(arr["game_ids"], dtype=np.int64))
     return np.concatenate(parts, axis=0) if parts else np.empty(0, dtype=np.int64)
 

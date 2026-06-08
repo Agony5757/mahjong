@@ -1,4 +1,4 @@
-"""On-disk cache for V4 autoregressive event-stream encoded samples.
+"""On-disk cache for autoregressive event-stream encoded samples.
 
 A cache directory looks like::
 
@@ -17,7 +17,7 @@ A cache directory looks like::
 Features for all samples in a shard are concatenated into a single flat
 array along axis 0, with ``lengths.npy`` recording the per-sample event
 count.  Bool arrays (features, action_mask) are packed with ``np.packbits``
-to save 8x disk space; ``open_shard_arrays_v4`` transparently unpacks them.
+to save 8x disk space; ``open_shard_arrays`` transparently unpacks them.
 Original (unpacked) shapes are stored in ``meta.json["packed"]``.
 
 Loading uses ``np.load(..., mmap_mode='r')`` for zero-copy access.
@@ -115,7 +115,7 @@ def assert_schema_compatible(loaded: Dict) -> None:
     for key in ("schema_version", "event_dim", "action_dim"):
         if loaded.get(key) != expected[key]:
             raise ValueError(
-                f"V4 cache schema mismatch on '{key}': "
+                f"cache schema mismatch on '{key}': "
                 f"cache={loaded.get(key)!r} code={expected[key]!r}"
             )
 
@@ -130,7 +130,7 @@ def assert_schema_compatible(loaded: Dict) -> None:
 
 
 class ShardWriter:
-    """Buffered writer for one V4 shard.
+    """Buffered writer for one shard.
 
     Accepts variable-length sample dicts from ``encode_paipu_file``.
     Features are accumulated per-sample and concatenated on flush.
@@ -227,7 +227,7 @@ class ShardWriter:
 
 
 def rebuild_manifest(cache_dir: str) -> CacheManifest:
-    """Rebuild V4 manifest, delegating to the shared implementation."""
+    """Rebuild manifest, delegating to the shared implementation."""
     return _rebuild_base(cache_dir, schema_fn=schema_fingerprint)
 
 
@@ -236,7 +236,7 @@ def rebuild_manifest(cache_dir: str) -> CacheManifest:
 # ---------------------------------------------------------------------------
 
 
-def open_shard_arrays_v4(cache_dir: str, shard_path: str) -> Dict[str, np.ndarray]:
+def open_shard_arrays(cache_dir: str, shard_path: str) -> Dict[str, np.ndarray]:
     """Load all shard arrays, lazily unpacking packbits files per-row.
 
     Unpacked features for big shards (e.g. 8.76M rows × 469M events)
@@ -287,6 +287,6 @@ __all__ = [
     "load_manifest",
     "save_manifest",
     "rebuild_manifest",
-    "open_shard_arrays_v4",
+    "open_shard_arrays",
     "manifest_path",
 ]

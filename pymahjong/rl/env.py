@@ -1,12 +1,10 @@
-"""V4 multi-agent Mahjong env wired to :class:`LiveEncoder`.
+"""Multi-agent Mahjong env wired to :class:`LiveEncoder`.
 
-The shared :class:`~pymahjong.rl.envs.EncodingMultiAgentEnv` does not work
-correctly for V4 because :meth:`V4Strategy.encode_observation` returns a
-zero-filled placeholder.  Real V4 observations require the live event
-encoder that mirrors the table.  This module provides a V4-specific env
-that maintains one :class:`pm.encv4_HandEncoder` per episode (it already
-tracks all four per-seat event streams internally) and produces real
-observations on every call to :meth:`observe`.
+Produces real event-stream observations via a live event encoder that
+mirrors the table.  The env maintains one :class:`pm.encv4_HandEncoder`
+per episode (it already tracks all four per-seat event streams
+internally) and produces real observations on every call to
+:meth:`observe`.
 
 The env supports:
 
@@ -19,7 +17,7 @@ Reward convention:
 
 * Intermediate steps yield ``reward = 0`` and ``done = False``.
 * On terminal step, ``payoffs`` (length-4, dtype float32) is the per-seat
-  reward in *units of 25 000 points* (matches the existing PPO loop).
+  reward in *units of 25 000 points*.
 * The terminal ``info`` dict additionally exposes ``result_type``
   (e.g. ``"RonAgari"``, ``"TsumoAgari"``, ``"NoTileRyuuKyoku"``, ...)
   and ``winners`` (list of seat indices), so the training loop can
@@ -50,7 +48,7 @@ PolicyFn = Callable[[Dict[str, Any], int], int]
 
 
 class MultiAgentEnv:
-    """4-player Mahjong env producing real V4 event-stream observations.
+    """4-player Mahjong env producing real event-stream observations.
 
     Each episode is a single hand.  Construct once; call :meth:`reset` to
     start a new hand.  Within a hand, repeatedly call :meth:`observe`
@@ -145,14 +143,14 @@ class MultiAgentEnv:
     # ------------------------------------------------------------------ observation
 
     def observe(self) -> Dict[str, Any]:
-        """Snapshot the current acting seat's V4 observation.
+        """Snapshot the current acting seat's observation.
 
         The returned ``action_mask`` uses the *legacy* mask from
-        :meth:`MahjongEnv.get_valid_actions` instead of the V4
+        :meth:`MahjongEnv.get_valid_actions` instead of the
         engine-iteration mask.  The legacy mask is the single source of
         truth that :meth:`MahjongEnv.step` validates against — keeping
         the two in sync avoids "Not an action in available actions"
-        ValueErrors that arise from the V4 mask permitting actions the
+        ValueErrors that arise from the mask permitting actions the
         legacy mask rejects (red-dora variants, riichi_stage2, chi
         disambiguation, etc.).
         """
@@ -258,7 +256,7 @@ class MultiAgentEnv:
                 if not MultiAgentEnv._fallback_warned:
                     import warnings
                     warnings.warn(
-                        f"V4 env: legacy mask rejected unified action={action} "
+                        f"env: legacy mask rejected unified action={action} "
                         f"at seat={seat}; falling back to legal action={fallback}. "
                         f"Further drifts will be silently coerced.  This usually "
                         f"indicates rare engine vs encv1 mask drift; training "

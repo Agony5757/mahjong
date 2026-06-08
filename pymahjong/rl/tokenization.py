@@ -1,4 +1,4 @@
-"""V4 autoregressive event-stream encoding for BC training.
+"""Autoregressive event-stream encoding for BC training.
 
 Wraps the C++ ``encv4_HandEncoder`` / ``encv4_TrackEncoder`` classes and
 integrates with the paipu replay pipeline via a ``_Proxy`` on
@@ -52,7 +52,7 @@ from .action_space import ACTION_DIM
 EVENT_DIM: int = getattr(pm, "encv4_EVENT_DIM", 100) if pm else 100
 
 # ---------------------------------------------------------------------------
-# V4 feature layout constants (matching TrainingDataEncodingV4.h)
+# Feature layout constants (matching TrainingDataEncodingV4.h)
 # ---------------------------------------------------------------------------
 
 OFF_EVENT_TYPE = 0;    FEAT_EVENT_TYPE = 19
@@ -150,7 +150,7 @@ def _remove_chi_hand_tiles(hand: list, lowest: int, chi_type: int) -> None:
 
 
 def state_to_string_v4(table, viewer: int) -> str:
-    """Pretty-print engine state in V4 canonical format (viewer-relative)."""
+    """Pretty-print engine state in canonical format (viewer-relative)."""
     if pm is None:
         raise RuntimeError("MahjongPyWrapper not importable")
 
@@ -159,7 +159,7 @@ def state_to_string_v4(table, viewer: int) -> str:
     phase = int(table.get_phase())
 
     lines = []
-    lines.append("== V4 STATE ==")
+    lines.append("== STATE ==")
     lines.append(f"VIEWER: {viewer}")
 
     game_wind = int(table.game_wind)
@@ -249,7 +249,7 @@ def state_to_string_v4(table, viewer: int) -> str:
 
 
 def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
-    """Reconstruct canonical state string from V4 event sequence."""
+    """Reconstruct canonical state string from event sequence."""
     game_wind = -1
     self_wind = -1
     oya_rel = -1
@@ -435,7 +435,7 @@ def events_to_string_v4(events: np.ndarray, viewer: int) -> str:
 
     # Build output
     lines = []
-    lines.append("== V4 STATE ==")
+    lines.append("== STATE ==")
     lines.append(f"VIEWER: {viewer}")
     lines.append(
         f"GAME: wind={_WIND_STR[game_wind]} "
@@ -627,7 +627,7 @@ def _engine_action_label(table, engine_idx: int) -> int:
 def encode_paipu_file(
     path: str,
 ) -> Optional[List[dict]]:
-    """Encode a single paipu file into V4 samples.
+    """Encode a single paipu file into samples.
 
     Returns ``None`` for unsupported game types, empty list for files that
     produce no samples.  Thread-safe via module-level lock.
@@ -676,7 +676,7 @@ def encode_paipu_file(
                 # which for a self-action decision is the player's own
                 # discard/call event.  That leaks the expert label directly
                 # into the input features (verified: removing the last
-                # event drops V5 BC test acc from 96.7% to 42.1%).
+                # event drops BC test acc from 96.7% to 42.1%).
                 # The correct snapshot is ``events[:pos]`` — all events
                 # that existed *before* on_decide was called, matching
                 # what live.py / MultiAgentEnv expose at inference time.
@@ -766,7 +766,7 @@ def encode_paipu_file(
 
 
 class StreamingPaipuDataset(IterableDataset):
-    """IterableDataset that streams V4-encoded paipu samples."""
+    """IterableDataset that streams encoded paipu samples."""
 
     collate_fn: object = None
 
@@ -827,7 +827,7 @@ class StreamingPaipuDataset(IterableDataset):
 
 
 def streaming_collate_v4(batch: List[Dict]) -> Dict[str, "torch.Tensor"]:
-    """Stack a list of V4 sample dicts into a batched tensor dict."""
+    """Stack a list of sample dicts into a batched tensor dict."""
     if not _HAS_TORCH:
         raise ImportError(
             "streaming_collate_v4 requires PyTorch; install torch to use it"

@@ -102,7 +102,7 @@ class HanchanEnv:
     """Hanchan-loop wrapper around :class:`MultiAgentEnv`.
 
     Args:
-        max_seq_len: passed to the inner V4 env.
+        max_seq_len: passed to the inner env.
         init_scores: starting scores (4-vector, default ``25000`` each).
         oka_threshold: trigger for ending past South-4 and for the West
             round.  Default 30 000.

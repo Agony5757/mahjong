@@ -1,8 +1,8 @@
-"""Live V4 encoder for online inference.
+"""Live encoder for online inference.
 
 Maintains a :class:`pm.encv4_HandEncoder` that stays in sync with a
 running :class:`pm.Table`. Use it to produce real-time observations
-for a trained V4 model during interactive play.
+for a trained model during interactive play.
 
 Typical usage (per session, per hand)::
 
@@ -38,7 +38,7 @@ from .tokenization import (
 
 
 class LiveEncoder:
-    """Stateful V4 encoder that mirrors a running :class:`pm.Table`.
+    """Stateful encoder that mirrors a running :class:`pm.Table`.
 
     Hand boundary handling: call :meth:`start_hand` once after each
     ``game_init_with_config`` (or whatever the host's "new hand" hook

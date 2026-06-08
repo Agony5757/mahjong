@@ -2,10 +2,10 @@
 
 Architecture (per the approved design):
 
-* **State (feature) encoding -> V5**: the V4/V5 100-dim event-stream is
+* **State (feature) encoding**: the 100-dim event-stream is
   encoded by the *unmodified* :class:`EventStreamTransformer` (used purely
   as a state encoder via :meth:`EventStreamTransformer.encode`).
-* **Action encoding -> V5 (Douzero)**: each *legal* action's static
+* **Action encoding (Douzero)**: each *legal* action's static
   descriptor (:func:`pymahjong.rl.action_features.torch_action_features`,
   ``ACTION_FEAT_DIM`` wide) is projected and concatenated with the pooled
   state, then scored by a shared MLP.
@@ -17,9 +17,9 @@ Architecture (per the approved design):
 * **Auxiliary next-rank head**: a small linear layer on the pooled state
   predicts the seat's final hanchan rank (Mortal's ``AuxNet((4,))``).
 
-The scorer / action-projection layout is byte-compatible with the V5 BC
-model (:class:`~pymahjong.rl.douzero.DouzeroTransformer`), so a V5 BC
-checkpoint warm-starts both the encoder and the Q-head; a V4 BC
+The scorer / action-projection layout is byte-compatible with the Douzero BC
+model (:class:`~pymahjong.rl.douzero.DouzeroTransformer`), so a Douzero-head BC
+checkpoint warm-starts both the encoder and the Q-head; a linear-head BC
 checkpoint warm-starts the encoder only.
 """
 
@@ -63,7 +63,7 @@ class DouzeroQHead(nn.Module):
         self.action_proj_dim = action_proj_dim
 
         self.action_proj = nn.Linear(action_feat_dim, action_proj_dim)
-        # Layout matches DouzeroTransformer.scorer for V5 BC warm-start.
+        # Layout matches DouzeroTransformer.scorer for Douzero BC warm-start.
         self.scorer = nn.Sequential(
             nn.Linear(d_model + action_proj_dim, scorer_hidden),
             nn.GELU(),
@@ -202,13 +202,13 @@ class MortalQNet(nn.Module):
     # ------------------------------------------------------------------ warm-start
 
     def load_bc(self, path: str, map_location="cpu") -> Tuple[list, list]:
-        """Warm-start from a V4 or V5 BC checkpoint.
+        """Warm-start from a linear-head or Douzero-head BC checkpoint.
 
         * Encoder weights (``input_proj`` / ``cls`` / ``pos_emb`` /
           ``encoder`` / ``norm`` / ``value_head`` / ``policy_head``) load
           into :attr:`encoder`.
         * Douzero Q-head weights (``action_proj`` / ``scorer``) load into
-          :attr:`qhead` -- present only in V5 checkpoints; for a V4
+          :attr:`qhead` -- present only in Douzero-head checkpoints; for a linear-head
           checkpoint the Q-head stays freshly initialised.
         * A **MortalQNet self-checkpoint** (keys prefixed ``encoder.`` /
           ``qhead.``) is detected and loaded whole (resume), so the Q-head
@@ -220,9 +220,9 @@ class MortalQNet(nn.Module):
         state = ckpt.get("model", ckpt) if isinstance(ckpt, dict) else ckpt
         # A MortalQNet self-checkpoint stores keys under ``encoder.`` /
         # ``qhead.`` -- detect that layout and load the whole model directly
-        # (resume), rather than treating it as a flat V4/V5 BC state_dict.
+        # (resume), rather than treating it as a flat BC state_dict.
         #
-        # NOTE: the detector must key off ``qhead.`` ONLY.  A flat V4/V5 BC
+        # NOTE: the detector must key off ``qhead.`` ONLY.  A flat BC
         # state_dict ALSO contains ``encoder.layers.*`` keys (that is the
         # nn.TransformerEncoder submodule of EventStreamTransformer), so
         # testing for an ``encoder.`` prefix would misclassify every BC

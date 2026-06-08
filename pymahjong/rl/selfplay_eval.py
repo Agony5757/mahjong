@@ -1,4 +1,4 @@
-"""Shared-policy self-play evaluation for V4 policies.
+"""Shared-policy self-play evaluation for event-stream policies.
 
 A coarse "is the model actually playing Mahjong?" diagnostic that
 complements the supervised top-1 accuracy on a held-out dataset.
@@ -22,7 +22,7 @@ Returned metrics (dict of ``str -> float``):
 * ``sp/mean_abs_payoff``  — average ``sum(|payoff|)`` in 25k-point units
                              (≈ 2 × winner's payoff when symmetric)
 * ``sp/wall_s``           — wall-clock spent on evaluation
-* ``sp/mask_fallback_fired`` — 1.0 if the V4 env's "illegal action"
+* ``sp/mask_fallback_fired`` — 1.0 if the env's "illegal action"
                                  fallback fired for the first time
                                  during eval (indicates rare drift)
 * ``sp/winner_share_seat{0..3}`` — per-seat fraction of agari wins
@@ -39,7 +39,7 @@ import numpy as np
 try:
     import torch
 except Exception as _e:  # noqa: BLE001
-    raise RuntimeError("torch is required for V4 self-play evaluation") from _e
+    raise RuntimeError("torch is required for self-play evaluation") from _e
 
 from .env import MultiAgentEnv
 from .transformer import EventStreamTransformer
@@ -64,7 +64,7 @@ def selfplay_eval(
     the dataset).
 
     Args:
-        model: the V4 ``EventStreamTransformer`` to evaluate.
+        model: the ``EventStreamTransformer`` to evaluate.
         n_hands: number of hands (episodes) to play.
         deterministic: if True, use ``argmax`` over masked logits;
             otherwise sample from the categorical distribution.

@@ -1,7 +1,7 @@
-"""Mortal-style value-learning trainer for the V5 network.
+"""Mortal-style value-learning trainer for the Douzero network.
 
 This implements Mortal's reinforcement-learning algorithm (value-based,
-*not* PPO) on top of this project's V5 components:
+*not* PPO) on top of this project's Douzero components:
 
 * The state is encoded by the unmodified ``EventStreamTransformer`` and a
   Douzero per-legal-action scorer **outputs ``Q(s, a)`` directly** (see
@@ -42,7 +42,7 @@ try:
     import torch
     import torch.nn.functional as F
 except Exception as e:  # noqa: BLE001
-    raise RuntimeError("torch is required for Mortal-style V5 training") from e
+    raise RuntimeError("torch is required for Mortal-style training") from e
 
 from .common.config import TransformerConfig
 from .hanchan_env import HanchanEnv
@@ -58,7 +58,7 @@ from .mortal_qnet import MortalQNet
 
 @dataclass
 class MortalConfig:
-    """Configuration for Mortal-style V5 value learning."""
+    """Configuration for Mortal-style value learning."""
 
     # -- schedule --
     total_steps: int = 1_000_000
@@ -144,7 +144,7 @@ class MortalConfig:
 
     # -- Mortal head-to-head eval on every checkpoint save (1v3 + 3v1) --
     # Disabled by default.  When enabled, after each checkpoint is written
-    # the trainer exports a V5-compatible (DouzeroTransformer-layout)
+    # the trainer exports a Douzero-compatible (DouzeroTransformer-layout)
     # checkpoint and runs ``mjai_bench_v2`` as a subprocess for two
     # matchups (1v3 and 3v1) vs the Mortal AI, logging ``mortal/*`` to
     # wandb.  All paths are server-specific and must be supplied.
@@ -629,14 +629,14 @@ class MortalTrainer:
         ``--v5-ckpt`` as a :class:`DouzeroTransformer`.  ``MortalQNet``'s
         encoder + Douzero Q-head share that exact weight layout (the scorer
         outputs a per-action scalar; greedy argmax over Q equals argmax over
-        the V5 policy logits), so we remap our state_dict into the V5 key
+        the Douzero policy logits), so we remap our state_dict into the Douzero key
         namespace: encoder keys are top-level, Q-head keys (``action_proj``
         / ``scorer``) lose their ``qhead.`` prefix, and the unused
-        ``policy_head`` is omitted (V5 derives logits from the scorer)."""
+        ``policy_head`` is omitted (the Douzero head derives logits from the scorer)."""
         v5_sd: Dict[str, torch.Tensor] = {}
         for k, v in self.model.encoder.state_dict().items():
             # The encoder is a full EventStreamTransformer and carries an
-            # unused ``policy_head`` (V5 derives logits from the scorer and
+            # unused ``policy_head`` (the Douzero head derives logits from the scorer and
             # has no policy_head), so drop it to keep the export key set an
             # exact match for DouzeroTransformer.
             if k.startswith("policy_head"):
@@ -681,7 +681,7 @@ class MortalTrainer:
         try:
             self._export_v5_ckpt(frozen)
         except Exception as e:  # noqa: BLE001
-            print(f"[mortal-eval] step={step} V5 export failed: {e!r}", flush=True)
+            print(f"[mortal-eval] step={step} Douzero export failed: {e!r}", flush=True)
             return
 
         out_root = cfg.mortal_eval_out_dir or os.path.join(base, "mortal_eval")
@@ -795,7 +795,7 @@ def train_mortal(
     config: Optional[MortalConfig] = None,
     transformer_config: Optional[TransformerConfig] = None,
 ) -> MortalQNet:
-    """Entry point: train a V5 network with Mortal's value-learning algorithm."""
+    """Entry point: train a Douzero network with Mortal's value-learning algorithm."""
     trainer = MortalTrainer(
         config=config,
         transformer_config=transformer_config,

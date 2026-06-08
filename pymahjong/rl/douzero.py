@@ -1,4 +1,4 @@
-"""V5: true Douzero-style policy — state encoding and *available actions*
+"""True Douzero-style policy — state encoding and *available actions*
 are separate model inputs, and the model scores **only the legal
 actions** through a shared MLP.
 
@@ -16,9 +16,9 @@ matches the Douzero (DouDizhu) paper's design and has three benefits:
   it generalises better across hand states that surface different
   legal-action subsets.
 
-Compatibility with the V4 infrastructure (env, self-play eval, cache
-shape) is preserved via a thin wrapper: V5's ``forward`` /
-``act`` / ``evaluate_actions`` accept the V4-style ``(features,
+Compatibility with the event-stream infrastructure (env, self-play eval, cache
+shape) is preserved via a thin wrapper: the ``forward`` /
+``act`` / ``evaluate_actions`` accept the legacy-style ``(features,
 attention_mask, action_mask)`` triple and run
 :func:`extract_legal_actions` internally to derive the per-legal
 action tensors.  The returned (B, 54) raw logits scatter the K
@@ -63,13 +63,13 @@ class DouzeroTransformer(EventStreamTransformer):
       the existing BC/PPO loss code remains unchanged.
     * ``value`` ``(B,)``
 
-    Convenience entry points (V4-compat signature):
+    Convenience entry points (legacy-compat signature):
 
     * ``act(features, attention_mask, action_mask, deterministic)``
       and ``evaluate_actions(features, attention_mask, action_mask,
-      actions)`` accept the V4-style ``action_mask`` and call
-      :func:`extract_legal_actions` internally, so V5 is a drop-in
-      replacement for V4 in the env / self-play eval code paths.
+      actions)`` accept the legacy-style ``action_mask`` and call
+      :func:`extract_legal_actions` internally, so it is a drop-in
+      replacement for the linear-head model in the env / self-play eval code paths.
     """
 
     def __init__(
@@ -95,7 +95,7 @@ class DouzeroTransformer(EventStreamTransformer):
         self.action_feat_dim = action_feat_dim
         self.action_proj_dim = action_proj_dim
 
-        # Drop the V4 linear policy head -- V5 replaces it entirely.
+        # Drop the linear policy head -- the Douzero scorer replaces it entirely.
         del self.policy_head
 
         # The default static descriptors used by act() / evaluate_actions()
@@ -182,9 +182,9 @@ class DouzeroTransformer(EventStreamTransformer):
 
         1. **Douzero (preferred for training)** -- pass
            ``action_features`` / ``action_pad_mask`` / ``legal_orig_idx``
-           explicitly (typically produced by the V5 collate function).
+           explicitly (typically produced by the Douzero collate function).
 
-        2. **V4-compatible (preferred for env loops)** -- pass a
+        2. **Legacy-compatible (preferred for env loops)** -- pass a
            ``action_mask`` of shape ``(B, 54)`` and let the model
            derive ``action_features`` / ``action_pad_mask`` /
            ``legal_orig_idx`` on the fly using the static descriptors.
@@ -192,14 +192,14 @@ class DouzeroTransformer(EventStreamTransformer):
         Returns:
             ``(raw_logits_54, value)``.  ``raw_logits_54`` has shape
             ``(B, ACTION_DIM)`` with NEG_INF for any illegal slot
-            (defence in depth + back-compat with the V4 loss code).
+            (defence in depth + back-compat with the masked-logit loss code).
         """
         if action_features is None:
             if action_mask is None:
                 raise ValueError(
-                    "V5 forward requires either Douzero inputs "
+                    "Douzero forward requires either Douzero inputs "
                     "(action_features + action_pad_mask + legal_orig_idx) "
-                    "or a V4-style action_mask"
+                    "or a legacy-style action_mask"
                 )
             action_features, action_pad_mask, legal_orig_idx, _ = extract_legal_actions(
                 action_mask,
@@ -213,7 +213,7 @@ class DouzeroTransformer(EventStreamTransformer):
         return raw_logits_54, value
 
     # ------------------------------------------------------------------
-    # Convenience: act / evaluate_actions  (V4-compat signature)
+    # Convenience: act / evaluate_actions  (legacy-compat signature)
     # ------------------------------------------------------------------
 
     @torch.no_grad()
@@ -224,7 +224,7 @@ class DouzeroTransformer(EventStreamTransformer):
         action_mask: torch.Tensor,
         deterministic: bool = False,
     ):
-        """V4-compatible action selection (returns 54-space index).
+        """Legacy-compatible action selection (returns 54-space index).
 
         Internally builds the per-legal-action tensors from
         ``action_mask`` and scores only the K legal actions.  Output
@@ -272,7 +272,7 @@ class DouzeroTransformer(EventStreamTransformer):
         action_mask: torch.Tensor,
         actions: torch.Tensor,
     ):
-        """V4-compatible PPO/BC interface (action in 54-space).
+        """Legacy-compatible BC interface (action in 54-space).
 
         Resolves each ``action`` to its index within the legal set,
         then computes log-probs / entropy on the K-wide softmax.  The

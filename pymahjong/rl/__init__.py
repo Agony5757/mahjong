@@ -9,7 +9,7 @@ A flat, single-encoder training stack built around:
   state encoder + Douzero per-legal-action scoring head.
 * :class:`MortalQNet` — Mortal-style value learner reusing the same
   encoder; trained via :func:`train_mortal`.
-* :func:`train_bc` — behavior cloning trainer (Douzero head, V4 cache).
+* :func:`train_bc` — behavior cloning trainer (Douzero head, event cache).
 * :class:`ShardWriter` / :class:`CachedEventDataset` — on-disk packbits
   shards and mmap-friendly map-style dataset.
 * :class:`OpponentPool` — historical snapshot pool for self-play.

@@ -1,12 +1,12 @@
-"""Extract per-legal-action feature tensors from a V4 ``action_mask``.
+"""Extract per-legal-action feature tensors from an ``action_mask``.
 
 True Douzero feeds *only* the legal actions through the scorer (not all
-54 with -inf masking).  V5 keeps the existing V4 cache format and
-``action_mask`` schema untouched and derives the per-legal-action
-tensors at collate / inference time using this module.
+54 with -inf masking).  This module keeps the event-stream cache format
+and ``action_mask`` schema untouched and derives the per-legal-action
+tensors at collate / inference time.
 
 The output of :func:`extract_legal_actions` is the canonical "action
-side" of V5's model input:
+side" of the Douzero model input:
 
 * ``action_features`` ``(B, K, F)``
     Per-legal-action descriptor vectors taken row-by-row from the
@@ -26,8 +26,8 @@ side" of V5's model input:
 
 * ``legal_target_idx`` ``(B,)`` long (optional, only when ``action`` arg
     is supplied):  position of the expert's action *within* the legal
-    list (``0..K-1``).  Required for V5 BC cross-entropy because V5's
-    softmax is over K legals, not 54 slots.
+    list (``0..K-1``).  Required for the Douzero BC cross-entropy because
+    the softmax is over K legals, not 54 slots.
 
 ``K`` is set to the per-batch maximum legal-action count plus a small
 safety slack (default 0); use a fixed ``max_k`` to pre-pad to a known

@@ -1,9 +1,9 @@
-"""Map-style :class:`torch.utils.data.Dataset` over a V4 on-disk cache.
+"""Map-style :class:`torch.utils.data.Dataset` over an on-disk event cache.
 
-V4 caches store variable-length event-stream features with packbits
-compression.  Unlike V3 (fixed-length token sequences), V4 features
-are concatenated into a flat array with a per-sample ``lengths`` array
-for random access via cumulative-sum indexing.
+Caches store variable-length event-stream features with packbits
+compression: features are concatenated into a flat array with a
+per-sample ``lengths`` array for random access via cumulative-sum
+indexing.
 """
 
 from __future__ import annotations
@@ -20,16 +20,16 @@ from .cache import (
     CacheManifest,
     assert_schema_compatible,
     load_manifest,
-    open_shard_arrays_v4,
+    open_shard_arrays,
 )
 
 
 class CachedEventDataset(Dataset):
-    """Random-access dataset over a V4 packbits cache directory.
+    """Random-access dataset over a packbits cache directory.
 
     Args:
         cache_dir: directory written by
-            :class:`pymahjong.rl.cache_v4.ShardWriter`
+            :class:`pymahjong.rl.cache.ShardWriter`
             (must contain ``index.json``).
     """
 
@@ -55,7 +55,7 @@ class CachedEventDataset(Dataset):
     def _arrays_for(self, shard_idx: int) -> Dict[str, np.ndarray]:
         cached = self._open.get(shard_idx)
         if cached is None:
-            cached = open_shard_arrays_v4(self.cache_dir, self._shards[shard_idx])
+            cached = open_shard_arrays(self.cache_dir, self._shards[shard_idx])
             # Pre-compute event-offset table so per-sample indexing is O(1).
             lengths = np.asarray(cached["lengths"], dtype=np.int64)
             offsets = np.empty(lengths.shape[0] + 1, dtype=np.int64)
@@ -103,7 +103,7 @@ class CachedEventDataset(Dataset):
 
 
 def cached_event_collate(batch):
-    """Collate variable-length V4 samples by padding to max seq_len."""
+    """Collate variable-length samples by padding to max seq_len."""
     max_len = max(int(b["seq_len"]) for b in batch)
     event_dim = batch[0]["features"].shape[1]
 

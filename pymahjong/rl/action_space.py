@@ -1,6 +1,6 @@
 """Centralized 54-action encoding for Mahjong.
 
-All encoding versions (V1-V4) share the same 54-discrete-action space.
+The legacy V1 path and the MajNova v0 stack share the same 54-discrete-action space.
 This module is the single source of truth for action index constants and
 bidirectional mapping between engine actions and the unified action space.
 """
@@ -88,7 +88,7 @@ ACTION_TYPES = (
 # * RESPONSE_HEAD_SLOTS — legal during P{i}_RESPONSE / CHANKAN response:
 #   Chi (6 variants), Pon (2 variants), MinKan, Ron, Pass-Response.
 #
-# At inference, the V4 ``action_mask`` (which is already phase-aware) picks
+# At inference, the ``action_mask`` (which is already phase-aware) picks
 # out the slots that come from the active head; the other head's outputs
 # are scattered into the disjoint slot positions with no overlap.
 ACTION_HEAD_SLOTS = (

@@ -1,7 +1,7 @@
-"""Transformer model for V4 event-stream encoding.
+"""Transformer model for event-stream encoding.
 
-V4 events are 100-dim binary feature vectors (packed bitsets).
-Instead of per-field embeddings (V3), a single linear projection maps
+Events are 100-dim binary feature vectors (packed bitsets).
+Instead of per-field embeddings, a single linear projection maps
 the event features into the transformer's model dimension.
 
 The ``act()`` / ``evaluate_actions()`` interface matches
@@ -26,14 +26,14 @@ from .common.config import TransformerConfig
 
 NEG_INF = -1e9
 
-# V4 event-stream pads to MAX_SEQ_LEN=512 (see TrainingDataEncodingV4.h).
+# Event-stream pads to MAX_SEQ_LEN=512 (see TrainingDataEncodingV4.h).
 # pos_emb gets ``+1`` to leave a slot for the prepended CLS token when
 # ``cfg.use_cls`` is enabled.
 MAX_SEQ_LEN = 512
 
 
 class EventStreamTransformer(nn.Module):
-    """Transformer policy/value model for V4 event-stream observations.
+    """Transformer policy/value model for event-stream observations.
 
     Input: ``(B, L, event_dim)`` float tensor (binary features).
     Architecture mirrors :class:`MahjongTransformer` but replaces

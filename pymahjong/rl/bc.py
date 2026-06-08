@@ -201,7 +201,7 @@ class BCConfig:
                                   # and val_loss may legitimately plateau before
                                   # really improving.  0 = no minimum.
     best_save_path: Optional[str] = None  # defaults to save_path + '.best'
-    # Self-play sanity evaluation (V4 only).  Plays ``selfplay_eval_hands``
+    # Self-play sanity evaluation.  Plays ``selfplay_eval_hands``
     # hands with the current model occupying all four seats and reports
     # agari rate / episode length / etc.  Useful to verify the BC model
     # has learned to actually finish hands -- not just match action
@@ -694,8 +694,8 @@ def train_bc(
     # Wrap with DDP after model state restored and optimizer built (the
     # raw param tensors are shared between optim and DDP — wrapping is
     # transparent to the optimizer).  Done before training loop only.
-    # ``find_unused_parameters=True`` is required for V5 (value head is
-    # not used in BC; DDP would otherwise error on the unused gradients).
+    # ``find_unused_parameters=True`` is required because the value head
+    # is not used in BC; DDP would otherwise error on the unused gradients.
     raw_model = model  # for state_dict save/load
     if _is_ddp():
         from torch.nn.parallel import DistributedDataParallel as DDP  # noqa: PLC0415
@@ -1016,7 +1016,7 @@ def train_bc(
             flush=True,
         )
     _wandb_finish(wandb_run)
-    # NOTE: do *not* destroy DDP here -- caller (train_bc_v5.py) may
+    # NOTE: do *not* destroy DDP here -- caller (train_bc.py) may
     # still need the process group for the final test eval allreduce.
     # The orchestrator should call dist.destroy_process_group() itself
     # at exit time (or just let process termination handle it).

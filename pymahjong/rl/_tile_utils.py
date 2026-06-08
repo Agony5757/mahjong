@@ -3,9 +3,9 @@
 These small utilities (tile string formatting, meld-type constants,
 red-five detection, ``CallGroup`` source-seat inference, ...) are not
 specific to any one observation encoding.  They originally lived in
-``pymahjong/rl/v3/tokenization.py`` and were re-imported from the V4
+the legacy token tokenizer and were re-imported from the
 event-stream encoder; this module is the single source of truth after
-the V3/V4/V5 namespaces were flattened into MajNova v0.
+the encoding namespaces were flattened into MajNova v0.
 """
 
 from __future__ import annotations

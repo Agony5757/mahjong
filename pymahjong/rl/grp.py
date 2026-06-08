@@ -3,7 +3,7 @@
 This is a faithful port of Mortal's ``GRP`` network + ``RewardCalculator``
 (see https://github.com/Equim-chan/Mortal ``mortal/model.py`` /
 ``mortal/reward_calculator.py``), adapted to drive reward shaping for the
-Mortal-style value learner that reuses this project's V5 network.
+Mortal-style value learner that reuses this project's Douzero network.
 
 Mortal converts the *sparse, end-of-hanchan placement* into a per-kyoku
 reward by tracking how the **expected final placement points** of a seat

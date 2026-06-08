@@ -1,4 +1,4 @@
-"""Per-action semantic feature vectors for the V5 Douzero-style head.
+"""Per-action semantic feature vectors for the Douzero-style head.
 
 This module is the single source of truth for the action descriptor
 table consumed by :class:`pymahjong.rl.douzero.DouzeroTransformer`.
@@ -20,7 +20,7 @@ Feature layout (50 dims total)::
     15..48  tile_basetile one-hot (34 dims; non-zero only for discards)
     49      phase indicator (0 = action-phase, 1 = response-phase)
 
-Changing this layout breaks any V5 checkpoint, since the
+Changing this layout breaks any checkpoint, since the
 ``action_features`` buffer is registered with the model.  If you must
 extend the descriptors, add new dims to the *end* and bump
 :data:`ACTION_FEAT_DIM` accordingly; old checkpoints can then be

@@ -1,4 +1,4 @@
-"""V4 collation functions for batching observations."""
+"""Collation functions for batching observations."""
 
 from .cached_dataset import cached_event_collate  # noqa: F401
 
