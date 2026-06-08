@@ -135,34 +135,32 @@ env = pymahjong.SingleAgentMahjongEnv(opponent_agent="path/to/model.pth")
 
 Human demonstration data from Tenhou.net (6 dan+ players) is available for offline RL research. [Download from releases](https://github.com/Agony5757/mahjong/releases/tag/v1.0.4).
 
-### Incremental paipu pipeline
+### Building a training cache
 
-To build your own training cache from raw Tenhou paipu, use the resumable
-pipeline driven by a single append-only manifest:
+To build your own training cache from raw Tenhou paipu, use the
+event-stream encoder. The download step writes XMLs under
+``--paipu-dir`` and the encoder produces packbits shards under
+``--out``:
 
 ```bash
-# Download year zip → fetch XMLs → encode to token shards
-python tools/paipu_pipeline.py run --work data/tenhou --year 2024 \
-    --shard-rows 65536
+# Download a year's worth of Tenhou XMLs (resumable)
+python tools/download_tenhou_paipu.py --year 2024 --out data/tenhou/xml
 
-# Inspect / verify state at any time
-python tools/paipu_pipeline.py status --work data/tenhou
-python tools/paipu_pipeline.py check  --work data/tenhou           # dry run
-python tools/paipu_pipeline.py check  --work data/tenhou --repair  # delete corrupt XMLs
+# Encode XMLs to MajNova v0 event-stream shards (parallel)
+python tools/encode_paipu_to_cache.py \
+    --paipu-dir data/tenhou/xml \
+    --out cache/houou \
+    --workers 8 --shard-rows 8192
 ```
 
 Properties:
 
-- **Resumable**: re-running `run` is a no-op once everything is encoded.
-  Each shard is flushed atomically and only then recorded in the manifest,
-  so a crash mid-shard simply re-encodes the affected paipu next time.
-- **Integrity**: every paipu is hashed with sha256 on every startup and
-  compared against the manifest; identical content under different game
-  ids is recorded as `duplicate` and the redundant XML is removed.
-- **Self-healing**: `check --repair` deletes corrupt XMLs and emits
-  `corrupt` events; the next `run` will re-fetch / re-encode them.
-- **Hand-dropped XMLs**: drop files into `<work>/xml/<game_id>.txt` and
-  they will be adopted automatically.
+- **Resumable**: re-running the encoder is a no-op once everything is
+  already encoded. Each shard is flushed atomically and only then
+  recorded in the manifest, so a crash mid-shard simply re-encodes the
+  affected paipu next time.
+- **Self-healing**: corrupt XMLs are detected and skipped; rerun the
+  downloader to re-fetch them.
 
 See [`docs/advanced/paipu_pipeline.md`](docs/advanced/paipu_pipeline.md)
 for the full manifest schema, layout on disk, and recovery flows.

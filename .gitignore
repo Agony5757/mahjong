@@ -62,3 +62,4 @@ models/*.pt
 models/*.pt.bak*
 models/*.json.bak*
 models/*.posemb_leaky.json
+runs/

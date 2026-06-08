@@ -1,105 +1,85 @@
-"""Modern Transformer-based RL stack for pymahjong.
+"""MajNova v0 — Transformer-based RL stack for pymahjong.
 
-This subpackage provides encoding-agnostic environments, training
-utilities, and a strategy registry that lets you switch between V1-V4
-observation encodings at runtime:
+A flat, single-encoder training stack built around:
 
-* :class:`EncodingVersion` -- enum of supported encodings.
-* :func:`get_strategy` -- retrieve an :class:`EncodingStrategy` by version.
-* :class:`EncodingMahjongEnv` / :class:`EncodingMultiAgentEnv` --
-  encoding-agnostic gymnasium environments.
-* :class:`ActionEncoder` -- unified 54-action space.
-* :func:`train_bc`, :func:`train_ppo` -- top-level training entry points.
+* :class:`ActionEncoder` — unified 54-action space.
+* :class:`MultiAgentEnv` / :class:`HanchanEnv` — per-hand / per-hanchan
+  Mahjong environments (event-stream observations).
+* :class:`EventStreamTransformer` / :class:`DouzeroTransformer` —
+  state encoder + Douzero per-legal-action scoring head.
+* :class:`MortalQNet` — Mortal-style value learner reusing the same
+  encoder; trained via :func:`train_mortal`.
+* :func:`train_bc` — behavior cloning trainer (Douzero head, V4 cache).
+* :class:`ShardWriter` / :class:`CachedEventDataset` — on-disk packbits
+  shards and mmap-friendly map-style dataset.
+* :class:`OpponentPool` — historical snapshot pool for self-play.
 
-Legacy aliases are preserved for backward compatibility:
-* :class:`TokenizedMahjongEnv` / :class:`TokenizedMultiAgentEnv`
-* :class:`MahjongTokenizer`, :class:`MahjongTransformer`
+Torch-dependent symbols are lazily imported so the core engine remains
+importable without PyTorch.
 """
 
 from .action_space import ActionEncoder, ACTION_DIM
-from .encoding import EncodingVersion, get_strategy, available_versions
-from .envs import EncodingMahjongEnv, EncodingMultiAgentEnv
-from .v3.tokenization import (
-    MahjongTokenizer,
-    SegmentType,
-    TILE_PAD,
-    TILE_VOCAB_SIZE,
-    NUM_SEGMENTS,
-    MAX_SEQ_LEN,
-    SCALAR_DIM,
-    state_to_string,
-    tokens_to_string,
-)
-from .env_v2 import TokenizedMahjongEnv, TokenizedMultiAgentEnv
-from .v3.cache import (
-    CACHE_SCHEMA_VERSION,
+from ._manifest import (
     CacheManifest,
-    ShardWriter,
+    ShardEntry,
     load_manifest,
-    rebuild_manifest,
+    manifest_path,
     save_manifest,
 )
 
-# Trigger strategy registration.
-from . import encodings  # noqa: F401
-
 __all__ = [
-    # Core API
-    "EncodingVersion",
-    "get_strategy",
-    "available_versions",
-    "EncodingMahjongEnv",
-    "EncodingMultiAgentEnv",
+    # Core action space
     "ActionEncoder",
     "ACTION_DIM",
-    # Tokenizer (V3)
-    "MahjongTokenizer",
-    "SegmentType",
-    "TILE_PAD",
-    "TILE_VOCAB_SIZE",
-    "NUM_SEGMENTS",
-    "MAX_SEQ_LEN",
-    "SCALAR_DIM",
-    "state_to_string",
-    "tokens_to_string",
-    # Legacy aliases
-    "TokenizedMahjongEnv",
-    "TokenizedMultiAgentEnv",
-    # Cache
-    "CACHE_SCHEMA_VERSION",
+    # Cache I/O
     "CacheManifest",
-    "ShardWriter",
+    "ShardEntry",
     "load_manifest",
-    "rebuild_manifest",
+    "manifest_path",
     "save_manifest",
+    # Lazy torch-only symbols (see __getattr__)
+    "train_bc",
+    "train_mortal",
+    "EventStreamTransformer",
+    "DouzeroTransformer",
+    "MortalQNet",
+    "MultiAgentEnv",
+    "HanchanEnv",
+    "LiveEncoder",
+    "OpponentPool",
+    "ShardWriter",
+    "CachedEventDataset",
+    "selfplay_eval",
 ]
 
 
-def _torch_only(name):
-    def _factory(*args, **kwargs):
+_TORCH_LAZY_MAP = {
+    "train_bc":              ("bc",            "train_bc"),
+    "train_mortal":          ("mortal",        "train_mortal"),
+    "EventStreamTransformer":("transformer",   "EventStreamTransformer"),
+    "DouzeroTransformer":    ("douzero",       "DouzeroTransformer"),
+    "MortalQNet":            ("mortal_qnet",   "MortalQNet"),
+    "MultiAgentEnv":         ("env",           "MultiAgentEnv"),
+    "HanchanEnv":            ("hanchan_env",   "HanchanEnv"),
+    "LiveEncoder":           ("live_encoder",  "LiveEncoder"),
+    "OpponentPool":          ("opponent_pool", "OpponentPool"),
+    "ShardWriter":           ("cache",         "ShardWriter"),
+    "CachedEventDataset":    ("cached_dataset","CachedEventDataset"),
+    "selfplay_eval":         ("selfplay_eval", "selfplay_eval"),
+}
+
+
+def __getattr__(name):
+    if name in _TORCH_LAZY_MAP:
+        module_name, symbol = _TORCH_LAZY_MAP[name]
         try:
             import torch  # noqa: F401
-        except ImportError as exc:  # pragma: no cover - import-time only
+        except ImportError as exc:
             raise ImportError(
-                f"{name} requires PyTorch. Install with `pip install torch`."
+                f"pymahjong.rl.{name} requires PyTorch. "
+                f"Install with `pip install torch`."
             ) from exc
-        if name == "MahjongTransformer":
-            from .v3.model import MahjongTransformer
-            return MahjongTransformer(*args, **kwargs)
-        if name == "train_bc":
-            from .bc import train_bc
-            return train_bc(*args, **kwargs)
-        if name == "train_ppo":
-            from .ppo import train_ppo
-            return train_ppo(*args, **kwargs)
-        if name == "train_selfplay_v4":
-            from .v4.selfplay import train_selfplay_v4
-            return train_selfplay_v4(*args, **kwargs)
-        raise AssertionError(f"unknown lazy target {name}")
-    return _factory
-
-
-MahjongTransformer = _torch_only("MahjongTransformer")
-train_bc = _torch_only("train_bc")
-train_ppo = _torch_only("train_ppo")
-train_selfplay_v4 = _torch_only("train_selfplay_v4")
+        import importlib
+        mod = importlib.import_module(f"pymahjong.rl.{module_name}")
+        return getattr(mod, symbol)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

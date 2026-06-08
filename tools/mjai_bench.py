@@ -370,11 +370,12 @@ class V5Agent:
         self.device = torch.device(device)
 
         from pymahjong.rl.common.config import TransformerConfig
-        from pymahjong.rl.encoding import EncodingVersion, get_strategy
+        from pymahjong.rl.douzero import DouzeroTransformer
+from pymahjong.rl.action_features import ACTION_FEAT_DIM
         cfg = TransformerConfig(d_model=d_model, n_heads=n_heads,
                                  n_layers=n_layers, ff_mult=ff_mult)
-        self.model = get_strategy(EncodingVersion.V5).create_model(
-            transformer_config=cfg, scorer_hidden=scorer_hidden,
+        self.model = DouzeroTransformer(event_dim=100, action_feat_dim=ACTION_FEAT_DIM, 
+            config=cfg, scorer_hidden=scorer_hidden,
         ).to(self.device).eval()
         ck = torch.load(str(ckpt_path), map_location=self.device, weights_only=False)
         state = ck["model"] if isinstance(ck, dict) and "model" in ck else ck

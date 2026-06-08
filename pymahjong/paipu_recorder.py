@@ -511,7 +511,7 @@ class TenhouPaipuRecorder:
         # Prefer ``result.score`` (engine-computed per-hand final scores,
         # populated by GameResult.cpp for every ron / tsumo / ryuukyoku /
         # nagashi-mangan path).  ``table.get_scores()`` reflects the
-        # player counters which, in single-hand V4MultiAgentEnv use, may
+        # player counters which, in single-hand MultiAgentEnv use, may
         # still be at the pre-agari snapshot (with only the riichi-stick
         # deduction applied), so deltas computed from it are wrong for
         # agari hands.  Fall back to ``t.get_scores()`` only when the

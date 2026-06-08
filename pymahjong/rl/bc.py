@@ -27,8 +27,76 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, DistributedSampler
 
 from .common.optim import CombinedOptimizer, build_optimizer, build_scheduler
-from .encoding import EncodingVersion, get_strategy
-from . import encodings  # noqa: F401 -- trigger strategy registration
+from .common.config import TransformerConfig
+from .action_features import ACTION_FEAT_DIM
+from .cached_dataset import CachedEventDataset, cached_event_collate
+from .douzero import DouzeroTransformer
+from .legal_actions import extract_legal_actions
+
+
+class _Strategy:
+    """Inline model/dataset/collate bindings for MajNova v0 BC training.
+
+    Consolidates what used to be ``EncodingStrategy`` / ``V4Strategy`` /
+    ``V5Strategy`` now that only the Douzero head over the event-stream
+    encoder is supported.
+    """
+
+    def create_model(self, transformer_config=None, **kwargs):
+        cfg = transformer_config or TransformerConfig()
+        return DouzeroTransformer(
+            config=cfg,
+            event_dim=100,
+            action_feat_dim=ACTION_FEAT_DIM,
+            action_proj_dim=kwargs.get("action_proj_dim"),
+            scorer_hidden=kwargs.get("scorer_hidden", 256),
+            scorer_dropout=kwargs.get("scorer_dropout", 0.0),
+        )
+
+    def collate_fn(self, batch):
+        out = cached_event_collate(batch)
+        action_features, action_pad_mask, legal_orig_idx, legal_target_idx = (
+            extract_legal_actions(out["action_mask"], action=out["action"])
+        )
+        out["action_features"] = action_features
+        out["action_pad_mask"] = action_pad_mask
+        out["legal_orig_idx"] = legal_orig_idx
+        out["legal_target_idx"] = legal_target_idx
+        return out
+
+    def create_dataset(self, mode, config):
+        if mode == "cached":
+            return CachedEventDataset(config.cache_dir)
+        if mode == "streaming":
+            import glob as _glob
+            import os as _os
+            from .tokenization import StreamingPaipuDataset
+            paipu_dir = getattr(config, "paipu_dir", None)
+            if not paipu_dir:
+                from ..config import get_config
+                paipu_dir = get_config().paipu_xml_path
+            paths = sorted(
+                p for p in _glob.glob(_os.path.join(paipu_dir, "**", "*"), recursive=True)
+                if _os.path.isfile(p) and (p.endswith(".xml") or p.endswith(".txt"))
+            )
+            return StreamingPaipuDataset(
+                paipu_paths=paths,
+                prefetch_n=getattr(config, "paipu_prefetch", 4),
+            )
+        raise ValueError(f"Unknown dataset mode: {mode!r}")
+
+    def forward_from_batch_raw(self, model, batch):
+        raw_logits, value = model(
+            batch["features"], batch["attention_mask"],
+            action_features=batch["action_features"],
+            action_pad_mask=batch["action_pad_mask"],
+            legal_orig_idx=batch["legal_orig_idx"],
+        )
+        return raw_logits, value, batch["action_mask"]
+
+
+def _get_strategy() -> _Strategy:
+    return _Strategy()
 
 
 # ----------------------------------------------------------------------
@@ -381,7 +449,7 @@ def evaluate(
     )
 
 
-def _maybe_init_wandb(cfg: BCConfig, encoding: str, transformer_config):
+def _maybe_init_wandb(cfg: BCConfig, transformer_config):
     """Try to initialise wandb if ``cfg.wandb_project`` is set.
 
     DDP-safe: only rank 0 talks to wandb; other ranks return None.
@@ -407,7 +475,7 @@ def _maybe_init_wandb(cfg: BCConfig, encoding: str, transformer_config):
         return None
     try:
         run_config = {
-            "encoding": encoding,
+            "encoder": "majnova_v0",
             "n_steps": cfg.n_steps,
             "batch_size": cfg.batch_size,
             "lr": cfg.lr,
@@ -494,7 +562,6 @@ def train_bc(
     model=None,
     config: Optional[BCConfig] = None,
     transformer_config=None,
-    encoding: str = "v3",
     resume_from: Optional[str] = None,
 ):
     """Train a transformer policy by behavior cloning.
@@ -509,7 +576,6 @@ def train_bc(
         model: optional pre-existing model to continue training.
         config: :class:`BCConfig`.
         transformer_config: transformer architecture config.
-        encoding: encoding version (``"v3"`` or ``"v4"``).
         resume_from: optional path to a checkpoint saved by a previous
             ``train_bc`` run. Restores model weights and, when present
             in the checkpoint, optimizer state, training step,
@@ -526,7 +592,7 @@ def train_bc(
     rank, local_rank, world = _maybe_init_ddp()
     device = _device(cfg)
 
-    strategy = get_strategy(EncodingVersion(encoding))
+    strategy = _get_strategy()
 
     if model is None:
         model = strategy.create_model(
@@ -642,14 +708,11 @@ def train_bc(
 
     # Initialise wandb if requested (rank 0 only).  No-op when cfg.wandb_project is
     # unset; safe to call even if `wandb` isn't installed.
-    wandb_run = _maybe_init_wandb(cfg, encoding, transformer_config)
+    wandb_run = _maybe_init_wandb(cfg, transformer_config)
 
-    # V4 / V5 self-play eval is optional and gated on encoding.  V5
-    # reuses V4's environment and live encoder (only the model head
-    # differs), so the same selfplay_eval_v4 helper works for both.
+    # Self-play eval is optional; it reuses the live encoder.
     do_sp_eval = (
-        encoding in ("v4", "v5")
-        and cfg.selfplay_eval_interval > 0
+        cfg.selfplay_eval_interval > 0
         and cfg.selfplay_eval_hands > 0
     )
     sp_eval_fn = None
@@ -657,14 +720,14 @@ def train_bc(
     sp_record_fn = None
     if do_sp_eval:
         try:
-            from pymahjong.rl.v4.selfplay_eval import (
-                selfplay_eval_v4 as sp_eval_fn,  # noqa: F811
+            from pymahjong.rl.selfplay_eval import (
+                selfplay_eval as sp_eval_fn,  # noqa: F811
                 format_selfplay_metrics as sp_format_fn,  # noqa: F811
                 record_one_selfplay_hand as sp_record_fn,  # noqa: F811
             )
         except Exception as _e:  # noqa: BLE001
             print(
-                f"[BC-SP] failed to import selfplay_eval_v4 ({_e!r}); "
+                f"[BC-SP] failed to import selfplay_eval ({_e!r}); "
                 "self-play evaluation disabled",
                 flush=True,
             )

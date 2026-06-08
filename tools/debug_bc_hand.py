@@ -43,8 +43,8 @@ from pymahjong.env_pymahjong import MahjongEnv
 from pymahjong.paipu_recorder import TenhouPaipuRecorder
 from pymahjong.paipu_tenhou_json import make_editor_url, xml_to_tenhou_json
 from pymahjong.rl.common.config import TransformerConfig
-from pymahjong.rl.v4.live import LiveV4Encoder
-from pymahjong.rl.v4.model import EventStreamTransformer
+from pymahjong.rl.live_encoder import LiveEncoder
+from pymahjong.rl.transformer import EventStreamTransformer
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +261,7 @@ def main() -> int:
                f"{_format_hand(env.t.players[pid])}")
 
     # Bind LiveV4 encoder for the (single) hand.
-    enc = LiveV4Encoder(env.t)
+    enc = LiveEncoder(env.t)
     enc.start_hand()
 
     rng = np.random.default_rng(args.seed)
@@ -274,7 +274,7 @@ def main() -> int:
         try:
             obs = enc.observation_for(pid, register_decide=True, max_seq_len=cfg.max_seq_len)
         except Exception as e:
-            _print(f"[step {step}] LiveV4Encoder.observation_for failed: {e!r}; "
+            _print(f"[step {step}] LiveEncoder.observation_for failed: {e!r}; "
                    "falling back to first valid action")
             valid = np.flatnonzero(env.get_valid_actions(nhot=True))
             env.step(pid, int(valid[0]) if len(valid) else 0)

@@ -55,8 +55,8 @@ def _build_bc_policy(model_path: str, *, device_str: str, deterministic: bool = 
     except ImportError as e:
         raise RuntimeError("torch is required for --bc-model") from e
     from pymahjong.rl.common.config import TransformerConfig
-    from pymahjong.rl.v4.model import EventStreamTransformer
-    from pymahjong.rl.v4.live import LiveV4Encoder
+    from pymahjong.rl.transformer import EventStreamTransformer
+    from pymahjong.rl.live_encoder import LiveEncoder
 
     device = torch.device(device_str)
     # Match the bc_v4.best.pt default dims (192/4/6/4).
@@ -67,7 +67,7 @@ def _build_bc_policy(model_path: str, *, device_str: str, deterministic: bool = 
     model.load_state_dict(state)
     model.eval()
 
-    # LiveV4Encoder needs an external table reference per env.  Bind a
+    # LiveEncoder needs an external table reference per env.  Bind a
     # fresh encoder for each fresh env via the closure below.
     enc_holder = {"enc": None, "env_id": None}
 
@@ -77,7 +77,7 @@ def _build_bc_policy(model_path: str, *, device_str: str, deterministic: bool = 
         # after env.reset()).
         if enc_holder["env_id"] is not id(env.t):
             enc_holder["env_id"] = id(env.t)
-            enc_holder["enc"] = LiveV4Encoder(env.t)
+            enc_holder["enc"] = LiveEncoder(env.t)
             enc_holder["enc"].start_hand()
         enc = enc_holder["enc"]
         pid = env.get_curr_player_id()

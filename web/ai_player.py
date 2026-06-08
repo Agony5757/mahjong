@@ -30,9 +30,9 @@ class RandomAI(BaseAIPlayer):
 
 
 class V4ModelAI(BaseAIPlayer):
-    """V4 :class:`EventStreamTransformer` BC/PPO checkpoint.
+    """:class:`EventStreamTransformer` BC/PPO checkpoint.
 
-    Maintains a per-session :class:`LiveV4Encoder` that mirrors the
+    Maintains a per-session :class:`LiveEncoder` that mirrors the
     underlying ``pm.Table`` so the model always sees the same event
     stream it was trained on. ``on_hand_start`` / ``on_action_executed``
     must be called by the host whenever a kyoku starts or the engine
@@ -44,18 +44,15 @@ class V4ModelAI(BaseAIPlayer):
         self._model = None
         self._device = None
         self._live = None
-        self._strategy = None
 
     def _ensure_model(self):
         if self._model is not None:
             return
         import torch
-        from pymahjong.rl.encoding import EncodingVersion, get_strategy
         from pymahjong.rl.common.config import TransformerConfig
-        from pymahjong.rl.v4.model import EventStreamTransformer
+        from pymahjong.rl.transformer import EventStreamTransformer
 
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self._strategy = get_strategy(EncodingVersion("v4"))
         ck = torch.load(self.model_path, map_location=self._device, weights_only=False)
         sd = ck.get("model", ck) if isinstance(ck, dict) else ck
         # Auto-detect optional architectural toggles from the checkpoint's
@@ -71,13 +68,13 @@ class V4ModelAI(BaseAIPlayer):
 
     def _ensure_live(self, env_wrapper):
         if self._live is None or self._live.table is not env_wrapper.t:
-            from pymahjong.rl.v4.live import LiveV4Encoder
-            self._live = LiveV4Encoder(env_wrapper.t)
+            from pymahjong.rl.live_encoder import LiveEncoder
+            self._live = LiveEncoder(env_wrapper.t)
             self._live.start_hand()
 
     def on_hand_start(self, env_wrapper) -> None:
-        from pymahjong.rl.v4.live import LiveV4Encoder
-        self._live = LiveV4Encoder(env_wrapper.t)
+        from pymahjong.rl.live_encoder import LiveEncoder
+        self._live = LiveEncoder(env_wrapper.t)
         self._live.start_hand()
 
     def on_action_executed(self, env_wrapper) -> None:
@@ -91,7 +88,10 @@ class V4ModelAI(BaseAIPlayer):
         self._ensure_live(env_wrapper)
 
         obs = self._live.observation_for(player_id)
-        feat, attn, mask = self._strategy.obs_to_tensor(obs, self._device)
+        import numpy as np
+        feat = torch.as_tensor(obs["features"], device=self._device, dtype=torch.float32).unsqueeze(0)
+        attn = torch.as_tensor(obs["attention_mask"], device=self._device, dtype=torch.bool).unsqueeze(0)
+        mask = torch.as_tensor(obs["action_mask"], device=self._device, dtype=torch.bool).unsqueeze(0)
 
         with torch.no_grad():
             logits, _ = self._model(feat, attn, mask)

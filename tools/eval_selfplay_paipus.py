@@ -31,8 +31,8 @@ import MahjongPyWrapper as pm
 from pymahjong.paipu_recorder import TenhouPaipuRecorder
 from pymahjong.paipu_tenhou_json import make_editor_url, xml_to_tenhou_json
 from pymahjong.rl.common.config import TransformerConfig
-from pymahjong.rl.v4.env import V4MultiAgentEnv
-from pymahjong.rl.v4.model import EventStreamTransformer
+from pymahjong.rl.env import MultiAgentEnv
+from pymahjong.rl.transformer import EventStreamTransformer
 
 
 def _load_model(
@@ -102,7 +102,7 @@ def main() -> int:
     ep_lengths: list[int] = []
     per_hand: list[dict] = []
 
-    env = V4MultiAgentEnv(max_seq_len=args.max_seq_len)
+    env = MultiAgentEnv(max_seq_len=args.max_seq_len)
     t0 = time.monotonic()
     for i in range(args.n_hands):
         seed = args.seed_base + i

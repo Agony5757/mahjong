@@ -34,8 +34,8 @@ import torch
 from pymahjong.paipu_recorder import TenhouPaipuRecorder
 from pymahjong.paipu_tenhou_json import make_editor_url, xml_to_tenhou_json
 from pymahjong.rl.common.config import TransformerConfig
-from pymahjong.rl.v4.hanchan_env import HanchanEnv
-from pymahjong.rl.v4.model import EventStreamTransformer
+from pymahjong.rl.hanchan_env import HanchanEnv
+from pymahjong.rl.transformer import EventStreamTransformer
 
 
 def _load_model(
@@ -56,7 +56,7 @@ def _load_model(
     Args:
         encoding: "v4" or "v5".  V4 builds an
             :class:`EventStreamTransformer`; V5 builds a
-            :class:`DouzeroV5Transformer` via the V5 strategy registry.
+            :class:`DouzeroTransformer` via the V5 strategy registry.
         split_heads: only meaningful for V4 linear-head checkpoints;
             ignored for V5 (its shared scorer subsumes phase routing).
         d_model/n_heads/n_layers/ff_mult: transformer arch overrides — must
@@ -69,10 +69,10 @@ def _load_model(
         d_model=d_model, n_heads=n_heads, n_layers=n_layers, ff_mult=ff_mult,
     )
     if encoding == "v5":
-        from pymahjong.rl.encoding import EncodingVersion, get_strategy
-        strat = get_strategy(EncodingVersion.V5)
-        m = strat.create_model(
-            transformer_config=cfg,
+        m = DouzeroTransformer(
+            config=cfg,
+            event_dim=100,
+            action_feat_dim=ACTION_FEAT_DIM,
             scorer_hidden=scorer_hidden,
             action_proj_dim=action_proj_dim,
         ).to(device)
