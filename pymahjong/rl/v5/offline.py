@@ -93,7 +93,7 @@ class OfflineConfig:
 
     # -- Mortal head-to-head eval (optional; reuses the bench harness) --
     mortal_eval: bool = False
-    mortal_eval_hanchan: int = 200
+    mortal_eval_hanchan: int = 1000
     mortal_eval_workers: int = 1
     """Concurrent bench processes per matchup (splits n_hanchan; bench is
     latency-bound with low GPU util, so 4-8 gives a near-linear speedup)."""

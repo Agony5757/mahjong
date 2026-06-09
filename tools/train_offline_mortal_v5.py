@@ -91,7 +91,7 @@ def main() -> int:
 
     # Mortal head-to-head eval
     ap.add_argument("--mortal-eval", action="store_true")
-    ap.add_argument("--mortal-eval-hanchan", type=int, default=200)
+    ap.add_argument("--mortal-eval-hanchan", type=int, default=1000)
     ap.add_argument("--mortal-eval-workers", type=int, default=1,
                     help="Concurrent bench processes per matchup (4-8 = "
                          "near-linear eval speedup; bench is latency-bound).")

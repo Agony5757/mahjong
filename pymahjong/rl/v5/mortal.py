@@ -187,11 +187,12 @@ class MortalConfig:
     # wandb.  All paths are server-specific and must be supplied.
     mortal_eval: bool = False
     """Enable Mortal head-to-head eval after each checkpoint save."""
-    mortal_eval_hanchan: int = 200
+    mortal_eval_hanchan: int = 1000
     """Hanchan per matchup.  More = lower variance but longer pause.
-    200 gives a tight estimate (rank std-err ~0.08) at a few tens of
-    minutes per eval; for fast in-training periodic eval override this back
-    to a small value (e.g. 16-64)."""
+    1000 gives a very tight estimate (rank std-err ~0.035); with
+    ``mortal_eval_workers`` 8 it finishes in a few tens of minutes.  For
+    fast in-training periodic eval override this back to a small value
+    (e.g. 16-64)."""
     mortal_eval_workers: int = 1
     """Concurrent bench processes per matchup (splits n_hanchan; the bench is
     latency-bound with low GPU util, so 4-8 ~ linear eval speedup)."""

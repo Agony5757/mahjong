@@ -327,7 +327,7 @@ def run_mortal_matchups(
     bench_cwd: str,
     mortal_ckpt: str,
     out_dir: str,
-    n_hanchan: int = 200,
+    n_hanchan: int = 1000,
     d_model: int = 384,
     n_heads: int = 8,
     n_layers: int = 6,

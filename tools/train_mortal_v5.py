@@ -164,9 +164,10 @@ def main() -> int:
     ap.add_argument("--mortal-eval", action="store_true",
                     help="After each checkpoint save, benchmark vs Mortal "
                          "(1v3 and 3v1) and log to wandb under mortal/*.")
-    ap.add_argument("--mortal-eval-hanchan", type=int, default=200,
-                    help="Hanchan per matchup (default 200 = tight estimate, "
-                         "tens of minutes; use 16-64 for in-training eval).")
+    ap.add_argument("--mortal-eval-hanchan", type=int, default=1000,
+                    help="Hanchan per matchup (default 1000 = tight estimate; "
+                         "use --mortal-eval-workers 8 for speed, or 16-64 for "
+                         "in-training eval).")
     ap.add_argument("--mortal-eval-workers", type=int, default=1,
                     help="Concurrent bench processes per matchup (4-8 = "
                          "near-linear eval speedup; bench is latency-bound).")
