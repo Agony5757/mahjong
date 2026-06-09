@@ -94,6 +94,9 @@ class OfflineConfig:
     # -- Mortal head-to-head eval (optional; reuses the bench harness) --
     mortal_eval: bool = False
     mortal_eval_hanchan: int = 200
+    mortal_eval_workers: int = 1
+    """Concurrent bench processes per matchup (splits n_hanchan; bench is
+    latency-bound with low GPU util, so 4-8 gives a near-linear speedup)."""
     mortal_bench_script: Optional[str] = None
     mortal_bench_cwd: Optional[str] = None
     mortal_ckpt: Optional[str] = None
@@ -337,6 +340,7 @@ class OfflineMortalTrainer:
                 device="cuda" if self._device.type == "cuda" else "cpu",
                 amp=cfg.mortal_eval_amp,
                 timeout_sec=cfg.mortal_eval_timeout_sec,
+                n_workers=cfg.mortal_eval_workers,
             )
             self._last_mortal_eval_step = self._total
             r13 = metrics.get("mortal/1v3/v5_avg_rank")

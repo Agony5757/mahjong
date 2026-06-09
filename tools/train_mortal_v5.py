@@ -167,6 +167,9 @@ def main() -> int:
     ap.add_argument("--mortal-eval-hanchan", type=int, default=200,
                     help="Hanchan per matchup (default 200 = tight estimate, "
                          "tens of minutes; use 16-64 for in-training eval).")
+    ap.add_argument("--mortal-eval-workers", type=int, default=1,
+                    help="Concurrent bench processes per matchup (4-8 = "
+                         "near-linear eval speedup; bench is latency-bound).")
     ap.add_argument("--mortal-bench-script", type=str, default=None,
                     help="Absolute path to mjai_bench_v2.py.")
     ap.add_argument("--mortal-bench-cwd", type=str, default=None,
@@ -247,6 +250,7 @@ def main() -> int:
         wandb_mode=args.wandb_mode,
         mortal_eval=args.mortal_eval,
         mortal_eval_hanchan=args.mortal_eval_hanchan,
+        mortal_eval_workers=args.mortal_eval_workers,
         mortal_bench_script=args.mortal_bench_script,
         mortal_bench_cwd=args.mortal_bench_cwd,
         mortal_ckpt=args.mortal_ckpt,

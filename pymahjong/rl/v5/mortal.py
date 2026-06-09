@@ -192,6 +192,9 @@ class MortalConfig:
     200 gives a tight estimate (rank std-err ~0.08) at a few tens of
     minutes per eval; for fast in-training periodic eval override this back
     to a small value (e.g. 16-64)."""
+    mortal_eval_workers: int = 1
+    """Concurrent bench processes per matchup (splits n_hanchan; the bench is
+    latency-bound with low GPU util, so 4-8 ~ linear eval speedup)."""
     mortal_bench_script: Optional[str] = None
     """Absolute path to the ``mjai_bench_v2.py`` benchmark CLI."""
     mortal_bench_cwd: Optional[str] = None
@@ -893,6 +896,7 @@ class MortalTrainer:
                 device="cuda" if self._device.type == "cuda" else "cpu",
                 amp=cfg.mortal_eval_amp,
                 timeout_sec=cfg.mortal_eval_timeout_sec,
+                n_workers=cfg.mortal_eval_workers,
             )
             self._last_mortal_eval_step = step
             r13 = metrics.get("mortal/1v3/v5_avg_rank")

@@ -67,6 +67,35 @@ def _validate_summary(obj: Any) -> Optional[Dict[str, Any]]:
     return obj
 
 
+def _build_cmd(
+    seats: List[str], *, eval_python: str, bench_script: str, ckpt_path: str,
+    mortal_ckpt: str, mdir: Path, n_hanchan: int, seed_start: int, seed_key: int,
+    device: str, d_model: int, n_heads: int, n_layers: int, ff_mult: int,
+    scorer_hidden: int, amp: bool,
+) -> List[str]:
+    """Build the mjai-bench command for one (chunk of a) matchup."""
+    cmd = [
+        eval_python, bench_script,
+        "--seat0", seats[0], "--seat1", seats[1],
+        "--seat2", seats[2], "--seat3", seats[3],
+        "--n-hanchan", str(n_hanchan),
+        "--seed-start", str(seed_start),
+        "--seed-key", str(seed_key),
+        "--device", device,
+        "--v5-ckpt", ckpt_path,
+        "--v5-d-model", str(d_model),
+        "--v5-n-heads", str(n_heads),
+        "--v5-n-layers", str(n_layers),
+        "--v5-ff-mult", str(ff_mult),
+        "--v5-scorer-hidden", str(scorer_hidden),
+        "--mortal-ckpt", mortal_ckpt,
+        "--out-dir", str(mdir),
+    ]
+    if amp:
+        cmd.append("--amp")
+    return cmd
+
+
 def _run_one(
     matchup: str,
     seats: List[str],
@@ -98,25 +127,13 @@ def _run_one(
         shutil.rmtree(mdir, ignore_errors=True)
     mdir.mkdir(parents=True, exist_ok=True)
 
-    cmd = [
-        eval_python, bench_script,
-        "--seat0", seats[0], "--seat1", seats[1],
-        "--seat2", seats[2], "--seat3", seats[3],
-        "--n-hanchan", str(n_hanchan),
-        "--seed-start", str(seed_start),
-        "--seed-key", str(seed_key),
-        "--device", device,
-        "--v5-ckpt", ckpt_path,
-        "--v5-d-model", str(d_model),
-        "--v5-n-heads", str(n_heads),
-        "--v5-n-layers", str(n_layers),
-        "--v5-ff-mult", str(ff_mult),
-        "--v5-scorer-hidden", str(scorer_hidden),
-        "--mortal-ckpt", mortal_ckpt,
-        "--out-dir", str(mdir),
-    ]
-    if amp:
-        cmd.append("--amp")
+    cmd = _build_cmd(
+        seats, eval_python=eval_python, bench_script=bench_script,
+        ckpt_path=ckpt_path, mortal_ckpt=mortal_ckpt, mdir=mdir,
+        n_hanchan=n_hanchan, seed_start=seed_start, seed_key=seed_key,
+        device=device, d_model=d_model, n_heads=n_heads, n_layers=n_layers,
+        ff_mult=ff_mult, scorer_hidden=scorer_hidden, amp=amp,
+    )
 
     t0 = time.monotonic()
     timed_out = False
@@ -201,6 +218,108 @@ def _metrics_from_summary(matchup: str, summary: Dict[str, Any]) -> Dict[str, fl
     return out
 
 
+def _aggregate_summaries(summaries: List[Optional[Dict[str, Any]]]) -> Optional[Dict[str, Any]]:
+    """Merge per-chunk bench summaries by summing rank_counts (exact)."""
+    valid = [s for s in summaries if s is not None]
+    if not valid:
+        return None
+    rc = [[0, 0, 0, 0] for _ in range(4)]
+    pt_w = [0.0, 0.0, 0.0, 0.0]
+    n_seat = [0, 0, 0, 0]
+    for s in valid:
+        srt = s["rank_counts"]
+        spt = s["avg_pt_delta_vs_25k"]
+        for seat in range(4):
+            ns = sum(int(x) for x in srt[seat])
+            n_seat[seat] += ns
+            pt_w[seat] += float(spt[seat]) * ns
+            for r in range(4):
+                rc[seat][r] += int(srt[seat][r])
+    avg_rank, pt_delta = [], []
+    for seat in range(4):
+        tot = sum(rc[seat]) or 1
+        avg_rank.append(sum((r + 1) * rc[seat][r] for r in range(4)) / tot)
+        pt_delta.append(pt_w[seat] / (n_seat[seat] or 1))
+    return {"avg_rank": avg_rank, "avg_pt_delta_vs_25k": pt_delta, "rank_counts": rc}
+
+
+def _run_one_parallel(
+    matchup: str, seats: List[str], *, n_workers: int,
+    bench_script: str, bench_cwd: str, eval_python: str, ckpt_path: str,
+    mortal_ckpt: str, out_dir: Path, n_hanchan: int, d_model: int, n_heads: int,
+    n_layers: int, ff_mult: int, scorer_hidden: int, seed_start: int, seed_key: int,
+    device: str, amp: bool, timeout_sec: float, env: Dict[str, str],
+) -> Tuple[Optional[Dict[str, Any]], float, bool]:
+    """Run a matchup by splitting ``n_hanchan`` into ``n_workers`` disjoint
+    seed chunks executed concurrently (the bench plays hanchan serially and
+    is latency-bound with low GPU util), then aggregating rank_counts.  The
+    union of seeds is identical to the serial run, so results match."""
+    base, rem = divmod(n_hanchan, n_workers)
+    chunks: List[Tuple[int, int, Path]] = []
+    off = 0
+    for w in range(n_workers):
+        nw = base + (1 if w < rem else 0)
+        if nw <= 0:
+            continue
+        mdir = out_dir / matchup / f"w{w:02d}"
+        if mdir.exists():
+            import shutil
+            shutil.rmtree(mdir, ignore_errors=True)
+        mdir.mkdir(parents=True, exist_ok=True)
+        chunks.append((seed_start + off, nw, mdir))
+        off += nw
+
+    t0 = time.monotonic()
+    procs: List[Tuple[Optional["subprocess.Popen"], Path]] = []
+    for (cs, nw, mdir) in chunks:
+        cmd = _build_cmd(
+            seats, eval_python=eval_python, bench_script=bench_script,
+            ckpt_path=ckpt_path, mortal_ckpt=mortal_ckpt, mdir=mdir,
+            n_hanchan=nw, seed_start=cs, seed_key=seed_key, device=device,
+            d_model=d_model, n_heads=n_heads, n_layers=n_layers, ff_mult=ff_mult,
+            scorer_hidden=scorer_hidden, amp=amp,
+        )
+        try:
+            proc = subprocess.Popen(
+                cmd, cwd=bench_cwd, env=env, stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, text=True, start_new_session=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            print(f"[mortal-eval] {matchup} chunk launch failed: {e!r}", flush=True)
+            proc = None
+        procs.append((proc, mdir))
+
+    summaries: List[Optional[Dict[str, Any]]] = []
+    any_timeout = False
+    for (proc, mdir) in procs:
+        if proc is None:
+            summaries.append(None)
+            continue
+        timed_out = False
+        try:
+            proc.communicate(timeout=timeout_sec)
+        except subprocess.TimeoutExpired:
+            any_timeout = timed_out = True
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+            proc.communicate()
+        if timed_out or proc.returncode != 0:
+            summaries.append(None)
+            continue
+        sp = mdir / "summary.json"
+        if not sp.exists():
+            summaries.append(None)
+            continue
+        try:
+            summaries.append(_validate_summary(json.loads(sp.read_text())))
+        except Exception:  # noqa: BLE001
+            summaries.append(None)
+
+    return _aggregate_summaries(summaries), time.monotonic() - t0, any_timeout
+
+
 def run_mortal_matchups(
     ckpt_path: str,
     *,
@@ -220,12 +339,17 @@ def run_mortal_matchups(
     device: str = "cuda",
     amp: bool = False,
     timeout_sec: float = 1800.0,
+    n_workers: int = 1,
     extra_env: Optional[Dict[str, str]] = None,
 ) -> Dict[str, float]:
     """Run 1v3 and 3v1 matchups of ``ckpt_path`` vs Mortal, return flat metrics.
 
     Never raises: any failure is reported via ``mortal/<matchup>/failed`` and
     ``mortal/<matchup>/timeout`` flags so the caller (training loop) is safe.
+
+    ``n_workers > 1`` splits each matchup's ``n_hanchan`` across that many
+    concurrent bench processes (same seed set, aggregated) -- a large wall-
+    time speedup since the bench is latency-bound with low GPU utilisation.
     """
     eval_python = eval_python or sys.executable
     # The bench runs with cwd=bench_cwd, so any relative path the caller
@@ -242,16 +366,28 @@ def run_mortal_matchups(
 
     metrics: Dict[str, float] = {}
     for matchup, (seats, _v5_seats) in _MATCHUPS.items():
-        summary, runtime, timed_out = _run_one(
-            matchup, seats,
-            bench_script=bench_script, bench_cwd=bench_cwd,
-            eval_python=eval_python, ckpt_path=ckpt_path,
-            mortal_ckpt=mortal_ckpt, out_dir=out_root,
-            n_hanchan=n_hanchan, d_model=d_model, n_heads=n_heads,
-            n_layers=n_layers, ff_mult=ff_mult, scorer_hidden=scorer_hidden,
-            seed_start=seed_start, seed_key=seed_key, device=device,
-            amp=amp, timeout_sec=timeout_sec, env=env,
-        )
+        if n_workers and n_workers > 1:
+            summary, runtime, timed_out = _run_one_parallel(
+                matchup, seats, n_workers=int(n_workers),
+                bench_script=bench_script, bench_cwd=bench_cwd,
+                eval_python=eval_python, ckpt_path=ckpt_path,
+                mortal_ckpt=mortal_ckpt, out_dir=out_root,
+                n_hanchan=n_hanchan, d_model=d_model, n_heads=n_heads,
+                n_layers=n_layers, ff_mult=ff_mult, scorer_hidden=scorer_hidden,
+                seed_start=seed_start, seed_key=seed_key, device=device,
+                amp=amp, timeout_sec=timeout_sec, env=env,
+            )
+        else:
+            summary, runtime, timed_out = _run_one(
+                matchup, seats,
+                bench_script=bench_script, bench_cwd=bench_cwd,
+                eval_python=eval_python, ckpt_path=ckpt_path,
+                mortal_ckpt=mortal_ckpt, out_dir=out_root,
+                n_hanchan=n_hanchan, d_model=d_model, n_heads=n_heads,
+                n_layers=n_layers, ff_mult=ff_mult, scorer_hidden=scorer_hidden,
+                seed_start=seed_start, seed_key=seed_key, device=device,
+                amp=amp, timeout_sec=timeout_sec, env=env,
+            )
         p = f"mortal/{matchup}/"
         metrics[p + "runtime_sec"] = float(runtime)
         metrics[p + "timeout"] = 1.0 if timed_out else 0.0

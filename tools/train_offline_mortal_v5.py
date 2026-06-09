@@ -92,6 +92,9 @@ def main() -> int:
     # Mortal head-to-head eval
     ap.add_argument("--mortal-eval", action="store_true")
     ap.add_argument("--mortal-eval-hanchan", type=int, default=200)
+    ap.add_argument("--mortal-eval-workers", type=int, default=1,
+                    help="Concurrent bench processes per matchup (4-8 = "
+                         "near-linear eval speedup; bench is latency-bound).")
     ap.add_argument("--mortal-bench-script", type=str, default=None)
     ap.add_argument("--mortal-bench-cwd", type=str, default=None)
     ap.add_argument("--mortal-ckpt", type=str, default=None)
@@ -144,6 +147,7 @@ def main() -> int:
         wandb_mode=args.wandb_mode,
         mortal_eval=args.mortal_eval,
         mortal_eval_hanchan=args.mortal_eval_hanchan,
+        mortal_eval_workers=args.mortal_eval_workers,
         mortal_bench_script=args.mortal_bench_script,
         mortal_bench_cwd=args.mortal_bench_cwd,
         mortal_ckpt=args.mortal_ckpt,

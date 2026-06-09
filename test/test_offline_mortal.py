@@ -137,3 +137,19 @@ def test_reward_annotation_telescopes_on_paipu():
         per_seat.setdefault(s["_seat"], {})[s["_hand_idx"]] = s["q_reward"]
     totals = [sum(hd.values()) for hd in per_seat.values()]
     assert abs(sum(totals)) < 1e-3, f"placement deltas must sum to ~0: {totals}"
+
+
+def test_mortal_eval_aggregate_summaries_matches_serial():
+    # The parallel-eval aggregator must merge per-chunk bench summaries by
+    # summing rank_counts and recomputing avg_rank exactly (so parallel eval
+    # == serial eval over the same seed set).
+    from pymahjong.rl.v4.mortal_eval import _aggregate_summaries
+    s1 = {"rank_counts": [[2, 1, 0, 0], [0, 1, 1, 1], [1, 1, 1, 0], [0, 0, 1, 2]],
+          "avg_pt_delta_vs_25k": [10.0, -5.0, 2.0, -7.0]}
+    s2 = {"rank_counts": [[1, 0, 1, 1], [1, 1, 0, 1], [1, 1, 0, 1], [0, 1, 2, 0]],
+          "avg_pt_delta_vs_25k": [6.0, -3.0, 4.0, -7.0]}
+    m = _aggregate_summaries([s1, s2, None])
+    assert m["rank_counts"][0] == [3, 1, 1, 1]              # summed
+    assert abs(m["avg_rank"][0] - 2.0) < 1e-9               # (3+2+3+4)/6
+    assert abs(m["avg_pt_delta_vs_25k"][0] - 8.0) < 1e-9    # (10*3+6*3)/6
+    assert _aggregate_summaries([None, None]) is None
