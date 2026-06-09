@@ -60,6 +60,7 @@ def _worker_main(args_dict: dict) -> List[dict]:
     worker_id = args_dict["worker_id"]
     shard_rows = args_dict["shard_rows"]
     paths: List[str] = args_dict["paths"]
+    pts = args_dict.get("pts")  # offline-RL placement points, or None for BC-only
 
     # Lazy import so workers don't pay the cost in the parent.
     from pymahjong.rl.v4.tokenization import encode_paipu_file_v4
@@ -80,7 +81,7 @@ def _worker_main(args_dict: dict) -> List[dict]:
     for fp in paths:
         n_files += 1
         try:
-            samples = encode_paipu_file_v4(fp)
+            samples = encode_paipu_file_v4(fp, pts=pts)
         except Exception as e:  # noqa: BLE001
             n_skipped += 1
             if n_skipped <= 5:
@@ -152,6 +153,7 @@ def cmd_encode(args: argparse.Namespace) -> int:
             "worker_id": i,
             "shard_rows": int(args.shard_rows),
             "paths": chunk,
+            "pts": (list(args.pts) if args.pts is not None else None),
         }
         for i, chunk in enumerate(chunks)
     ]
@@ -219,6 +221,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_enc.add_argument("--max-files", type=int, default=None)
     p_enc.add_argument("--workers", type=int, default=1)
     p_enc.add_argument("--shard-rows", type=int, default=32768)
+    p_enc.add_argument("--pts", type=float, nargs=4, default=None,
+                       metavar=("P1", "P2", "P3", "P4"),
+                       help="If given, also emit Mortal offline-RL targets "
+                            "(per-kyoku placement reward / rank / steps) using "
+                            "these placement points for ranks [1st..4th]. "
+                            "Mortal uses 6 4 2 0. Omit for a BC-only cache.")
     p_enc.set_defaults(func=cmd_encode)
 
     p_show = sub.add_parser("inspect", help="print V4 cache manifest summary")

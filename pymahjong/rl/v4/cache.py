@@ -143,6 +143,10 @@ class V4ShardWriter:
         self._labels: List[int] = []
         self._track_ids: List[int] = []
         self._game_ids: List[int] = []
+        # Optional Mortal offline-RL targets (all-or-nothing per shard).
+        self._rewards: List[float] = []
+        self._ranks: List[int] = []
+        self._steps: List[int] = []
 
     def __enter__(self) -> "V4ShardWriter":
         return self
@@ -168,6 +172,10 @@ class V4ShardWriter:
         # Backward-compat: fall back to track_id when game_id isn't supplied
         # so older sample producers still work (game_id will then mix games).
         self._game_ids.append(int(sample.get("game_id", sample["track_id"])))
+        if "q_reward" in sample:
+            self._rewards.append(float(sample["q_reward"]))
+            self._ranks.append(int(sample["player_rank"]))
+            self._steps.append(int(sample["steps_to_done"]))
 
     def close(self) -> ShardEntry:
         if self.n_rows == 0:
@@ -196,10 +204,25 @@ class V4ShardWriter:
         np.save(os.path.join(self.shard_dir, "track_ids.npy"), track_ids)
         np.save(os.path.join(self.shard_dir, "game_ids.npy"), game_ids)
 
+        has_rl = len(self._rewards) > 0
+        if has_rl and len(self._rewards) != n_rows_written:
+            raise ValueError(
+                f"RL targets present for {len(self._rewards)}/{n_rows_written} "
+                "rows; offline-RL targets must be all-or-nothing per shard"
+            )
+        if has_rl:
+            np.save(os.path.join(self.shard_dir, "rewards.npy"),
+                    np.asarray(self._rewards, dtype=np.float32))
+            np.save(os.path.join(self.shard_dir, "ranks.npy"),
+                    np.asarray(self._ranks, dtype=np.int8))
+            np.save(os.path.join(self.shard_dir, "steps_to_done.npy"),
+                    np.asarray(self._steps, dtype=np.int16))
+
         meta = {
             "n_rows": int(n_rows_written),
             "schema_version": CACHE_SCHEMA_VERSION,
             "total_events": int(features.shape[0]),
+            "rl_targets": bool(has_rl),
             "packed": {
                 "features.orig_shape": list(features.shape),
                 "action_mask.orig_shape": list(action_masks.shape),
@@ -213,6 +236,9 @@ class V4ShardWriter:
         self._labels.clear()
         self._track_ids.clear()
         self._game_ids.clear()
+        self._rewards.clear()
+        self._ranks.clear()
+        self._steps.clear()
 
         return ShardEntry(
             path=os.path.basename(self.shard_dir),
@@ -272,6 +298,14 @@ def open_shard_arrays_v4(cache_dir: str, shard_path: str) -> Dict[str, np.ndarra
         "game_ids":    (np.load(os.path.join(sub, "game_ids.npy"), mmap_mode="r")
                         if os.path.exists(os.path.join(sub, "game_ids.npy"))
                         else np.load(os.path.join(sub, "track_ids.npy"), mmap_mode="r")),
+        # Optional Mortal offline-RL targets (present only in RL-annotated
+        # caches; ``None`` otherwise so BC caches still load).
+        "rewards":       (np.load(os.path.join(sub, "rewards.npy"), mmap_mode="r")
+                          if os.path.exists(os.path.join(sub, "rewards.npy")) else None),
+        "ranks":         (np.load(os.path.join(sub, "ranks.npy"), mmap_mode="r")
+                          if os.path.exists(os.path.join(sub, "ranks.npy")) else None),
+        "steps_to_done": (np.load(os.path.join(sub, "steps_to_done.npy"), mmap_mode="r")
+                          if os.path.exists(os.path.join(sub, "steps_to_done.npy")) else None),
     }
 
 

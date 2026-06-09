@@ -625,8 +625,58 @@ def _engine_action_label(table, engine_idx: int) -> int:
 # ---------------------------------------------------------------
 
 
+def _table_scores(table) -> List[int]:
+    """Best-effort read of the 4 players' current scores from a ``Table``."""
+    try:
+        players = table.players
+        return [int(players[p].score) for p in range(4)]
+    except Exception:  # noqa: BLE001
+        return [25000, 25000, 25000, 25000]
+
+
+def _annotate_rl_targets(
+    samples: List[dict],
+    hand_start_scores: List[List[int]],
+    final_scores: List[int],
+    pts: List[float],
+) -> None:
+    """Attach Mortal offline-RL targets (in place) to ``samples``.
+
+    ``q_reward`` is the per-kyoku placement-delta (potential-difference of
+    expected placement points, telescoping to the seat's final placement
+    points), ``player_rank`` the seat's final rank (0=1st), ``steps_to_done``
+    the seat's remaining decisions in the kyoku.
+    """
+    from ..v5.grp import _placement_exp_pts  # pure-numpy, no torch needed
+
+    pts_arr = np.asarray(pts, dtype=np.float64)
+    # Score states at each kyoku boundary: start-of-each-hand + final.
+    states = [np.asarray(s, dtype=np.float64) for s in hand_start_scores]
+    states.append(np.asarray(final_scores, dtype=np.float64))
+    exp = [_placement_exp_pts(st, pts_arr) for st in states]      # (T+1, 4)
+    rewards = [exp[k + 1] - exp[k] for k in range(len(exp) - 1)]  # (T, 4)
+
+    fin = np.asarray(final_scores, dtype=np.float64)
+    order = sorted(range(4), key=lambda i: (-fin[i], i))         # ties: lower seat first
+    rank = [0, 0, 0, 0]
+    for r, seat in enumerate(order):
+        rank[seat] = r
+
+    groups: Dict = {}
+    for s in samples:
+        groups.setdefault((s["_hand_idx"], s["_seat"]), []).append(s)
+    for (k, seat), grp in groups.items():
+        m = len(grp)
+        r = float(rewards[k][seat]) if 0 <= k < len(rewards) else 0.0
+        for pos, s in enumerate(grp):
+            s["q_reward"] = r
+            s["player_rank"] = int(rank[seat])
+            s["steps_to_done"] = int(m - 1 - pos)
+
+
 def encode_paipu_file_v4(
     path: str,
+    pts: Optional[List[float]] = None,
 ) -> Optional[List[dict]]:
     """Encode a single paipu file into V4 samples.
 
@@ -636,6 +686,15 @@ def encode_paipu_file_v4(
     Each hanchan may contain multiple hands (局). Each hand triggers an
     ``init()`` call.  Samples are extracted at every ``init()`` boundary
     (for the previous hand) and once more at the end.
+
+    When ``pts`` (a 4-vector of placement points for ranks [1st..4th]) is
+    given, each sample is additionally annotated with **offline-RL targets**
+    faithful to Mortal: ``q_reward`` (the per-kyoku placement-delta reward
+    for that seat, GRP-free deterministic version), ``player_rank`` (the
+    seat's final hanchan rank 0-3) and ``steps_to_done`` (own remaining
+    decisions in the kyoku).  Mortal's ``q_target = gamma**steps_to_done *
+    kyoku_reward``; with Mortal's ``gamma=1`` ``steps_to_done`` is unused but
+    stored for generality.
     """
     if pm is None:
         raise RuntimeError("MahjongPyWrapper not importable")
@@ -648,6 +707,12 @@ def encode_paipu_file_v4(
     samples: List[dict] = []
     enc_holder: list = [None]
     hand_counter = [0]
+    # Per-kyoku score progression for the offline-RL reward (only used when
+    # ``pts`` is given).  ``hand_start_scores[k]`` = scores at the start of
+    # hand k (== scores after hand k-1); ``last_scores[0]`` tracks the
+    # running (final) scores.
+    hand_start_scores: List[List[int]] = []
+    last_scores: list = [[25000, 25000, 25000, 25000]]
 
     def _extract_hand_samples(game_id: str, hand_idx: int) -> None:
         """Extract samples from the current encoder state."""
@@ -695,6 +760,8 @@ def encode_paipu_file_v4(
                     "attention_mask": attention_mask,
                     "action_mask": action_mask,
                     "action": action_label,
+                    "_hand_idx": hand_idx,
+                    "_seat": p,
                 })
 
     class _Proxy:
@@ -714,6 +781,8 @@ def encode_paipu_file_v4(
             ret = self._inner.init(*args, **kwargs)
             enc_holder[0] = pm.encv4_HandEncoder(self._inner.table)
             enc_holder[0].encode_init()
+            if pts is not None:
+                hand_start_scores.append(_table_scores(self._inner.table))
             return ret
 
         def make_selection(self, idx):
@@ -738,6 +807,8 @@ def encode_paipu_file_v4(
             ret = self._inner.make_selection(idx)
             new_entries = gl.logs[n_before:]
             _route_gamelog_entries(enc, new_entries)
+            if pts is not None:
+                last_scores[0] = _table_scores(t)
             return ret
 
     xml_path = Path(path)
@@ -757,6 +828,17 @@ def encode_paipu_file_v4(
             _extract_hand_samples(xml_path.stem, hand_counter[0])
         finally:
             pm.PaipuReplayer = orig_ctor
+
+    if pts is not None and samples:
+        try:
+            _annotate_rl_targets(samples, hand_start_scores, last_scores[0], pts)
+        except Exception:
+            # On any failure leave neutral RL targets so the file's BC
+            # samples remain usable.
+            for s in samples:
+                s.setdefault("q_reward", 0.0)
+                s.setdefault("player_rank", 0)
+                s.setdefault("steps_to_done", 0)
 
     return samples
 

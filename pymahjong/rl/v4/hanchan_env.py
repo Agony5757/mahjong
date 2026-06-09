@@ -235,6 +235,32 @@ class HanchanEnv:
         result = self._last_kyoku_result
         self._scores = list(result.scores_after)
 
+        # Update the on-table riichi-stick (kyoutaku) count to its
+        # POST-hand value *before* any hanchan-termination branch, so the
+        # leftover-stick distribution at hanchan end uses the correct
+        # count.  ``t.get_result().n_riichibo`` is the post-distribution
+        # stick count (0 on agari since the winner collected, may be >0 on
+        # ryuukyoku from carry-over + new riichis this hand).  Falling
+        # back to counting RiichiSuccess from the gamelog if the result
+        # was uninitialised.
+        try:
+            n_riichi_end = int(self.get_inner_table().get_result().n_riichibo)
+        except Exception:
+            n_riichi_end = -1
+        if n_riichi_end < 0:
+            try:
+                logs = list(self.get_inner_table().gamelog.logs)
+                n_new_riichi = sum(
+                    1 for e in logs if e.action == pm.LogAction.RiichiSuccess
+                )
+                if result.is_agari:
+                    n_riichi_end = 0  # winner took all sticks
+                else:
+                    n_riichi_end = self._kyoutaku + n_new_riichi
+            except Exception:
+                n_riichi_end = 0
+        self._kyoutaku = max(0, int(n_riichi_end))
+
         # Tobi: end immediately if any player < 0.
         if self._tobi and any(s < 0 for s in self._scores):
             self._hanchan_over = True
@@ -283,31 +309,6 @@ class HanchanEnv:
             self._termination_reason = "west_oka_reached"
             self._distribute_leftover_kyoutaku()
             return self._dummy_obs()
-
-        # Kyoutaku carry-over: ``t.get_result().n_riichibo`` is the
-        # post-distribution stick count (0 on agari since the winner
-        # collected, may be >0 on ryuukyoku from carry-over + new
-        # riichis this hand).  Fall back to counting RiichiSuccess from
-        # gamelog if the result was uninitialised.
-        try:
-            n_riichi_end = int(
-                self.get_inner_table().get_result().n_riichibo
-            )
-        except Exception:
-            n_riichi_end = -1
-        if n_riichi_end < 0:
-            try:
-                logs = list(self.get_inner_table().gamelog.logs)
-                n_new_riichi = sum(
-                    1 for e in logs if e.action == pm.LogAction.RiichiSuccess
-                )
-                if result.is_agari:
-                    n_riichi_end = 0  # winner took all sticks
-                else:
-                    n_riichi_end = self._kyoutaku + n_new_riichi
-            except Exception:
-                n_riichi_end = 0
-        self._kyoutaku = max(0, int(n_riichi_end))
 
         # Safety: cap total kyoku to prevent infinite renchan loops.
         self._kyoku_seq += 1

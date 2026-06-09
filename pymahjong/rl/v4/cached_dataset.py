@@ -93,13 +93,19 @@ class CachedEventDataset(Dataset):
 
         seq_len = features.shape[0]
 
-        return {
+        out = {
             "features": torch.from_numpy(np.ascontiguousarray(features)),
             "attention_mask": torch.ones(seq_len, dtype=torch.bool),
             "action_mask": torch.from_numpy(np.ascontiguousarray(amask)),
             "action": torch.tensor(label, dtype=torch.long),
             "seq_len": torch.tensor(seq_len, dtype=torch.long),
         }
+        # Mortal offline-RL targets, when the cache was built with them.
+        if arrays.get("rewards") is not None:
+            out["q_reward"] = torch.tensor(float(arrays["rewards"][local]), dtype=torch.float32)
+            out["player_rank"] = torch.tensor(int(arrays["ranks"][local]), dtype=torch.long)
+            out["steps_to_done"] = torch.tensor(int(arrays["steps_to_done"][local]), dtype=torch.long)
+        return out
 
 
 def cached_event_collate(batch):
@@ -116,12 +122,17 @@ def cached_event_collate(batch):
         features[i, :L] = b["features"]
         attention_mask[i, :L] = b["attention_mask"]
 
-    return {
+    out = {
         "features": features,
         "attention_mask": attention_mask,
         "action_mask": torch.stack([b["action_mask"] for b in batch], dim=0),
         "action": torch.stack([b["action"] for b in batch], dim=0),
     }
+    if "q_reward" in batch[0]:
+        out["q_reward"] = torch.stack([b["q_reward"] for b in batch], dim=0)
+        out["player_rank"] = torch.stack([b["player_rank"] for b in batch], dim=0)
+        out["steps_to_done"] = torch.stack([b["steps_to_done"] for b in batch], dim=0)
+    return out
 
 
 __all__ = ["CachedEventDataset", "cached_event_collate"]
